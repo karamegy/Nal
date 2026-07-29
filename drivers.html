@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الأسطول والسائقين - Global Transport Hub</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #050505;
+            --primary-color: #1877f2;
+            --primary-hover: #166fe5;
+            --success-color: #2e7d32;
+            --warning-color: #ed6c02;
+            --danger-color: #e41e3f;
+            --border-color: #ced0d4;
+            --secondary-text: #65676b;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --primary-color: #2d88ff;
+            --primary-hover: #1a77f2;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #ff334b;
+            --border-color: #393a3b;
+            --secondary-text: #b0b3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .nav-links a, .nav-links button {
+            text-decoration: none;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 15px auto;
+            padding: 0 10px;
+        }
+
+        /* بطاقات الإحصائيات السريعة */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 5px;
+        }
+
+        .stat-title {
+            font-size: 12px;
+            color: var(--secondary-text);
+        }
+
+        /* صندوق الجدول */
+        .card-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* جدول السائقين المطور */
+        .drivers-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .drivers-table th, .drivers-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .drivers-table th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .status-available {
+            background-color: rgba(46, 125, 50, 0.15);
+            color: var(--success-color);
+        }
+
+        .status-busy {
+            background-color: rgba(237, 108, 2, 0.15);
+            color: var(--warning-color);
+        }
+
+        .action-btns-cell {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .tbl-btn {
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-toggle {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-call {
+            background-color: var(--success-color);
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 8px;
+        }
+
+        .btn-delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        /* نموذج إضافة سائق جديد */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--text-color);
+            outline: none;
+            font-size: 14px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <header>
+        <div class="logo">🚚 إدارة الأسطول والسائقين</div>
+        <div class="nav-links">
+            <a href="index.html">الرئيسية</a>
+            <a href="community.html">المجتمع والشات</a>
+            <button onclick="toggleTheme()">🌓</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- إحصائيات سريعة للأسطول -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">إجمالي السائقين</div>
+                <div class="stat-number" id="totalDriversCount">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">المتاحين للعمل</div>
+                <div class="stat-number" id="availableDriversCount" style="color: var(--success-color);">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">في رحلات حالياً</div>
+                <div class="stat-number" id="busyDriversCount" style="color: var(--warning-color);">1</div>
+            </div>
+        </div>
+
+        <!-- جدول السائقين والسيارات المتاحة -->
+        <div class="card-box">
+            <div class="card-title">📋 سجل السائقين والسيارات المتاحة</div>
+            <table class="drivers-table">
+                <thead>
+                    <tr>
+                        <th>اسم السائق</th>
+                        <th>نوع السيارة</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="driversTableBody">
+                    <tr>
+                        <td><b>عماد (المؤسس)</b></td>
+                        <td>ربع نقل (ربع طن)</td>
+                        <td><span class="status-badge status-available">🟢 متاح للعمل</span></td>
+                        <td>
+                            <div class="action-btns-cell">
+                                <button class="tbl-btn btn-toggle" onclick="toggleDriverStatus(this)">تبديل الحالة</button>
+                                <a href="tel:01000000000" class="tbl-btn btn-call">📞 اتصال</a>
+                                <button class="tbl-btn btn-delete" onclick="deleteDriver(this)">حذف</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>محمد أحمد</b></td>
+                        <td>ربع نقل</td>
+                        <td><span class="status-badge status-busy">🚚 في رحلة حالياً</span></td>
+                        <td>
+                            <div class="action-btns-cell">
+                                <button class="tbl-btn btn-toggle" onclick="toggleDriverStatus(this)">تبديل الحالة</button>
+                                <a href="tel:01000000000" class="tbl-btn btn-call">📞 اتصال</a>
+                                <button class="tbl-btn btn-delete" onclick="deleteDriver(this)">حذف</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- إضافة سائق جديد للأسطول -->
+        <div class="card-box">
+            <div class="card-title">➕ إضافة سائق جديد للأسطول</div>
+            <div class="form-group">
+                <input type="text" id="newDriverName" placeholder="اسم السائق الجديد...">
+            </div>
+            <div class="form-group">
+                <input type="text" id="newDriverCar" placeholder="نوع السيارة (مثال: ربع نقل - شاحنة)...">
+            </div>
+            <div class="form-group">
+                <select id="newDriverStatus">
+                    <option value="available">🟢 متاح للعمل</option>
+                    <option value="busy">🚚 في رحلة حالياً</option>
+                </select>
+            </div>
+            <button class="submit-btn" onclick="addNewDriver()">إضافة سائق جديد للقائمة 🚀</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute("data-theme");
+            const newTheme = currentTheme === "light" ? "dark" : "light";
+            body.setAttribute("data-theme", newTheme);
+            localStorage.setItem("drivers_theme", newTheme);
+        }
+
+        window.onload = function() {
+            const savedTheme = localStorage.getItem("drivers_theme") || "light";
+            document.body.setAttribute("data-theme", savedTheme);
+            updateStats();
+        };
+
+        function updateStats() {
+            const rows = document.querySelectorAll("#driversTableBody tr");
+            let total = rows.length;
+            let available = 0;
+            let busy = 0;
+
+            rows.forEach(row => {
+                const badge = row.querySelector(".status-badge");
+                if(badge.classList.contains("status-available")) {
+                    available++;
+                } else {
+                    busy++;
+                }
+            });
+
+            document.getElementById("totalDriversCount").innerText = total;
+            document.getElementById("availableDriversCount").innerText = available;
+            document.getElementById("busyDriversCount").innerText = busy;
+        }
+
+        function addNewDriver() {
+            const name = document.getElementById("newDriverName").value;
+            const car = document.getElementById("newDriverCar").value;
+            const statusVal = document.getElementById("newDriverStatus").value;
+
+            if(name.trim() === "" || car.trim() === "") {
+                alert("يرجى إدخال اسم السائق ونوع السيارة.");
+                return;
+            }
+
+            const tbody = document.getElementById("driversTableBody");
+            const newRow = document.createElement("tr");
+
+            let badgeHTML = statusVal === "available" 
+                ? '<span class="status-badge status-available">🟢 متاح للعمل</span>' 
+                : '<span class="status-badge status-busy">🚚 في رحلة حالياً</span>';
+
+            newRow.innerHTML = `
+                <td><b>${escapeHtml(name)}</b></td>
+                <td>${escapeHtml(car)}</td>
+                <td>${badgeHTML}</td>
+                <td>
+                    <div class="action-btns-cell">
+                        <button class="tbl-btn btn-toggle" onclick="toggleDriverStatus(this)">تبديل الحالة</button>
+                        <a href="tel:01000000000" class="tbl-btn btn-call">📞 اتصال</a>
+                        <button class="tbl-btn btn-delete" onclick="deleteDriver(this)">حذف</button>
+                    </div>
+                </td>
+            `;
+
+            tbody.appendChild(newRow);
+            document.getElementById("newDriverName").value = "";
+            document.getElementById("newDriverCar").value = "";
+            updateStats();
+        }
+
+        function toggleDriverStatus(btn) {
+            const row = btn.closest("tr");
+            const badge = row.querySelector(".status-badge");
+            
+            if(badge.classList.contains("status-available")) {
+                badge.className = "status-badge status-busy";
+                badge.innerText = "🚚 في رحلة حالياً";
+            } else {
+                badge.className = "status-badge status-available";
+                badge.innerText = "🟢 متاح للعمل";
+            }
+            updateStats();
+        }
+
+        function deleteDriver(btn) {
+            if(confirm("هل أنت متأكد من حذف هذا السائق من الأسطول؟")) {
+                btn.closest("tr").remove();
+                updateStats();
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>

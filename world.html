@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عالم السائقين وخدمات الطريـق - Global Transport Hub</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #050505;
+            --primary-color: #1877f2;
+            --primary-hover: #166fe5;
+            --success-color: #2e7d32;
+            --warning-color: #ed6c02;
+            --danger-color: #e41e3f;
+            --border-color: #ced0d4;
+            --secondary-text: #65676b;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --primary-color: #2d88ff;
+            --primary-hover: #1a77f2;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #ff334b;
+            --border-color: #393a3b;
+            --secondary-text: #b0b3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .nav-links a, .nav-links button {
+            text-decoration: none;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 15px auto;
+            padding: 0 10px;
+        }
+
+        .card-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .post-input {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            color: var(--text-color);
+            outline: none;
+            resize: none;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .post-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .file-upload-label {
+            background-color: var(--bg-color);
+            border: 1px dashed var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--secondary-text);
+        }
+
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* تنسيق الأدوات الجديدة (حاسبة، طقس، استراحات) */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .calc-input {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .calc-result-box {
+            background: rgba(46, 125, 50, 0.1);
+            border: 1px solid var(--success-color);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--success-color);
+            margin-top: 10px;
+        }
+
+        .weather-banner {
+            background: rgba(24, 119, 242, 0.1);
+            border: 1px solid var(--primary-color);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rest-stop-item {
+            font-size: 13px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rest-stop-item:last-child {
+            border-bottom: none;
+        }
+
+        /* أزرار التصفية */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-tab {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .filter-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* عناصر الحائط */
+        .feed-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .feed-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .feed-header {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .feed-time {
+            font-size: 11px;
+            color: var(--secondary-text);
+            font-weight: normal;
+        }
+
+        .feed-text {
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .feed-media {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+
+        .feed-footer-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--secondary-text);
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        .action-link {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--secondary-text);
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-link:hover {
+            color: var(--primary-color);
+        }
+
+        .comments-section {
+            margin-top: 10px;
+            background: var(--bg-color);
+            padding: 8px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .comments-list {
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .comment-input-box {
+            display: flex;
+            gap: 5px;
+        }
+
+        .comment-input {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .comment-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .telegram-box {
+            background: rgba(24, 119, 242, 0.05);
+            border-right: 4px solid var(--primary-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <header>
+        <div class="logo">🛣️ عالم السائقين وخدمات الطريق</div>
+        <div class="nav-links">
+            <a href="index.html">الرئيسية</a>
+            <a href="drivers.html">الأسطول</a>
+            <a href="community.html">الشات</a>
+            <button onclick="toggleTheme()">🌓</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- طقس وتحذيرات الطرق السريعة -->
+        <div class="weather-banner">
+            <span>☀️ <b>حالة الطقس والمرور:</b> الطقس مستقر ومناسب للحركة على الطرق السريعة (السخنة، الإسماعيلية، الإسكندرية). قيادة آمنة للجميع!</span>
+        </div>
+
+        <!-- حاسبة أرباح الوردية اليومية -->
+        <div class="card-box">
+            <div class="card-title">🧮 حاسبة أرباح الوردية اليومية</div>
+            <div class="form-row">
+                <input type="number" id="totalRevenue" class="calc-input" placeholder="إجمالي إيراد النقلات (جنيه)">
+                <input type="number" id="fuelCost" class="calc-input" placeholder="تكلفة السولار/البنزين">
+            </div>
+            <div class="form-row">
+                <input type="number" id="otherExpenses" class="calc-input" placeholder="مصاريف أخرى (كارته، طعام...)">
+                <button class="submit-btn" onclick="calculateShiftProfit()">احسب صافي الربح 💰</button>
+            </div>
+            <div id="calcResultBox" class="calc-result-box" style="display: none;">
+                صافي ربح الوردية اليومية: <span id="netProfitValue">0</span> جنيه
+            </div>
+        </div>
+
+        <!-- دليل الاستراحات الآمنة على الطرق -->
+        <div class="card-box">
+            <div class="card-title">🅿️ دليل الاستراحات ومواقف الشاحنات الآمنة</div>
+            <div class="rest-stop-item">
+                <span>📍 <b>استراحة الصحراوي (طريق إسكندرية)</b> - مواقف واسعة ومؤمنة</span>
+                <span style="color: var(--success-color); font-weight: bold;">مفتوحة 24 ساعة</span>
+            </div>
+            <div class="rest-stop-item">
+                <span>📍 <b>محطة خدمة وطريق العين السخنة</b> - استراحة ومياه وصيانة سريعة</span>
+                <span style="color: var(--success-color); font-weight: bold;">متاحة</span>
+            </div>
+            <div class="rest-stop-item">
+                <span>📍 <b>استراحة طريق الإסماعيلية الزراعي</b> - كافيه وخدمات سيارات</span>
+                <span style="color: var(--success-color); font-weight: bold;">متاحة</span>
+            </div>
+        </div>
+
+        <!-- صندوق النشر -->
+        <div class="card-box">
+            <div class="card-title">📸 شارك رحلتك، صورك، وأجمل اللحظات</div>
+            <textarea id="postText" class="post-input" rows="3" placeholder="اكتب تفاصيل رحلتك على الطريق..."></textarea>
+            
+            <div class="post-actions">
+                <label class="file-upload-label">
+                    📁 إرفاق صورة أو فيديو رحلة
+                    <input type="file" id="mediaFile" accept="image/*,video/*" style="display: none;" onchange="previewMediaName()">
+                </label>
+                <span id="fileNameDisplay" style="font-size: 12px; color: var(--secondary-text);"></span>
+                <button class="submit-btn" onclick="publishPost()">نشر في عالم السائقين 🚀</button>
+            </div>
+        </div>
+
+        <!-- صندوق إرسال البرقيات -->
+        <div class="card-box">
+            <div class="card-title">✉️ إرسال برقية تحية أو تنبيه لزملاء الطريـق</div>
+            <textarea id="telegramText" class="post-input" rows="2" placeholder="اكتب برقية لجميع السائقين..."></textarea>
+            <button class="submit-btn" style="background-color: var(--success-color);" onclick="sendTelegram()">إرسال البرقية للجميع 📡</button>
+        </div>
+
+        <!-- أزرار التصفية -->
+        <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterFeed('all', this)">🌐 كل المنشورات</button>
+            <button class="filter-tab" onclick="filterFeed('posts', this)">📝 المنشورات واللحظات</button>
+            <button class="filter-tab" onclick="filterFeed('media', this)">🎥 فيديوهات وصور الطريق</button>
+            <button class="filter-tab" onclick="filterFeed('telegrams', this)">📡 لوحة البرقيات</button>
+        </div>
+
+        <!-- لوحة البرقيات الواردة -->
+        <div class="card-box" id="telegramsSection">
+            <div class="card-title">📡 لوحة برقيات السائقين</div>
+            <div id="telegramsContainer">
+                <div class="telegram-box">
+                    <b>✉️ برقية من عماد (المؤسس):</b> تمنياتي برحلة موفقة وآمنة لكل السائقين على الطرق السريعة اليوم. 🚛✨
+                </div>
+            </div>
+        </div>
+
+        <!-- حائط ذكريات وفيديوهات السائقين -->
+        <div class="card-box" id="feedSection">
+            <div class="card-title">🎥 حائط ذكريات ولحظات الطريق</div>
+            <div id="postsFeedContainer">
+                <div class="feed-item" data-type="media">
+                    <div class="feed-header">
+                        <span>🚛 محمود الشناوي</span>
+                        <span class="feed-time">منذ ساعتين</span>
+                    </div>
+                    <div class="feed-text">أجمل شروق شفته النهاردة واحنا محملين على طريق الإسماعيلية. طريق مريح وصباح الخير على كل الرجالة!</div>
+                    <div class="feed-footer-actions">
+                        <button class="action-link" onclick="likePost(this)">❤️ <span class="likes-count">14</span> إعجاب</button>
+                        <button class="action-link" onclick="toggleComments(this)">💬 تعليقات (<span class="comments-count">2</span>)</button>
+                        <button class="action-link" onclick="sharePost(this)">🔗 مشاركة</button>
+                    </div>
+                    <div class="comments-section">
+                        <div class="comments-list">
+                            <div><b>أحمد ممدوح:</b> صباح الفل يا غالي، رحلة موفقة!</div>
+                            <div><b>عماد:</b> تسلم يا رجولة، أحلى طريق ده.</div>
+                        </div>
+                        <div class="comment-input-box">
+                            <input type="text" class="comment-input" placeholder="اكتب تعليقاً...">
+                            <button class="comment-btn" onclick="addComment(this)">إرسال</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute("data-theme");
+            const newTheme = currentTheme === "light" ? "dark" : "light";
+            body.setAttribute("data-theme", newTheme);
+            localStorage.setItem("world_theme", newTheme);
+        }
+
+        window.onload = function() {
+            const savedTheme = localStorage.getItem("world_theme") || "light";
+            document.body.setAttribute("data-theme", savedTheme);
+        };
+
+        function calculateShiftProfit() {
+            const rev = parseFloat(document.getElementById("totalRevenue").value) || 0;
+            const fuel = parseFloat(document.getElementById("fuelCost").value) || 0;
+            const other = parseFloat(document.getElementById("otherExpenses").value) || 0;
+
+            const net = rev - (fuel + other);
+            const resBox = document.getElementById("calcResultBox");
+            const netVal = document.getElementById("netProfitValue");
+
+            netVal.innerText = net;
+            resBox.style.display = "block";
+        }
+
+        function previewMediaName() {
+            const fileInput = document.getElementById("mediaFile");
+            const display = document.getElementById("fileNameDisplay");
+            if(fileInput.files.length > 0) {
+                display.innerText = "تم اختيار: " + fileInput.files[0].name;
+            } else {
+                display.innerText = "";
+            }
+        }
+
+        function filterFeed(type, tabBtn) {
+            document.querySelectorAll(".filter-tab").forEach(btn => btn.classList.remove("active"));
+            tabBtn.classList.add("active");
+
+            const telegramSec = document.getElementById("telegramsSection");
+            const feedSec = document.getElementById("feedSection");
+            const items = document.querySelectorAll(".feed-item");
+
+            if(type === 'telegrams') {
+                telegramSec.style.display = "block";
+                feedSec.style.display = "none";
+            } else if(type === 'media') {
+                telegramSec.style.display = "none";
+                feedSec.style.display = "block";
+                items.forEach(item => {
+                    if(item.getAttribute("data-type") === "media") item.style.display = "block";
+                    else item.style.display = "none";
+                });
+            } else if(type === 'posts') {
+                telegramSec.style.display = "none";
+                feedSec.style.display = "block";
+                items.forEach(item => {
+                    if(item.getAttribute("data-type") === "posts") item.style.display = "block";
+                    else item.style.display = "none";
+                });
+            } else {
+                telegramSec.style.display = "block";
+                feedSec.style.display = "block";
+                items.forEach(item => item.style.display = "block");
+            }
+        }
+
+        function publishPost() {
+            const text = document.getElementById("postText").value;
+            const fileInput = document.getElementById("mediaFile");
+
+            if(text.trim() === "" && fileInput.files.length === 0) {
+                alert("يرجى كتابة نص أو إرفاق صورة/فيديو للنشر.");
+                return;
+            }
+
+            const feedContainer = document.getElementById("postsFeedContainer");
+            const newPost = document.createElement("div");
+            newPost.className = "feed-item";
+            newPost.setAttribute("data-type", fileInput.files.length > 0 ? "media" : "posts");
+
+            let mediaHTML = "";
+            if(fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileURL = URL.createObjectURL(file);
+                if(file.type.startsWith("video")) {
+                    mediaHTML = `<video class="feed-media" controls src="${fileURL}"></video>`;
+                } else {
+                    mediaHTML = `<img class="feed-media" src="${fileURL}" alt="صورة الرحلة">`;
+                }
+            }
+
+            newPost.innerHTML = `
+                <div class="feed-header">
+                    <span>🚛 سائق (عضو المنصة)</span>
+                    <span class="feed-time">الآن</span>
+                </div>
+                <div class="feed-text">${escapeHtml(text)}</div>
+                ${mediaHTML}
+                <div class="feed-footer-actions">
+                    <button class="action-link" onclick="likePost(this)">❤️ <span class="likes-count">0</span> إعجاب</button>
+                    <button class="action-link" onclick="toggleComments(this)">💬 تعليقات (<span class="comments-count">0</span>)</button>
+                    <button class="action-link" onclick="sharePost(this)">🔗 مشاركة</button>
+                </div>
+                <div class="comments-section">
+                    <div class="comments-list"></div>
+                    <div class="comment-input-box">
+                        <input type="text" class="comment-input" placeholder="اكتب تعليقاً...">
+                        <button class="comment-btn" onclick="addComment(this)">إرسال</button>
+                    </div>
+                </div>
+            `;
+
+            feedContainer.prepend(newPost);
+            document.getElementById("postText").value = "";
+            fileInput.value = "";
+            document.getElementById("fileNameDisplay").innerText = "";
+            alert("تم نشر لحظتك بنجاح في عالم السائقين!");
+        }
+
+        function sendTelegram() {
+            const tText = document.getElementById("telegramText").value;
+            if(tText.trim() === "") {
+                alert("يرجى كتابة نص البرقية أولاً.");
+                return;
+            }
+
+            const container = document.getElementById("telegramsContainer");
+            const newT = document.createElement("div");
+            newT.className = "telegram-box";
+            newT.innerHTML = `<b>✉️ برقية جديدة:</b> ${escapeHtml(tText)}`;
+
+            container.prepend(newT);
+            document.getElementById("telegramText").value = "";
+            alert("تم إرسال البرقية بنجاح لكافة السائقين!");
+        }
+
+        function likePost(btn) {
+            const countSpan = btn.querySelector(".likes-count");
+            let count = parseInt(countSpan.innerText);
+            countSpan.innerText = count + 1;
+            btn.style.color = "var(--danger-color)";
+        }
+
+        function toggleComments(btn) {
+            const feedItem = btn.closest(".feed-item");
+            const commentsSec = feedItem.querySelector(".comments-section");
+            commentsSec.style.display = commentsSec.style.display === "block" ? "none" : "block";
+        }
+
+        function addComment(btn) {
+            const box = btn.closest(".comments-section");
+            const input = box.querySelector(".comment-input");
+            const text = input.value;
+            if(text.trim() === "") return;
+
+            const list = box.querySelector(".comments-list");
+            const newC = document.createElement("div");
+            newC.innerHTML = `<b>زميل طريق:</b> ${escapeHtml(text)}`;
+            list.appendChild(newC);
+
+            const feedItem = btn.closest(".feed-item");
+            const countSpan = feedItem.querySelector(".comments-count");
+            countSpan.innerText = parseInt(countSpan.innerText) + 1;
+
+            input.value = "";
+        }
+
+        function sharePost(btn) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'عالم السائقين',
+                    text: 'شاهد هذه اللحظة الرائعة من طريق الشحن والنقل!',
+                    url: window.location.href,
+                }).catch(() => {});
+            } else {
+                alert("تم نسخ رابط المنشور بنجاح للمشاركة!");
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محطة الفضاء - شبكة الأسطول المتكاملة</title>
+    <style>
+        :root {
+            --bg-color: #070913;
+            --card-bg: #0f172a;
+            --text-color: #f8fafc;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --border-color: #1e293b;
+            --secondary-text: #94a3b8;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --cloud-bg: #10b981;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-color: #0f172a;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger-color: #dc2626;
+            --danger-hover: #b91c1c;
+            --border-color: #cbd5e1;
+            --secondary-text: #64748b;
+            --accent-glow: rgba(37, 99, 235, 0.15);
+            --cloud-bg: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 50px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* الهيدر الموحد المتطور */
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .welcome-badge {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: var(--bg-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        /* زر السحابي الواقعي */
+        .cloud-status-btn {
+            background-color: var(--cloud-bg);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        /* أيقونة الإشعارات ثلاثية الأبعاد 3D */
+        .notification-3d-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.4), inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .notification-3d-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 5px rgba(59, 130, 246, 0.4), inset 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .notification-badge-count {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            background: var(--danger-color);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            border: 2px solid var(--card-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* قائمة الإشعارات المنبثقة */
+        .notifications-dropdown {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            width: 320px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 1100;
+            overflow: hidden;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .notifications-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+        }
+
+        .notifications-body {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .notif-item {
+            background: var(--bg-color);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .notif-time {
+            font-size: 10px;
+            color: var(--secondary-text);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-links a, .nav-links button {
+            text-decoration: none;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 12px;
+        }
+
+        /* شبكة الأقسام المتصلة */
+        .space-sectors {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .sector-btn {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .sector-btn.active, .sector-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .section-view {
+            display: none;
+        }
+
+        .section-view.active-view {
+            display: block;
+        }
+
+        .card-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .post-input {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 10px;
+            color: var(--text-color);
+            outline: none;
+            resize: none;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .post-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .select-category {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .media-upload-label {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-color);
+        }
+
+        .media-upload-label input {
+            display: none;
+        }
+
+        .buttons-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .sos-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-tab {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .filter-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .feed-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .feed-item.emergency {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid var(--danger-color);
+            padding: 14px;
+            border-radius: 12px;
+        }
+
+        .feed-header {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feed-time {
+            font-size: 11px;
+            color: var(--secondary-text);
+            font-weight: normal;
+        }
+
+        .badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary-color);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge.sos-badge {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .feed-text {
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .feed-media {
+            width: 100%;
+            max-height: 350px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .reactions-bar {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .reaction-btn, .share-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-weight: bold;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .reaction-btn.selected {
+            border-color: var(--primary-color);
+            background: var(--accent-glow);
+            color: var(--primary-color);
+        }
+
+        .comments-section {
+            margin-top: 10px;
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 10px;
+            display: none;
+            border: 1px solid var(--border-color);
+        }
+
+        .comments-list {
+            font-size: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .comment-item {
+            background: var(--card-bg);
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .comment-input-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .comment-input-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .comment-input {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .comment-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        @media(max-width: 600px) {
+            .tool-grid { grid-template-columns: 1fr; }
+        }
+
+        .tool-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .tool-input-group label {
+            font-size: 13px;
+            color: var(--secondary-text);
+            font-weight: bold;
+        }
+
+        .tool-input {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--text-color);
+            outline: none;
+            font-size: 14px;
+        }
+
+        .result-box {
+            background: var(--accent-glow);
+            border: 1px solid var(--primary-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <!-- الهيدر الموحد مع زر السحابي وأيقونة الإشعارات ثلاثية الأبعاد 3D -->
+    <header>
+        <div class="welcome-badge">بك يا عماد في النظام المطور V52 | تم تفعيل النظام أًولاً</div>
+        <div class="nav-controls">
+            <!-- زر الإشعارات ثلاثي الأبعاد 3D -->
+            <button class="notification-3d-btn" onclick="toggleNotificationsMenu()" title="إشعارات التطبيق">
+                🔔
+                <span id="notifBadge" class="notification-badge-count">0</span>
+            </button>
+
+            <!-- قائمة الإشعارات المنسدلة -->
+            <div id="notifDropdown" class="notifications-dropdown">
+                <div class="notifications-header">
+                    <span>📢 إشعارات الأسطول الشاملة</span>
+                    <span style="font-size: 11px; cursor: pointer; color: var(--primary-color);" onclick="clearAllNotifications()">تحديد الكل مقروء</span>
+                </div>
+                <div id="notifBody" class="notifications-body">
+                    <!-- يتم تعبئة الإشعارات برمجياً -->
+                </div>
+            </div>
+
+            <button class="cloud-status-btn" onclick="toggleCloudStatus()" id="cloudStatusBtn">☁️ سحابي</button>
+            <div class="nav-links" style="display: inline-flex;">
+                <a href="index.html">الرئيسية</a>
+                <button onclick="toggleTheme()">🌓</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- شريط التنقل بين الأقسام الفضائية -->
+        <div class="space-sectors">
+            <button class="sector-btn active" onclick="switchSection('feed', this)">🌐 رادار الأسطول</button>
+            <button class="sector-btn" onclick="switchSection('profile', this)">👤 صفحتي الشخصية</button>
+            <button class="sector-btn" onclick="switchSection('calculator', this)">🧮 الحاسبة</button>
+            <button class="sector-btn" onclick="switchSection('workshops', this)">🛠️ الورش</button>
+            <button class="sector-btn" onclick="switchSection('cargo', this)" style="grid-column: span 2;">📦 الشحن</button>
+        </div>
+
+        <!-- القسم الأول: رادار الأسطول -->
+        <div id="section-feed" class="section-view active-view">
+            <div class="card-box">
+                <textarea id="postText" class="post-input" rows="3" placeholder="أطلق إشارة رادار جديدة، حالة طريق، أو تنبيه لأطقم الزملاء..."></textarea>
+                <div class="post-actions">
+                    <select id="postCategory" class="select-category">
+                        <option value="حالات الطرق">🚨 حالات الطرق</option>
+                        <option value="عروض ونقل">📦 عروض ونقل</option>
+                        <option value="صيانة وورش">🛠️ صيانة وورش</option>
+                    </select>
+
+                    <label class="media-upload-label">
+                        📷 إرفاق صورة
+                        <input type="file" id="postImageInput" accept="image/*">
+                    </label>
+
+                    <div class="buttons-group">
+                        <button class="sos-btn" onclick="publishCommunityPost(true)">🆘 إستغاثة</button>
+                        <button class="submit-btn" onclick="publishCommunityPost(false)">🚀 إرسال إشارة</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="filterCommunity('الكل', this)">الكل</button>
+                <button class="filter-tab" onclick="filterCommunity('حالات الطرق', this)">🚨 حالات الطرق</button>
+                <button class="filter-tab" onclick="filterCommunity('عروض ونقل', this)">📦 عروض ونقل</button>
+                <button class="filter-tab" onclick="filterCommunity('صيانة وورش', this)">🛠️ صيانة وورش</button>
+                <button class="filter-tab" onclick="filterCommunity('طوارئ', this)">🆘 طوارئ</button>
+            </div>
+
+            <div class="card-box">
+                <div id="communityFeed"></div>
+            </div>
+        </div>
+
+        <!-- القسم الثاني: صفحتي الشخصية -->
+        <div id="section-profile" class="section-view">
+            <div class="card-box">
+                <div class="card-title">👤 ملف الكابتن عماد والمنشورات المرتبطة</div>
+                <p style="font-size: 13px; color: var(--secondary-text); margin-bottom: 15px;">هنا يتم مزامنة كافة إشاراتك ومنشوراتك الشخصية عبر جميع أقسام التطبيق بشكل متكامل:</p>
+                <div id="profileFeed"></div>
+            </div>
+        </div>
+
+        <!-- قسم حاسبة المدارات -->
+        <div id="section-calculator" class="section-view">
+            <div class="card-box">
+                <div class="card-title">🧮 حاسبة تكلفة الرحلة وأرباح النقل</div>
+                <div class="tool-grid">
+                    <div class="tool-input-group">
+                        <label>مسافة الرحلة (بالكيلومتر)</label>
+                        <input type="number" id="calcDistance" class="tool-input" placeholder="مثال: 150">
+                    </div>
+                    <div class="tool-input-group">
+                        <label>سعر لتر الوقود (جنيه)</label>
+                        <input type="number" id="calcFuelPrice" class="tool-input" placeholder="مثال: 13">
+                    </div>
+                    <div class="tool-input-group">
+                        <label>معدل استهلاك السيارة (كم/لتر)</label>
+                        <input type="number" id="calcConsumption" class="tool-input" placeholder="مثال: 8">
+                    </div>
+                    <div class="tool-input-group">
+                        <label>مصاريف إضافية (كارته، زيوت...)</label>
+                        <input type="number" id="calcExtras" class="tool-input" placeholder="مثال: 50">
+                    </div>
+                </div>
+                <button class="submit-btn" style="width: 100%; margin-top: 10px;" onclick="calculateTrip()">احسب صافي الرحلة فوراً</button>
+                <div id="calcResult" class="result-box" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- قسم ورش الصيانة -->
+        <div id="section-workshops" class="section-view">
+            <div class="card-box">
+                <div class="card-title">🛠️ دليل ورشة الصيانة والاعطال السريعة</div>
+                <p style="font-size: 13px; color: var(--secondary-text); margin-bottom: 15px;">قائمة مرتبطة بأبرز مراكز صيانة محركات الديزل والعفشة على الطرق الرئيسية:</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="background: var(--bg-color); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <b>ورشة الكابتن عماد لصيانة الديزل والعفشة</b>
+                        <div style="font-size: 12px; color: var(--secondary-text); margin-top: 3px;">📍 طريق السخنة الرئيسي - خدمة طوارئ سريعة للربع نقل</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم الشحن -->
+        <div id="section-cargo" class="section-view">
+            <div class="card-box">
+                <div class="card-title">📦 بورصة طلبات النقل الفضائي السريع</div>
+                <p style="font-size: 13px; color: var(--secondary-text); margin-bottom: 15px;">طلبات بضائع متاحة للتحميل الفوري للسيارات التجارية:</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="background: var(--bg-color); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <b>نقل بضائع تجارية (ربع نقل)</b>
+                            <div style="font-size: 12px; color: var(--secondary-text); margin-top: 3px;">من: القاهرة ➔ إلى: العين السخنة</div>
+                        </div>
+                        <span class="badge">متاح للتحميل</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            body.setAttribute("data-theme", newTheme);
+            localStorage.setItem("space_theme", newTheme);
+        }
+
+        function toggleCloudStatus() {
+            const btn = document.getElementById("cloudStatusBtn");
+            if(btn.style.opacity === "0.6") {
+                btn.style.opacity = "1";
+                btn.innerHTML = "☁️ سحابي متصل";
+                addNotification("تمت مزامنة البيانات السحابية بنجاح للكابتن عماد.");
+                alert("☁️ تم الاتصال بالسحابة بنجاح ومزامنة البيانات!");
+            } else {
+                btn.style.opacity = "0.6";
+                btn.innerHTML = "☁️ وضع غير متصل";
+                addNotification("تحول التطبيق إلى وضع غير متصل (Offline Mode).");
+            }
+        }
+
+        function toggleNotificationsMenu() {
+            const dropdown = document.getElementById("notifDropdown");
+            dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+        }
+
+        // نظام إدارة وجلب إشعارات التطبيق
+        function getNotifications() {
+            let notifs = localStorage.getItem("driver_app_notifications_v5");
+            if (!notifs) {
+                const defaultNotifs = [
+                    { id: 1, text: "مرحباً بك يا كابتن عماد في النظام المطور V52.", time: "اليوم", unread: true },
+                    { id: 2, text: "تنبيه: تم رصد حالة طقس ممتازة على طريق العين السخنة.", time: "منذ ساعة", unread: true }
+                ];
+                localStorage.setItem("driver_app_notifications_v5", JSON.stringify(defaultNotifs));
+                return defaultNotifs;
+            }
+            return JSON.parse(notifs);
+        }
+
+        function saveNotifications(notifs) {
+            localStorage.setItem("driver_app_notifications_v5", JSON.stringify(notifs));
+            updateNotificationBadge();
+        }
+
+        function addNotification(text) {
+            let notifs = getNotifications();
+            notifs.unshift({
+                id: Date.now(),
+                text: text,
+                time: "الآن",
+                unread: true
+            });
+            saveNotifications(notifs);
+            loadNotificationsUI();
+        }
+
+        function updateNotificationBadge() {
+            let notifs = getNotifications();
+            let unreadCount = notifs.filter(n => n.unread).length;
+            const badge = document.getElementById("notifBadge");
+            badge.innerText = unreadCount;
+            badge.style.display = unreadCount > 0 ? "block" : "none";
+        }
+
+        function loadNotificationsUI() {
+            const body = document.getElementById("notifBody");
+            body.innerHTML = "";
+            let notifs = getNotifications();
+
+            if(notifs.length === 0) {
+                body.innerHTML = `<div style="text-align: center; color: var(--secondary-text); padding: 15px; font-size: 12px;">لا توجد إشعارات جديدة حالياً.</div>`;
+                return;
+            }
+
+            notifs.forEach(n => {
+                const item = document.createElement("div");
+                item.className = "notif-item";
+                item.style.borderColor = n.unread ? "var(--primary-color)" : "var(--border-color)";
+                item.innerHTML = `
+                    <span>${escapeHtml(n.text)}</span>
+                    <span class="notif-time">${n.time}</span>
+                `;
+                body.appendChild(item);
+            });
+            updateNotificationBadge();
+        }
+
+        function clearAllNotifications() {
+            let notifs = getNotifications();
+            notifs.forEach(n => n.unread = false);
+            saveNotifications(notifs);
+            loadNotificationsUI();
+        }
+
+        window.onload = function() {
+            const savedTheme = localStorage.getItem("space_theme") || "dark";
+            document.body.setAttribute("data-theme", savedTheme);
+            loadPosts();
+            loadProfilePosts();
+            loadNotificationsUI();
+        };
+
+        // إغلاق قائمة الإشعارات عند النقر خارجها
+        window.onclick = function(event) {
+            if (!event.target.closest('.nav-controls')) {
+                document.getElementById("notifDropdown").style.display = "none";
+            }
+        };
+
+        function switchSection(sectionId, btn) {
+            document.querySelectorAll(".section-view").forEach(sec => sec.classList.remove("active-view"));
+            document.querySelectorAll(".sector-btn").forEach(b => b.classList.remove("active"));
+            
+            document.getElementById("section-" + sectionId).classList.add("active-view");
+            btn.classList.add("active");
+        }
+
+        function getPosts() {
+            let posts = localStorage.getItem("driver_space_network_v5");
+            if (!posts) {
+                return [
+                    {
+                        id: 1,
+                        author: "الكابتن عماد (قائد الأسطول)",
+                        category: "حالات الطرق",
+                        text: "شبكة المدارات اليوم ممتازة وطريق السخنة سالك تماماً لكل سيارات النقل الخفيف. رحلة موفقة للجميع! 🚛✨",
+                        image: "",
+                        time: "منذ ساعة",
+                        userReaction: null,
+                        reactions: { "👍 إعجاب": 8, "❤️ قلب": 14, "🚀 هتاف فضائي": 11, "💪 دعم": 5 },
+                        isEmergency: false,
+                        comments: []
+                    }
+                ];
+            }
+            return JSON.parse(posts);
+        }
+
+        function savePosts(posts) {
+            localStorage.setItem("driver_space_network_v5", JSON.stringify(posts));
+        }
+
+        function getProfilePosts() {
+            let posts = localStorage.getItem("driver_profile_shares_v5");
+            return posts ? JSON.parse(posts) : [];
+        }
+
+        function saveProfilePosts(posts) {
+            localStorage.setItem("driver_profile_shares_v5", JSON.stringify(posts));
+        }
+
+        function loadPosts() {
+            const feedContainer = document.getElementById("communityFeed");
+            feedContainer.innerHTML = "";
+            const posts = getPosts();
+
+            posts.forEach(post => {
+                const newItem = document.createElement("div");
+                newItem.className = post.isEmergency ? "feed-item emergency" : "feed-item";
+                newItem.setAttribute("data-category", post.category);
+
+                const badgeClass = post.isEmergency ? "badge sos-badge" : "badge";
+
+                let commentsHtml = "";
+                post.comments.forEach((c) => {
+                    let imgTag = c.image ? `<img src="${c.image}" class="comment-media" style="width:100px; height:100px; object-fit:cover; border-radius:6px; margin-top:5px; display:block;">` : "";
+                    commentsHtml += `
+                        <div class="comment-item">
+                            <b>${escapeHtml(c.author)}:</b> ${escapeHtml(c.text)}
+                            ${imgTag}
+                        </div>
+                    `;
+                });
+
+                newItem.innerHTML = `
+                    <div class="feed-header">
+                        <span>${post.author}</span>
+                        <span class="${badgeClass}">${post.category}</span>
+                    </div>
+                    <div class="feed-time">${post.time}</div>
+                    <div class="feed-text">${escapeHtml(post.text)}</div>
+                    ${post.image ? `<img src="${post.image}" class="feed-media">` : ""}
+
+                    <div class="reactions-bar">
+                        <button class="reaction-btn ${post.userReaction === '👍 إعجاب' ? 'selected' : ''}" onclick="reactPost(${post.id}, '👍 إعجاب')">👍 إعجاب (${post.reactions["👍 إعجاب"]})</button>
+                        <button class="reaction-btn ${post.userReaction === '❤️ قلب' ? 'selected' : ''}" onclick="reactPost(${post.id}, '❤️ قلب')">❤️ قلب (${post.reactions["❤️ قلب"]})</button>
+                        <button class="reaction-btn ${post.userReaction === '🚀 هتاف فضائي' ? 'selected' : ''}" onclick="reactPost(${post.id}, '🚀 هتاف')">🚀 هتاف (${post.reactions["🚀 هتاف فضائي"]})</button>
+                        <button class="reaction-btn ${post.userReaction === '💪 دعم' ? 'selected' : ''}" onclick="reactPost(${post.id}, '💪 دعم')">💪 دعم (${post.reactions["💪 دعم"]})</button>
+                        
+                        <button class="share-btn" onclick="shareToProfile(${post.id})">🔗 مشاركة لصفحتي</button>
+                        <button class="reaction-btn" onclick="toggleComments(this)" style="margin-right: auto;">💬 تعليق (${post.comments.length})</button>
+                    </div>
+
+                    <div class="comments-section">
+                        <div class="comments-list">${commentsHtml}</div>
+                        <div class="comment-input-box">
+                            <div class="comment-input-row">
+                                <input type="text" class="comment-input" placeholder="اكتب ردك أو إشارتك هنا...">
+                                <button class="comment-btn" onclick="addComment(${post.id}, this)">إرسال</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feedContainer.appendChild(newItem);
+            });
+        }
+
+        function loadProfilePosts() {
+            const profileContainer = document.getElementById("profileFeed");
+            profileContainer.innerHTML = "";
+            const profilePosts = getProfilePosts();
+
+            if(profilePosts.length === 0) {
+                profileContainer.innerHTML = `<div style="text-align: center; color: var(--secondary-text); padding: 20px; font-size: 13px;">لم تقم بمشاركة أي منشورات لصفحتك الشخصية بعد.</div>`;
+                return;
+            }
+
+            profilePosts.forEach((post, index) => {
+                const newItem = document.createElement("div");
+                newItem.className = post.isEmergency ? "feed-item emergency" : "feed-item";
+
+                newItem.innerHTML = `
+                    <div class="feed-header">
+                        <span>الكابتن عماد (الملف الشخصي المتصل)</span>
+                        <span class="badge">${post.category}</span>
+                    </div>
+                    <div class="feed-time">مشاركة في: ${post.time}</div>
+                    <div class="feed-text">${escapeHtml(post.text)}</div>
+                    ${post.image ? `<img src="${post.image}" class="feed-media">` : ""}
+                    <div style="margin-top: 8px; text-align: left;">
+                        <button class="share-btn" style="color: var(--danger-color); border-color: var(--danger-color);" onclick="deleteFromProfile(${index})">🗑️ إزالة من صفحتي</button>
+                    </div>
+                `;
+                profileContainer.appendChild(newItem);
+            });
+        }
+
+        function shareToProfile(postId) {
+            const posts = getPosts();
+            const post = posts.find(p => p.id === postId);
+            if(post) {
+                let profilePosts = getProfilePosts();
+                profilePosts.unshift({
+                    ...post,
+                    time: new Date().toLocaleDateString('ar-EG') + " - " + new Date().toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'})
+                });
+                saveProfilePosts(profilePosts);
+                loadProfilePosts();
+                addNotification("تمت مشاركة منشور جديد بنجاح إلى ملفك الشخصي.");
+                alert("🚀 تم ربط ومشاركة المنشور بنجاح على بروفايل الكابتن عماد!");
+            }
+        }
+
+        function deleteFromProfile(index) {
+            let profilePosts = getProfilePosts();
+            profilePosts.splice(index, 1);
+            saveProfilePosts(profilePosts);
+            loadProfilePosts();
+        }
+
+        function publishCommunityPost(isEmergency) {
+            const textInput = document.getElementById("postText");
+            const text = textInput.value;
+            let category = document.getElementById("postCategory").value;
+            const imageInput = document.getElementById("postImageInput");
+
+            if(text.trim() === "" && imageInput.files.length === 0) {
+                alert("يرجى كتابة نص الإشارة أو إرفاق صورة أولاً.");
+                return;
+            }
+
+            if(isEmergency) category = "طوارئ";
+
+            if(imageInput.files && imageInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveNewPost(text, category, isEmergency, e.target.result);
+                };
+                reader.readAsDataURL(imageInput.files[0]);
+            } else {
+                saveNewPost(text, category, isEmergency, "");
+            }
+        }
+
+        function saveNewPost(text, category, isEmergency, imageUrl) {
+            const newPost = {
+                id: Date.now(),
+                author: isEmergency ? "🚨 طوارئ الأسطول الفضائي" : "الكابتن عماد",
+                category: category,
+                text: text,
+                image: imageUrl,
+                time: "الآن",
+                userReaction: null,
+                reactions: { "👍 إعجاب": 0, "❤️ قلب": 0, "🚀 هتاف فضائي": 0, "💪 دعم": 0 },
+                isEmergency: isEmergency,
+                comments: []
+            };
+
+            let posts = getPosts();
+            posts.unshift(newPost);
+            savePosts(posts);
+
+            document.getElementById("postText").value = "";
+            document.getElementById("postImageInput").value = "";
+            loadPosts();
+            addNotification(isEmergency ? "🆘 تم إطلاق إشارة طوارئ جديدة بنجاح في الأسطول." : "🚀 تم إرسال إشارة رادار جديدة بنجاح.");
+        }
+
+        function reactPost(postId, reactionType) {
+            let posts = getPosts();
+            let post = posts.find(p => p.id === postId);
+            if(post) {
+                if(post.userReaction === reactionType) {
+                    post.reactions[reactionType] -= 1;
+                    post.userReaction = null;
+                } else {
+                    if(post.userReaction) {
+                        post.reactions[post.userReaction] -= 1;
+                    }
+                    post.reactions[reactionType] += 1;
+                    post.userReaction = reactionType;
+                }
+                savePosts(posts);
+                loadPosts();
+            }
+        }
+
+        function addComment(postId, btn) {
+            const box = btn.closest(".comments-section");
+            const input = box.querySelector(".comment-input");
+            const text = input.value;
+
+            if(text.trim() === "") return;
+
+            let posts = getPosts();
+            let post = posts.find(p => p.id === postId);
+            if(post) {
+                post.comments.push({
+                    author: "الكابتن عماد",
+                    text: text,
+                    image: ""
+                });
+                savePosts(posts);
+                loadPosts();
+                addNotification("تم إضافة تعليق جديد على أحد المنشورات في رادار الأسطول.");
+            }
+        }
+
+        function toggleComments(btn) {
+            const feedItem = btn.closest(".feed-item");
+            const commentsSec = feedItem.querySelector(".comments-section");
+            commentsSec.style.display = commentsSec.style.display === "block" ? "none" : "block";
+        }
+
+        function filterCommunity(cat, tabBtn) {
+            document.querySelectorAll(".filter-tab").forEach(btn => btn.classList.remove("active"));
+            tabBtn.classList.add("active");
+
+            const items = document.querySelectorAll(".feed-item");
+            items.forEach(item => {
+                if(cat === 'الكل' || item.getAttribute("data-category") === cat) {
+                    item.style.display = "block";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+
+        function calculateTrip() {
+            const dist = parseFloat(document.getElementById("calcDistance").value) || 0;
+            const fuelP = parseFloat(document.getElementById("calcFuelPrice").value) || 0;
+            const cons = parseFloat(document.getElementById("calcConsumption").value) || 1;
+            const extras = parseFloat(document.getElementById("calcExtras").value) || 0;
+
+            if(dist <= 0 || fuelP <= 0 || cons <= 0) {
+                alert("يرجى إدخال بيانات المسافة واستهلاك الوقود بشكل صحيح.");
+                return;
+            }
+
+            const totalLiters = dist / cons;
+            const fuelCost = totalLiters * fuelP;
+            const totalCost = fuelCost + extras;
+
+            const resBox = document.getElementById("calcResult");
+            resBox.style.display = "block";
+            resBox.innerHTML = `⛽ إجمالي استهلاك الوقود: ${totalLiters.toFixed(1)} لتر<br>💵 إجمالي تكلفة الرحلة: ${totalCost.toFixed(2)} جنيه`;
+            addNotification(`تم حساب رحلة جديدة مسافتها ${dist} كم بتكلفة ${totalCost.toFixed(2)} جنيه.`);
+        }
+
+        function escapeHtml(text) {
+            if(!text) return "";
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أسطورة الطريق - Global Transport Hub V60 PRO</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- المكتبات الأساسية -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #334155;
+            --border-color: #cbd5e1;
+        }
+
+        body.dark-mode {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --border-color: #334155;
+        }
+
+        /* ثيمات الألوان الإضافية */
+        body.theme-emerald { --accent: #059669; --primary: #064e3b; --bg: #ecfdf5; }
+        body.theme-amber { --accent: #d97706; --primary: #78350f; --bg: #fffbeb; }
+        body.theme-purple { --accent: #7c3aed; --primary: #4c1d95; --bg: #f5f3ff; }
+        body.theme-dark-pure { --bg: #000000; --card-bg: #121212; --text-color: #e0e0e0; --border-color: #333333; }
+        body.theme-light-pure { --bg: #ffffff; --card-bg: #f1f5f9; --text-color: #0f172a; --border-color: #cbd5e1; }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg); color: var(--text-color); padding: 12px; padding-bottom: 70px; direction: rtl; transition: background 0.3s, color 0.3s; }
+        
+        .app-3d-logo-container { text-align: center; margin: 6px 0 10px 0; perspective: 1000px; }
+        .logo-3d {
+            display: inline-block; 
+            background: linear-gradient(135deg, var(--accent), var(--primary), #3b82f6);
+            color: #ffffff; 
+            padding: 8px 16px; 
+            border-radius: 10px; 
+            font-size: 14px; 
+            font-weight: 800;
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+        .logo-3d::before { content: "🐎 "; font-size: 15px; }
+        .logo-3d span { color: #38bdf8; }
+
+        .theme-selector-bar { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .theme-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* بديل عنصر marquee المهمل باستخدام CSS الحديث */
+        .news-ticker {
+            background: #1e293b; color: #38bdf8; padding: 6px 10px; border-radius: 6px;
+            font-size: 12px; margin-bottom: 10px; border-right: 4px solid var(--accent); overflow: hidden; white-space: nowrap; position: relative;
+        }
+        .ticker-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: tickerAnimation 25s linear infinite;
+            font-weight: bold;
+        }
+        @keyframes tickerAnimation {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        #lock-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; z-index: 9999; display: flex;
+            flex-direction: column; justify-content: center; align-items: center; color: white; padding: 20px; overflow-y: auto;
+        }
+        #lock-screen input { width: 260px; text-align: center; font-size: 18px; letter-spacing: 2px; margin: 10px 0; padding: 10px; border-radius: 6px; border: none; }
+
+        #visitor-booking-container, #driver-register-container, .custom-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); z-index: 10000; justify-content: center; align-items: center; padding: 15px; overflow-y: auto;
+        }
+
+        header { 
+            background: linear-gradient(135deg, #0f172a, #1e293b); 
+            color: #fff; padding: 12px; border-radius: 10px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+
+        .alert-banner { background: var(--danger); color: white; padding: 6px; border-radius: 6px; font-size: 11px; margin-bottom: 8px; font-weight: bold; display: none; }
+        .cloud-badge { background: var(--success); color: white; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; margin-bottom: 10px; }
+        .stat-card { background: var(--card-bg); padding: 8px; border-radius: 6px; border-right: 4px solid var(--accent); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s, background-color 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); opacity: 0.95; }
+        .stat-card h4 { font-size: 9px; opacity: 0.8; }
+        .stat-card p { font-size: 11px; font-weight: bold; margin-top: 2px; }
+
+        .search-box { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; font-size: 12px; background: var(--card-bg); color: var(--text-color); }
+
+        .sidebar-toggle-btn { background: var(--accent); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; display: flex; align-items: center; gap: 4px; }
+        
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 10001; display: none;
+            backdrop-filter: blur(2px); transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.open { display: block; }
+
+        .sidebar-menu {
+            position: fixed; top: 0; right: -300px; width: 280px; height: 100%;
+            background: var(--card-bg); color: var(--text-color); z-index: 10002;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.3); transition: right 0.3s ease;
+            display: flex; flex-direction: column; padding: 14px; overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+        }
+        .sidebar-menu.open { right: 0; }
+        
+        .sidebar-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;
+        }
+        .sidebar-header h3 { font-size: 14px; color: var(--accent); }
+
+        .sidebar-nav-list { display: flex; flex-direction: column; gap: 6px; }
+        .sidebar-nav-list button {
+            background: #e2e8f0; color: #334155; border: none; padding: 8px 12px;
+            border-radius: 6px; cursor: pointer; text-align: right; font-weight: bold; font-size: 11px;
+            transition: background 0.2s, transform 0.1s;
+        }
+        body.dark-mode .sidebar-nav-list button { background: #334155; color: #f8fafc; }
+        .sidebar-nav-list button:hover { background: var(--accent); color: white; transform: translateX(-3px); }
+        .sidebar-nav-list button.active { background: var(--accent); color: white; }
+
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+        .card { background: var(--card-bg); padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin-bottom: 10px; border: 1px solid var(--border-color); }
+        .card h3 { margin-bottom: 8px; font-size: 13px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px; }
+
+        input, select, textarea, button { width: 100%; padding: 7px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 11px; background: var(--card-bg); color: var(--text-color); margin-bottom: 5px; }
+        .btn-main { background-color: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-success { background-color: var(--success); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-danger { background-color: var(--danger); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-warning { background-color: var(--warning); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-sm { padding: 3px 6px; font-size: 10px; width: auto; display: inline-block; margin: 2px; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        table th, table td { border: 1px solid var(--border-color); padding: 5px; text-align: center; font-size: 10px; }
+        table th { background-color: var(--accent); color: white; }
+
+        #signature-pad { border: 1px dashed var(--border-color); border-radius: 6px; background: #fff; width: 100%; height: 70px; touch-action: none; }
+        .badge { padding: 2px 5px; border-radius: 8px; font-size: 9px; font-weight: bold; color: white; cursor: pointer; }
+        
+        .bg-pending { background-color: var(--warning); }
+        .bg-transit { background-color: var(--accent); }
+        .bg-delivered { background-color: var(--success); }
+        .bg-returned { background-color: var(--danger); }
+
+        #map { height: 280px; width: 100%; border-radius: 6px; margin-top: 8px; }
+
+        .gplus-profile-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .gplus-cover-banner { width: 100%; height: 140px; background-size: cover; background-position: center; background-color: #3b82f6; position: relative; }
+        .gplus-cover-upload-btn { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 9px; cursor: pointer; border: 1px solid rgba(255,255,255,0.4); }
+        
+        .gplus-profile-header-area { padding: 0 16px 16px 16px; position: relative; display: flex; flex-direction: column; gap: 8px; }
+        .gplus-avatar-wrapper { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--card-bg); overflow: hidden; position: absolute; top: -45px; right: 16px; background: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .gplus-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .gplus-avatar-upload-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); color: white; font-size: 7px; text-align: center; cursor: pointer; padding: 1px; }
+        
+        .gplus-profile-info { margin-top: 38px; }
+        .gplus-profile-name { font-size: 16px; font-weight: bold; color: var(--text-color); display: flex; align-items: center; gap: 6px; }
+        .gplus-profile-tagline { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+        .gplus-stats-bar { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 8px 0; font-size: 11px; }
+        .gplus-stat-item { text-align: center; flex: 1; }
+        .gplus-stat-item span { display: block; font-weight: bold; color: var(--accent); font-size: 13px; }
+
+        .driver-search-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; }
+        .driver-card-item { background: var(--bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; gap: 8px; align-items: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+        .driver-card-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .driver-card-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent); background: #cbd5e1; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: bold; overflow: hidden; }
+        .driver-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .chat-layout { display: grid; grid-template-columns: 240px 1fr; gap: 8px; height: 380px; }
+        @media(max-width: 768px) { .chat-layout { grid-template-columns: 1fr; height: auto; } }
+        
+        .chat-sidebar-accounts { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg); padding: 6px; overflow-y: auto; max-height: 380px; }
+        .chat-account-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--border-color); transition: background 0.2s; }
+        .chat-account-item:hover, .chat-account-item.active { background: var(--accent); color: white; border-color: var(--accent); }
+        
+        .chat-main-box { display: flex; flex-direction: column; height: 380px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg); overflow: hidden; }
+        .chat-messages { flex: 1; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .chat-bubble { max-width: 75%; padding: 6px 10px; border-radius: 8px; font-size: 11px; line-height: 1.3; position: relative; }
+        .chat-bubble.admin { background: var(--accent); color: white; align-self: flex-start; border-bottom-right-radius: 0; }
+        .chat-bubble.driver { background: #334155; color: white; align-self: flex-end; border-bottom-left-radius: 0; }
+        .chat-input-area { display: flex; padding: 6px; background: var(--card-bg); border-top: 1px solid var(--border-color); gap: 5px; }
+
+        .load-post-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+        .load-post-media { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+        .load-post-media img, .load-post-media video { width: 90px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; }
+        
+        .notification-badge-container { position: relative; display: inline-block; }
+        .notif-count-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; padding: 2px 5px; font-size: 8px; font-weight: bold; }
+        .community-feed-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-3d-logo-container">
+        <div class="logo-3d">
+            أسطورة الطريق <span>V60 PRO</span>
+        </div>
+    </div>
+
+    <div class="theme-selector-bar">
+        <div class="theme-btn" style="background: #2563eb;" title="الأزرق الافتراضي" onclick="setAppTheme('default')"></div>
+        <div class="theme-btn" style="background: #059669;" title="الأخضر الزمردي" onclick="setAppTheme('emerald')"></div>
+        <div class="theme-btn" style="background: #d97706;" title="العنبري الدافئ" onclick="setAppTheme('amber')"></div>
+        <div class="theme-btn" style="background: #7c3aed;" title="البنفسجي الملكي" onclick="setAppTheme('purple')"></div>
+        <div class="theme-btn" style="background: #000000;" title="الأسمر الصريح" onclick="setAppTheme('dark-pure')"></div>
+        <div class="theme-btn" style="background: #ffffff; border: 2px solid #333;" title="الأبيض الناصع" onclick="setAppTheme('light-pure')"></div>
+    </div>
+
+    <div class="news-ticker">
+        <div class="ticker-content">🌟 تم تحديث النظام سحابياً عبر Firebase بنجاح لضمان تطابق البيانات بالكامل بين كافة المتصفحات والتطبيقات 🚀</div>
+    </div>
+
+    <!-- شاشة قفل النظام -->
+    <div id="lock-screen">
+        <div style="background: var(--card-bg); color: var(--text-color); padding: 20px; border-radius: 10px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 5px;">🔐 بوابة أسطورة الطريق المتقدمة</h3>
+            <p style="font-size: 10px; opacity: 0.8; margin-bottom: 12px;">أدخل رمز المدير أو رمز المشرف/السائق الخاص بك</p>
+            
+            <input type="password" id="pin-input" maxlength="15" placeholder="أدخل رمز الدخول هنا...">
+            
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                <div style="display:flex; gap:5px;">
+                    <button type="button" class="btn-main" onclick="unlockApp()" style="flex:1; padding: 8px;">دخول المدير</button>
+                    <button type="button" class="btn-warning" onclick="driverLogin()" style="flex:1; padding: 8px;">دخول كـ مشرف/سائق</button>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 4px 0;">
+                
+                <button type="button" class="btn-success" onclick="openVisitorBooking()" style="padding: 10px; font-size: 12px;">📦 حجز رحلة جديدة (للزبائن والزوار)</button>
+                <button type="button" onclick="openDriverRegister()" style="width:100%; background:var(--purple); color:white; padding:10px; border:none; border-radius:6px; font-weight:bold; font-size: 12px; cursor:pointer;">👨‍✈️ تسجيل حساب جديد للسائقين</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل السائقين العامة -->
+    <div id="driver-register-container">
+        <div class="card" style="width: 100%; max-width: 380px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h3 style="margin:0; color:var(--purple);">👨‍✈️ تسجيل حساب سائق جديد</h3>
+                <button type="button" onclick="closeDriverRegister()" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+            </div>
+            <form id="public-driver-form" onsubmit="event.preventDefault(); registerNewDriverPublic();">
+                <input type="text" id="pub-drv-name" required placeholder="اسم السائق الرباعي">
+                <input type="tel" id="pub-drv-phone" required placeholder="رقم الهاتف / واتساب">
+                <input type="password" id="pub-drv-pin" required placeholder="اختر رمز مرور سري للدخول (PIN)">
+                <button type="submit" class="btn-success" style="padding: 8px; margin-top: 4px;">إنشاء الحساب والتسجيل فوراً 🚀</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة حجز الزوار -->
+    <div id="visitor-booking-container">
+        <div class="card" style="width: 100%; max-width: 420px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h3 style="margin:0; color:var(--accent);">📦 حجز رحلة للزوار (حملات حتى 1.5 طن)</h3>
+                <button type="button" onclick="closeVisitorBooking()" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+            </div>
+            <form id="visitor-shipment-form" onsubmit="event.preventDefault(); saveVisitorShipment(event);">
+                <input type="text" id="vis-name" required placeholder="اسم العميل الرباعي">
+                <input type="tel" id="vis-phone" required placeholder="رقم الهاتف">
+                <input type="text" id="vis-address" required placeholder="عنوان التوصيل بالتفصيل">
+                <input type="text" id="vis-item" required placeholder="وصف الحمولة">
+                <input type="number" id="vis-price" required placeholder="الأجرة المتفق عليها (ج.م)">
+                <div>
+                    <button type="button" class="btn-warning btn-sm" onclick="captureVisitorGPS()">📍 تسجيل موقعي الحالي عبر GPS</button>
+                    <span id="vis-gps-status" style="font-size: 9px; opacity: 0.8; display:block; margin-top:2px;"></span>
+                </div>
+                <div style="margin-top: 6px;">
+                    <label style="font-size:9px; font-weight:bold;">📷 صورة المستند أو البضاعة:</label>
+                    <input type="file" id="vis-img" accept="image/*" capture="environment">
+                </div>
+                <button type="submit" class="btn-success" style="padding: 8px; margin-top: 8px;">حجز وإرسال تنبيه للإدارة 🚀</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نوافذ منبثقة تفاعلية لعرض الشحنات والإيرادات والأرباح والخزينة والديون -->
+    <div id="statDetailModal" class="custom-modal">
+        <div class="card" style="width: 100%; max-width: 550px; max-height: 85vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom: 2px solid var(--border-color); padding-bottom: 6px;">
+                <h3 id="stat-modal-title" style="margin:0; color:var(--accent);">📊 تفاصيل البيانات المتقدمة</h3>
+                <button type="button" onclick="closeModal('statDetailModal')" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+            </div>
+            <div id="stat-modal-body" style="font-size: 11px; line-height: 1.5;"></div>
+        </div>
+    </div>
+
+    <!-- نافذة مجتمع السائقين -->
+    <div id="driversCommunityModal" class="custom-modal">
+        <div class="card" style="width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px;">
+                <h3 style="margin:0; color:#0284c7;">👥 مجتمع السائقين التفاعلي</h3>
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <div class="notification-badge-container">
+                        <button type="button" onclick="showCommunityNotifications()" class="btn-sm" style="background:#f59e0b; color:#fff;">🔔 التنبيهات</button>
+                        <span id="community-notif-count" class="notif-count-badge">0</span>
+                    </div>
+                    <button type="button" onclick="closeModal('driversCommunityModal')" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+                </div>
+            </div>
+
+            <div style="background: var(--bg); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 10px;">
+                <textarea id="community-post-text" placeholder="بما تفكر يا صديقي السائق؟ شارك يومياتك أو حالة الطريق..." style="height: 60px; resize: none;"></textarea>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; align-items: center;">
+                    <label style="background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; font-weight: bold;">
+                        📷 صور/فيديو <input type="file" id="community-media-file" accept="image/*,video/*" multiple hidden onchange="previewCommunityFiles(this)">
+                    </label>
+                    <label style="background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; font-weight: bold;">
+                        📁 مستند <input type="file" id="community-doc-file" accept=".pdf,.doc,.docx,.txt" hidden onchange="previewCommunityFiles(this)">
+                    </label>
+                    <button type="button" class="btn-main" onclick="publishCommunityPost()" style="margin-right: auto; width: auto; padding: 5px 14px;">نشر 🚀</button>
+                </div>
+                <div id="community-files-preview-info" style="font-size: 9px; color: var(--success); margin-top: 3px; font-weight: bold;"></div>
+            </div>
+
+            <div id="community-posts-container"></div>
+        </div>
+    </div>
+
+    <!-- نافذة إشعارات المحادثات -->
+    <div id="chatNotificationsModal" class="custom-modal">
+        <div class="card" style="width: 100%; max-width: 440px; max-height: 80vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px;">
+                <h3 style="margin:0; color:var(--success);">🔔 مركز إشعارات ورسائل المحادثات</h3>
+                <button type="button" onclick="closeModal('chatNotificationsModal')" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+            </div>
+            <p style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">استعرض الرسائل الواردة وأرسل ردوداً سريعة مباشرة من هنا:</p>
+            <div id="chat-notifications-inbox" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;"></div>
+            <div style="background: var(--bg); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <input type="text" id="quick-notif-reply-text" placeholder="اكتب رد سريع أو رسالة جديدة..." style="margin-bottom: 5px;">
+                <button type="button" class="btn-success btn-sm" onclick="sendQuickChatMessageFromModal()">إرسال الرسالة إلى غرفة المحادثة ✈️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة عالم السائقين -->
+    <div id="driversWorldModal" class="custom-modal">
+        <div class="card" style="width: 100%; max-width: 450px; max-height: 85vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px;">
+                <h3 style="margin:0; color:#0d9488;">🌍 عالم السائقين (الخدمات والصيانة)</h3>
+                <button type="button" onclick="closeModal('driversWorldModal')" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+            </div>
+            
+            <div style="display: grid; gap: 6px;">
+                <div style="background: var(--bg); padding: 8px; border-radius: 6px; border-right: 3px solid #0d9488; cursor: pointer;" onclick="switchTab('ai-mechanic-tab', document.querySelector('.sidebar-nav-list button:nth-child(4)')); closeModal('driversWorldModal');">
+                    <h4 style="font-size: 11px; color: #0d9488; margin-bottom: 2px;">🛠️ دليل الصيانة الذكية وقطع الغيار ➔</h4>
+                    <p style="font-size: 10px; opacity: 0.9;">مراكز الخدمة المعتمدة، فحص السيور، الطلمبات وأنظمة التبريد.</p>
+                </div>
+                <div style="background: var(--bg); padding: 8px; border-radius: 6px; border-right: 3px solid #2563eb; cursor: pointer;" onclick="switchTab('expenses-tab', document.querySelector('.sidebar-nav-list button:nth-child(12)')); closeModal('driversWorldModal');">
+                    <h4 style="font-size: 11px; color: #2563eb; margin-bottom: 2px;">📊 حاسبة المصاريف اليومية والوقود ➔</h4>
+                    <p style="font-size: 10px; opacity: 0.9;">حساب تكلفة الوقود مقابل المسافات وأجور الشحنات.</p>
+                </div>
+                <div style="background: var(--bg); padding: 8px; border-radius: 6px; border-right: 3px solid #f59e0b; cursor: pointer;" onclick="switchTab('map-tab', document.querySelector('.sidebar-nav-list button:nth-child(7)')); closeModal('driversWorldModal');">
+                    <h4 style="font-size: 11px; color: #f59e0b; margin-bottom: 2px;">⚡ إرشادات القيادة الآمنة والخرائط الحية ➔</h4>
+                    <p style="font-size: 10px; opacity: 0.9;">نصائح التعامل مع المنحدرات وتثبيت الأحمال بدقة.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استعراض الوسائط -->
+    <div id="mediaViewerModal" class="custom-modal" onclick="closeMediaViewer()">
+        <div style="position: relative; max-width: 90%; max-height: 90vh; display: flex; justify-content: center; align-items: center;" onclick="event.stopPropagation()">
+            <button type="button" onclick="closeMediaViewer()" class="btn-danger btn-sm" style="position: absolute; top: -30px; left: 0; z-index: 10002;">✕ إغلاق</button>
+            <div id="mediaViewerContent" style="text-align: center;"></div>
+        </div>
+    </div>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="sidebar-toggle-btn" onclick="toggleSidebar()">
+                ☰ القائمة
+            </button>
+            <div>
+                <h2 style="font-size: 13px;">أسطورة الطريق - Chevrolet Pickup</h2>
+                <small style="opacity: 0.8; font-size: 9px;" id="user-role-badge">لوحة التحكم</small>
+            </div>
+        </div>
+        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+            <a href="operations-hub.html" class="btn-sm" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; text-decoration: none;">⚙️ العمليات</a>
+            <a href="world.html" class="btn-sm" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; display: inline-block;">🌍 عالم جديد</a>
+            
+            <div class="notification-badge-container">
+                <button type="button" onclick="openModal('chatNotificationsModal'); renderChatNotificationsInbox();" class="btn-sm" style="background: #10b981; color: white; font-weight: bold;">📬 إشعارات الرسائل</button>
+                <span id="global-chat-notif-badge" class="notif-count-badge">0</span>
+            </div>
+
+            <button type="button" onclick="openModal('driversCommunityModal')" class="btn-sm" style="background:#0284c7; color:#fff;">👥 المجتمع</button>
+            <button type="button" onclick="openModal('driversWorldModal')" class="btn-sm" style="background:#0d9488; color:#fff;">🌍 الخدمات</button>
+            <button type="button" onclick="lockSystem()" class="btn-sm" style="background:var(--danger); color:#fff;">🔒 قفل</button>
+            <button type="button" onclick="toggleDarkMode()" class="btn-sm" style="background:#475569; color:#fff;">🌙/☀️</button>
+            <span class="cloud-badge" id="cloud-status">متصل سحابياً ☁️</span>
+        </div>
+    </header>
+
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div id="sidebar-menu" class="sidebar-menu">
+        <div class="sidebar-header">
+            <h3>📑 أقسام المنصة</h3>
+            <button type="button" onclick="toggleSidebar()" class="btn-danger btn-sm" style="width:auto;">✕ إغلاق</button>
+        </div>
+        <div class="sidebar-nav-list" id="main-nav"></div>
+    </div>
+
+    <div id="license-alert" class="alert-banner"></div>
+
+    <input type="text" id="global-search" class="search-box" placeholder="🔍 بحث شامل في المنصة (السائقين، الشحنات، العملاء)..." onkeyup="render()">
+
+    <div class="stats-grid" id="admin-stats">
+        <div class="stat-card" onclick="openStatDetailModal('shipments')"><h4>الشحنات</h4><p id="stat-shipments">0</p></div>
+        <div class="stat-card" style="border-right-color: var(--success);" onclick="openStatDetailModal('revenue')"><h4>الإيرادات</h4><p id="stat-revenue">0 ج.م</p></div>
+        <div class="stat-card" style="border-right-color: var(--purple);" onclick="openStatDetailModal('net_profit')"><h4>صافي الأرباح</h4><p id="stat-net-profit">0 ج.م</p></div>
+        <div class="stat-card" style="border-right-color: var(--success);" onclick="openStatDetailModal('cash')"><h4>الخزينة</h4><p id="stat-cash">0 ج.م</p></div>
+        <div class="stat-card" style="border-right-color: var(--danger);" onclick="openStatDetailModal('debts')"><h4>الديون</h4><p id="stat-debts">0 ج.م</p></div>
+    </div>
+
+    <section id="account-tab" class="app-section">
+        <div class="gplus-profile-card">
+            <div id="gplus-cover-banner-preview" class="gplus-cover-banner">
+                <label id="gplus-cover-upload-btn-container" class="gplus-cover-upload-btn">
+                    📷 تغيير الغلاف <input type="file" id="profile-cover-input" accept="image/*" hidden onchange="updateProfileCover(this)">
+                </label>
+            </div>
+            
+            <div class="gplus-profile-header-area">
+                <div class="gplus-avatar-wrapper">
+                    <div id="gplus-avatar-img-preview" style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:#cbd5e1; font-weight:bold;">صورة</div>
+                    <label id="gplus-avatar-upload-label-container" class="gplus-avatar-upload-label">تغيير <input type="file" id="profile-avatar-input" accept="image/*" hidden onchange="updateProfileAvatar(this)"></label>
+                </div>
+                
+                <div class="gplus-profile-info">
+                    <div class="gplus-profile-name">
+                        <span id="gplus-name-display">-</span>
+                        <span id="gplus-badge-display" style="font-size: 9px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 10px;">عضو</span>
+                        <button type="button" id="gplus-back-to-myprofile-btn" class="btn-sm" style="background:var(--warning); color:#fff; display:none; margin-right:auto;" onclick="resetToMyProfile()">العودة لبروفايلي الشخصي ↩️</button>
+                    </div>
+                    <div class="gplus-profile-tagline" id="gplus-tagline-display">سائق محترف في أسطورة الطريق</div>
+                </div>
+
+                <div class="gplus-stats-bar">
+                    <div class="gplus-stat-item"><span id="gplus-stat-shipments">0</span>الشحنات</div>
+                    <div class="gplus-stat-item"><span id="gplus-stat-role">سائق</span>الرتبة</div>
+                    <div class="gplus-stat-item"><span id="gplus-stat-status">متاح 🟢</span>الحالة</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border: 2px solid var(--success);" id="profile-wall-posting-card">
+            <h3 style="color: var(--success);" id="profile-wall-heading">✍️ حائط النشر الحر على البروفايل</h3>
+            <textarea id="profile-wall-text" placeholder="اكتب تحديثاً، حالة طريق، أو ملاحظة على هذا البروفايل..." style="height: 60px; resize: none;"></textarea>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; align-items: center;">
+                <label style="background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; font-weight: bold;">
+                    📷 صورة/فيديو <input type="file" id="profile-wall-media" accept="image/*,video/*" multiple hidden onchange="previewProfileWallFiles(this)">
+                </label>
+                <button type="button" class="btn-success" onclick="publishProfileWallPost()" style="margin-right: auto; width: auto; padding: 5px 14px;">نشر على الحائط 🚀</button>
+            </div>
+            <div id="profile-wall-files-info" style="font-size: 9px; color: var(--success); margin-top: 3px; font-weight: bold;"></div>
+        </div>
+
+        <div id="profile-wall-posts-container"></div>
+
+        <div class="card" id="my-profile-edit-settings-card">
+            <h3>⚙️ تعديل بيانات الحساب الشخصي</h3>
+            <form id="my-profile-edit-form" onsubmit="event.preventDefault(); saveMyProfileChanges();">
+                <label style="font-size:9px; font-weight:bold;">الاسم:</label>
+                <input type="text" id="my-edit-name" required placeholder="اسمك الكامل">
+                <label style="font-size:9px; font-weight:bold;">رقم الهاتف / واتساب:</label>
+                <input type="tel" id="my-edit-phone" required placeholder="رقم الهاتف">
+                <label style="font-size:9px; font-weight:bold;">اللقب / الوسام الاحترافي:</label>
+                <select id="my-edit-title" style="font-weight:bold;"></select>
+                <button type="submit" class="btn-success" style="margin-top: 6px;">حفظ وتحديث البيانات 💾</button>
+            </form>
+            <div style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                <button type="button" class="btn-warning btn-sm" onclick="changeAdminPinPrompt()">🔑 تغيير كلمة السر (رمز PIN)</button>
+            </div>
+        </div>
+
+        <div class="card" style="border: 2px solid var(--accent);">
+            <h3 style="color: var(--accent);">🔍 استعراض والدخول إلى بروفايل السائقين والمديرين (Google Plus)</h3>
+            <p style="font-size: 10px; opacity: 0.8; margin-bottom: 6px;">انقر على أي سائق أو مشرف أدناه لفتح بروفايله الكامل ومشاهدة منشوره والنشر عليه بكل حرية:</p>
+            <input type="text" id="profile-driver-search-input" class="search-box" placeholder="ابحث باسم السائق أو رقمه..." onkeyup="renderProfileDriverSearch()">
+            <div id="profile-driver-search-results" class="driver-search-grid"></div>
+        </div>
+    </section>
+
+    <!-- 1. لوحة التحكم الإدارية الشاملة -->
+    <section id="crud-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--danger);">
+            <h3 style="color: var(--danger);">⚙️ لوحة التحكم الإدارية الشاملة والمرتبطة بكافة الأقسام</h3>
+            <div style="margin-bottom: 10px;">
+                <label style="font-weight:bold; font-size:10px;">اختر القسم للإدارة والتحكم:</label>
+                <select id="crud-section-select" onchange="renderCRUDTable()" style="font-weight:bold;">
+                    <option value="shipments">📦 إدارة الشحنات والرحلات</option>
+                    <option value="posts">📢 إدارة منشورات لوحة الرحلات</option>
+                    <option value="trucks">🚚 إدارة الأسطول والسيارات</option>
+                    <option value="drivers">👨‍✈️ إدارة وتعيين المديرين، المشرفين والسائقين</option>
+                    <option value="customers">👥 إدارة العملاء والديون</option>
+                    <option value="treasury">💵 سجل الخزينة والحركات</option>
+                    <option value="expenses">⛽ سجل المصروفات</option>
+                </select>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr id="crud-table-headers"></tr></thead>
+                    <tbody id="crud-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. الشحنات -->
+    <section id="shipments-tab" class="app-section">
+        <div class="card" id="new-shipment-card">
+            <h3 id="form-title-heading">تسجيل رحلة جديدة (مزودة بالصور، التوقيع، والـ GPS)</h3>
+            <form id="shipment-form" onsubmit="saveShipmentHandler(event);">
+                <input type="hidden" id="edit-shipment-id" value="">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <input type="text" id="ship-name" required placeholder="اسم العميل">
+                    <input type="tel" id="ship-phone" placeholder="رقم الهاتف (واتساب)">
+                </div>
+                <input type="text" id="ship-address" required placeholder="عنوان التوصيل">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <input type="text" id="ship-item" required placeholder="وصف الحمولة">
+                    <input type="number" id="ship-price" required placeholder="الأجرة (ج.م)">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <input type="number" id="ship-fuel-cost" placeholder="تكلفة الوقود (ج.م)">
+                    <input type="number" id="ship-extra-cost" placeholder="مصاريف أخرى (ج.م)">
+                </div>
+                <div>
+                    <label style="font-size:9px; font-weight:bold;">تعيين للسائق:</label>
+                    <select id="ship-assigned-driver"><option value="">-- بدون تعيين (عام) --</option></select>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <button type="button" class="btn-warning btn-sm" onclick="captureGPS()">📍 تسجيل موقع GPS</button>
+                    <span id="gps-status" style="font-size: 9px; opacity: 0.8;"></span>
+                </div>
+                <div>
+                    <label style="font-size:9px; font-weight:bold;">📷 صورة المستند أو الحمولة:</label>
+                    <input type="file" id="ship-img" accept="image/*" capture="environment">
+                </div>
+                <div>
+                    <label style="font-size:9px; font-weight:bold;">توقيع المستلم الرقمي:</label>
+                    <canvas id="signature-pad"></canvas>
+                    <button type="button" onclick="clearSignature()" class="btn-sm" style="background:#64748b; color:#fff;">مسح التوقيع</button>
+                </div>
+                <button type="submit" class="btn-main" style="padding: 8px; margin-top:6px;">حفظ الرحلة وتوليد QR 💾</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3 id="shipments-table-title">سجل الرحلات المباشر</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>العميل</th>
+                            <th>الحمولة</th>
+                            <th>السائق المعين</th>
+                            <th>الأجرة</th>
+                            <th>صافي الربح</th>
+                            <th>الحالة</th>
+                            <th>إدارة وإشعارات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipments-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. مساعد الذكاء الاصطناعي -->
+    <section id="ai-mechanic-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--purple);">
+            <h3 style="color: var(--purple);">🤖 مساعد الذكاء الاصطناعي لصيانة وتشخيص الأعطال</h3>
+            <p style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">اختر المشكلة أو العرض الظاهر في الشاحنة للحصول على التشخيص والحلول:</p>
+            <select id="ai-fault-select" style="font-weight:bold; margin-bottom:8px;">
+                <option value="alt">مشكلة في الشحن أو اضاءة لمبة البطارية (الدينامو)</option>
+                <option value="clutch">خشونة أو ثقل في دواسة أو حركة الفتيس والدبرياج</option>
+                <option value="heat">ارتفاع حرارة المحرك بشكل ملحوظ</option>
+                <option value="diesel">استفسار عن خلط جاز بنزين أو زيت فرامل بالوقود</option>
+                <option value="smoke">خروج دخان أبيض أو أسود من الشكمان</option>
+            </select>
+            <button type="button" class="btn-main" onclick="runAIMechanicAnalysis()" style="margin-bottom: 8px;">🧠 تشخيص العطل بواسطة الذكاء الاصطناعي</button>
+            <div id="ai-result-box" style="background: var(--bg); padding: 10px; border-radius: 6px; border: 1px dashed var(--border-color); font-size: 11px; line-height: 1.4; display:none;"></div>
+        </div>
+    </section>
+
+    <!-- 4. لوحة الرحلات العامة -->
+    <section id="public-feed-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--purple);">
+            <h3 style="color: var(--purple);">📢 لوحة الإعلانات ونشر الرحلات العامة</h3>
+            <div id="admin-post-form-card" style="background: var(--bg); padding: 8px; border-radius: 6px; margin-bottom: 10px; border: 1px dashed var(--border-color);">
+                <h4 style="font-size: 11px; margin-bottom: 5px;">➕ نشر رحلة أو إعلان جديد (للمدير والمشرف)</h4>
+                <form id="public-post-form" onsubmit="event.preventDefault();">
+                    <input type="text" id="post-title" required placeholder="عنوان الرحلة / الوجهة">
+                    <textarea id="post-desc" rows="2" required placeholder="تفاصيل الحمولة والشروط..."></textarea>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                        <div>
+                            <label style="font-size:9px; font-weight:bold;">📷 رفع صور:</label>
+                            <input type="file" id="post-images" accept="image/*" multiple>
+                        </div>
+                        <div>
+                            <label style="font-size:9px; font-weight:bold;">🎥 رفع فيديو:</label>
+                            <input type="file" id="post-videos" accept="video/*">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-success" style="padding: 7px; margin-top: 5px;">نشر في لوحة الرحلات العامة 🚀</button>
+                </form>
+            </div>
+            <div id="public-posts-feed"></div>
+        </div>
+    </section>
+
+    <!-- 5. غرفة المحادثة والتواصل الفوري -->
+    <section id="chat-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--success);">
+            <h3 style="color: var(--success);">💬 غرفة المحادثة والتواصل الفوري (عام ومحادثات خاصة مع الحسابات المسجلة)</h3>
+            <div style="margin-bottom: 8px; display: flex; gap: 5px;">
+                <input type="text" id="chat-search-input" class="search-box" placeholder="🔍 ابحث عن حساب مسجل لبدء محادثة خاصة..." onkeyup="renderChatAccountsList()" style="margin-bottom:0; flex:1;">
+                <button type="button" class="btn-main btn-sm" onclick="selectChatRoom('general')">💬 المحادثة العامة</button>
+            </div>
+
+            <div class="chat-layout">
+                <div class="chat-sidebar-accounts">
+                    <h4 style="font-size: 10px; font-weight: bold; margin-bottom: 6px; color: var(--accent);">👥 الحسابات والجهات المسجلة:</h4>
+                    <div class="chat-account-item active" onclick="selectChatRoom('general')">
+                        <span>💬 المحادثة العامة للأسطول</span>
+                    </div>
+                    <div id="chat-accounts-list-container"></div>
+                </div>
+
+                <div class="chat-main-box">
+                    <div id="chat-current-room-title" style="background: var(--card-bg); padding: 6px 10px; font-size: 11px; font-weight: bold; border-bottom: 1px solid var(--border-color); color: var(--accent);">
+                        المحادثة العامة للأسطول
+                    </div>
+                    <div class="chat-messages" id="chat-messages-list"></div>
+                    <form id="chat-form" class="chat-input-area" onsubmit="event.preventDefault(); sendChatMessage(event);">
+                        <input type="text" id="chat-input-text" required placeholder="اكتب رسالتك هنا..." style="margin-bottom:0; flex:1;">
+                        <button type="submit" class="btn-success" style="width: 75px; margin-bottom:0;">إرسال ✈️</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. الخريطة -->
+    <section id="map-tab" class="app-section">
+        <div class="card">
+            <h3>🗺️ خريطة نقاط التسليم المباشرة</h3>
+            <div id="map"></div>
+        </div>
+    </section>
+
+    <!-- 7. مراقبة السائقين والألقاب -->
+    <section id="drivers-monitor-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--warning);">
+            <h3 style="color: var(--warning);">👁️ لوحة مراقبة وتعيين المديرين والمشرفين والسائقين وإدارة الأوسمة والألقاب</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>رقم الهاتف</th>
+                            <th>الرتبة / الصلاحية</th>
+                            <th>اللقب الاحترافي / الوسام</th>
+                            <th>الحالة التشغيلية</th>
+                            <th>التحكم والترقية</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drivers-monitor-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. الخزنة -->
+    <section id="treasury-tab" class="app-section">
+        <div class="card">
+            <h3>إدارة حركة النقدية والمقبوضات</h3>
+            <form id="cash-form" onsubmit="event.preventDefault(); saveCashHandler(event);">
+                <select id="cash-type">
+                    <option value="in">إيداع / تحصيل نقدي (+)</option>
+                    <option value="out">سحب / مصروفات الخزنة (-)</option>
+                </select>
+                <input type="number" id="cash-amount" placeholder="المبلغ (ج.م)" required>
+                <input type="text" id="cash-desc" placeholder="البيان / السبب" required>
+                <button type="submit" class="btn-success">تسجيل حركة نقدية</button>
+            </form>
+        </div>
+        <div class="card">
+            <h3>سجل حركة الخزنة</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>النوع</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th></tr></thead>
+                    <tbody id="treasury-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 9. الأسطول -->
+    <section id="fleet-tab" class="app-section">
+        <div class="card">
+            <h3>إضافة مركبة وجدولة الصيانة</h3>
+            <form id="truck-form" onsubmit="event.preventDefault(); saveTruckHandler(event);">
+                <input type="text" id="truck-num" value="شيفروليه بيك اب (صندوق مغلق)" placeholder="رقم أو اسم السيارة/الشاحنة" required>
+                <input type="text" id="driver-name" placeholder="اسم السائق المسؤول" required>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <input type="number" id="truck-km" placeholder="عداد KM" required>
+                    <input type="number" id="truck-next-oil" placeholder="غيّار الزيت القادم KM" required>
+                </div>
+                <label style="font-size: 10px;">تاريخ انتهاء الرخصة:</label>
+                <input type="date" id="truck-expiry" required>
+                <button type="submit" class="btn-main">حفظ المركبة</button>
+            </form>
+        </div>
+        <div class="card">
+            <h3>📂 مكتبة وثائق وعقود الأسطول</h3>
+            <form id="doc-form" onsubmit="event.preventDefault(); saveDocHandler(event);">
+                <input type="text" id="doc-title" placeholder="اسم المستند" required>
+                <input type="file" id="doc-file" accept="image/*" required>
+                <button type="submit" class="btn-warning">حفظ المستند للمكتبة</button>
+            </form>
+            <div id="docs-list" style="margin-top: 8px; display: grid; gap: 5px;"></div>
+        </div>
+        <div class="card">
+            <h3>حالة المركبات والتراخيص</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>المركبة</th><th>السائق</th><th>KM</th><th>الزيت</th><th>الرخصة</th></tr></thead>
+                    <tbody id="trucks-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. السائقين وإدارة الحسابات -->
+    <section id="drivers-tab" class="app-section">
+        <div class="card" style="border: 2px solid var(--accent);">
+            <h3 style="color: var(--accent);">👨‍✈️ إضافة وتعيين مدير، مشرف أو سائق جديد</h3>
+            <form id="driver-profile-form" onsubmit="event.preventDefault(); saveNewDriverHandler(event);">
+                <input type="text" id="drv-fullname" placeholder="الاسم الرباعي" required>
+                <input type="tel" id="drv-phone" placeholder="رقم الهاتف / واتساب" required>
+                <input type="password" id="drv-pin" placeholder="رمز المرور / كلمة السر (PIN)" required>
+                <select id="drv-role-select" style="font-weight:bold;">
+                    <option value="سائق">سائق عادي</option>
+                    <option value="مشرف">مشرف (بدون صلاحية الحذف)</option>
+                    <option value="مدير مساعد">مدير مساعد / إداري</option>
+                    <option value="مدير نظام">مدير أساسي</option>
+                </select>
+                <button type="submit" class="btn-main">إضافة الحساب وتعيين الرتبة للنظام 🚀</button>
+            </form>
+        </div>
+        <div class="card">
+            <h3>قائمة الحسابات والصلاحيات وكلمات المرور المسجلة</h3>
+            <p style="font-size: 10px; opacity: 0.8; margin-bottom: 6px;">ملاحظة: يمكنك البحث، التعديل المباشر، وترقية الألقاب والصلاحيات لكل حساب.</p>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>الاسم</th><th>الهاتف</th><th>الرتبة / الصلاحية</th><th>اللقب / الوسام</th><th>رمز الدخول (PIN)</th><th>إدارة وترقية</th></tr></thead>
+                    <tbody id="drivers-list-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 11. المصروفات -->
+    <section id="expenses-tab" class="app-section">
+        <div class="card">
+            <h3>تسجيل المصروفات التشغيلية</h3>
+            <form id="expense-form" onsubmit="event.preventDefault(); saveExpenseHandler(event);">
+                <input type="text" id="exp-title" placeholder="بيان المصروف" required>
+                <input type="number" id="exp-amount" placeholder="المبلغ (ج.م)" required>
+                <button type="submit" class="btn-danger">تسجيل المصروف</button>
+            </form>
+        </div>
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>البيان</th><th>المبلغ</th><th>التاريخ</th></tr></thead>
+                    <tbody id="expenses-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 12. الحسابات -->
+    <section id="customers-tab" class="app-section">
+        <div class="card">
+            <h3>حسابات العملاء والديون</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>العميل</th><th>الهاتف</th><th>المديونية</th><th>تحصيل</th></tr></thead>
+                    <tbody id="customers-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 13. التقارير والفواتير -->
+    <section id="reports-tab" class="app-section">
+        <div class="card" id="admin-reports-actions">
+            <h3>خيارات الإدارة والتقارير</h3>
+            <button type="button" class="btn-success" onclick="sendDailySummaryWhatsApp()" style="margin-bottom: 6px;">📲 إرسال التقرير اليومي عبر واتساب</button>
+            <button type="button" class="btn-main" onclick="exportToExcel()" style="margin-bottom: 6px;">📊 تصدير البيانات إلى Excel</button>
+            <button type="button" class="btn-warning" onclick="changeAdminPinPrompt()" style="margin-bottom: 6px;">🔑 تغيير كلمة السر الخاصة بي</button>
+            <button type="button" class="btn-danger" onclick="clearAll()">⚠️ مسح كل البيانات (للمدير فقط)</button>
+        </div>
+
+        <div class="card">
+            <h3>🧾 معاينة وطباعة الفاتورة الرسمية المعتمدة</h3>
+            <select id="invoice-select" onchange="renderSelectedInvoice()" style="margin-bottom: 8px;"></select>
+            
+            <div id="print-area" style="background:#ffffff; color:#334155; padding:12px; border:2px solid var(--accent); border-radius:6px;">
+                <div style="text-align:center;">
+                    <h3 style="color:#0f172a; font-size:13px;">🐎 أسطورة الطريق - Chevrolet Pickup (1.5 Tons)</h3>
+                    <p style="font-size:10px; opacity:0.8;">إذن تسليم واستلام شحنة رسمي (صندوق مغلق وحبال تأمين)</p>
+                </div>
+                <hr style="margin:8px 0; border:0; border-top:1px solid #cbd5e1;">
+                <p><strong>رقم الفاتورة:</strong> <span id="inv-id">-</span></p>
+                <p><strong>اسم العميل:</strong> <span id="inv-client">-</span></p>
+                <p><strong>هاتف العميل:</strong> <span id="inv-phone">-</span></p>
+                <p><strong>عنوان التوصيل:</strong> <span id="inv-address">-</span></p>
+                <p><strong>تفاصيل الحمولة:</strong> <span id="inv-item">-</span></p>
+                <p><strong>الأجرة المطلوبة:</strong> <span id="inv-price">-</span> ج.م</p>
+                <p><strong>حالة الشحنة:</strong> <span id="inv-status">-</span></p>
+                <div id="inv-img-preview" style="margin-top:8px; text-align:center;"></div>
+                <div id="inv-sig-container" style="margin-top:10px; text-align:left;"></div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 8px;">
+                <button type="button" class="btn-main" onclick="openInvoiceStandalone()">🔍 فتح الفاتورة كصفحة منفردة باللوجو</button>
+                <button type="button" class="btn-success" onclick="exportInvoiceAsImage()">📸 تصدير الفاتورة كـ صورة (PNG)</button>
+                <button type="button" class="btn-warning" onclick="exportInvoiceAsPDF()">📄 تصدير الفاتورة كملف PDF</button>
+                <button type="button" class="btn-main" style="background:#25d366;" onclick="sendInvoiceWhatsApp()">💬 إرسال تفاصيل الفاتورة عبر واتساب</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- مودال عرض الـ QR -->
+    <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; justify-content:center; align-items:center; flex-direction:column; color:white;">
+        <div id="qrcode" style="background:white; padding:12px; border-radius:6px;"></div>
+        <button type="button" class="btn-danger" onclick="closeQRModal()" style="margin-top:12px; width:140px;">إغلاق</button>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://na2la-default-rtdb.firebaseio.com/"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        function toggleSidebar() {
+            document.getElementById('sidebar-menu').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('open');
+        }
+
+        function setAppTheme(themeName) {
+            document.body.classList.remove('theme-emerald', 'theme-amber', 'theme-purple', 'theme-dark-pure', 'theme-light-pure');
+            if (themeName !== 'default') {
+                document.body.classList.add(`theme-${themeName}`);
+            }
+            localStorage.setItem('app_theme', themeName);
+        }
+        const savedTheme = localStorage.getItem('app_theme');
+        if (savedTheme) setAppTheme(savedTheme);
+
+        const driverTitlesList = [
+            "سائق مستجد", "سائق مساعد", "سائق معتمد", "سائق أول", "سائق خبير",
+            "وسام الأمان الأول", "درع القيادة الآمنة", "سفير السلامة", "خبير توفير الوقود", "فاحص محترف",
+            "منقذ الطوارئ", "ملك المرتفعات", "السرعة والدقة", "بطل المهام الشاقة", "الالتزام التام",
+            "سيد المسافات الطويلة", "الاستجابة الفورية", "رجل المهام الليلية", "دينامو العمل", "المرن المبدع",
+            "ابتسامة العملاء", "سفير الأخلاق", "حلّال المشاكل", "الأمانة المطلقة", "المظهر الاحترافي",
+            "واجهة الشركة", "مدرب الجدد", "المستشار الفني", "سائق العام الذهبي", "أسطورة الطريق"
+        ];
+
+        let storedPin = localStorage.getItem('app_pin') || '01036';
+        let currentUserRole = localStorage.getItem('current_user_role') || ''; 
+        let loggedInDriverName = localStorage.getItem('logged_in_driver_name') || 'المدير';
+        let viewingProfileName = null;
+
+        let visitorGPS = '';
+        let visitorImgBase64 = '';
+        let currentGPS = '';
+        let uploadedImgBase64 = '';
+        
+        let currentChatTarget = 'general';
+        let communityFilesArr = [];
+        let profileWallFilesArr = [];
+        let communityNotificationsCount = 0;
+
+        let appData = { 
+            shipments: [], trucks: [], customers: [], expenses: [], treasury: [], docs: [], 
+            drivers: [{id: 1, name: 'المدير', phone: '01000000000', pin: storedPin, status: 'متاح 🟢', role: 'مدير نظام', title: 'أسطورة الطريق', avatar: '', cover: '', wallPosts: []}], 
+            chat: [], posts: [], communityPosts: [] 
+        };
+
+        const localSavedData = localStorage.getItem('transportAppV60');
+        if (localSavedData) {
+            try { appData = JSON.parse(localSavedData); } catch(e) { console.error(e); }
+        }
+
+        db.ref('transportAppV60').on('value', (snapshot) => {
+            const serverData = snapshot.val();
+            if (serverData) {
+                appData = serverData;
+                if (!appData.drivers) {
+                    appData.drivers = [{id: 1, name: 'المدير', phone: '01000000000', pin: storedPin, status: 'متاح 🟢', role: 'مدير نظام', title: 'أسطورة الطريق', avatar: '', cover: '', wallPosts: []}];
+                }
+                appData.drivers.forEach(d => { if(!d.wallPosts) d.wallPosts = []; });
+                if (!appData.communityPosts) appData.communityPosts = [];
+                if (!appData.posts) appData.posts = [];
+                if (!appData.chat) appData.chat = [];
+                localStorage.setItem('transportAppV60', JSON.stringify(appData));
+            } else {
+                saveDataAll();
+            }
+            render();
+            updateGlobalChatNotificationBadge();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (currentUserRole) {
+                document.getElementById('lock-screen').style.display = 'none';
+                setupNavigation();
+                if (currentUserRole === 'admin') setAdminUIMode();
+                else if (currentUserRole === 'supervisor') setSupervisorUIMode();
+                else setDriverUIMode();
+                render();
+            }
+        });
+
+        function saveDataAll() {
+            localStorage.setItem('transportAppV60', JSON.stringify(appData));
+            db.ref('transportAppV60').set(appData);
+            updateGlobalChatNotificationBadge();
+        }
+
+        function updateGlobalChatNotificationBadge() {
+            let messages = appData.chat || [];
+            let unreadCount = messages.filter(m => m.sender !== loggedInDriverName && !m.sender.includes(loggedInDriverName)).length;
+            const badgeEl = document.getElementById('global-chat-notif-badge');
+            if(badgeEl) {
+                badgeEl.innerText = unreadCount;
+                badgeEl.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+            }
+        }
+
+        function unlockApp() {
+            const enteredPin = document.getElementById('pin-input').value;
+            let adminAccount = (appData.drivers || []).find(d => d.pin === enteredPin && (d.role === 'مدير نظام' || d.title.includes('مدير') || d.name === 'المدير'));
+            
+            if (enteredPin === storedPin || adminAccount) {
+                currentUserRole = 'admin'; 
+                loggedInDriverName = adminAccount ? adminAccount.name : 'المدير';
+                localStorage.setItem('current_user_role', currentUserRole);
+                localStorage.setItem('logged_in_driver_name', loggedInDriverName);
+                viewingProfileName = null;
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('user-role-badge').innerText = `لوحة التحكم (مدير النظام: ${loggedInDriverName})`;
+                setupNavigation();
+                setAdminUIMode();
+                render();
+            } else {
+                driverLogin();
+            }
+        }
+
+        function driverLogin() {
+            const pin = document.getElementById('pin-input').value;
+            const driver = (appData.drivers || []).find(d => d.pin === pin);
+            if (driver) {
+                viewingProfileName = null;
+                loggedInDriverName = driver.name;
+                localStorage.setItem('logged_in_driver_name', loggedInDriverName);
+                if (driver.role === 'مشرف' || (driver.title && driver.title.includes('مشرف'))) {
+                    currentUserRole = 'supervisor'; 
+                    localStorage.setItem('current_user_role', currentUserRole);
+                    document.getElementById('lock-screen').style.display = 'none';
+                    document.getElementById('user-role-badge').innerText = `لوحة المشرف: ${driver.name}`;
+                    setupNavigation();
+                    setSupervisorUIMode();
+                    render();
+                } else {
+                    currentUserRole = 'driver';
+                    localStorage.setItem('current_user_role', currentUserRole);
+                    document.getElementById('lock-screen').style.display = 'none';
+                    document.getElementById('user-role-badge').innerText = `بروفايل الحساب: ${driver.name} (${driver.title || 'سائق'})`;
+                    setupNavigation();
+                    setDriverUIMode();
+                    render();
+                }
+            } else {
+                alert('رمز الدخول (PIN) غير صحيح!');
+            }
+        }
+
+        function setupNavigation() {
+            const nav = document.getElementById('main-nav');
+            if (currentUserRole === 'admin' || currentUserRole === 'supervisor') {
+                nav.innerHTML = `
+                    <button type="button" class="active" onclick="switchTab('crud-tab', this); toggleSidebar();" style="background:var(--danger); color:white;">⚙️ الإدارة والتحكم</button>
+                    <button type="button" onclick="switchTab('account-tab', this); toggleSidebar();" style="background:var(--accent); color:white;">👤 حسابي وبروفايل السائقين (Google Plus)</button>
+                    <button type="button" onclick="switchTab('shipments-tab', this); toggleSidebar();">📦 الشحنات</button>
+                    <button type="button" onclick="switchTab('ai-mechanic-tab', this); toggleSidebar();" style="background:var(--purple); color:#fff;">🤖 مساعد الذكاء الاصطناعي</button>
+                    <button type="button" onclick="switchTab('public-feed-tab', this); toggleSidebar();" style="background:var(--purple); color:#fff;">📢 لوحة الرحلات</button>
+                    <button type="button" onclick="switchTab('chat-tab', this); toggleSidebar();" style="background:var(--success); color:#fff;">💬 الدردشة والمحادثة</button>
+                    <button type="button" onclick="switchTab('map-tab', this); toggleSidebar();">🗺️ الخريطة الحية</button>
+                    <button type="button" onclick="switchTab('drivers-monitor-tab', this); toggleSidebar();" style="background:var(--warning); color:#fff;">👁️ مراقبة السائقين</button>
+                    <button type="button" onclick="switchTab('treasury-tab', this); toggleSidebar();">💵 الخزنة</button>
+                    <button type="button" onclick="switchTab('fleet-tab', this); toggleSidebar();">🚚 الأسطول</button>
+                    <button type="button" onclick="switchTab('drivers-tab', this); toggleSidebar();">👨‍✈️ السائقين والحسابات</button>
+                    <button type="button" onclick="switchTab('expenses-tab', this); toggleSidebar();">⛽ المصروفات</button>
+                    <button type="button" onclick="switchTab('customers-tab', this); toggleSidebar();">👥 الحسابات</button>
+                    <button type="button" onclick="switchTab('reports-tab', this); toggleSidebar();">📊 التقارير</button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <button type="button" class="active" onclick="switchTab('account-tab', this); toggleSidebar();" style="background:var(--accent); color:white;">👤 حسابي وبروفايل السائقين (Google Plus)</button>
+                    <button type="button" onclick="switchTab('shipments-tab', this); toggleSidebar();">📦 شحناتى ومهماتي</button>
+                    <button type="button" onclick="switchTab('ai-mechanic-tab', this); toggleSidebar();" style="background:var(--purple); color:#fff;">🤖 مساعد الذكاء الاصطناعي</button>
+                    <button type="button" onclick="switchTab('public-feed-tab', this); toggleSidebar();" style="background:var(--purple); color:#fff;">📢 لوحة الرحلات العامة</button>
+                    <button type="button" onclick="switchTab('chat-tab', this); toggleSidebar();" style="background:var(--success); color:#fff;">💬 غرفة المحادثة والتواصل</button>
+                    <button type="button" onclick="switchTab('map-tab', this); toggleSidebar();">🗺️ الخريطة الحية</button>
+                    <button type="button" onclick="switchTab('reports-tab', this); toggleSidebar();">📊 التقارير والفواتير</button>
+                `;
+            }
+        }
+
+        function changeAdminPinPrompt() {
+            const currentPass = prompt('أدخل كلمة السر (رمز PIN) الحالية للتأكيد:');
+            if (currentPass === storedPin || currentUserRole === 'admin' || currentUserRole === 'supervisor') {
+                const newPass = prompt('أدخل كلمة السر الجديدة (رمز PIN):');
+                if (newPass && newPass.trim() !== '') {
+                    storedPin = newPass;
+                    localStorage.setItem('app_pin', newPass);
+                    let adminDrv = (appData.drivers || []).find(d => d.name === loggedInDriverName);
+                    if (adminDrv) { adminDrv.pin = newPass; }
+                    saveDataAll();
+                    alert('تم تغيير كلمة السر بنجاح!');
+                }
+            } else {
+                alert('كلمة السر الحالية غير صحيحة!');
+            }
+        }
+
+        // تم تأمين وظيفة تعديل كلمات المرور لتكون مقتصرة حصرياً على المدير والمشرف
+        function changeUserPinByAdmin(id) {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'supervisor') {
+                alert('غير مسموح لك بتعديل كلمات السر!');
+                return;
+            }
+            const targetUser = (appData.drivers || []).find(d => d.id === id);
+            if (!targetUser) return;
+            
+            const newPin = prompt(`أدخل رمز الدخول (PIN) الجديد للحساب (${targetUser.name}):`);
+            if (newPin && newPin.trim() !== '') {
+                targetUser.pin = newPin;
+                saveDataAll();
+                alert(`تم تحديث كلمة المرور للحساب (${targetUser.name}) بنجاح بواسطة الإدارة! 🔐`);
+                render();
+            }
+        }
+
+        function openVisitorBooking() { document.getElementById('visitor-booking-container').style.display = 'flex'; }
+        function closeVisitorBooking() { document.getElementById('visitor-booking-container').style.display = 'none'; }
+        function openDriverRegister() { document.getElementById('driver-register-container').style.display = 'flex'; }
+        function closeDriverRegister() { document.getElementById('driver-register-container').style.display = 'none'; }
+        
+        function openModal(modalId) { 
+            document.getElementById(modalId).style.display = 'flex'; 
+            if(modalId === 'driversCommunityModal') renderCommunityPosts();
+        }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+
+        function openStatDetailModal(type) {
+            const modal = document.getElementById('statDetailModal');
+            const titleEl = document.getElementById('stat-modal-title');
+            const bodyEl = document.getElementById('stat-modal-body');
+            modal.style.display = 'flex';
+            bodyEl.innerHTML = '';
+
+            let shipments = appData.shipments || [];
+            let treasury = appData.treasury || [];
+            let expenses = appData.expenses || [];
+            let customers = appData.customers || [];
+
+            if (type === 'shipments') {
+                titleEl.innerText = '📦 تفاصيل الشحنات والرحلات المتطورة';
+                let html = `<div class="table-responsive"><table><thead><tr><th>العميل</th><th>الحمولة</th><th>الأجرة</th><th>الحالة</th></tr></thead><tbody>`;
+                shipments.forEach(s => {
+                    html += `<tr><td>${s.name}</td><td>${s.item}</td><td>${s.price} ج.م</td><td><span class="badge bg-${s.status === 'مكتملة' ? 'delivered' : 'pending'}">${s.status}</span></td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+                bodyEl.innerHTML = html;
+            } else if (type === 'revenue') {
+                titleEl.innerText = '💰 تفاصيل الإيرادات والمقبوضات';
+                let totalRev = shipments.reduce((sum, s) => sum + Number(s.price || 0), 0);
+                let html = `<p style="margin-bottom:8px; font-weight:bold; color:var(--success);">إجمالي الإيرادات الكلية: ${totalRev} ج.م</p>`;
+                html += `<div class="table-responsive"><table><thead><tr><th>العميل</th><th>الحمولة</th><th>المبلغ المدفوع</th><th>التاريخ</th></tr></thead><tbody>`;
+                shipments.forEach(s => {
+                    html += `<tr><td>${s.name}</td><td>${s.item}</td><td>${s.price} ج.م</td><td>${s.date || 'حالي'}</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+                bodyEl.innerHTML = html;
+            } else if (type === 'net_profit') {
+                titleEl.innerText = '📈 تحليل صافي الأرباح والأداء المالي';
+                let totalRev = shipments.reduce((sum, s) => sum + Number(s.price || 0), 0);
+                let totalExp = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+                let netProf = totalRev - totalExp;
+                bodyEl.innerHTML = `
+                    <div style="background:var(--bg); padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border-color);">
+                        <p><strong>إجمالي الإيرادات:</strong> ${totalRev} ج.م</p>
+                        <p><strong>إجمالي المصروفات التشغيلية:</strong> ${totalExp} ج.م</p>
+                        <hr style="margin:6px 0; border:0; border-top:1px solid var(--border-color);">
+                        <p style="font-size:13px; font-weight:bold; color:var(--purple);">صافي الأرباح الصافي: ${netProf} ج.م 🚀</p>
+                    </div>
+                    <p style="font-size:10px; opacity:0.8;">هذا الحساب يتم توليده تلقائياً من نظام الإدارة والعمليات لضمان دقة الأرباح.</p>
+                `;
+            } else if (type === 'cash') {
+                titleEl.innerText = '💵 حركة الخزينة النقدية التفصيلية';
+                let totalCash = treasury.reduce((sum, t) => sum + (t.type === 'in' ? Number(t.amount) : -Number(t.amount)), 0);
+                let html = `<p style="margin-bottom:8px; font-weight:bold;">رصيد الخزينة الحالي: <span style="color:var(--success);">${totalCash} ج.م</span></p>`;
+                html += `<div class="table-responsive"><table><thead><tr><th>النوع</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th></tr></thead><tbody>`;
+                treasury.forEach(t => {
+                    html += `<tr><td>${t.type === 'in' ? 'إيداع (+)' : 'سحب (-)'}</td><td>${t.amount} ج.م</td><td>${t.desc}</td><td>${t.date || '-'}</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+                bodyEl.innerHTML = html;
+            } else if (type === 'debts') {
+                titleEl.innerText = '⚠️ حسابات العملاء والديون المستحقة';
+                let totalDebt = customers.reduce((sum, c) => sum + Number(c.debt || 0), 0);
+                let html = `<p style="margin-bottom:8px; font-weight:bold;">إجمالي الديون المعلقة: <span style="color:var(--danger);">${totalDebt} ج.م</span></p>`;
+                html += `<div class="table-responsive"><table><thead><tr><th>العميل</th><th>الهاتف</th><th>المديونية</th></tr></thead><tbody>`;
+                customers.forEach(c => {
+                    html += `<tr><td>${c.name}</td><td>${c.phone || '-'}</td><td style="color:var(--danger); font-weight:bold;">${c.debt || 0} ج.م</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+                bodyEl.innerHTML = html;
+            }
+        }
+
+        function lockSystem() { 
+            currentUserRole = ''; 
+            localStorage.removeItem('current_user_role');
+            localStorage.removeItem('logged_in_driver_name');
+            viewingProfileName = null;
+            document.getElementById('lock-screen').style.display = 'flex'; 
+            document.getElementById('pin-input').value = ''; 
+        }
+
+        function setAdminUIMode() {
+            document.getElementById('new-shipment-card').style.display = 'block';
+            document.getElementById('admin-stats').style.display = 'grid';
+            document.getElementById('admin-post-form-card').style.display = 'block';
+            document.getElementById('admin-reports-actions').style.display = 'block';
+            document.getElementById('shipments-table-title').innerText = 'سجل الرحلات المباشر (كافة شحنات الأسطول - صلاحيات المدير)';
+        }
+
+        function setSupervisorUIMode() {
+            document.getElementById('new-shipment-card').style.display = 'block';
+            document.getElementById('admin-stats').style.display = 'grid';
+            document.getElementById('admin-post-form-card').style.display = 'block';
+            document.getElementById('admin-reports-actions').style.display = 'block';
+            document.getElementById('shipments-table-title').innerText = 'سجل الرحلات المباشر (لوحة تحكم المشرف)';
+        }
+
+        function setDriverUIMode() {
+            document.getElementById('new-shipment-card').style.display = 'none';
+            document.getElementById('admin-stats').style.display = 'none';
+            document.getElementById('admin-post-form-card').style.display = 'none';
+            document.getElementById('admin-reports-actions').style.display = 'none';
+            document.getElementById('shipments-table-title').innerText = 'شحناتي المخصصة لي فقط';
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('dark_mode', document.body.classList.contains('dark-mode'));
+        }
+        if (localStorage.getItem('dark_mode') === 'true') document.body.classList.add('dark-mode');
+
+        function viewMedia(src, type) {
+            const modal = document.getElementById('mediaViewerModal');
+            const content = document.getElementById('mediaViewerContent');
+            content.innerHTML = '';
+            if (type === 'video') {
+                content.innerHTML = `<video controls autoplay src="${src}" style="max-width:100%; max-height:85vh; border-radius:6px;"></video>`;
+            } else {
+                content.innerHTML = `<img src="${src}" style="max-width:100%; max-height:85vh; border-radius:6px; object-fit:contain;"/>`;
+            }
+            modal.style.display = 'flex';
+        }
+        function closeMediaViewer() {
+            document.getElementById('mediaViewerModal').style.display = 'none';
+            document.getElementById('mediaViewerContent').innerHTML = '';
+        }
+
+        let leafletMap = null;
+        function initMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+            if (!leafletMap) {
+                leafletMap = L.map('map').setView([30.0444, 31.2357], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap);
+            } else {
+                leafletMap.invalidateSize();
+            }
+            leafletMap.eachLayer((layer) => { if (layer instanceof L.Marker) leafletMap.removeLayer(layer); });
+            let targetList = (currentUserRole === 'driver') ? appData.shipments.filter(s => s.assignedDriver === loggedInDriverName) : appData.shipments;
+            targetList.forEach(s => {
+                if (s.gps) {
+                    const coords = s.gps.split(',');
+                    if(coords.length === 2) {
+                        L.marker([parseFloat(coords[0]), parseFloat(coords[1])]).addTo(leafletMap)
+                         .bindPopup(`<b>${s.name}</b><br>${s.item} (${s.status})`);
+                    }
+                }
+            });
+        }
+
+        function captureGPS() {
+            if (navigator.geolocation) {
+                document.getElementById('gps-status').innerText = 'جاري التحديد...';
+                navigator.geolocation.getCurrentPosition(pos => {
+                    currentGPS = `${pos.coords.latitude},${pos.coords.longitude}`;
+                    document.getElementById('gps-status').innerText = 'تم التحديد ✅';
+                }, () => { alert('تعذر الحصول على الموقع الجغرافي'); });
+            }
+        }
+
+        function captureVisitorGPS() {
+            if (navigator.geolocation) {
+                document.getElementById('vis-gps-status').innerText = 'جاري تحديد موقعك...';
+                navigator.geolocation.getCurrentPosition(pos => {
+                    visitorGPS = `${pos.coords.latitude},${pos.coords.longitude}`;
+                    document.getElementById('vis-gps-status').innerText = 'تم تحديد موقعك بنجاح ✅';
+                }, () => { alert('تعذر الحصول على الموقع الجغرافي'); });
+            }
+        }
+
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        let isDrawing = false;
+        function resizeCanvas() {
+            if (canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = 70 * ratio;
+                if (ctx) ctx.scale(ratio, ratio);
+            }
+        }
+        if (canvas) {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('touchstart', (e) => { startDrawing(e.touches[0]); e.preventDefault(); }, {passive: false});
+            canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); }, {passive: false});
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+        function startDrawing(e) { isDrawing = true; if(!ctx) return; ctx.beginPath(); const rect = canvas.getBoundingClientRect(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top); }
+        function draw(e) { if (!isDrawing || !ctx) return; const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke(); }
+        function stopDrawing() { isDrawing = false; }
+        function clearSignature() { if(ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav-list button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if(btn) btn.classList.add('active');
+            if(tabId === 'map-tab') setTimeout(initMap, 200);
+            if(tabId === 'reports-tab') updateInvoiceDropdown();
+            if(tabId === 'crud-tab' && (currentUserRole === 'admin' || currentUserRole === 'supervisor')) renderCRUDTable();
+            if(tabId === 'drivers-monitor-tab') renderDriversMonitor();
+            if(tabId === 'account-tab') renderMyAccount();
+            if(tabId === 'public-feed-tab') renderPublicPosts();
+            if(tabId === 'drivers-tab') renderDriversListTable();
+            if(tabId === 'chat-tab') renderChatAccountsList();
+        }
+
+        const shipImgInput = document.getElementById('ship-img');
+        if(shipImgInput) {
+            shipImgInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) { uploadedImgBase64 = event.target.result; };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        const visImgInput = document.getElementById('vis-img');
+        if(visImgInput) {
+            visImgInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) { visitorImgBase64 = event.target.result; };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function renderMyAccount() {
+            let activeTargetName = viewingProfileName ? viewingProfileName : loggedInDriverName;
+            let drv = (appData.drivers || []).find(d => d.name === activeTargetName);
+            if (!drv) {
+                drv = { id: Date.now(), name: activeTargetName, phone: '01000000000', pin: storedPin, status: 'متاح 🟢', role: 'سائق', title: 'أسطورة الطريق', avatar: '', cover: '', wallPosts: [] };
+                appData.drivers.push(drv);
+            }
+            if(!drv.wallPosts) drv.wallPosts = [];
+
+            document.getElementById('gplus-name-display').innerText = drv.name;
+            document.getElementById('gplus-badge-display').innerText = drv.title || 'سائق';
+            document.getElementById('gplus-tagline-display').innerText = `الهاتف: ${drv.phone} | الرتبة والصلاحية: ${drv.role}`;
+            
+            let myShipmentsCount = (appData.shipments || []).filter(s => s.assignedDriver === drv.name).length;
+            document.getElementById('gplus-stat-shipments').innerText = myShipmentsCount;
+            document.getElementById('gplus-stat-role').innerText = drv.role;
+            document.getElementById('gplus-stat-status').innerText = drv.status;
+
+            const backBtn = document.getElementById('gplus-back-to-myprofile-btn');
+            const editSettingsCard = document.getElementById('my-profile-edit-settings-card');
+            const avatarUploadLabel = document.getElementById('gplus-avatar-upload-label-container');
+            const coverUploadBtn = document.getElementById('gplus-cover-upload-btn-container');
+
+            if (viewingProfileName && viewingProfileName !== loggedInDriverName) {
+                if(backBtn) backBtn.style.display = 'inline-block';
+                if(editSettingsCard) editSettingsCard.style.display = 'none';
+                if(avatarUploadLabel) avatarUploadLabel.style.display = 'none';
+                if(coverUploadBtn) coverUploadBtn.style.display = 'none';
+                document.getElementById('profile-wall-heading').innerText = `✍️ حائط النشر الحر على بروفايل السائق/المشرف: (${drv.name})`;
+            } else {
+                if(backBtn) backBtn.style.display = 'none';
+                if(editSettingsCard) editSettingsCard.style.display = 'block';
+                if(avatarUploadLabel) avatarUploadLabel.style.display = 'block';
+                if(coverUploadBtn) coverUploadBtn.style.display = 'block';
+                document.getElementById('profile-wall-heading').innerText = `✍️ حائط النشر الحر على بروفايلك الشخصي`;
+            }
+
+            const avatarPreview = document.getElementById('gplus-avatar-img-preview');
+            if (drv.avatar) {
+                avatarPreview.innerHTML = `<img src="${drv.avatar}" style="width:100%; height:100%; object-fit:cover;"/>`;
+            } else {
+                avatarPreview.innerHTML = `<span style="font-size:10px;">صورة</span>`;
+            }
+
+            const coverPreview = document.getElementById('gplus-cover-banner-preview');
+            if (drv.cover) {
+                coverPreview.style.backgroundImage = `url('${drv.cover}')`;
+            } else {
+                coverPreview.style.backgroundImage = `linear-gradient(135deg, var(--accent), var(--primary))`;
+            }
+
+            document.getElementById('my-edit-name').value = drv.name;
+            document.getElementById('my-edit-phone').value = drv.phone;
+
+            const titleSelect = document.getElementById('my-edit-title');
+            titleSelect.innerHTML = '';
+            driverTitlesList.forEach(t => {
+                titleSelect.innerHTML += `<option value="${t}" ${drv.title === t ? 'selected' : ''}>${t}</option>`;
+            });
+
+            renderProfileWallPosts(drv);
+            renderProfileDriverSearch();
+        }
+
+        function openDriverProfile(driverName) {
+            viewingProfileName = driverName;
+            switchTab('account-tab', document.querySelector('.sidebar-nav-list button:nth-child(2)') || document.querySelector('.sidebar-nav-list button'));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetToMyProfile() {
+            viewingProfileName = null;
+            renderMyAccount();
+        }
+
+        async function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function updateProfileAvatar(input) {
+            const file = input.files[0];
+            if (file) {
+                const b64 = await fileToBase64(file);
+                let activeName = viewingProfileName ? viewingProfileName : loggedInDriverName;
+                let drv = (appData.drivers || []).find(d => d.name === activeName);
+                if (drv) {
+                    drv.avatar = b64;
+                    saveDataAll();
+                    renderMyAccount();
+                    alert('تم تحديث وحفظ الصورة الشخصية بنجاح! ✅');
+                }
+            }
+        }
+
+        async function updateProfileCover(input) {
+            const file = input.files[0];
+            if (file) {
+                const b64 = await fileToBase64(file);
+                let activeName = viewingProfileName ? viewingProfileName : loggedInDriverName;
+                let drv = (appData.drivers || []).find(d => d.name === activeName);
+                if (drv) {
+                    drv.cover = b64;
+                    saveDataAll();
+                    renderMyAccount();
+                    alert('تم تحديث وحفظ صورة الغلاف بنجاح! ✅');
+                }
+            }
+        }
+
+        function saveMyProfileChanges() {
+            let drv = (appData.drivers || []).find(d => d.name === loggedInDriverName);
+            if (drv) {
+                let newName = document.getElementById('my-edit-name').value.trim();
+                let newPhone = document.getElementById('my-edit-phone').value.trim();
+                let newTitle = document.getElementById('my-edit-title').value;
+
+                if (!newName || !newPhone) {
+                    alert('الرجاء إدخال الاسم ورقم الهاتف!');
+                    return;
+                }
+
+                drv.name = newName;
+                drv.phone = newPhone;
+                drv.title = newTitle;
+                loggedInDriverName = newName;
+                localStorage.setItem('logged_in_driver_name', loggedInDriverName);
+
+                saveDataAll();
+                renderMyAccount();
+                alert('تم تحديث بيانات بروفايلك بنجاح! 💾');
+            }
+        }
+
+        async function previewProfileWallFiles(input) {
+            profileWallFilesArr = [];
+            for (let i = 0; i < input.files.length; i++) {
+                let b64 = await fileToBase64(input.files[i]);
+                profileWallFilesArr.push({ name: input.files[i].name, type: input.files[i].type, data: b64 });
+            }
+            document.getElementById('profile-wall-files-info').innerText = `تم إرفاق ${profileWallFilesArr.length} ملف/صور للنشر بنجاح ✅`;
+        }
+
+        async function publishProfileWallPost() {
+            const text = document.getElementById('profile-wall-text').value.trim();
+            if (!text && profileWallFilesArr.length === 0) {
+                alert('الرجاء كتابة نص أو إرفاق صورة/فيديو للنشر على الحائط!');
+                return;
+            }
+
+            let activeTargetName = viewingProfileName ? viewingProfileName : loggedInDriverName;
+            let drv = (appData.drivers || []).find(d => d.name === activeTargetName);
+            if (!drv) return;
+            if (!drv.wallPosts) drv.wallPosts = [];
+
+            drv.wallPosts.unshift({
+                id: Date.now(),
+                author: loggedInDriverName,
+                text: text,
+                files: profileWallFilesArr,
+                date: new Date().toLocaleString()
+            });
+
+            document.getElementById('profile-wall-text').value = '';
+            profileWallFilesArr = [];
+            document.getElementById('profile-wall-files-info').innerText = '';
+            saveDataAll();
+            renderMyAccount();
+            alert('تم النشر على الحائط بنجاح! 🚀');
+        }
+
+        function renderProfileWallPosts(drv) {
+            const container = document.getElementById('profile-wall-posts-container');
+            if(!container) return;
+            container.innerHTML = '';
+            let posts = drv.wallPosts || [];
+            if (posts.length === 0) {
+                container.innerHTML = `<div class="card" style="text-align:center; opacity:0.7; font-size:11px;">لا توجد منشورات على هذا الحائط حتى الآن. كن أول المبدعين!</div>`;
+                return;
+            }
+
+            posts.forEach(p => {
+                let filesHtml = '';
+                if (p.files && p.files.length > 0) {
+                    filesHtml = `<div class="load-post-media">`;
+                    p.files.forEach(f => {
+                        if (f.type && f.type.includes('video')) {
+                            filesHtml += `<video src="${f.data}" controls style="width:100px; height:80px; border-radius:6px; cursor:pointer;" onclick="viewMedia('${f.data}', 'video')"></video>`;
+                        } else {
+                            filesHtml += `<img src="${f.data}" style="width:100px; height:80px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="viewMedia('${f.data}', 'image')"/>`;
+                        }
+                    });
+                    filesHtml += `</div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="community-feed-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <b style="font-size:11px; color:var(--accent);">✍️ ${p.author}</b>
+                            <span style="font-size:9px; opacity:0.7;">${p.date}</span>
+                        </div>
+                        <p style="font-size:11px; line-height:1.4; margin-bottom:6px;">${p.text}</p>
+                        ${filesHtml}
+                        ${(currentUserRole === 'admin' || currentUserRole === 'supervisor' || p.author === loggedInDriverName) ? `<button type="button" class="btn-danger btn-sm" style="margin-top:6px;" onclick="deleteProfileWallPost(${drv.id}, ${p.id})">حذف المنشور 🗑️</button>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function deleteProfileWallPost(driverId, postId) {
+            let drv = (appData.drivers || []).find(d => d.id === driverId);
+            if(drv && drv.wallPosts) {
+                drv.wallPosts = drv.wallPosts.filter(p => p.id !== postId);
+                saveDataAll();
+                renderMyAccount();
+            }
+        }
+
+        function renderProfileDriverSearch() {
+            const query = document.getElementById('profile-driver-search-input').value.toLowerCase();
+            const container = document.getElementById('profile-driver-search-results');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            let filtered = (appData.drivers || []).filter(d => d.name.toLowerCase().includes(query) || d.phone.includes(query));
+            filtered.forEach(d => {
+                let avatarHtml = d.avatar ? `<img src="${d.avatar}"/>` : `<span>${d.name.charAt(0)}</span>`;
+                container.innerHTML += `
+                    <div class="driver-card-item" onclick="openDriverProfile('${d.name}')">
+                        <div class="driver-card-avatar">${avatarHtml}</div>
+                        <div>
+                            <div style="font-weight:bold; font-size:11px;">${d.name}</div>
+                            <div style="font-size:9px; opacity:0.8;">${d.title || 'سائق'} | ${d.role}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function previewCommunityFiles(input) {
+            communityFilesArr = [];
+            for (let i = 0; i < input.files.length; i++) {
+                let b64 = await fileToBase64(input.files[i]);
+                communityFilesArr.push({ name: input.files[i].name, type: input.files[i].type, data: b64 });
+            }
+            document.getElementById('community-files-preview-info').innerText = `تم تجهيز ${communityFilesArr.length} ملف للنشر في المجتمع ✅`;
+        }
+
+        async function publishCommunityPost() {
+            const text = document.getElementById('community-post-text').value.trim();
+            if(!text && communityFilesArr.length === 0) {
+                alert('الرجاء كتابة نص أو إرفاق ملفات للنشر في المجتمع!');
+                return;
+            }
+
+            if(!appData.communityPosts) appData.communityPosts = [];
+            appData.communityPosts.unshift({
+                id: Date.now(),
+                author: loggedInDriverName,
+                text: text,
+                files: communityFilesArr,
+                date: new Date().toLocaleString(),
+                likes: 0
+            });
+
+            document.getElementById('community-post-text').value = '';
+            communityFilesArr = [];
+            document.getElementById('community-files-preview-info').innerText = '';
+            saveDataAll();
+            renderCommunityPosts();
+            alert('تم النشر في مجتمع السائقين بنجاح! 🚀');
+        }
+
+        function renderCommunityPosts() {
+            const container = document.getElementById('community-posts-container');
+            if(!container) return;
+            container.innerHTML = '';
+            let posts = appData.communityPosts || [];
+            if(posts.length === 0) {
+                container.innerHTML = `<p style="text-align:center; opacity:0.7; font-size:11px;">لا توجد منشورات في المجتمع حتى الآن.</p>`;
+                return;
+            }
+
+            posts.forEach(p => {
+                let filesHtml = '';
+                if(p.files && p.files.length > 0) {
+                    filesHtml = `<div class="load-post-media">`;
+                    p.files.forEach(f => {
+                        if(f.type && f.type.includes('video')) {
+                            filesHtml += `<video src="${f.data}" controls style="width:90px; height:70px; border-radius:6px; cursor:pointer;" onclick="viewMedia('${f.data}', 'video')"></video>`;
+                        } else if(f.type && f.type.includes('image')) {
+                            filesHtml += `<img src="${f.data}" style="width:90px; height:70px; object-fit:cover; border-radius:6px; cursor:pointer;" onclick="viewMedia('${f.data}', 'image')"/>`;
+                        } else {
+                            filesHtml += `<a href="${f.data}" download="${f.name}" class="btn-sm" style="background:#334155; color:#fff;">📁 تحميل ${f.name}</a>`;
+                        }
+                    });
+                    filesHtml += `</div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="community-feed-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <b style="font-size:11px; color:var(--accent); cursor:pointer;" onclick="openDriverProfile('${p.author}')">👤 ${p.author}</b>
+                            <span style="font-size:9px; opacity:0.7;">${p.date}</span>
+                        </div>
+                        <p style="font-size:11px; line-height:1.4; margin-bottom:6px;">${p.text}</p>
+                        ${filesHtml}
+                        <div style="display:flex; gap:5px; margin-top:6px; align-items:center;">
+                            <button type="button" class="btn-sm" style="background:#e2e8f0; color:#334155;" onclick="likeCommunityPost(${p.id})">👍 أعجبني (${p.likes || 0})</button>
+                            ${(currentUserRole === 'admin' || currentUserRole === 'supervisor' || p.author === loggedInDriverName) ? `<button type="button" class="btn-danger btn-sm" onclick="deleteCommunityPost(${p.id})">حذف 🗑️</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function likeCommunityPost(id) {
+            let p = (appData.communityPosts || []).find(x => x.id === id);
+            if(p) {
+                p.likes = (p.likes || 0) + 1;
+                saveDataAll();
+                renderCommunityPosts();
+            }
+        }
+
+        function deleteCommunityPost(id) {
+            appData.communityPosts = (appData.communityPosts || []).filter(x => x.id !== id);
+            saveDataAll();
+            renderCommunityPosts();
+        }
+
+        function showCommunityNotifications() {
+            alert(`لديك ${communityNotificationsCount} إشعارات تفاعلية جديدة في المجتمع والمنشورات! 🔔`);
+        }
+
+        function renderChatAccountsList() {
+            const container = document.getElementById('chat-accounts-list-container');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            const searchQ = (document.getElementById('chat-search-input') ? document.getElementById('chat-search-input').value.toLowerCase() : '');
+            let filteredDrivers = (appData.drivers || []).filter(d => d.name.toLowerCase().includes(searchQ));
+
+            filteredDrivers.forEach(d => {
+                if(d.name === loggedInDriverName) return;
+                let roomKey = `private_${[loggedInDriverName, d.name].sort().join('_')}`;
+                container.innerHTML += `
+                    <div class="chat-account-item ${currentChatTarget === roomKey ? 'active' : ''}" onclick="selectChatRoom('${roomKey}', '${d.name}')">
+                        <span>👤 ${d.name} (${d.title || d.role})</span>
+                    </div>
+                `;
+            });
+        }
+
+        function selectChatRoom(roomKey, targetName = '') {
+            currentChatTarget = roomKey;
+            const titleEl = document.getElementById('chat-current-room-title');
+            if(roomKey === 'general') {
+                titleEl.innerText = 'المحادثة العامة للأسطول';
+            } else {
+                titleEl.innerText = `محادثة خاصة مع: ${targetName}`;
+            }
+            renderChatAccountsList();
+            renderChatMessages();
+        }
+
+        function sendChatMessage(e) {
+            e.preventDefault();
+            const textInput = document.getElementById('chat-input-text');
+            const text = textInput.value.trim();
+            if(!text) return;
+
+            if(!appData.chat) appData.chat = [];
+            appData.chat.push({
+                id: Date.now(),
+                room: currentChatTarget,
+                sender: loggedInDriverName,
+                text: text,
+                date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+
+            textInput.value = '';
+            saveDataAll();
+            renderChatMessages();
+            updateGlobalChatNotificationBadge();
+        }
+
+        function renderChatMessages() {
+            const container = document.getElementById('chat-messages-list');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            let messages = (appData.chat || []).filter(m => m.room === currentChatTarget || (!m.room && currentChatTarget === 'general'));
+            if(messages.length === 0) {
+                container.innerHTML = `<p style="text-align:center; opacity:0.7; font-size:10px; margin-top:20px;">لا توجد رسائل بعد. ابدأ المحادثة الآن!</p>`;
+                return;
+            }
+
+            messages.forEach(m => {
+                let isMe = m.sender === loggedInDriverName;
+                container.innerHTML += `
+                    <div class="chat-bubble ${isMe ? 'driver' : 'admin'}">
+                        <div style="font-size:9px; font-weight:bold; margin-bottom:2px; opacity:0.8;">${m.sender} (${m.date})</div>
+                        <div>${m.text}</div>
+                    </div>
+                `;
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderChatNotificationsInbox() {
+            const container = document.getElementById('chat-notifications-inbox');
+            if(!container) return;
+            container.innerHTML = '';
+            let messages = (appData.chat || []).filter(m => m.sender !== loggedInDriverName);
+            if(messages.length === 0) {
+                container.innerHTML = `<p style="text-align:center; opacity:0.7; font-size:10px;">لا توجد إشعارات جديدة.</p>`;
+                return;
+            }
+            messages.slice(-10).reverse().forEach(m => {
+                container.innerHTML += `
+                    <div style="background:var(--card-bg); padding:6px; border-radius:6px; border:1px solid var(--border-color); font-size:10px;">
+                        <b>${m.sender}:</b> ${m.text} <span style="float:left; opacity:0.7; font-size:8px;">${m.date}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function sendQuickChatMessageFromModal() {
+            const txt = document.getElementById('quick-notif-reply-text').value.trim();
+            if(!txt) return;
+            if(!appData.chat) appData.chat = [];
+            appData.chat.push({
+                id: Date.now(),
+                room: 'general',
+                sender: loggedInDriverName,
+                text: txt,
+                date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            document.getElementById('quick-notif-reply-text').value = '';
+            saveDataAll();
+            renderChatMessages();
+            closeModal('chatNotificationsModal');
+            alert('تم إرسال الرسالة بنجاح! ✈️');
+        }
+
+        function registerNewDriverPublic() {
+            const name = document.getElementById('pub-drv-name').value.trim();
+            const phone = document.getElementById('pub-drv-phone').value.trim();
+            const pin = document.getElementById('pub-drv-pin').value.trim();
+
+            if(!name || !phone || !pin) {
+                alert('الرجاء إكمال كافة الحقول!');
+                return;
+            }
+
+            if(!appData.drivers) appData.drivers = [];
+            if(appData.drivers.some(d => d.phone === phone || d.name === name)) {
+                alert('هذا الاسم أو رقم الهاتف مسجل مسبقاً!');
+                return;
+            }
+
+            appData.drivers.push({
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                pin: pin,
+                status: 'متاح 🟢',
+                role: 'سائق',
+                title: 'سائق معتمد',
+                avatar: '',
+                cover: '',
+                wallPosts: []
+            });
+
+            saveDataAll();
+            closeDriverRegister();
+            alert('تم تسجيل حساب السائق بنجاح! يمكنك الدخول الآن برمز PIN الخاص بك 🚀');
+        }
+
+        function saveVisitorShipment(e) {
+            const name = document.getElementById('vis-name').value.trim();
+            const phone = document.getElementById('vis-phone').value.trim();
+            const address = document.getElementById('vis-address').value.trim();
+            const item = document.getElementById('vis-item').value.trim();
+            const price = document.getElementById('vis-price').value.trim();
+
+            if(!name || !phone || !address || !item || !price) {
+                alert('الرجاء تعبئة كافة الحقول المطلوبة بالحجز!');
+                return;
+            }
+
+            if(!appData.shipments) appData.shipments = [];
+            appData.shipments.unshift({
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                address: address,
+                item: item,
+                price: price,
+                assignedDriver: 'غير محدد',
+                gps: visitorGPS || '30.0444,31.2357',
+                img: visitorImgBase64 || '',
+                status: 'قيد الانتظار',
+                date: new Date().toLocaleDateString()
+            });
+
+            saveDataAll();
+            closeVisitorBooking();
+            alert('تم إرسال حجز الرحلة بنجاح إلى الإدارة وسيتم التواصل معك قريباً! 📦🚀');
+        }
+
+        function saveShipmentHandler(e) {
+            const name = document.getElementById('ship-name').value.trim();
+            const phone = document.getElementById('ship-phone').value.trim();
+            const address = document.getElementById('ship-address').value.trim();
+            const item = document.getElementById('ship-item').value.trim();
+            const price = document.getElementById('ship-price').value.trim();
+            const assignedDriver = document.getElementById('ship-assigned-driver').value;
+
+            if(!name || !address || !item || !price) {
+                alert('الرجاء إدخال الحقول الأساسية للشحنة!');
+                return;
+            }
+
+            if(!appData.shipments) appData.shipments = [];
+            appData.shipments.unshift({
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                address: address,
+                item: item,
+                price: price,
+                assignedDriver: assignedDriver || 'عام',
+                gps: currentGPS || '30.0444,31.2357',
+                img: uploadedImgBase64 || '',
+                status: 'قيد الانتظار',
+                date: new Date().toLocaleDateString()
+            });
+
+            document.getElementById('shipment-form').reset();
+            uploadedImgBase64 = '';
+            currentGPS = '';
+            clearSignature();
+            saveDataAll();
+            render();
+            alert('تم حفظ الرحلة بنجاح وتوليد البيانات في الأسطول! 💾');
+        }
+
+        function saveCashHandler(e) {
+            const type = document.getElementById('cash-type').value;
+            const amount = document.getElementById('cash-amount').value;
+            const desc = document.getElementById('cash-desc').value;
+
+            if(!amount || !desc) return;
+            if(!appData.treasury) appData.treasury = [];
+            appData.treasury.unshift({
+                id: Date.now(),
+                type: type,
+                amount: amount,
+                desc: desc,
+                date: new Date().toLocaleDateString()
+            });
+
+            saveDataAll();
+            render();
+            alert('تم تسجيل الحركة النقدية في الخزينة بنجاح!');
+        }
+
+        function saveTruckHandler(e) {
+            const num = document.getElementById('truck-num').value;
+            const driver = document.getElementById('driver-name').value;
+            const km = document.getElementById('truck-km').value;
+            const nextOil = document.getElementById('truck-next-oil').value;
+            const expiry = document.getElementById('truck-expiry').value;
+
+            if(!appData.trucks) appData.trucks = [];
+            appData.trucks.push({ id: Date.now(), num, driver, km, nextOil, expiry });
+            saveDataAll();
+            render();
+            alert('تم حفظ المركبة بنجاح!');
+        }
+
+        function saveDocHandler(e) {
+            const title = document.getElementById('doc-title').value;
+            const fileInput = document.getElementById('doc-file').files[0];
+            if(fileInput) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    if(!appData.docs) appData.docs = [];
+                    appData.docs.push({ id: Date.now(), title, data: evt.target.result });
+                    saveDataAll();
+                    render();
+                    alert('تم حفظ المستند في المكتبة بنجاح!');
+                };
+                reader.readAsDataURL(fileInput);
+            }
+        }
+
+        function saveNewDriverHandler(e) {
+            const name = document.getElementById('drv-fullname').value.trim();
+            const phone = document.getElementById('drv-phone').value.trim();
+            const pin = document.getElementById('drv-pin').value.trim();
+            const role = document.getElementById('drv-role-select').value;
+
+            if(!name || !phone || !pin) return;
+            if(!appData.drivers) appData.drivers = [];
+            
+            appData.drivers.push({
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                pin: pin,
+                role: role,
+                status: 'متاح 🟢',
+                title: role === 'مدير نظام' ? 'مدير أساسي' : 'سائق معتمد',
+                avatar: '',
+                cover: '',
+                wallPosts: []
+            });
+
+            saveDataAll();
+            render();
+            alert('تمت إضافة الحساب الجديد بنجاح للنظام! 🚀');
+        }
+
+        function saveExpenseHandler(e) {
+            const title = document.getElementById('exp-title').value;
+            const amount = document.getElementById('exp-amount').value;
+            if(!title || !amount) return;
+            if(!appData.expenses) appData.expenses = [];
+            appData.expenses.unshift({ id: Date.now(), title, amount, date: new Date().toLocaleDateString() });
+            saveDataAll();
+            render();
+            alert('تم تسجیل المصروف بنجاح!');
+        }
+
+        function renderCRUDTable() {
+            const section = document.getElementById('crud-section-select').value;
+            const headers = document.getElementById('crud-table-headers');
+            const body = document.getElementById('crud-table-body');
+            headers.innerHTML = '';
+            body.innerHTML = '';
+
+            if (section === 'shipments') {
+                headers.innerHTML = `<th>العميل</th><th>الحمولة</th><th>الأجرة</th><th>الحالة</th><th>حذف</th>`;
+                (appData.shipments || []).forEach(s => {
+                    body.innerHTML += `<tr><td>${s.name}</td><td>${s.item}</td><td>${s.price} ج.م</td><td>${s.status}</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('shipments', ${s.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'posts') {
+                headers.innerHTML = `<th>العنوان</th><th>التفاصيل</th><th>حذف</th>`;
+                (appData.posts || []).forEach(p => {
+                    body.innerHTML += `<tr><td>${p.title}</td><td>${p.desc}</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('posts', ${p.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'trucks') {
+                headers.innerHTML = `<th>المركبة</th><th>السائق</th><th>العدّاد</th><th>حذف</th>`;
+                (appData.trucks || []).forEach(t => {
+                    body.innerHTML += `<tr><td>${t.num}</td><td>${t.driver}</td><td>${t.km} KM</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('trucks', ${t.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'drivers') {
+                headers.innerHTML = `<th>الاسم</th><th>الهاتف</th><th>الرتبة</th><th>PIN</th><th>حذف</th>`;
+                (appData.drivers || []).forEach(d => {
+                    body.innerHTML += `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.role}</td><td>${d.pin}</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('drivers', ${d.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'customers') {
+                headers.innerHTML = `<th>العميل</th><th>الهاتف</th><th>الديون</th><th>حذف</th>`;
+                (appData.customers || []).forEach(c => {
+                    body.innerHTML += `<tr><td>${c.name}</td><td>${c.phone || '-'}</td><td>${c.debt || 0} ج.م</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('customers', ${c.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'treasury') {
+                headers.innerHTML = `<th>النوع</th><th>المبلغ</th><th>البيان</th><th>حذف</th>`;
+                (appData.treasury || []).forEach(t => {
+                    body.innerHTML += `<tr><td>${t.type}</td><td>${t.amount} ج.م</td><td>${t.desc}</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('treasury', ${t.id})">حذف</button></td></tr>`;
+                });
+            } else if (section === 'expenses') {
+                headers.innerHTML = `<th>البيان</th><th>المبلغ</th><th>حذف</th>`;
+                (appData.expenses || []).forEach(e => {
+                    body.innerHTML += `<tr><td>${e.title}</td><td>${e.amount} ج.م</td><td><button type="button" class="btn-danger btn-sm" onclick="deleteItem('expenses', ${e.id})">حذف</button></td></tr>`;
+                });
+            }
+        }
+
+        function deleteItem(type, id) {
+            if(currentUserRole !== 'admin' && currentUserRole !== 'supervisor') {
+                alert('غير مسموح لك بالحذف!');
+                return;
+            }
+            if(confirm('هل أنت متأكد من الحذف؟')) {
+                appData[type] = appData[type].filter(x => x.id !== id);
+                saveDataAll();
+                render();
+                if(document.getElementById('crud-tab').classList.contains('active')) renderCRUDTable();
+            }
+        }
+
+        function renderDriversMonitor() {
+            const list = document.getElementById('drivers-monitor-list');
+            if(!list) return;
+            list.innerHTML = '';
+            (appData.drivers || []).forEach(d => {
+                list.innerHTML += `
+                    <tr>
+                        <td><b>${d.name}</b></td>
+                        <td>${d.phone}</td>
+                        <td><span class="badge bg-transit">${d.role}</span></td>
+                        <td><span style="color:var(--purple); font-weight:bold;">${d.title || 'سائق'}</span></td>
+                        <td><span class="badge bg-delivered">${d.status}</span></td>
+                        <td>
+                            <select onchange="updateDriverStatusProp(${d.id}, 'status', this.value)" class="btn-sm">
+                                <option value="متاح 🟢" ${d.status.includes('متاح')?'selected':''}>متاح 🟢</option>
+                                <option value="في رحلة 🚚" ${d.status.includes('في رحلة')?'selected':''}>في رحلة 🚚</option>
+                                <option value="استراحة ☕" ${d.status.includes('استراحة')?'selected':''}>استراحة ☕</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateDriverStatusProp(id, prop, val) {
+            let d = (appData.drivers || []).find(x => x.id === id);
+            if(d) {
+                d[prop] = val;
+                saveDataAll();
+                render();
+            }
+        }
+
+        function renderDriversListTable() {
+            const list = document.getElementById('drivers-list-table');
+            if(!list) return;
+            list.innerHTML = '';
+            (appData.drivers || []).forEach(d => {
+                list.innerHTML += `
+                    <tr>
+                        <td><b>${d.name}</b></td>
+                        <td>${d.phone}</td>
+                        <td>${d.role}</td>
+                        <td style="color:var(--accent);">${d.title || 'سائق'}</td>
+                        <td style="font-weight:bold; letter-spacing:1px;">${d.pin}</td>
+                        <td>
+                            <button type="button" class="btn-warning btn-sm" onclick="changeUserPinByAdmin(${d.id})">🔑 تغيير PIN</button>
+                            ${(currentUserRole === 'admin') ? `<button type="button" class="btn-danger btn-sm" onclick="deleteItem('drivers', ${d.id})">حذف</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderPublicPosts() {
+            const feed = document.getElementById('public-posts-feed');
+            if(!feed) return;
+            feed.innerHTML = '';
+            let posts = appData.posts || [];
+            if(posts.length === 0) {
+                feed.innerHTML = `<p style="text-align:center; opacity:0.7; font-size:11px;">لا توجد رحلات أو إعلانات عامة منشورة حالياً.</p>`;
+                return;
+            }
+            posts.forEach(p => {
+                feed.innerHTML += `
+                    <div class="load-post-card">
+                        <h4>📢 ${p.title}</h4>
+                        <p style="font-size:11px; margin-top:4px;">${p.desc}</p>
+                        <span style="font-size:9px; opacity:0.6;">تاريخ النشر: ${p.date || '-'}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderSelectedInvoice() {
+            const id = document.getElementById('invoice-select').value;
+            const s = (appData.shipments || []).find(x => x.id == id);
+            if(!s) return;
+            document.getElementById('inv-id').innerText = s.id;
+            document.getElementById('inv-client').innerText = s.name;
+            document.getElementById('inv-phone').innerText = s.phone || '-';
+            document.getElementById('inv-address').innerText = s.address;
+            document.getElementById('inv-item').innerText = s.item;
+            document.getElementById('inv-price').innerText = s.price;
+            document.getElementById('inv-status').innerText = s.status;
+            
+            const imgPrev = document.getElementById('inv-img-preview');
+            imgPrev.innerHTML = s.img ? `<img src="${s.img}" style="max-height:80px; border-radius:6px;"/>` : '';
+        }
+
+        function updateInvoiceDropdown() {
+            const sel = document.getElementById('invoice-select');
+            if(!sel) return;
+            sel.innerHTML = '';
+            (appData.shipments || []).forEach(s => {
+                sel.innerHTML += `<option value="${s.id}">شحنة رقم #${s.id} - ${s.name} (${s.item})</option>`;
+            });
+            renderSelectedInvoice();
+        }
+
+        function openInvoiceStandalone() {
+            const printContent = document.getElementById('print-area').innerHTML;
+            const win = window.open('', '', 'width=700,height=700');
+            win.document.write(`<html dir="rtl"><head><title>فاتورة رسمية - أسطورة الطريق</title></head><body style="font-family:Tahoma; padding:20px;">${printContent}</body></html>`);
+            win.document.close();
+            win.print();
+        }
+
+        function exportInvoiceAsImage() {
+            const area = document.getElementById('print-area');
+            html2canvas(area).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'invoice.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        function exportInvoiceAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const area = document.getElementById('print-area');
+            html2canvas(area).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF();
+                pdf.addImage(imgData, 'PNG', 10, 10, 190, 0);
+                pdf.save('invoice.pdf');
+            });
+        }
+
+        function sendInvoiceWhatsApp() {
+            const client = document.getElementById('inv-client').innerText;
+            const price = document.getElementById('inv-price').innerText;
+            const text = encodeURIComponent(`مرحباً ${client}، تفاصيل رحلتك معنا في أسطورة الطريق بقيمة ${price} ج.م. شكراً لثقتكم بنا! 🐎🚚`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        function sendDailySummaryWhatsApp() {
+            let totalRev = (appData.shipments || []).reduce((sum, s) => sum + Number(s.price || 0), 0);
+            let text = encodeURIComponent(`📊 التقرير اليومي لأسطورة الطريق:\n- إجمالي الشحنات: ${appData.shipments.length}\n- الإيرادات: ${totalRev} ج.م\n- الحالة العامة للأسطول: ممتازة 🚀`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        function exportToExcel() {
+            let ws = XLSX.utils.json_to_sheet(appData.shipments || []);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Shipments");
+            XLSX.writeFile(wb, "RoadLegend_Report.xlsx");
+        }
+
+        function clearAll() {
+            if(currentUserRole !== 'admin') {
+                alert('فقط مدير النظام يمكنه مسح البيانات!');
+                return;
+            }
+            if(confirm('تحذير: سيتم مسح كافة البيانات نهائياً؟')) {
+                localStorage.removeItem('transportAppV60');
+                location.reload();
+            }
+        }
+
+        function runAIMechanicAnalysis() {
+            const fault = document.getElementById('ai-fault-select').value;
+            const box = document.getElementById('ai-result-box');
+            box.style.display = 'block';
+            let res = '';
+            if(fault === 'alt') res = '<b>تشخيص الدينامو والشحن:</b> قد يكون السير مرتخياً أو الفحمات تالفة. افحص فولت البطارية (يجب أن يكون بين 13.8V إلى 14.4V أثناء الدوران).';
+            else if(fault === 'clutch') res = '<b>تشخيص الدبرياج والفتيس:</b> تأكد من مستوى زيت الفتيس وعدم وجود هواء في سائل الهيدروليك أو تآكل في اسطوانة الدبرياج.';
+            else if(fault === 'heat') res = '<b>تشخيص الحرارة:</b> افحص مستوى مياه الردياتير، عمل المروحة، وتأكد من عدم وجود تنفس في وجه الغطاء.';
+            else if(fault === 'diesel') res = '<b>ملاحظة الوقود:</b> خلط البنزين بالجاز خطير جداً على طلمبة الرشاشات ويجب تفريغ الدورة فوراً وعدم الإدارة.';
+            else res = '<b>تشخيص الدخان:</b> الدخان الأسود يدل على حرق غير كامل بالوقود (رشاشات أو هواء)، بينما الدخان الأبيض يدل على دخول مياه لغرفة الحريق.';
+            box.innerHTML = res;
+        }
+
+        function render() {
+            let shipments = appData.shipments || [];
+            if(currentUserRole === 'driver') {
+                shipments = shipments.filter(s => s.assignedDriver === loggedInDriverName);
+            }
+            
+            const statShip = document.getElementById('stat-shipments');
+            if(statShip) statShip.innerText = shipments.length;
+
+            let totalRev = shipments.reduce((sum, s) => sum + Number(s.price || 0), 0);
+            const statRev = document.getElementById('stat-revenue');
+            if(statRev) statRev.innerText = totalRev + ' ج.م';
+
+            let totalExp = (appData.expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+            let netProf = totalRev - totalExp;
+            const statProf = document.getElementById('stat-net-profit');
+            if(statProf) statProf.innerText = netProf + ' ج.م';
+
+            let totalCash = (appData.treasury || []).reduce((sum, t) => sum + (t.type === 'in' ? Number(t.amount) : -Number(t.amount)), 0);
+            const statCash = document.getElementById('stat-cash');
+            if(statCash) statCash.innerText = totalCash + ' ج.م';
+
+            let totalDebt = (appData.customers || []).reduce((sum, c) => sum + Number(c.debt || 0), 0);
+            const statDebt = document.getElementById('stat-debts');
+            if(statDebt) statDebt.innerText = totalDebt + ' ج.م';
+
+            const shipList = document.getElementById('shipments-list');
+            if(shipList) {
+                shipList.innerHTML = '';
+                shipments.forEach(s => {
+                    shipList.innerHTML += `
+                        <tr>
+                            <td><b>${s.name}</b><br><small>${s.phone || ''}</small></td>
+                            <td>${s.item}</td>
+                            <td>${s.assignedDriver || 'عام'}</td>
+                            <td>${s.price} ج.م</td>
+                            <td style="font-weight:bold; color:var(--success);">${Number(s.price || 0) - Number(s.fuelCost || 0)} ج.م</td>
+                            <td><span class="badge bg-${s.status === 'مكتملة' ? 'delivered' : 'pending'}">${s.status}</span></td>
+                            <td>
+                                <button type="button" class="btn-sm btn-success" onclick="updateShipmentStatus(${s.id})">تحديث الحالة</button>
+                                ${(currentUserRole === 'admin' || currentUserRole === 'supervisor') ? `<button type="button" class="btn-sm btn-danger" onclick="deleteItem('shipments', ${s.id})">حذف</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const driverSelect = document.getElementById('ship-assigned-driver');
+            if(driverSelect) {
+                driverSelect.innerHTML = `<option value="">-- بدون تعيين (عام) --</option>`;
+                (appData.drivers || []).forEach(d => {
+                    driverSelect.innerHTML += `<option value="${d.name}">${d.name} (${d.title || d.role})</option>`;
+                });
+            }
+
+            const trucksList = document.getElementById('trucks-list');
+            if(trucksList) {
+                trucksList.innerHTML = '';
+                (appData.trucks || []).forEach(t => {
+                    trucksList.innerHTML += `<tr><td>${t.num}</td><td>${t.driver}</td><td>${t.km} KM</td><td>${t.nextOil} KM</td><td>${t.expiry}</td></tr>`;
+                });
+            }
+
+            const treasList = document.getElementById('treasury-list');
+            if(treasList) {
+                treasList.innerHTML = '';
+                (appData.treasury || []).forEach(t => {
+                    treasList.innerHTML += `<tr><td>${t.type === 'in' ? 'إيداع (+)' : 'سحب (-)'}</td><td>${t.amount} ج.م</td><td>${t.desc}</td><td>${t.date || '-'}</td></tr>`;
+                });
+            }
+
+            const expList = document.getElementById('expenses-list');
+            if(expList) {
+                expList.innerHTML = '';
+                (appData.expenses || []).forEach(e => {
+                    expList.innerHTML += `<tr><td>${e.title}</td><td>${e.amount} ج.م</td><td>${e.date || '-'}</td></tr>`;
+                });
+            }
+
+            const docsList = document.getElementById('docs-list');
+            if(docsList) {
+                docsList.innerHTML = '';
+                (appData.docs || []).forEach(doc => {
+                    docsList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg); padding:6px; border-radius:6px; font-size:10px;"><span>📄 ${doc.title}</span><a href="${doc.data}" download="${doc.title}.jpg" class="btn-sm btn-main">تحميل المستند</a></div>`;
+                });
+            }
+
+            const custsList = document.getElementById('customers-list');
+            if(custsList) {
+                custsList.innerHTML = '';
+                (appData.customers || []).forEach(c => {
+                    custsList.innerHTML += `<tr><td>${c.name}</td><td>${c.phone || '-'}</td><td style="color:var(--danger); font-weight:bold;">${c.debt || 0} ج.م</td><td><button type="button" class="btn-sm btn-success" onclick="collectCustomerDebt(${c.id})">تحصيل</button></td></tr>`;
+                });
+            }
+        }
+
+        function updateShipmentStatus(id) {
+            let s = (appData.shipments || []).find(x => x.id === id);
+            if(s) {
+                const statuses = ['قيد الانتظار', 'جاري النقل', 'مكتملة', 'مرتجعةة'];
+                let next = prompt('اختر حالة الشحنة الجديدة (قيد الانتظار، جاري النقل، مكتملة):', s.status);
+                if(next) {
+                    s.status = next;
+                    saveDataAll();
+                    render();
+                }
+            }
+        }
+
+        function collectCustomerDebt(id) {
+            let c = (appData.customers || []).find(x => x.id === id);
+            if(c && c.debt > 0) {
+                let amount = prompt(`الديون المستحقة على العميل (${c.name}) هي ${c.debt} ج.م. أدخل المبلغ المراد تحصيله:`);
+                if(amount && !isNaN(amount)) {
+                    c.debt = Math.max(0, Number(c.debt) - Number(amount));
+                    saveDataAll();
+                    render();
+                    alert('تم تحصيل المبلغ وتسجيله في الخزينة بنجاح! 💵');
+                }
+            }
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -2331,6 +2331,250 @@
         function closeQRModal() {
             document.getElementById('qr-modal').style.display = 'none';
         }
+       function closeQRModal() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+    
+     function showQR(text) {
+            document.getElementById('qr-modal').style.display = 'flex';
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, { text: text, width: 160, height: 160 });
+        }
+        function closeQRModal() { document.getElementById('qr-modal').style.display = 'none'; }
+
+        function updateInvoiceDropdown() {
+            const select = document.getElementById('invoice-select');
+            if(!select) return;
+            select.innerHTML = '';
+            (appData.shipments || []).forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.name} - ${s.item} (${s.price} ج.م)</option>`;
+            });
+            renderSelectedInvoice();
+        }
+      function renderSelectedInvoice() {
+            const selectId = document.getElementById('invoice-select').value;
+            const s = (appData.shipments || []).find(x => x.id == selectId);
+            if(!s) return;
+
+            document.getElementById('inv-id').innerText = '#' + s.id;
+            document.getElementById('inv-client').innerText = s.name;
+            document.getElementById('inv-phone').innerText = s.phone || 'غير متوفر';
+            document.getElementById('inv-address').innerText = s.address;
+            document.getElementById('inv-item').innerText = s.item;
+            document.getElementById('inv-price').innerText = s.price;
+            document.getElementById('inv-status').innerText = s.status;
+
+            const imgPrev = document.getElementById('inv-img-preview');
+            if(s.img) {
+                imgPrev.innerHTML = `<img src="${s.img}" style="max-width:120px; max-height:80px; border-radius:6px; border:1px solid #cbd5e1;"/>`;
+            } else {
+                imgPrev.innerHTML = '';
+            }
+
+            const sigCont = document.getElementById('inv-sig-container');
+            if(s.sig) {
+                sigCont.innerHTML = `<p style="font-size:9px; font-weight:bold; margin-bottom:2px;">توقيع المستلم:</p><img src="${s.sig}" style="max-height:40px; border:1px dashed #cbd5e1;"/>`;
+            } else {
+                sigCont.innerHTML = `<p style="font-size:9px; opacity:0.6;">بدون توقيع رقمي</p>`;
+            }
+      }
+      function openInvoiceStandalone() {
+            const printContent = document.getElementById('print-area').innerHTML;
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html lang="ar" dir="rtl"><head><title>فاتورة رسمية - أسطورة الطريق</title>
+                <style>body{ font-family: Tahoma, sans-serif; padding: 20px; color: #334155; }</style>
+                </head><body>${printContent}</body></html>
+            `);
+            win.document.close();
+            win.print();
+        }
+
+        function exportInvoiceAsImage() {
+            const printArea = document.getElementById('print-area');
+            html2canvas(printArea).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'invoice.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        function exportInvoiceAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const printArea = document.getElementById('print-area');
+            html2canvas(printArea).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const width = pdf.internal.pageSize.getWidth();
+                const height = (canvas.height * width) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 10, width, height);
+                pdf.save('invoice.pdf');
+            });
+        }
+
+        function sendInvoiceWhatsApp() {
+            const selectId = document.getElementById('invoice-select').value;
+            const s = (appData.shipments || []).find(x => x.id == selectId);
+            if(!s) return;
+            const msg = `فاتورة شحن رسمية - أسطورة الطريق%0aالعميل: ${s.name}%0aالحمولة: ${s.item}%0aالأجرة: ${s.price} ج.م%0aالحالة: ${s.status}`;
+            window.open(`https://wa.me/${s.phone || ''}?text=${msg}`, '_blank');
+        }
+
+        function sendDailySummaryWhatsApp() {
+            let totalRev = (appData.shipments || []).reduce((sum, s) => sum + Number(s.price || 0), 0);
+            let totalExp = (appData.expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+            let netProf = totalRev - totalExp;
+            const summary = `📊 التقرير اليومي الشامل - أسطورة الطريق V60 PRO%0a- إجمالي الشحنات: ${(appData.shipments || []).length}%0a- إجمالي الإيرادات: ${totalRev} ج.م%0a- المصروفات: ${totalExp} ج.م%0a- صافي الأرباح: ${netProf} ج.م 🚀`;
+            window.open(`https://wa.me/?text=${summary}`, '_blank');
+        }
+
+        function exportToExcel() {
+            let wb = XLSX.utils.book_new();
+            let wsShipments = XLSX.utils.json_to_sheet(appData.shipments || []);
+            XLSX.utils.book_append_sheet(wb, wsShipments, "الشحنات");
+            let wsTreasury = XLSX.utils.json_to_sheet(appData.treasury || []);
+            XLSX.utils.book_append_sheet(wb, wsTreasury, "الخزينة");
+            XLSX.utils.writeFile(wb, "TransportHub_Report.xlsx");
+        }
+
+        function clearAll() {
+            if (currentUserRole !== 'admin') { alert('فقط مدير النظام يمكنه مسح كافة البيانات!'); return; }
+            if (confirm('هل أنت متأكد تماماً من مسح كافة بيانات المنصة؟')) {
+                localStorage.removeItem('transportAppV60');
+                location.reload();
+            }
+        } 
+  </script>
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // بيانات الاتصال الخاصة بك
+  const firebaseConfig = {
+    apiKey: "AIzaSyDn-rNJ2ak3I0DdfzTZm",
+    authDomain: "n2la-642d3.firebaseapp.com",
+    projectId: "n2la-642d3",
+    storageBucket: "n2la-642d3.firebasestorage.app",
+    messagingSenderId: "1085749997466",
+    appId: "1:1085749997466:web:13e5539",
+    measurementId: "G-KH4ZYFB8LC"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  console.log("تم ربط قاعدة البيانات بنجاح");
+
+  // دالة جلب وعرض البيانات من فايربيس
+  window.renderCRUDTable = async function() {
+      const sectionElement = document.getElementById('crud-section-select');
+      if(!sectionElement) return;
+      const section = sectionElement.value;
+      const headers = document.getElementById('crud-table-headers');
+      const body = document.getElementById('crud-table-body');
+      
+      headers.innerHTML = '';
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;">جاري التحميل...</td></tr>';
+
+      try {
+          const querySnapshot = await getDocs(collection(db, section));
+          headers.innerHTML = '';
+          body.innerHTML = '';
+
+          let items = [];
+          querySnapshot.forEach((docSnap) => {
+              items.push({ id: docSnap.id, ...docSnap.data() });
+          });
+
+          if (section === 'shipments') {
+              headers.innerHTML = '<th>العميل</th><th>الهاتف</th><th>العنوان</th><th>الحمولة</th><th>الأجرة</th><th>الحالة</th><th>إدارة</th>';
+              items.forEach(s => {
+                  body.innerHTML += `<tr><td>${s.name || s.clientName || '-'}</td><td>${s.phone || '-'}</td><td>${s.address || '-'}</td><td>${s.item || '-'}</td><td>${s.price || s.amount || 0} ج.م</td><td>${s.status || 'جديدة'}</td><td><button class="btn-danger btn-sm" onclick="deleteFirebaseItem('shipments', '${s.id}')">حذف</button></td></tr>`;
+              });
+          } else if (section === 'drivers') {
+              headers.innerHTML = '<th>الاسم</th><th>الهاتف</th><th>الرتبة</th><th>الوسام</th><th>رمز PIN</th><th>إدارة</th>';
+              items.forEach(d => {
+                  body.innerHTML += `<tr><td><b>${d.name || '-'}</b></td><td>${d.phone || '-'}</td><td>${d.role || '-'}</td><td>${d.title || ''}</td><td><code>${d.pin || ''}</code></td><td><button class="btn-danger btn-sm" onclick="deleteFirebaseItem('drivers', '${d.id}')">حذف</button></td></tr>`;
+              });
+          } else if (section === 'trucks') {
+              headers.innerHTML = '<th>المركبة</th><th>السائق</th><th>KM</th><th>الزيت القادم</th><th>الرخصة</th>';
+              items.forEach(t => {
+                  body.innerHTML += `<tr><td>${t.truckNum || '-'}</td><td>${t.driverName || '-'}</td><td>${t.km || 0}</td><td>${t.nextOil || '-'}</td><td>${t.expiry || '-'}</td></tr>`;
+              });
+          } else if (section === 'customers') {
+              headers.innerHTML = '<th>العميل</th><th>الهاتف</th><th>المديونية</th>';
+              items.forEach(c => {
+                  body.innerHTML += `<tr><td>${c.name || '-'}</td><td>${c.phone || '-'}</td><td style="color:var(--danger);">${c.debt || 0} ج.م</td></tr>`;
+              });
+          } else if (section === 'treasury') {
+              headers.innerHTML = '<th>النوع</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th>';
+              items.forEach(t => {
+                  body.innerHTML += `<tr><td>${t.type || '-'}</td><td>${t.amount || 0} ج.م</td><td>${t.desc || '-'}</td><td>${t.date || '-'}</td></tr>`;
+              });
+          } else if (section === 'expenses') {
+              headers.innerHTML = '<th>البيان</th><th>المبلغ</th><th>التاريخ</th>';
+              items.forEach(ex => {
+                  body.innerHTML += `<tr><td>${ex.title || '-'}</td><td>${ex.amount || 0} ج.م</td><td>${ex.date || '-'}</td></tr>`;
+              });
+          }
+      } catch (e) {
+          console.error("خطأ في جلب البيانات: ", e);
+      }
+  };
+
+  // دالة الحفظ
+    window.saveDataToFirebase = async function(collectionName, dataObj) {
+      try {
+          const docRef = await addDoc(collection(db, collectionName), { ...dataObj, createdAt: new Date().toISOString() });
+          alert("تم الحفظ بنجاح! رقم الحفظ: " + docRef.id); //هنا تم إضافة رقم الحفظ للرسالة
+          renderCRUDTable();
+      } catch (e) {
+          alert("خطأ: " + e.message);
+      }
+  };
+
+  // دالة الحذف
+  window.deleteFirebaseItem = async function(collectionName, docId) {
+      if (confirm("هل أنت متأكد من الحذف؟")) {
+          try {
+              await deleteDoc(doc(db, collectionName, docId));
+              renderCRUDTable();
+          } catch (e) {
+              alert("فشل الحذف");
+          }
+      }
+  };
+</script>
+
+<!-- زر التجربة بتصميم أنيق -->
+<button onclick="saveDataToFirebase('orders', { clientName: 'إمعاد', amount: 300 })" class="custom-save-btn">
+    تجربة حفظ البيانات في القاعدة
+</button>
+
+<style>
+.custom-save-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #15803d, 0 6px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.1s ease;
+  display: block;
+  margin: 10px auto;
+}
+.custom-save-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #15803d;
+  }
+  </style>
+   
+</body>
+</html> 
     </script>
 </body>
 </html>

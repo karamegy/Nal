@@ -1875,61 +1875,98 @@
             document.getElementById('visitor-shipment-form').reset();
             alert('تم حجز الرحلة بنجاح وإرسالها للإدارة! 📦🚀');
         }
+        
+        async function saveShipmentHandler(e) {
+    if (e) e.preventDefault();
+    
+    const name = document.getElementById('ship-name').value;
+    const phone = document.getElementById('ship-phone').value;
+    const address = document.getElementById('ship-address').value;
+    const item = document.getElementById('ship-item').value;
+    const price = document.getElementById('ship-price').value;
+    const fuelCost = document.getElementById('ship-fuel-cost').value || 0;
+    const extraCost = document.getElementById('ship-extra-cost').value || 0;
+    const assignedDriver = document.getElementById('ship-assigned-driver').value;
+    const signatureData = canvas ? canvas.toDataURL() : '';
 
-        function saveShipmentHandler(e) {
-            const name = document.getElementById('ship-name').value;
-            const phone = document.getElementById('ship-phone').value;
-            const address = document.getElementById('ship-address').value;
-            const item = document.getElementById('ship-item').value;
-            const price = document.getElementById('ship-price').value;
-            const fuelCost = document.getElementById('ship-fuel-cost').value || 0;
-            const extraCost = document.getElementById('ship-extra-cost').value || 0;
-            const assignedDriver = document.getElementById('ship-assigned-driver').value;
-            const signatureData = canvas ? canvas.toDataURL() : '';
+    const newShipment = {
+        id: 'INV-' + Date.now().toString().slice(-6),
+        name: name,
+        phone: phone,
+        address: address,
+        item: item,
+        price: price,
+        fuelCost: fuelCost,
+        extraCost: extraCost,
+        assignedDriver: assignedDriver || 'عام',
+        gps: currentGPS || '',
+        img: uploadedImgBase64 || '',
+        signature: signatureData,
+        status: 'قيد التنفيذ',
+        date: new Date().toLocaleDateString('ar-EG')
+    };
 
-            appData.shipments.unshift({
-                id: Date.now(),
-                name: name,
-                phone: phone,
-                address: address,
-                item: item,
-                price: price,
-                fuelCost: fuelCost,
-                extraCost: extraCost,
-                assignedDriver: assignedDriver || 'عام',
-                gps: currentGPS,
-                img: uploadedImgBase64,
-                signature: signatureData,
-                status: 'قيد التنفيذ',
-                date: new Date().toLocaleDateString()
-            });
-
-            saveDataAll();
-            document.getElementById('shipment-form').reset();
-            if(ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
-            uploadedImgBase64 = '';
-            currentGPS = '';
-            render();
-            alert('تم حفظ الرحلة بنجاح! 💾');
+    try {
+        // حفظ في فايربيس مباشرة
+        await addDoc(collection(db, "shipments"), newShipment);
+        if (typeof renderCRUDTable === 'function') {
+            renderCRUDTable(); // تحديث جدول فايربيس إن وجد
         }
+    } catch (err) {
+        console.error("خطأ في حفظ الرحلة إلى فايربيس:", err);
+    }
 
-        function saveCashHandler(e) {
-            const type = document.getElementById('cash-type').value;
-            const amount = document.getElementById('cash-amount').value;
-            const desc = document.getElementById('cash-desc').value;
+    if (!appData.shipments) appData.shipments = [];
+    appData.shipments.unshift(newShipment);
 
-            appData.treasury.unshift({
-                type: type,
-                amount: amount,
-                desc: desc,
-                date: new Date().toLocaleDateString()
-            });
+    saveDataAll();
+    document.getElementById('shipment-form').reset();
+    if(ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    uploadedImgBase64 = '';
+    currentGPS = '';
+    render();
+    alert('تم حفظ الرحلة بنجاح! 💾');
+}
 
-            saveDataAll();
-            document.getElementById('cash-form').reset();
-            render();
-            alert('تم تسجیل الحركة النقدية بنجاح!');
-        }
+        async function saveVisitorShipment(e) {
+    const name = document.getElementById('vis-name').value;
+    const phone = document.getElementById('vis-phone').value;
+    const address = document.getElementById('vis-address').value;
+    const item = document.getElementById('vis-item').value;
+    const price = document.getElementById('vis-price').value;
+
+    const newShipment = {
+        id: 'VIS-' + Date.now().toString().slice(-6),
+        name: name,
+        phone: phone,
+        address: address,
+        item: item,
+        price: price,
+        fuelCost: 0,
+        extraCost: 0,
+        assignedDriver: 'بدون تعيين',
+        gps: visitorGPS || '',
+        img: visitorImgBase64 || '',
+        signature: '',
+        status: 'قيد الانتظار',
+        date: new Date().toLocaleDateString('ar-EG')
+    };
+
+    try {
+        // حفظ في فايربيس مباشرة
+        await addDoc(collection(db, "shipments"), newShipment);
+    } catch (err) {
+        console.error("خطأ في حفظ حجز الزائر إلى فايربيس:", err);
+    }
+
+    if (!appData.shipments) appData.shipments = [];
+    appData.shipments.unshift(newShipment);
+
+    saveDataAll();
+    closeVisitorBooking();
+    document.getElementById('visitor-shipment-form').reset();
+    alert('تم حجز الرحلة بنجاح وإرسالها للإدارة! 📦🚀');
+}
 
         function saveExpenseHandler(e) {
             const title = document.getElementById('exp-title').value;

@@ -2581,6 +2581,69 @@
   display: block;
   margin: 10px auto;
 }
+    function saveShipmentHandler(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('ship-name').value.trim();
+    const phone = document.getElementById('ship-phone').value.trim();
+    const address = document.getElementById('ship-address').value.trim();
+    const item = document.getElementById('ship-item').value.trim();
+    const price = Number(document.getElementById('ship-price').value) || 0;
+    const fuelCost = Number(document.getElementById('ship-fuel-cost').value) || 0;
+    const extraCost = Number(document.getElementById('ship-extra-cost').value) || 0;
+    const assignedDriver = document.getElementById('ship-assigned-driver').value;
+    
+    // التقاط التوقيع الرقمي كصورة Base64 إذا تم التوقيع
+    let signatureData = '';
+    if (canvas) {
+        signatureData = canvas.toDataURL('image/png');
+    }
+
+    const newShipment = {
+        id: 'INV-' + Date.now().toString().slice(-6),
+        name: name,
+        phone: phone,
+        address: address,
+        item: item,
+        price: price,
+        fuelCost: fuelCost,
+        extraCost: extraCost,
+        netProfit: price - (fuelCost + extraCost),
+        assignedDriver: assignedDriver || 'عام',
+        gps: currentGPS || '',
+        img: uploadedImgBase64 || '',
+        signature: signatureData,
+        status: 'قيد التنفيذ 🚚',
+        date: new Date().toLocaleDateString('ar-EG')
+    };
+
+    if (!appData.shipments) appData.shipments = [];
+    appData.shipments.unshift(newShipment);
+
+    // تحديث حسابات العملاء والديون تلقائياً
+    if (!appData.customers) appData.customers = [];
+    let existingCustomer = appData.customers.find(c => c.name === name);
+    if (existingCustomer) {
+        existingCustomer.debt = (Number(existingCustomer.debt) || 0) + price;
+    } else {
+        appData.customers.push({ name: name, phone: phone, debt: price });
+    }
+
+    // حفظ البيانات وتحديث واجهة المنصة
+    saveDataAll();
+    render();
+    updateInvoiceDropdown();
+
+    // إعادة تعيين النموذج
+    document.getElementById('shipment-form').reset();
+    clearSignature();
+    uploadedImgBase64 = '';
+    currentGPS = '';
+    document.getElementById('gps-status').innerText = '';
+
+    alert('تم حفظ الفاتورة والرحلة بنجاح وتوليد البيانات للسجلات! 🚀');
+    switchTab('reports-tab', document.querySelector('.sidebar-nav-list button:nth-last-child(1)'));
+        }
 .custom-save-btn:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 #15803d;

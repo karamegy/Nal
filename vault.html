@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // الخزنة النقدية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
+        table th, table td { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1">
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link active"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية</h1>
+                    <button onclick="openTxModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="corporate-card p-4 text-center border-t-4 border-t-cyan-500"><span class="text-xs text-slate-500">الإيرادات</span><div class="text-lg font-black text-cyan-600 mono-font mt-1" id="totalIncome">0 ج.م</div></div>
+                    <div class="corporate-card p-4 text-center border-t-4 border-t-purple-500"><span class="text-xs text-slate-500">المصروفات</span><div class="text-lg font-black text-purple-600 mono-font mt-1" id="totalExpense">0 ج.م</div></div>
+                    <div class="corporate-card p-4 text-center border-t-4 border-t-emerald-500"><span class="text-xs text-slate-500">الصافي</span><div class="text-lg font-black text-emerald-600 mono-font mt-1" id="netVault">0 ج.م</div></div>
+                </div>
+                <div class="corporate-card p-6">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">رقم الحركة</th><th class="p-4">النوع</th><th class="p-4">المبلغ</th><th class="p-4">البيان</th><th class="p-4">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vaultTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="txModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
+            <h3 class="font-bold text-sm text-slate-900">تسجيل حركة نقدية</h3>
+            <div class="space-y-3 text-xs">
+                <div><label class="block mb-1 text-slate-600">النوع</label><select id="txType" class="corporate-input w-full"><option value="إيراد">إيراد</option><option value="مصروف">مصروف</option></select></div>
+                <div><label class="block mb-1 text-slate-600">المبلغ</label><input type="number" id="txAmount" class="corporate-input w-full mono-font"></div>
+                <div><label class="block mb-1 text-slate-600">البيان</label><input type="text" id="txDesc" class="corporate-input w-full"></div>
+            </div>
+            <div class="flex gap-2 pt-2"><button onclick="saveTx()" class="btn-primary flex-1 py-2 text-xs">حفظ</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+        </div>
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+        function saveData() {
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
+            renderVault();
+        }
+        function renderVault() {
+            let inc = transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+            let exp = transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+            document.getElementById('totalIncome').innerText = inc.toLocaleString() + ' ج.م';
+            document.getElementById('totalExpense').innerText = exp.toLocaleString() + ' ج.م';
+            document.getElementById('netVault').innerText = (inc - exp).toLocaleString() + ' ج.م';
+            document.getElementById('vaultTableBody').innerHTML = transactions.map(t => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 mono-font text-rose-600 font-bold">${t.id}</td>
+                    <td class="p-4 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
+                    <td class="p-4 mono-font font-bold">${Number(t.amount).toLocaleString()} ج.م</td>
+                    <td class="p-4 text-slate-600">${t.desc}</td>
+                    <td class="p-4 mono-font text-slate-500">${t.date}</td>
+                </tr>
+            `).join('');
+        }
+        function openTxModal() { document.getElementById('txModal').classList.add('active'); }
+        function closeModal() { document.getElementById('txModal').classList.remove('active'); }
+        function saveTx() {
+            let amount = Number(document.getElementById('txAmount').value);
+            let desc = document.getElementById('txDesc').value;
+            if(!amount || !desc) return alert('أدخل كافة البيانات');
+            transactions.push({ id: 'TX-'+Math.floor(100+Math.random()*900), type: document.getElementById('txType').value, amount, desc, date: new Date().toISOString().split('T')[0] });
+            closeModal(); saveData();
+        }
+        renderVault();
+    </script>
+</body>
+</html>

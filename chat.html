@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // الشات والاتصالات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
+        @keyframes pulseRing { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(79, 70, 229, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
+        .ring-pulse { animation: pulseRing 1.5s infinite; }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1">
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link active"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+                <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة</h1>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-6">
+                <div class="corporate-card grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[600px]">
+                    <div class="lg:col-span-4 border-l border-slate-200 flex flex-col bg-slate-50">
+                        <div class="p-4 border-b border-slate-200 bg-white"><h3 class="font-bold text-sm text-slate-900">العملاء والشركات</h3></div>
+                        <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="chatContactsList"></div>
+                    </div>
+                    <div class="lg:col-span-8 flex flex-col bg-white">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm" id="activeChatAvatar">ش</div>
+                                <div><h4 class="font-bold text-sm text-slate-900" id="activeChatName">اختر عميل لبدء المحادثة</h4><span class="text-[10px] text-emerald-600 font-mono">متصل</span></div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="startAudioCall()" class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center cursor-pointer" title="اتصال صوتي"><i class="fa-solid fa-phone"></i></button>
+                                <button onclick="startVideoCall()" class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center cursor-pointer" title="اتصال فيديو"><i class="fa-solid fa-video"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30" id="chatMessagesArea"><div class="text-center text-xs text-slate-400 py-20">اختر محادثة من القائمة الجانبية.</div></div>
+                        <div class="p-4 border-t border-slate-200 bg-white flex gap-2">
+                            <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك..." class="corporate-input flex-1 text-xs">
+                            <button onclick="sendChatMessage()" class="btn-primary px-5 text-xs"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- مودال الاتصال الصوتي -->
+    <div id="audioCallModal" class="custom-modal">
+        <div class="corporate-card p-8 max-w-sm w-full space-y-6 text-center bg-slate-900 text-white shadow-2xl">
+            <div class="w-24 h-24 mx-auto bg-indigo-600 rounded-full flex items-center justify-center text-3xl ring-pulse"><i class="fa-solid fa-phone-volume animate-bounce"></i></div>
+            <h3 class="font-bold text-lg" id="audioCallTargetName">جاري الاتصال...</h3>
+            <button onclick="endActiveCall()" class="w-14 h-14 bg-rose-600 rounded-full mx-auto flex items-center justify-center text-white text-xl cursor-pointer"><i class="fa-solid fa-phone-slash"></i></button>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
+            chats: JSON.parse(localStorage.getItem('eidco_v13_chats')) || {}
+        };
+        let currentActiveChatId = null;
+        let ringtoneCtx = null, ringtoneTimer = null;
+
+        function renderContacts() {
+            document.getElementById('chatContactsList').innerHTML = state.clients.map(c => `
+                <div onclick="selectClient(${c.id})" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${currentActiveChatId===c.id?'bg-indigo-50 border-r-4 border-indigo-600':''}">
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">${c.name.charAt(0)}</div>
+                    <div><h4 class="font-bold text-xs text-slate-900">${c.name}</h4><p class="text-[11px] text-slate-500">${c.phone||'بدون هاتف'}</p></div>
+                </div>
+            `).join('');
+        }
+        function selectClient(id) {
+            currentActiveChatId = id;
+            let c = state.clients.find(x => x.id === id);
+            document.getElementById('activeChatName').innerText = c.name;
+            document.getElementById('activeChatAvatar').innerText = c.name.charAt(0);
+            renderMessages();
+            renderContacts();
+        }
+        function renderMessages() {
+            let area = document.getElementById('chatMessagesArea');
+            let msgs = state.chats[currentActiveChatId] || [];
+            area.innerHTML = msgs.map(m => `
+                <div class="flex flex-col ${m.sender==='me'?'items-end':'items-start'}">
+                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender==='me'?'bg-indigo-600 text-white':'bg-white border text-slate-800'}">${m.text}</div>
+                    <span class="text-[9px] text-slate-400 mt-0.5">${m.time}</span>
+                </div>
+            `).join('');
+            area.scrollTop = area.scrollHeight;
+        }
+        function sendChatMessage() {
+            if(!currentActiveChatId) return alert('اختر عميل أولاً');
+            let txt = document.getElementById('chatMessageInput').value.trim();
+            if(!txt) return;
+            if(!state.chats[currentActiveChatId]) state.chats[currentActiveChatId] = [];
+            state.chats[currentActiveChatId].push({ sender: 'me', text: txt, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+            localStorage.setItem('eidco_v13_chats', JSON.stringify(state.chats));
+            document.getElementById('chatMessageInput').value = '';
+            renderMessages();
+            renderContacts();
+        }
+        function startAudioCall() {
+            if(!currentActiveChatId) return alert('اختر عميل أولاً');
+            let c = state.clients.find(x => x.id === currentActiveChatId);
+            document.getElementById('audioCallTargetName').innerText = c.name;
+            document.getElementById('audioCallModal').classList.add('active');
+            try {
+                ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
+                ringtoneTimer = setInterval(() => {
+                    let osc = ringtoneCtx.createOscillator();
+                    let g = ringtoneCtx.createGain();
+                    osc.frequency.setValueAtTime(440, ringtoneCtx.currentTime);
+                    g.gain.setValueAtTime(0.1, ringtoneCtx.currentTime);
+                    osc.connect(g); g.connect(ringtoneCtx.destination);
+                    osc.start(); osc.stop(ringtoneCtx.currentTime + 0.4);
+                }, 1200);
+            }catch(e){}
+        }
+        function startVideoCall() { alert('جاري بدء مكالمة فيديو آمنة...'); }
+        function endActiveCall() {
+            if(ringtoneTimer) clearInterval(ringtoneTimer);
+            document.getElementById('audioCallModal').classList.remove('active');
+        }
+        renderContacts();
+    </script>
+</body>
+</html>

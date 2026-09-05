@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الفواتير والمبيعات</title>
+    <title>EIDCO // لوحة التحكم الرئيسية</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -12,13 +13,10 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
-        .custom-modal.active { display: flex !important; }
-        table th, table td { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -29,8 +27,8 @@
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
             <nav class="space-y-1.5 flex-1">
-                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
-                <a href="invoices.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
+                <a href="index.html" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
@@ -44,112 +42,72 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير والمبيعات</h1>
-                    <button onclick="openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة</button>
+                    <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية</h1>
+                    <div class="flex items-center gap-3">
+                        <a href="invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> فاتورة سريعة</a>
+                    </div>
                 </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6">
-                <div class="corporate-card p-6 space-y-5">
-                    <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
-                            <thead>
-                                <tr class="bg-slate-100 text-slate-700 font-mono border-b border-slate-200">
-                                    <th class="p-4">رقم الفاتورة</th><th class="p-4">العميل</th><th class="p-4">الصنف</th><th class="p-4">الكمية</th><th class="p-4">الإجمالي</th><th class="p-4">الربح</th><th class="p-4 text-center">إجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
-                        </table>
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                    <div>
+                        <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً</span>
+                        <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">كرم حمدي عبدالعظيم</h2>
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                        <span class="text-xs text-slate-500">رصيد الخزنة الصافي</span>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
+                        <span class="text-xs text-slate-500">إجمالي المبيعات</span>
+                        <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                        <span class="text-xs text-slate-500">صافي الأرباح</span>
+                        <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
+                        <span class="text-xs text-slate-500">العملاء والشركات</span>
+                        <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
+                    </div>
+                </div>
+
+                <div class="corporate-card p-6 space-y-4">
+                    <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي</h3>
+                    <div class="h-72 relative"><canvas id="analyticsChart"></canvas></div>
                 </div>
             </main>
         </div>
     </div>
 
-    <div id="invoiceModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة</h3>
-            <div class="space-y-3 text-xs">
-                <div><label class="block mb-1 text-slate-600">اختر العميل</label><select id="invClient" class="corporate-input w-full"></select></div>
-                <div><label class="block mb-1 text-slate-600">اختر الصنف</label><select id="invProduct" class="corporate-input w-full" onchange="updateInvPrice()"></select></div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="calcInvTotal()"></div>
-                    <div><label class="block mb-1 text-slate-600">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100" readonly></div>
-                </div>
-                <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex justify-between font-bold">
-                    <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono">0.00 ج.م</span>
-                </div>
-            </div>
-            <div class="flex gap-2 pt-2"><button onclick="saveInvoice()" class="btn-primary flex-1 py-2 text-xs">حفظ وتحديث المخزن</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
-        </div>
-    </div>
-
     <script>
         let state = {
+            adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
             clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
             products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
             invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
         };
-        function saveData() {
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
-            localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-            renderInvoices();
-        }
-        function renderInvoices() {
-            document.getElementById('invoicesTableBody').innerHTML = state.invoices.map(i => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id}</td>
-                    <td class="p-4 font-bold text-slate-900">${i.client}</td>
-                    <td class="p-4 text-slate-700">${i.productName}</td>
-                    <td class="p-4 mono-font">${i.qty}</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 text-center"><button onclick="deleteInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>
-            `).join('');
-        }
-        function openNewInvoiceModal() {
-            if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف أولاً.');
-            document.getElementById('invClient').innerHTML = state.clients.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-            document.getElementById('invProduct').innerHTML = state.products.map(p=>`<option value="${p.code}" data-price="${p.sellPrice}" data-buy="${p.buyPrice}">${p.name} (المتاح: ${p.qty})</option>`).join('');
-            document.getElementById('invoiceModal').classList.add('active');
-            updateInvPrice();
-        }
-        function closeModal() { document.getElementById('invoiceModal').classList.remove('active'); }
-        function updateInvPrice() {
-            let sel = document.getElementById('invProduct');
-            if(sel.options[sel.selectedIndex]) document.getElementById('invPriceUnit').value = sel.options[sel.selectedIndex].getAttribute('data-price');
-            calcInvTotal();
-        }
-        function calcInvTotal() {
-            let qty = Number(document.getElementById('invQty').value) || 1;
-            let price = Number(document.getElementById('invPriceUnit').value) || 0;
-            document.getElementById('invTotalDisplay').innerText = `${(qty*price).toLocaleString()} ج.م`;
-        }
-        function saveInvoice() {
-            let code = document.getElementById('invProduct').value;
-            let prod = state.products.find(p => p.code === code);
-            let qty = Number(document.getElementById('invQty').value) || 1;
-            let price = Number(document.getElementById('invPriceUnit').value) || 0;
-            if(prod.qty < qty) return alert('⚠️ الكمية غير متوفرة');
-            prod.qty -= qty;
-            let total = qty * price;
-            let profit = (price - Number(prod.buyPrice)) * qty;
-            let id = 'INV-' + Math.floor(1000 + Math.random()*9000);
-            state.invoices.push({ id, client: document.getElementById('invClient').value, productCode: code, productName: prod.name, qty, unitPrice: price, total, profit });
-            state.transactions.push({ id: 'TX-'+Math.floor(100+Math.random()*900), type: 'إيراد', amount: total, desc: `فاتورة مبيعات ${id}` });
-            closeModal(); saveData();
-        }
-        function deleteInvoice(id) {
-            let inv = state.invoices.find(i => i.id === id);
-            if(inv) { let p = state.products.find(x => x.code === inv.productCode); if(p) p.qty += inv.qty; }
-            state.invoices = state.invoices.filter(i => i.id !== id);
-            saveData();
-        }
-        renderInvoices();
+        document.getElementById('welcomeAdminName').innerText = state.adminName;
+        let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+        let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+        document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
+        document.getElementById('statSales').innerText = state.invoices.reduce((s,i)=>s+Number(i.total),0).toLocaleString() + ' ج.م';
+        document.getElementById('statProfits').innerText = state.invoices.reduce((s,i)=>s+Number(i.profit||0),0).toLocaleString() + ' ج.م';
+        document.getElementById('statClients').innerText = state.clients.length + ' جهة';
+
+        new Chart(document.getElementById('analyticsChart'), {
+            type: 'line',
+            data: {
+                labels: state.invoices.length ? state.invoices.map(i=>i.id) : ['بداية التشغيل', 'اليوم'],
+                datasets: [{ label: 'المبيعات', data: state.invoices.length ? state.invoices.map(i=>i.total) : [0, 15000], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.08)' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
     </script>
 </body>
 </html>

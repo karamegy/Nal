@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // المخزن والأصناف</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
+        table th, table td { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1">
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
+                <a href="inventory.html" class="nav-link active"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <h1 class="font-black text-slate-900 text-sm">مخزن الأصناف والتسعير</h1>
+                    <button onclick="openNewProductModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-box-open"></i> إضافة صنف جديد</button>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-6">
+                <div class="corporate-card p-6 space-y-5">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b border-slate-200">
+                                    <th class="p-4">الكود</th><th class="p-4">اسم الصنف</th><th class="p-4">الكمية المتاحة</th><th class="p-4">سعر الشراء</th><th class="p-4">سعر البيع</th><th class="p-4 text-center">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="productModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
+            <h3 class="font-bold text-sm text-slate-900">إضافة صنف جديد للمخزن</h3>
+            <div class="space-y-3 text-xs">
+                <div><label class="block mb-1 text-slate-600">كود الصنف</label><input type="text" id="prodCode" class="corporate-input w-full mono-font" placeholder="01"></div>
+                <div><label class="block mb-1 text-slate-600">اسم الصنف</label><input type="text" id="prodName" class="corporate-input w-full" placeholder="مثال: أعلاف وحبوب"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="prodQty" class="corporate-input w-full mono-font" value="100"></div>
+                    <div><label class="block mb-1 text-slate-600">سعر الشراء</label><input type="number" id="prodBuyPrice" class="corporate-input w-full mono-font" value="1000"></div>
+                </div>
+                <div><label class="block mb-1 text-slate-600">سعر البيع</label><input type="number" id="prodSellPrice" class="corporate-input w-full mono-font" value="1500"></div>
+            </div>
+            <div class="flex gap-2 pt-2"><button onclick="saveProduct()" class="btn-primary flex-1 py-2 text-xs">حفظ</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+        </div>
+    </div>
+
+    <script>
+        let products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+        function saveData() {
+            localStorage.setItem('eidco_v13_products', JSON.stringify(products));
+            renderProducts();
+        }
+        function renderProducts() {
+            document.getElementById('inventoryTableBody').innerHTML = products.map(p => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 mono-font text-emerald-600 font-bold">${p.code}</td>
+                    <td class="p-4 font-bold text-slate-900">${p.name}</td>
+                    <td class="p-4 mono-font font-bold text-emerald-700">${p.qty} وحدة</td>
+                    <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice||0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600">${Number(p.sellPrice||0).toLocaleString()} ج.م</td>
+                    <td class="p-4 text-center"><button onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+        function openNewProductModal() { document.getElementById('productModal').classList.add('active'); }
+        function closeModal() { document.getElementById('productModal').classList.remove('active'); }
+        function saveProduct() {
+            let name = document.getElementById('prodName').value;
+            if(!name) return alert('أدخل اسم الصنف');
+            products.push({
+                code: document.getElementById('prodCode').value || 'PRD-'+Math.floor(100+Math.random()*900),
+                name,
+                qty: Number(document.getElementById('prodQty').value)||0,
+                buyPrice: Number(document.getElementById('prodBuyPrice').value)||0,
+                sellPrice: Number(document.getElementById('prodSellPrice').value)||0
+            });
+            closeModal(); saveData();
+        }
+        function deleteProduct(code) { products = products.filter(p => p.code !== code); saveData(); }
+        renderProducts();
+    </script>
+</body>
+</html>

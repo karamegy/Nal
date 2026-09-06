@@ -30,12 +30,14 @@
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
-        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; cursor: pointer; }
+        .corporate-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.15); border-color: var(--primary); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
 
         /* تصميم اللوجو الثلاثي الأبعاد المضيء (3D Neon Glowing Logo) */
@@ -151,23 +153,27 @@
                     <input type="text" id="globalSearchInput" oninput="filterDashboardData(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث سريع في الفواتير أو العملاء برقم أو اسم...">
                 </div>
 
-                <!-- إحصائيات سريعة -->
+                <!-- إحصائيات سريعة ( قابلة للنقر لعرض الملخص والتفاصيل ) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
-                        <span class="text-xs text-slate-500">رصيد الخزنة الصافي</span>
+                    <div onclick="showSummaryModal('vault')" class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">رصيد الخزنة الصافي</span><i class="fa-solid fa-vault text-indigo-600 text-sm"></i></div>
                         <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
+                        <span class="text-[10px] text-indigo-600 font-bold block">انقر لعرض الحركات والتفاصيل ←</span>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
-                        <span class="text-xs text-slate-500">إجمالي المبيعات</span>
+                    <div onclick="showSummaryModal('sales')" class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">إجمالي المبيعات</span><i class="fa-solid fa-cart-shopping text-cyan-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
+                        <span class="text-[10px] text-cyan-600 font-bold block">انقر لعرض تفاصيل المبيعات ←</span>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
-                        <span class="text-xs text-slate-500">صافي الأرباح</span>
+                    <div onclick="showSummaryModal('profits')" class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">صافي الأرباح</span><i class="fa-solid fa-chart-line text-emerald-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits">0 ج.م</div>
+                        <span class="text-[10px] text-emerald-600 font-bold block">انقر لعرض تفاصيل الأرباح ←</span>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
-                        <span class="text-xs text-slate-500">العملاء والشركات</span>
+                    <div onclick="showSummaryModal('clients')" class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">العملاء والشركات</span><i class="fa-solid fa-building-user text-purple-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
+                        <span class="text-[10px] text-purple-600 font-bold block">انقر لعرض قائمة العملاء ←</span>
                     </div>
                 </div>
 
@@ -294,8 +300,24 @@
         </div>
     </div>
 
+    <!-- نافذة عرض الملخص والتفاصيل (Modal) -->
+    <div id="summaryModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="modalTitle" class="font-black text-base text-indigo-600">تفاصيل الملخص</h3>
+                <button onclick="closeSummaryModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="modalBody" class="space-y-3 text-xs overflow-y-auto flex-1 p-1">
+                <!-- المحتوى يتغير ديناميكياً حسب البطاقة المضغوطة -->
+            </div>
+            <div class="pt-2 border-t text-center">
+                <button onclick="closeSummaryModal()" class="btn-primary w-full py-2 text-xs">إغلاق النافذة</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // دالة تنظيف ومزامنة المعاملات والفواتير آلياً لمنع تضخم الأرقام
+        // دالة تنظيف ومزامنة المعاملات والفواتير آلياً لمنع تضخم الأرقام وتطابق البيانات مع الخزنة
         function sanitizeAndSyncTransactions() {
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
@@ -318,7 +340,7 @@
 
             // تصفية المعاملات لحذف المعاملات المرتبطة بفواتير محذوفة
             let cleanedTransactions = transactions.filter(t => {
-                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                let match = t.desc.match(/(INV-[\w\d-]+|BATCH-[\w\d-]+)/i);
                 if (match) {
                     let invId = match[1];
                     return activeIds.includes(invId);
@@ -328,7 +350,7 @@
 
             // التأكد من وجود معامل لكل فاتورة نشطة
             let existingInvTxIds = cleanedTransactions.map(t => {
-                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                let match = t.desc.match(/(INV-[\w\d-]+|BATCH-[\w\d-]+)/i);
                 return match ? match[1] : null;
             }).filter(Boolean);
 
@@ -404,6 +426,87 @@
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // دالة عرض الملخص في النافذة المنبثقة عند الضغط على البطاقات
+        function showSummaryModal(type) {
+            let modalTitle = document.getElementById('modalTitle');
+            let modalBody = document.getElementById('modalBody');
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let clients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
+
+            if (type === 'vault') {
+                let inc = transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+                let exp = transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+                modalTitle.innerText = 'ملخص الخزنة النقدية';
+                modalBody.innerHTML = `
+                    <div class="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-xl mb-3">
+                        <div><span class="text-[10px] text-slate-500 block">إيرادات</span><span class="font-bold text-cyan-600 mono-font">${inc.toLocaleString()} ج.م</span></div>
+                        <div><span class="text-[10px] text-slate-500 block">مصروفات</span><span class="font-bold text-purple-600 mono-font">${exp.toLocaleString()} ج.م</span></div>
+                        <div><span class="text-[10px] text-slate-500 block">الصافي</span><span class="font-bold text-emerald-600 mono-font">${(inc-exp).toLocaleString()} ج.م</span></div>
+                    </div>
+                    <h4 class="font-bold text-slate-700 mb-2">آخر الحركات النقدية المسجلة:</h4>
+                    <div class="space-y-2">
+                        ${transactions.slice(-5).reverse().map(t=>`
+                            <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
+                                <div><span class="font-bold text-slate-900 block">${t.desc}</span><span class="text-[10px] text-slate-400 font-mono">${t.date || '---'}</span></div>
+                                <span class="font-bold mono-font ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type==='إيراد'?'+':'-'}${Number(t.amount).toLocaleString()} ج.م</span>
+                            </div>
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد حركات مسجلة</p>'}
+                    </div>
+                `;
+            } else if (type === 'sales') {
+                let totalSales = invoices.reduce((s,i)=>s+Number(i.total),0);
+                modalTitle.innerText = 'ملخص إجمالي المبيعات';
+                modalBody.innerHTML = `
+                    <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3">
+                        <span class="text-xs text-slate-500 block">إجمالي مبيعات الفواتير</span>
+                        <span class="text-xl font-black text-cyan-600 mono-font">${totalSales.toLocaleString()} ج.م</span>
+                    </div>
+                    <h4 class="font-bold text-slate-700 mb-2">أحدث الفواتير المسجلة:</h4>
+                    <div class="space-y-2">
+                        ${invoices.slice(-5).reverse().map(i=>`
+                            <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
+                                <div><span class="font-bold text-indigo-600 mono-font">${i.id}</span> <span class="text-slate-600">(${i.client})</span></div>
+                                <span class="font-bold mono-font text-slate-900">${Number(i.total).toLocaleString()} ج.م</span>
+                            </div>
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد فواتير مسجلة</p>'}
+                    </div>
+                `;
+            } else if (type === 'profits') {
+                let totalProfits = invoices.reduce((s,i)=>s+Number(i.profit||0),0);
+                modalTitle.innerText = 'ملخص صافي الأرباح';
+                modalBody.innerHTML = `
+                    <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3">
+                        <span class="text-xs text-slate-500 block">إجمالي صافي الأرباح</span>
+                        <span class="text-xl font-black text-emerald-600 mono-font">${totalProfits.toLocaleString()} ج.م</span>
+                    </div>
+                    <p class="text-slate-600 text-center">الأرباح تُحسب تلقائياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف داخل الفواتير الصادرة.</p>
+                `;
+            } else if (type === 'clients') {
+                modalTitle.innerText = 'ملخص العملاء والشركات';
+                modalBody.innerHTML = `
+                    <div class="p-3 bg-purple-50 rounded-xl text-center mb-3">
+                        <span class="text-xs text-slate-500 block">إجمالي الجهات المسجلة</span>
+                        <span class="text-xl font-black text-purple-600 mono-font">${clients.length} جهة</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${clients.map(c=>`
+                            <div class="p-2.5 bg-slate-50 rounded-xl border flex justify-between items-center">
+                                <span class="font-bold text-slate-900">${c.name}</span>
+                                <span class="text-slate-500 mono-font text-[11px]">${c.phone || c.type || 'جهة مسجلة'}</span>
+                            </div>
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد جهات مسجلة</p>'}
+                    </div>
+                `;
+            }
+
+            document.getElementById('summaryModal').classList.add('active');
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summaryModal').classList.remove('active');
         }
 
         function filterDashboardData(query) {

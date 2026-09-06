@@ -140,12 +140,12 @@
                     </div>
                 </div>
 
-                <!-- حاوية الخريطة مع لوحة التحكم باللمس المحدثة والقابلة للطي -->
+                <!-- حاوية الخريطة مع لوحة التحكم باللمس المحدثة والقابلة للطي تلقائياً على الموبايل -->
                 <div class="corporate-card p-4 relative">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
                             <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول</span>
-                            <i id="panelToggleIcon" class="fa-solid fa-chevron-up text-xs text-slate-500"></i>
+                            <i id="panelToggleIcon" class="fa-solid fa-chevron-down text-xs text-slate-500"></i>
                         </div>
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
                             <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
@@ -194,6 +194,17 @@
 
         const clientsRef = collection(db, "clients");
         const fleetRef = collection(db, "fleet_locations");
+
+        // ضبط طي لوحة التحكم تلقائياً على الأجهزة الذكية والموبايل لمنع حجب الخريطة
+        if (window.innerWidth < 1024) {
+            const panel = document.getElementById('touchControlPanel');
+            const icon = document.getElementById('panelToggleIcon');
+            if (panel && icon) {
+                panel.classList.add('collapsed');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
 
         // تهيئة الخريطة الأساسية
         let map = L.map('leafletMap', {
@@ -385,7 +396,6 @@
                         let userDocRef = doc(db, "fleet_locations", "my_location");
                         await setDoc(userDocRef, telemetryData, { merge: true });
                         
-                        // مزامنة الطابور المحلي المعلق إن وجد
                         if(offlineQueue.length > 0) {
                             localStorage.removeItem('eidco_offline_gps_queue');
                             offlineQueue = [];

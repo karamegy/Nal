@@ -30,8 +30,8 @@
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; cursor: pointer; }
-        .corporate-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.15); border-color: var(--primary); }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
+        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); border-color: var(--primary); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
@@ -40,11 +40,73 @@
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
 
-        /* تصميم اللوجو الثلاثي الأبعاد المضيء (3D Neon Glowing Logo) */
-        .logo-3d-container {
-            perspective: 1000px;
-            display: inline-block;
+        /* تصميم شريط الأخبار RSS العلوي */
+        .rss-ticker-wrapper {
+            background: #0f172a;
+            color: #f8fafc;
+            border-bottom: 1px solid #1e293b;
+            font-size: 0.8rem;
+            position: relative;
+            z-index: 50;
+            overflow: hidden;
         }
+        .rss-ticker-content {
+            display: inline-block;
+            white-space: nowrap;
+            padding-right: 100%;
+            animation: tickerMarquee 35s linear infinite;
+        }
+        .rss-ticker-content.paused {
+            animation-play-state: paused !important;
+        }
+        @keyframes tickerMarquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(100%, 0, 0); }
+        }
+
+        /* تصميم شاشة تلفزيون EIDCO LIVE TV */
+        .tv-frame {
+            background: #090d16;
+            border: 3px solid #1e293b;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.6), 0 0 20px rgba(79, 70, 229, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        .tv-screen {
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            min-height: 280px;
+            position: relative;
+        }
+        .tv-screen::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 2;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+        .tv-glare {
+            position: absolute;
+            top: 0; right: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 50%);
+            pointer-events: none;
+            z-index: 3;
+        }
+        .tv-badge-live {
+            background: #ef4444;
+            color: #fff;
+            animation: pulseBg 1.5s infinite;
+        }
+        @keyframes pulseBg {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* تصميم اللوجو الثلاثي الأبعاد المضيء */
+        .logo-3d-container { perspective: 1000px; display: inline-block; }
         .logo-3d-badge {
             background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
             color: #ffffff;
@@ -62,21 +124,43 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         @keyframes neonPulse {
-            0% {
-                box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4), 0 0 10px rgba(99, 102, 241, 0.4);
-                transform: rotateX(5deg) rotateY(-5deg);
-            }
-            100% {
-                box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9);
-                transform: rotateX(-5deg) rotateY(5deg);
-            }
+            0% { box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4), 0 0 10px rgba(99, 102, 241, 0.4); transform: rotateX(5deg) rotateY(-5deg); }
+            100% { box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9); transform: rotateX(-5deg) rotateY(5deg); }
         }
     </style>
 </head>
 <body>
+
+    <!-- شريط RSS الإخباري العلوي مع شريط التحكم -->
+    <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800">
+        <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
+            <i class="fa-solid fa-rss text-amber-400 animate-pulse"></i>
+            <span>عاجل EIDCO RSS</span>
+        </div>
+
+        <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
+            <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري تحميل أحدث الأخبار والتحديثات من النظام...</span>
+            </div>
+        </div>
+
+        <!-- أدوات التحكم في شريط الأخبار -->
+        <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
+            <button onclick="window.toggleRssSpeed()" class="text-slate-400 hover:text-amber-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="سرعة الشريط">
+                <i class="fa-solid fa-gauge-simple-high"></i> <span id="rssSpeedText">1x</span>
+            </button>
+            <button onclick="window.toggleRssPause()" id="rssPauseBtn" class="text-slate-400 hover:text-indigo-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="إيقاف / تشغيل الحركة">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+            <button onclick="window.openAddNewsModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-bold rounded-md transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> خبر جديد
+            </button>
+        </div>
+    </div>
+
     <div class="flex min-h-screen">
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
-            <!-- اللوجو الثلاثي الأبعاد المضيء في القائمة الجانبية -->
+            <!-- اللوجو الثلاثي الأبعاد المضيء -->
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="logo-3d-container">
                     <div class="logo-3d-badge w-11 h-11 text-lg">
@@ -132,6 +216,56 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+
+                <!-- شاشة تلفزيون EIDCO LIVE TV لتفريغ وملخص الفواتير والموجز والأنباء -->
+                <div class="tv-frame p-4 border-2 border-slate-800 rounded-3xl shadow-2xl relative">
+                    <!-- الشريط العلوي للتلفزيون -->
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-800 text-xs mb-3 px-2">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span class="font-black text-slate-100 tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-tv text-indigo-400"></i> EIDCO BUSINESS TV
+                            </span>
+                            <span class="tv-badge-live px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">LIVE</span>
+                        </div>
+
+                        <!-- مفاتيح تغيير القنوات والتحكم -->
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="window.switchTvChannel('invoices')" id="tvBtnInvoices" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white transition">
+                                <i class="fa-solid fa-file-invoice ml-1"></i> الفواتير
+                            </button>
+                            <button onclick="window.switchTvChannel('summary')" id="tvBtnSummary" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 text-slate-300 hover:text-white transition">
+                                <i class="fa-solid fa-chart-pie ml-1"></i> الموجز
+                            </button>
+                            <button onclick="window.switchTvChannel('news')" id="tvBtnNews" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 text-slate-300 hover:text-white transition">
+                                <i class="fa-solid fa-newspaper ml-1"></i> أهم الأنباء
+                            </button>
+                            <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="px-2 py-1 bg-slate-800 text-amber-400 rounded-lg text-[11px] font-bold ml-1 hover:bg-slate-700 transition" title="التنقل الأوتوماتيكي">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- شاشة العرض الرئيسية -->
+                    <div class="tv-screen rounded-2xl p-6 text-white relative flex flex-col justify-between overflow-hidden">
+                        <div class="tv-glare"></div>
+
+                        <!-- محتوى القناة المحددة -->
+                        <div id="tvScreenContent" class="space-y-4 relative z-10 min-h-[190px] flex flex-col justify-center">
+                            <!-- يتحدث دفق الشاشة تلقائياً عبر JS -->
+                        </div>
+
+                        <!-- شريط البث والإحصائيات في أسفل الشاشة -->
+                        <div class="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 relative z-10">
+                            <div class="flex items-center gap-4">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-database text-indigo-400"></i> مزامنة سحابية: <strong class="text-emerald-400" id="tvSyncStatus">متصلة (100%)</strong></span>
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-[#000] fa-clock text-amber-400"></i> الوقت: <strong class="text-slate-200 mono-font" id="tvClockText">--:--:--</strong></span>
+                            </div>
+                            <div class="text-indigo-300 font-mono text-[10px]" id="tvChannelLabel">القناة 1: ملخص المبيعات والفواتير النشطة</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- بطاقة الترحيب -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
@@ -152,24 +286,24 @@
                     <input type="text" id="globalSearchInput" oninput="window.filterDashboardData(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث سريع في الفواتير أو العملاء برقم أو اسم...">
                 </div>
 
-                <!-- إحصائيات سريعة ( قابلة للنقر لعرض الملخص والتفاصيل ) -->
+                <!-- إحصائيات سريعة -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div onclick="window.showSummaryModal('vault')" class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                    <div onclick="window.showSummaryModal('vault')" class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">رصيد الخزنة الصافي</span><i class="fa-solid fa-vault text-indigo-600 text-sm"></i></div>
                         <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
                         <span class="text-[10px] text-indigo-600 font-bold block">انقر لعرض الحركات والتفاصيل ←</span>
                     </div>
-                    <div onclick="window.showSummaryModal('sales')" class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
+                    <div onclick="window.showSummaryModal('sales')" class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">إجمالي المبيعات</span><i class="fa-solid fa-cart-shopping text-cyan-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
                         <span class="text-[10px] text-cyan-600 font-bold block">انقر لعرض تفاصيل المبيعات ←</span>
                     </div>
-                    <div onclick="window.showSummaryModal('profits')" class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                    <div onclick="window.showSummaryModal('profits')" class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">صافي الأرباح</span><i class="fa-solid fa-chart-line text-emerald-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits">0 ج.م</div>
                         <span class="text-[10px] text-emerald-600 font-bold block">انقر لعرض تفاصيل الأرباح ←</span>
                     </div>
-                    <div onclick="window.showSummaryModal('clients')" class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
+                    <div onclick="window.showSummaryModal('clients')" class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">العملاء والشركات</span><i class="fa-solid fa-building-user text-purple-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
                         <span class="text-[10px] text-purple-600 font-bold block">انقر لعرض قائمة العملاء ←</span>
@@ -202,7 +336,7 @@
                     </div>
                 </div>
 
-                <!-- القائمة الرئيسية المتطورة -->
+                <!-- القائمة الرئيسية -->
                 <div class="space-y-3">
                     <h3 class="font-bold text-sm text-slate-900 px-1"><i class="fa-solid fa-compass ml-2 text-indigo-600"></i> القائمة الرئيسية وأقسام المنظومة</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -294,6 +428,35 @@
         </div>
     </div>
 
+    <!-- نافذة إضافة خبر جديد في شريط RSS -->
+    <div id="addNewsModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-black text-base text-indigo-600"><i class="fa-solid fa-rss text-amber-500 ml-1"></i> إضافة خبر عاجل لشريط RSS</h3>
+                <button onclick="window.closeAddNewsModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">عنوان الخبر / التنبيه:</label>
+                    <input type="text" id="newRssTextInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:border-indigo-600" placeholder="مثال: تم إضافة منتجات جديدة لمخزن الرئيسي...">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">تصنيف الخبر:</label>
+                    <select id="newRssCategoryInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:border-indigo-600">
+                        <option value="تحديث">تحديث إداري</option>
+                        <option value="مالي">تنبيه مالي</option>
+                        <option value="مخزن">حركة المخزن</option>
+                        <option value="عاجل">عاجل جداً</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pt-3 border-t flex justify-end gap-2">
+                <button onclick="window.closeAddNewsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition">إلغاء</button>
+                <button onclick="window.submitCustomNews()" class="btn-primary text-xs py-2 px-5">نشر الخبر الآن</button>
+            </div>
+        </div>
+    </div>
+
     <!-- نافذة عرض الملخص والتفاصيل (Modal) -->
     <div id="summaryModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative max-h-[85vh] flex flex-col">
@@ -301,16 +464,14 @@
                 <h3 id="modalTitle" class="font-black text-base text-indigo-600">تفاصيل الملخص</h3>
                 <button onclick="window.closeSummaryModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="modalBody" class="space-y-3 text-xs overflow-y-auto flex-1 p-1">
-                <!-- المحتوى يتغير ديناميكياً حسب البطاقة المضغوطة -->
-            </div>
+            <div id="modalBody" class="space-y-3 text-xs overflow-y-auto flex-1 p-1"></div>
             <div class="pt-2 border-t text-center">
                 <button onclick="window.closeSummaryModal()" class="btn-primary w-full py-2 text-xs">إغلاق النافذة</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules & Custom Application JS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -322,7 +483,6 @@
             updateDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -332,7 +492,6 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -350,9 +509,21 @@
             transactions: []
         };
 
+        let rssNewsList = [
+            "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المحدثة.",
+            "💡 يمكنك التحكم بشريط الأخبار وإيقافه أو تسريعه وتدوين أنباء المؤسسة بكل سهولة.",
+            "📊 شاشة التلفزيون تعرض صياغة حية ومباشرة للفواتير الصادرة والموجز المالي."
+        ];
+
+        let currentTvChannel = 'invoices'; // 'invoices' | 'summary' | 'news'
+        let tvAutoSlideInterval = null;
+        let currentRssSpeedIndex = 0;
+        const rssSpeeds = ['35s', '20s', '50s'];
+        const rssSpeedLabels = ['1x', '2x', '0.5x'];
+
         let analyticsChartInstance = null;
 
-        // المزامنة اللحظية الحية
+        // المزامنة اللحظية مع Firebase
         onSnapshot(accountsRef, (snapshot) => {
             state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateAdminHeader();
@@ -361,23 +532,215 @@
         onSnapshot(clientsRef, (snapshot) => {
             state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateStatsAndDashboard();
+            refreshRssAndTv();
         });
 
         onSnapshot(productsRef, (snapshot) => {
             state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateStatsAndDashboard();
+            refreshRssAndTv();
         });
 
         onSnapshot(invoicesRef, (snapshot) => {
             state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateStatsAndDashboard();
             renderAnalyticsChart();
+            refreshRssAndTv();
         });
 
         onSnapshot(transactionsRef, (snapshot) => {
             state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateStatsAndDashboard();
+            refreshRssAndTv();
         });
+
+        // التحديث الدوري لخصائص شريط الاخبار والتلفزيون
+        function refreshRssAndTv() {
+            renderRssTicker();
+            renderTvScreen();
+        }
+
+        // إدارة شريط الأخبار RSS
+        function renderRssTicker() {
+            let container = document.getElementById('rssTickerContent');
+            if(!container) return;
+
+            let dynamicNews = [...rssNewsList];
+            if(state.invoices.length > 0) {
+                let lastInv = state.invoices[state.invoices.length - 1];
+                dynamicNews.unshift(`🧾 أحدث فاتورة صادرة: رقم ${lastInv.id || 'INV'} بقيمة ${(Number(lastInv.total)||0).toLocaleString()} ج.م للعميل (${lastInv.client || 'عام'})`);
+            }
+            let totalVault = state.transactions.filter(t=>t.type==='إيراد').reduce((s,t)=>s+Number(t.amount||0),0) - state.transactions.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount||0),0);
+            dynamicNews.push(`💰 رصيد الخزنة النقدية الحالي: ${totalVault.toLocaleString()} ج.م`);
+
+            container.innerHTML = dynamicNews.map(n => `<span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle text-[6px] text-amber-400"></i> ${n}</span>`).join('&nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp;');
+        }
+
+        window.toggleRssPause = function() {
+            let ticker = document.getElementById('rssTickerContent');
+            let btn = document.getElementById('rssPauseBtn');
+            if(ticker.classList.contains('paused')) {
+                ticker.classList.remove('paused');
+                btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+                btn.classList.remove('text-emerald-400');
+            } else {
+                ticker.classList.add('paused');
+                btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                btn.classList.add('text-emerald-400');
+            }
+        };
+
+        window.toggleRssSpeed = function() {
+            currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
+            let ticker = document.getElementById('rssTickerContent');
+            ticker.style.animationDuration = rssSpeeds[currentRssSpeedIndex];
+            document.getElementById('rssSpeedText').innerText = rssSpeedLabels[currentRssSpeedIndex];
+        };
+
+        window.openAddNewsModal = function() {
+            document.getElementById('addNewsModal').classList.add('active');
+        };
+
+        window.closeAddNewsModal = function() {
+            document.getElementById('addNewsModal').classList.remove('active');
+        };
+
+        window.submitCustomNews = function() {
+            let text = document.getElementById('newRssTextInput').value.trim();
+            let cat = document.getElementById('newRssCategoryInput').value;
+            if(!text) {
+                alert('الرجاء كتابة نص الخبر أولاً');
+                return;
+            }
+            rssNewsList.unshift(`📌 [${cat}] ${text}`);
+            document.getElementById('newRssTextInput').value = '';
+            closeAddNewsModal();
+            renderRssTicker();
+            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار.');
+        };
+
+        // إدارة شاشة EIDCO LIVE TV
+        window.switchTvChannel = function(channel) {
+            currentTvChannel = channel;
+            
+            // تحديث تصميم أزرار القنوات
+            ['invoices', 'summary', 'news'].forEach(ch => {
+                let b = document.getElementById('tvBtn' + ch.charAt(0).toUpperCase() + ch.slice(1));
+                if(ch === channel) {
+                    b.className = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white transition";
+                } else {
+                    b.className = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 text-slate-300 hover:text-white transition";
+                }
+            });
+
+            renderTvScreen();
+        };
+
+        window.toggleTvAutoSlide = function() {
+            let btn = document.getElementById('tvAutoSlideBtn');
+            if(tvAutoSlideInterval) {
+                clearInterval(tvAutoSlideInterval);
+                tvAutoSlideInterval = null;
+                btn.classList.remove('bg-emerald-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-amber-400');
+                btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+            } else {
+                tvAutoSlideInterval = setInterval(() => {
+                    const channels = ['invoices', 'summary', 'news'];
+                    let nextIdx = (channels.indexOf(currentTvChannel) + 1) % channels.length;
+                    switchTvChannel(channels[nextIdx]);
+                }, 6000);
+                btn.classList.remove('bg-slate-800', 'text-amber-400');
+                btn.classList.add('bg-emerald-600', 'text-white');
+                btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+            }
+        };
+
+        function renderTvScreen() {
+            let screen = document.getElementById('tvScreenContent');
+            let channelLabel = document.getElementById('tvChannelLabel');
+            if(!screen) return;
+
+            if(currentTvChannel === 'invoices') {
+                channelLabel.innerText = "القناة 1: تفريغ ملخص الفواتير المجمعة والفردية";
+                let recentInv = state.invoices.slice(-3).reverse();
+                screen.innerHTML = `
+                    <div class="flex justify-between items-center text-xs font-bold text-indigo-300 border-b border-slate-800 pb-2">
+                        <span><i class="fa-solid fa-file-invoice text-amber-400 ml-1"></i> ملخص أحدث الفواتير المسجلة</span>
+                        <span>إجمالي الفواتير: ${state.invoices.length} فاتورة</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 my-2">
+                        ${recentInv.map(i => `
+                            <div class="bg-slate-900/90 border border-slate-700/60 p-3 rounded-xl space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="mono-font text-amber-400 font-bold">${i.id || 'INV'}</span>
+                                    <span class="text-[10px] text-slate-400">${i.date || 'اليوم'}</span>
+                                </div>
+                                <div class="text-xs font-black text-slate-200">${i.client || 'عميل نقدي'}</div>
+                                <div class="text-indigo-400 font-bold mono-font text-sm">${Number(i.total||0).toLocaleString()} ج.م</div>
+                            </div>
+                        `).join('') || '<div class="col-span-3 text-center text-slate-500 py-4">لا توجد فواتير صادرة حالياً</div>'}
+                    </div>
+                `;
+            } else if (currentTvChannel === 'summary') {
+                channelLabel.innerText = "القناة 2: الموجز الإداري والمؤشرات المالية الحية";
+                let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
+                let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
+                let vault = totalInc - totalExp;
+                let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
+                let totalProfit = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+
+                screen.innerHTML = `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center my-1">
+                        <div class="bg-indigo-950/60 border border-indigo-800/50 p-3 rounded-2xl">
+                            <span class="text-[10px] text-indigo-300 font-bold block">رصيد الخزنة</span>
+                            <span class="text-base font-black text-emerald-400 mono-font">${vault.toLocaleString()} ج.م</span>
+                        </div>
+                        <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
+                            <span class="text-[10px] text-slate-400 font-bold block">المبيعات الكلية</span>
+                            <span class="text-base font-black text-cyan-400 mono-font">${totalSales.toLocaleString()} ج.م</span>
+                        </div>
+                        <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
+                            <span class="text-[10px] text-slate-400 font-bold block">الأرباح الصافية</span>
+                            <span class="text-base font-black text-amber-400 mono-font">${totalProfit.toLocaleString()} ج.م</span>
+                        </div>
+                        <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
+                            <span class="text-[10px] text-slate-400 font-bold block">العملاء والشركات</span>
+                            <span class="text-base font-black text-purple-400 mono-font">${state.clients.length} جهة</span>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTvChannel === 'news') {
+                channelLabel.innerText = "القناة 3: أهم الأخبار ومستجدات المنظومة";
+                screen.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-start gap-3 bg-slate-900/80 border border-slate-800 p-3 rounded-xl">
+                            <i class="fa-solid fa-shield-halved text-emerald-400 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="font-black text-xs text-slate-100">حماية بيومترية متكاملة</h4>
+                                <p class="text-[11px] text-slate-400">النظام مؤمن بنظام الجلسات وقفل الأمان بالبصمة البيومترية.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 bg-slate-900/80 border border-slate-800 p-3 rounded-xl">
+                            <i class="fa-solid fa-cloud-arrow-up text-indigo-400 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="font-black text-xs text-slate-100">المزامنة السحابية اللحظية (Firebase V10)</h4>
+                                <p class="text-[11px] text-slate-400">يتم تحديث المبيعات والمخزن فورياً بين جميع الأجهزة بدون الحاجة لإعادة التحميل.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // تحديث الساعة الرقمية للتلفزيون
+        setInterval(() => {
+            let clock = document.getElementById('tvClockText');
+            if(clock) {
+                let d = new Date();
+                clock.innerText = d.toLocaleTimeString('ar-EG');
+            }
+        }, 1000);
 
         function updateAdminHeader() {
             let adminName = localStorage.getItem('eidco_v13_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');
@@ -525,7 +888,6 @@
             try {
                 let inv = state.invoices.find(i => i.id === id);
 
-                // إرجاع الأصناف السحابية للمخزن
                 if(inv && inv.items) {
                     for(let it of inv.items) {
                         let p = state.products.find(x => x.code === it.code);
@@ -535,13 +897,11 @@
                     }
                 }
 
-                // حذف الفاتورة
                 let targetDocId = docId || (inv ? inv.docId : null);
                 if(targetDocId) {
                     await deleteDoc(doc(db, "invoices", targetDocId));
                 }
 
-                // حذف المعاملة المالية المرتبطة بالفاتورة
                 let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
                 if(tx && tx.docId) {
                     await deleteDoc(doc(db, "transactions", tx.docId));

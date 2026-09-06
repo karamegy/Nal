@@ -19,7 +19,6 @@
         if (!sessionStorage.getItem('eidco_session_auth')) {
             window.location.href = 'auth.html';
         }
-        // إجبار حذف أي Service Worker قديم يحفظ النسخة القديمة
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
                 for(let reg of registrations) reg.unregister();
@@ -197,41 +196,39 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الفاتورة الفردية لتصديرها كصورة -->
+    <!-- نافذة معاينة الفاتورة الفردية المحدثة لتصديرها كصورة -->
     <div id="invoicePreviewModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative box-border">
-            <div id="singleInvoicePrintArea" class="p-4 bg-white rounded-xl border border-slate-200 space-y-3 w-full box-border">
-                <div class="flex justify-between items-center border-b pb-2">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border">
+            <div id="singleInvoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4 w-full box-border">
+                <div class="flex justify-between items-center border-b pb-3">
                     <div>
-                        <h4 class="font-black text-slate-900 text-sm">EIDCO // فاتورة مبيعات</h4>
+                        <h3 class="font-black text-slate-900 text-sm">EIDCO // فاتورة مبيعات معتمدة</h3>
                         <span id="prevSingleInvId" class="text-xs text-indigo-600 font-mono font-bold" dir="ltr"></span>
                     </div>
                     <div class="text-left text-[11px] text-slate-500">
-                        <div>التاريخ: <span id="prevSingleDate" class="mono-font" dir="ltr"></span></div>
+                        <div>التاريخ: <span id="prevSingleDate" class="mono-font font-bold" dir="ltr"></span></div>
                     </div>
                 </div>
                 <div>
-                    <span class="text-[11px] text-slate-500">العميل:</span>
-                    <h5 id="prevSingleClient" class="font-bold text-xs text-slate-900"></h5>
+                    <span class="text-[11px] text-slate-500 block">العميل / الشركة:</span>
+                    <h4 id="prevSingleClient" class="font-black text-sm text-slate-900"></h4>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right text-xs border rounded-lg">
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-right text-xs">
                         <thead>
                             <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                <th class="p-2">الصنف</th>
-                                <th class="p-2 text-center">الكمية</th>
-                                <th class="p-2 text-center">السعر</th>
-                                <th class="p-2 text-left">الإجمالي</th>
+                                <th class="p-2.5">الصنف</th>
+                                <th class="p-2.5 text-center">الكمية</th>
+                                <th class="p-2.5 text-center">السعر</th>
+                                <th class="p-2.5 text-left">الإجمالي</th>
                             </tr>
                         </thead>
                         <tbody id="prevSingleItemsBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-                <div class="space-y-1 pt-2 border-t text-xs">
-                    <div class="flex justify-between items-center font-bold text-slate-900">
-                        <span>الإجمالي النهائي:</span>
-                        <span id="prevSingleTotal" class="text-indigo-600 mono-font text-sm" dir="ltr"></span>
-                    </div>
+                <div class="flex justify-between items-center pt-3 border-t text-sm font-bold text-slate-900">
+                    <span>الإجمالي النهائي:</span>
+                    <span id="prevSingleTotal" class="text-indigo-600 mono-font text-base" dir="ltr"></span>
                 </div>
             </div>
             
@@ -239,7 +236,7 @@
                 <button onclick="downloadSingleInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-image"></i> تحميل الفاتورة صورة
                 </button>
-                <button onclick="closeInvoicePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+                <button onclick="closeInvoicePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق المعاينة</button>
             </div>
         </div>
     </div>
@@ -248,6 +245,7 @@
         let state = {
             clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
             invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
+            batchInvoices: JSON.parse(localStorage.getItem('eidco_v13_batch_invoices')) || [],
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [],
             payments: JSON.parse(localStorage.getItem('eidco_v13_client_payments')) || []
         };
@@ -263,7 +261,8 @@
 
             tbody.innerHTML = state.clients.map(c => {
                 let clientInvoices = state.invoices.filter(i => i.client === c.name);
-                let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+                let clientBatches = state.batchInvoices.filter(b => b.client === c.name);
+                let totalPurchases = [...clientInvoices, ...clientBatches].reduce((sum, inv) => sum + Number(inv.total), 0);
 
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
                 let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -320,9 +319,11 @@
             document.getElementById('stmtClientName').innerText = currentActiveClient.name;
 
             let clientInvoices = state.invoices.filter(i => i.client === clientName);
+            let clientBatches = state.batchInvoices.filter(b => b.client === clientName);
+            let allClientInvoices = [...clientInvoices, ...clientBatches];
             let clientPayments = state.payments.filter(p => p.clientName === clientName);
 
-            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+            let totalPurchases = allClientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
             let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
             let dueBalance = totalPurchases - totalPaid;
 
@@ -331,7 +332,7 @@
             document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
 
             let rowsHtml = '';
-            clientInvoices.forEach(inv => {
+            allClientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id}</td>
@@ -373,39 +374,47 @@
         }
 
         function previewInvoice(invId) {
-            let inv = state.invoices.find(i => i.id === invId);
-            if(!inv) return;
+            // البحث في الفواتير الفردية أو المجمعة
+            let inv = state.invoices.find(i => i.id === invId) || state.batchInvoices.find(b => b.id === invId);
+            if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة');
 
             document.getElementById('prevSingleInvId').innerText = inv.id;
             document.getElementById('prevSingleDate').innerText = inv.date || '---';
-            document.getElementById('prevSingleClient').innerText = inv.client;
+            document.getElementById('prevSingleClient').innerText = inv.client || 'عميل عام';
             document.getElementById('prevSingleTotal').innerText = Number(inv.total).toLocaleString() + ' ج.م';
 
             let itemsHtml = '';
             if(inv.items && inv.items.length) {
                 itemsHtml = inv.items.map(it => `
                     <tr>
-                        <td class="p-2 font-bold text-slate-900">${it.prodName || it.name}</td>
-                        <td class="p-2 text-center mono-font" dir="ltr">${it.qty}</td>
-                        <td class="p-2 text-center mono-font" dir="ltr">${Number(it.unitPrice || it.price).toLocaleString()}</td>
-                        <td class="p-2 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal || (it.qty * it.price)).toLocaleString()}</td>
+                        <td class="p-2.5 font-bold text-slate-900">${it.prodName || it.name}</td>
+                        <td class="p-2.5 text-center mono-font" dir="ltr">${it.qty}</td>
+                        <td class="p-2.5 text-center mono-font" dir="ltr">${Number(it.unitPrice || it.price).toLocaleString()}</td>
+                        <td class="p-2.5 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal || (it.qty * (it.unitPrice || it.price))).toLocaleString()}</td>
                     </tr>
                 `).join('');
             } else {
-                itemsHtml = `<tr><td colspan="4" class="p-2 text-center text-slate-500">فاتورة فردية / مبيعات عامة</td></tr>`;
+                itemsHtml = `<tr><td colspan="4" class="p-3 text-center text-slate-500">فاتورة مبيعات مباشرة / بدون تفاصيل أصناف</td></tr>`;
             }
 
             document.getElementById('prevSingleItemsBody').innerHTML = itemsHtml;
+            
+            // إخفاء نافذة كشف الحساب مؤقتاً لتجنب التداخل أثناء التصوير
+            document.getElementById('statementModal').classList.remove('active');
             document.getElementById('invoicePreviewModal').classList.add('active');
         }
 
         function closeInvoicePreviewModal() {
             document.getElementById('invoicePreviewModal').classList.remove('active');
+            // إعادة فتح كشف الحساب إذا كان هناك عميل نشط
+            if(currentActiveClient) {
+                openClientStatement(currentActiveClient.name);
+            }
         }
 
         function downloadSingleInvoiceImage() {
             let element = document.getElementById('singleInvoicePrintArea');
-            html2canvas(element, { scale: 2 }).then(canvas => {
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
                 link.download = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
                 link.href = canvas.toDataURL('image/png');
@@ -415,7 +424,7 @@
 
         function downloadStatementImage() {
             let element = document.getElementById('statementPrintArea');
-            html2canvas(element, { scale: 2 }).then(canvas => {
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
                 link.download = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
                 link.href = canvas.toDataURL('image/png');
@@ -457,9 +466,9 @@
         function sendStatementWhatsApp() {
             if(!currentActiveClient) return;
             let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
+            let clientBatches = state.batchInvoices.filter(b => b.client === currentActiveClient.name);
+            let totalPurchases = [...clientInvoices, ...clientBatches].reduce((sum, inv) => sum + Number(inv.total), 0);
             let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
-
-            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
             let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
             let dueBalance = totalPurchases - totalPaid;
 

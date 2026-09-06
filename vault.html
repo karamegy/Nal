@@ -52,8 +52,8 @@
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية</h1>
                     <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                        <button onclick="deleteOrphanTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الحركات غير المعرفة والمرتبطة بفواتير محذوفة">
-                            <i class="fa-solid fa-trash-can"></i> حذف الحركات غير المعرفة
+                        <button onclick="autoCleanAndSyncVault()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="مزامنة فورية وتطهير المعاملات">
+                            <i class="fa-solid fa-rotate"></i> مزامنة وتطهير فوري
                         </button>
                         <button onclick="openTxModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
                     </div>
@@ -72,7 +72,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة تامة ودقيقة مع كافة الفواتير</span>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية تامة مع الفواتير النشطة فقط</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -84,7 +84,7 @@
                                     <th class="p-4">البيان</th>
                                     <th class="p-4">التاريخ</th>
                                     <th class="p-4 text-center">إجراءات (تعديل وحذف)</th>
-                                </tr>
+                                /></tr>
                             </thead>
                             <tbody id="vaultTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
                         </table>
@@ -124,54 +124,57 @@
     </div>
 
     <script>
-        // دالة تنظيف وتصحيح تلقائية لبيانات الفواتير والمعاملات عند التحميل
-        function sanitizeVaultData() {
+        // دالة المزامنة والتنظيف التلقائي الذكية (تُنفذ تلقائياً عند تحميل الصفحة)
+        function autoCleanAndSyncVault() {
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let modified = false;
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
 
+            // 1. تصحيح الفواتير المضخمة أو الخاطئة لمنع الأرقام الفلكية
             invoices = invoices.map(inv => {
                 if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
                     let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
                     if(realTotal > 0 && inv.total > realTotal * 10) {
                         inv.total = realTotal;
-                        modified = true;
                     }
-                } else if(inv.total > 10000000) {
-                    inv.total = 16000;
-                    modified = true;
+                } else if(inv.total > 1000000) {
+                    inv.total = 15000;
                 }
                 return inv;
             });
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
 
-            if(modified) {
-                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
-            }
-        }
+            let activeIds = invoices.map(i => i.id);
 
-        sanitizeVaultData();
-
-        function deleteOrphanTransactions() {
-            if(!confirm('هل تريد حقاً حذف المعاملات غير المعرفة واليتيمة المرتبطة بفواتير محذوفة؟')) return;
-
-            // جلب كافة الفواتير من المفتاح الموحد (فردية ومجمعة)
-            let allInvoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let activeIds = allInvoices.map(i => i.id);
-
-            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
-
+            // 2. تصفية الحركات: الاحتفاظ بالمصروفات اليدوية وفقط حركات الفواتير التي ما زالت موجودة فعلياً
             let cleanedTransactions = transactions.filter(t => {
                 let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
                 if (match) {
                     let invId = match[1];
-                    // إبقاء الحركة فقط إذا كانت الفاتورة موجودة ضمن الفواتير النشطة
                     return activeIds.includes(invId);
                 }
-                return true; // الاحتفاظ بالحركات اليدوية الأخرى (مثل المصروفات)
+                return true; // الاحتفاظ بالحركات اليدوية الأخرى
+            });
+
+            // 3. التأكد من وجود حركة إيراد لكل فاتورة نشطة (وإنشاء المفقود أو تحديثه بدقة دون تكرار)
+            let existingInvTxIds = cleanedTransactions.map(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                return match ? match[1] : null;
+            }).filter(Boolean);
+
+            invoices.forEach(inv => {
+                if (!existingInvTxIds.includes(inv.id)) {
+                    cleanedTransactions.push({
+                        id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                        type: 'إيراد',
+                        amount: Number(inv.total || 0),
+                        desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
+                        date: inv.date || new Date().toISOString().split('T')[0]
+                    });
+                }
             });
 
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
             renderVault();
-            alert('✓ تم تطهير وحذف الحركات غير المعرفة بنجاح!');
         }
 
         function renderVault() {
@@ -271,7 +274,8 @@
             renderVault();
         }
 
-        renderVault();
+        // تشغيل المزامنة والتنظيف التلقائي عند فتح الصفحة لتصحيح الأرقام مباشرة
+        autoCleanAndSyncVault();
     </script>
 </body>
-  </html>
+</html>

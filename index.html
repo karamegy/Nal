@@ -145,7 +145,7 @@
                     </div>
                 </div>
 
-                <!-- شريط البحث السريع الجديد -->
+                <!-- شريط البحث السريع -->
                 <div class="corporate-card p-4 flex items-center gap-3">
                     <i class="fa-solid fa-magnifying-glass text-indigo-600 mr-2"></i>
                     <input type="text" id="globalSearchInput" oninput="filterDashboardData(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث سريع في الفواتير أو العملاء برقم أو اسم...">
@@ -262,7 +262,6 @@
                                 <span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span>
                             </div>
                         </a>
-                        <!-- زر إدارة المستخدمين الجديد في شبكة الأقسام -->
                         <a href="users.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-users-gear"></i></div>
                             <div>
@@ -296,30 +295,59 @@
     </div>
 
     <script>
-        function sanitizeData() {
+        // دالة تنظيف ومزامنة المعاملات والفواتير آلياً لمنع تضخم الأرقام
+        function sanitizeAndSyncTransactions() {
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let modified = false;
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
 
+            // تصحيح الفواتير المضخمة
             invoices = invoices.map(inv => {
                 if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
                     let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
                     if(realTotal > 0 && inv.total > realTotal * 10) {
                         inv.total = realTotal;
-                        modified = true;
                     }
-                } else if(inv.total > 10000000) {
-                    inv.total = 16000;
-                    modified = true;
+                } else if(inv.total > 1000000) {
+                    inv.total = 15000;
                 }
                 return inv;
             });
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
 
-            if(modified) {
-                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
-            }
+            let activeIds = invoices.map(i => i.id);
+
+            // تصفية المعاملات لحذف المعاملات المرتبطة بفواتير محذوفة
+            let cleanedTransactions = transactions.filter(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                if (match) {
+                    let invId = match[1];
+                    return activeIds.includes(invId);
+                }
+                return true; // الاحتفاظ بالمصروفات اليدوية الأخرى
+            });
+
+            // التأكد من وجود معامل لكل فاتورة نشطة
+            let existingInvTxIds = cleanedTransactions.map(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                return match ? match[1] : null;
+            }).filter(Boolean);
+
+            invoices.forEach(inv => {
+                if (!existingInvTxIds.includes(inv.id)) {
+                    cleanedTransactions.push({
+                        id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                        type: 'إيراد',
+                        amount: Number(inv.total || 0),
+                        desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
+                        date: inv.date || new Date().toISOString().split('T')[0]
+                    });
+                }
+            });
+
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
         }
 
-        sanitizeData();
+        sanitizeAndSyncTransactions();
 
         let state = {
             adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
@@ -378,7 +406,6 @@
             `).join('');
         }
 
-        // دالة البحث السريع الفوري
         function filterDashboardData(query) {
             let q = query.trim().toLowerCase();
             let batchInvs = state.invoices.filter(i => i.isBatch);

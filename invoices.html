@@ -65,8 +65,8 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير والمبيعات</h1>
-                    <button onclick="openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة</button>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير والمبيعات (Firebase)</h1>
+                    <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة</button>
                 </div>
             </header>
 
@@ -79,7 +79,9 @@
                                     <th class="p-4">رقم الفاتورة</th><th class="p-4">العميل</th><th class="p-4">الصنف</th><th class="p-4">الكمية</th><th class="p-4">الإجمالي</th><th class="p-4">الربح</th><th class="p-4 text-center">إجراء</th>
                                 </tr>
                             </thead>
-                            <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من السحابة...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -92,134 +94,211 @@
             <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة</h3>
             <div class="space-y-3 text-xs">
                 <div><label class="block mb-1 text-slate-600">اختر العميل</label><select id="invClient" class="corporate-input w-full"></select></div>
-                <div><label class="block mb-1 text-slate-600">اختر الصنف</label><select id="invProduct" class="corporate-input w-full" onchange="updateInvPrice()"></select></div>
+                <div><label class="block mb-1 text-slate-600">اختر الصنف</label><select id="invProduct" class="corporate-input w-full" onchange="window.updateInvPrice()"></select></div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="calcInvTotal()"></div>
+                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="window.calcInvTotal()"></div>
                     <div><label class="block mb-1 text-slate-600">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100" readonly></div>
                 </div>
                 <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex justify-between font-bold">
                     <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono">0.00 ج.م</span>
                 </div>
             </div>
-            <div class="flex gap-2 pt-2"><button onclick="saveInvoice()" class="btn-primary flex-1 py-2 text-xs">حفظ وتحديث المخزن</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+            <div class="flex gap-2 pt-2"><button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ وتحديث المخزن</button><button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
         </div>
     </div>
 
-    <script>
-        let state = {
-            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
-            products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
-            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
-            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            updateDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
-        
-        function saveData() {
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
-            localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-            renderInvoices();
-        }
 
-        function renderInvoices() {
-            document.getElementById('invoicesTableBody').innerHTML = state.invoices.map(i => `
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const clientsRef = collection(db, "clients");
+        const productsRef = collection(db, "products");
+        const invoicesRef = collection(db, "invoices");
+        const transactionsRef = collection(db, "transactions");
+
+        let state = {
+            clients: [],
+            products: [],
+            invoices: [],
+            transactions: []
+        };
+
+        // المزامنة اللحظية مع Firebase Firestore
+        onSnapshot(clientsRef, (snapshot) => {
+            state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+        });
+
+        onSnapshot(productsRef, (snapshot) => {
+            state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+        });
+
+        onSnapshot(invoicesRef, (snapshot) => {
+            state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            window.renderInvoices();
+        });
+
+        onSnapshot(transactionsRef, (snapshot) => {
+            state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+        });
+
+        window.renderInvoices = function() {
+            let singleInvoices = state.invoices.filter(i => !i.isBatch);
+            let tbody = document.getElementById('invoicesTableBody');
+            
+            if(!singleInvoices.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = singleInvoices.map(i => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id}</td>
-                    <td class="p-4 font-bold text-slate-900">${i.client}</td>
-                    <td class="p-4 text-slate-700">${i.productName}</td>
-                    <td class="p-4 mono-font">${i.qty}</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 text-center"><button onclick="deleteInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id || 'INV'}</td>
+                    <td class="p-4 font-bold text-slate-900">${i.client || 'عميل'}</td>
+                    <td class="p-4 text-slate-700">${i.productName || 'صنف'}</td>
+                    <td class="p-4 mono-font">${i.qty || 1}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer" title="حذف الفاتورة">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
-            `).join('') || `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة.</td></tr>`;
-        }
+            `).join('');
+        };
 
-        function openNewInvoiceModal() {
-            if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف أولاً.');
-            document.getElementById('invClient').innerHTML = state.clients.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-            document.getElementById('invProduct').innerHTML = state.products.map(p=>`<option value="${p.code}" data-price="${p.sellPrice}" data-buy="${p.buyPrice}">${p.name} (المتاح: ${p.qty})</option>`).join('');
+        window.openNewInvoiceModal = function() {
+            if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام أولاً.');
+            
+            document.getElementById('invClient').innerHTML = state.clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            document.getElementById('invProduct').innerHTML = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice}" data-buy="${p.buyPrice}">${p.name} (المتاح: ${p.qty})</option>`).join('');
+            
             document.getElementById('invoiceModal').classList.add('active');
-            updateInvPrice();
-        }
+            window.updateInvPrice();
+        };
 
-        function closeModal() { 
+        window.closeModal = function() { 
             document.getElementById('invoiceModal').classList.remove('active'); 
-        }
+        };
 
-        function updateInvPrice() {
+        window.updateInvPrice = function() {
             let sel = document.getElementById('invProduct');
-            if(sel.options[sel.selectedIndex]) document.getElementById('invPriceUnit').value = sel.options[sel.selectedIndex].getAttribute('data-price');
-            calcInvTotal();
-        }
+            if(sel && sel.options[sel.selectedIndex]) {
+                document.getElementById('invPriceUnit').value = sel.options[sel.selectedIndex].getAttribute('data-price') || 0;
+            }
+            window.calcInvTotal();
+        };
 
-        function calcInvTotal() {
+        window.calcInvTotal = function() {
             let qty = Number(document.getElementById('invQty').value) || 1;
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
-            document.getElementById('invTotalDisplay').innerText = `${(qty*price).toLocaleString()} ج.م`;
-        }
+            document.getElementById('invTotalDisplay').innerText = `${(qty * price).toLocaleString()} ج.م`;
+        };
 
-        function saveInvoice() {
+        window.saveInvoice = async function() {
             let code = document.getElementById('invProduct').value;
             let prod = state.products.find(p => p.code === code);
             let qty = Number(document.getElementById('invQty').value) || 1;
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
             
             if(!prod) return alert('⚠️ يرجى اختيار الصنف بشكل صحيح');
-            if(prod.qty < qty) return alert('⚠️ الكمية غير متوفرة في المخزن');
+            if(prod.qty < qty) return alert('⚠️ الكمية المحددة غير متوفرة حالياً بالكامل في المخزن');
             
-            prod.qty -= qty;
             let total = qty * price;
-            let profit = (price - Number(prod.buyPrice)) * qty;
-            let id = 'INV-' + Math.floor(1000 + Math.random()*9000);
+            let profit = (price - Number(prod.buyPrice || 0)) * qty;
+            let id = 'INV-' + Math.floor(1000 + Math.random() * 9000);
             let today = new Date().toISOString().split('T')[0];
 
-            state.invoices.push({ 
-                id, 
-                client: document.getElementById('invClient').value, 
-                productCode: code, 
-                productName: prod.name, 
-                qty, 
-                unitPrice: price, 
-                total, 
-                profit, 
-                date: today 
-            });
+            try {
+                // 1. خصم الكمية المباعة من الأصناف في Firestore
+                if (prod.docId) {
+                    await updateDoc(doc(db, "products", prod.docId), { qty: prod.qty - qty });
+                }
 
-            // إضافة الحركة المالية للخزنة مع التاريخ وتجنب قيم undefined
-            state.transactions.push({ 
-                id: 'TX-'+Math.floor(100+Math.random()*900), 
-                type: 'إيراد', 
-                amount: total, 
-                desc: `فاتورة مبيعات ${id}`, 
-                date: today 
-            });
+                // 2. إضافة الفاتورة الفردية السحابية
+                await addDoc(invoicesRef, { 
+                    id, 
+                    client: document.getElementById('invClient').value, 
+                    productCode: code, 
+                    productName: prod.name, 
+                    qty, 
+                    unitPrice: price, 
+                    total, 
+                    profit, 
+                    date: today,
+                    isBatch: false
+                });
 
-            closeModal(); 
-            saveData();
-            alert('✓ تم إصدار الفاتورة وتحديث المخزن والخزنة بنجاح');
-        }
+                // 3. إضافة الحركة المالية لإيرادات الخزنة السحابية
+                await addDoc(transactionsRef, { 
+                    id: 'TX-' + Math.floor(100 + Math.random() * 900), 
+                    type: 'إيراد', 
+                    amount: total, 
+                    desc: `فاتورة مبيعات ${id}`, 
+                    date: today 
+                });
 
-        function deleteInvoice(id) {
+                window.closeModal(); 
+                alert('✓ تم إصدار الفاتورة وتحديث المخزن والخزنة سحابياً بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء حفظ الفاتورة في السحابة: ' + err.message);
+            }
+        };
+
+        window.deleteInvoice = async function(id, docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة.')) return;
             
-            let inv = state.invoices.find(i => i.id === id);
-            if(inv) { 
-                let p = state.products.find(x => x.code === inv.productCode); 
-                if(p) p.qty += inv.qty; 
+            try {
+                let inv = state.invoices.find(i => i.id === id);
+                
+                // 1. إرجاع الكميات المباعة إلى المخزن السحابي
+                if(inv) { 
+                    let p = state.products.find(x => x.code === inv.productCode); 
+                    if(p && p.docId) {
+                        await updateDoc(doc(db, "products", p.docId), { qty: p.qty + inv.qty });
+                    }
+                }
+                
+                // 2. حذف مستند الفاتورة
+                let targetDocId = docId || (inv ? inv.docId : null);
+                if(targetDocId) {
+                    await deleteDoc(doc(db, "invoices", targetDocId));
+                }
+                
+                // 3. حذف حركة الخزنة المرتبطة بالفاتورة
+                let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
+                if(tx && tx.docId) {
+                    await deleteDoc(doc(db, "transactions", tx.docId));
+                }
+                
+                alert('✓ تم حذف الفاتورة وتحديث النظام سحابياً بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء حذف الفاتورة: ' + err.message);
             }
-            
-            // حذف الفاتورة
-            state.invoices = state.invoices.filter(i => i.id !== id);
-            
-            // حذف المعاملة المالية المرتبطة بهذه الفاتورة حصرياً من الخزنة لتجنب ظهور فواتير محذوفة
-            state.transactions = state.transactions.filter(t => !t.desc.includes(id));
-            
-            saveData();
-            alert('✓ تم حذف الفاتورة وتحديث النظام بنجاح');
-        }
-
-        renderInvoices();
+        };
     </script>
 </body>
 </html>

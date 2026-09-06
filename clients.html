@@ -22,20 +22,21 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 13px; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
@@ -106,15 +107,15 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600">اسم العميل / الشركة</label>
-                    <input type="text" id="clientNameInput" class="corporate-input w-full" placeholder="مثال: شركة النور للتجارة">
+                    <input type="text" id="clientNameInput" class="corporate-input" placeholder="مثال: شركة النور للتجارة">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600">رقم الهاتف (للواتساب)</label>
-                    <input type="text" id="clientPhoneInput" class="corporate-input w-full mono-font" placeholder="010xxxxxxxx">
+                    <input type="text" id="clientPhoneInput" class="corporate-input mono-font" placeholder="010xxxxxxxx" dir="ltr">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600">العنوان</label>
-                    <input type="text" id="clientAddressInput" class="corporate-input w-full" placeholder="المدينة - الشارع">
+                    <input type="text" id="clientAddressInput" class="corporate-input" placeholder="المدينة - الشارع">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -127,55 +128,61 @@
     <!-- نافذة كشف حساب العميل التفصيلي -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl">
-            <div class="flex justify-between items-center border-b pb-3">
-                <div>
-                    <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
-                    <span class="text-[11px] text-slate-500">كشف الحساب التفصيلي والمديونيات</span>
+            <!-- منطقة كشف الحساب القابلة للتصدير كصورة -->
+            <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
+                        <span class="text-[11px] text-slate-500">كشف الحساب التفصيلي والمديونيات - EIDCO</span>
+                    </div>
+                    <button onclick="closeStatementModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <button onclick="closeStatementModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
-            </div>
 
-            <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="p-3 bg-slate-50 rounded-xl border">
-                    <span class="text-[10px] text-slate-500 block">إجمالي المشتريات</span>
-                    <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm">0 ج.م</strong>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="p-3 bg-slate-50 rounded-xl border">
+                        <span class="text-[10px] text-slate-500 block">إجمالي المشتريات</span>
+                        <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <span class="text-[10px] text-emerald-600 block">إجمالي المدفوعات</span>
+                        <strong id="stmtTotalPaid" class="text-emerald-700 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
+                    <div class="p-3 bg-rose-50 rounded-xl border border-rose-100">
+                        <span class="text-[10px] text-rose-600 block">المتبقي (المديونية)</span>
+                        <strong id="stmtTotalDue" class="text-rose-700 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
                 </div>
-                <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                    <span class="text-[10px] text-emerald-600 block">إجمالي المدفوعات</span>
-                    <strong id="stmtTotalPaid" class="text-emerald-700 mono-font text-sm">0 ج.م</strong>
-                </div>
-                <div class="p-3 bg-rose-50 rounded-xl border border-rose-100">
-                    <span class="text-[10px] text-rose-600 block">المتبقي (المديونية)</span>
-                    <strong id="stmtTotalDue" class="text-rose-700 mono-font text-sm">0 ج.م</strong>
-                </div>
-            </div>
 
-            <!-- زر تسجيل دفعة نقدية -->
-            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex gap-2 items-center">
-                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input flex-1 mono-font text-xs">
-                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 px-4 whitespace-nowrap"><i class="fa-solid fa-money-bill-wave ml-1"></i> تسجيل دفعة نقدية</button>
-            </div>
-
-            <div class="space-y-2">
-                <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات:</span>
-                <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200">
-                    <table class="w-full text-right text-xs">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                <th class="p-2.5">الرقم / المعاملة</th>
-                                <th class="p-2.5">التفاصيل</th>
-                                <th class="p-2.5">المبلغ</th>
-                                <th class="p-2.5">التاريخ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
-                    </table>
+                <div class="space-y-2">
+                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات:</span>
+                    <div class="max-h-48 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-2.5">الرقم / المعاملة</th>
+                                    <th class="p-2.5">التفاصيل</th>
+                                    <th class="p-2.5">المبلغ</th>
+                                    <th class="p-2.5">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex gap-2 pt-2">
-                <button onclick="sendStatementWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال كشف الحساب واتساب
+            <!-- زر تسجيل دفعة نقدية بتصميم متجاوب لعدم الخروج عن الشاشة -->
+            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row gap-2 items-center">
+                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input flex-1 mono-font text-xs" dir="ltr">
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 px-4 w-full sm:w-auto whitespace-nowrap"><i class="fa-solid fa-money-bill-wave ml-1"></i> تسجيل دفعة نقدية</button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-image"></i> تصدير صورة
+                </button>
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال واتساب
                 </button>
                 <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
             </div>
@@ -200,11 +207,9 @@
             }
 
             tbody.innerHTML = state.clients.map(c => {
-                // حساب إجمالي المشتريات للعميل
                 let clientInvoices = state.invoices.filter(i => i.client === c.name);
                 let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
 
-                // حساب إجمالي المدفوعات المسجلة للعميل
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
                 let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
@@ -213,10 +218,10 @@
                 return `
                     <tr class="hover:bg-slate-50">
                         <td class="p-4 font-bold text-slate-900">${c.name}</td>
-                        <td class="p-4 mono-font text-slate-600">${c.phone || '---'}</td>
+                        <td class="p-4 mono-font text-slate-600" dir="ltr">${c.phone || '---'}</td>
                         <td class="p-4 text-slate-600">${c.address || '---'}</td>
-                        <td class="p-4 mono-font text-indigo-600 font-bold">${totalPurchases.toLocaleString()} ج.م</td>
-                        <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}">${dueBalance.toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${totalPurchases.toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}" dir="ltr">${dueBalance.toLocaleString()} ج.م</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
                             <button onclick="openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
@@ -274,10 +279,10 @@
             clientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600">${inv.id}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id}</td>
                         <td class="p-2.5">فاتورة مبيعات (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600">+${Number(inv.total).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500">${inv.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                     </tr>
                 `;
             });
@@ -285,10 +290,10 @@
             clientPayments.forEach(pay => {
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
-                        <td class="p-2.5 mono-font font-bold text-emerald-600">سداد دفعة</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">سداد دفعة</td>
                         <td class="p-2.5">دفعة نقدية مسددة</td>
-                        <td class="p-2.5 mono-font font-bold text-emerald-600">-${Number(pay.amount).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500">${pay.date}</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date}</td>
                     </tr>
                 `;
             });
@@ -306,6 +311,16 @@
             currentActiveClient = null;
         }
 
+        function downloadStatementImage() {
+            let element = document.getElementById('statementPrintArea');
+            html2canvas(element, { scale: 2 }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
         function recordClientPayment() {
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
@@ -313,7 +328,6 @@
 
             let today = new Date().toISOString().split('T')[0];
 
-            // حفظ الدفعة
             state.payments.push({
                 id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
                 clientName: currentActiveClient.name,
@@ -321,7 +335,6 @@
                 date: today
             });
 
-            // إضافة الدفعة للخزنة النقدية كإيراد / تحصيل
             state.transactions.push({
                 id: 'TX-' + Math.floor(100 + Math.random() * 900),
                 type: 'إيراد',

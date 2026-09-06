@@ -64,14 +64,16 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة</h1>
+                <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة (Firebase)</h1>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6">
                 <div class="corporate-card grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[600px]">
                     <div class="lg:col-span-4 border-l border-slate-200 flex flex-col bg-slate-50">
                         <div class="p-4 border-b border-slate-200 bg-white"><h3 class="font-bold text-sm text-slate-900">العملاء والشركات</h3></div>
-                        <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="chatContactsList"></div>
+                        <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="chatContactsList">
+                            <div class="p-4 text-center text-xs text-slate-400">جاري تحميل جهات الاتصال من السحابة...</div>
+                        </div>
                     </div>
                     <div class="lg:col-span-8 flex flex-col bg-white">
                         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -104,57 +106,153 @@
         </div>
     </div>
 
-    <script>
-        let state = {
-            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
-            chats: JSON.parse(localStorage.getItem('eidco_v13_chats')) || {}
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            query, 
+            where, 
+            orderBy 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
-        let currentActiveChatId = null;
+
+        // تهيئة Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const clientsRef = collection(db, "clients");
+        const messagesRef = collection(db, "messages");
+
+        let clientsList = [];
+        let messagesList = [];
+        let currentActiveClientId = null;
+        let unsubscribeMessages = null;
         let ringtoneCtx = null, ringtoneTimer = null;
 
+        // الاستماع المباشر لجدول العملاء من السحابة
+        onSnapshot(clientsRef, (snapshot) => {
+            clientsList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            renderContacts();
+        }, (error) => {
+            console.error("خطأ في جلب العملاء:", error);
+            document.getElementById('chatContactsList').innerHTML = `<div class="p-4 text-center text-xs text-rose-500">تعذر تحميل جهات الاتصال.</div>`;
+        });
+
         function renderContacts() {
-            document.getElementById('chatContactsList').innerHTML = state.clients.map(c => `
-                <div onclick="selectClient(${c.id})" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${currentActiveChatId===c.id?'bg-indigo-50 border-r-4 border-indigo-600':''}">
-                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">${c.name.charAt(0)}</div>
-                    <div><h4 class="font-bold text-xs text-slate-900">${c.name}</h4><p class="text-[11px] text-slate-500">${c.phone||'بدون هاتف'}</p></div>
+            let container = document.getElementById('chatContactsList');
+            if (clientsList.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">لا يوجد عملاء مسجلين حالياً.</div>`;
+                return;
+            }
+
+            container.innerHTML = clientsList.map(c => `
+                <div onclick="window.selectClient('${c.id}')" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${currentActiveClientId === c.id ? 'bg-indigo-50 border-r-4 border-indigo-600' : ''}">
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">${c.name ? c.name.charAt(0) : 'ع'}</div>
+                    <div>
+                        <h4 class="font-bold text-xs text-slate-900">${c.name || 'عميل'}</h4>
+                        <p class="text-[11px] text-slate-500">${c.phone || 'بدون هاتف'}</p>
+                    </div>
                 </div>
             `).join('');
         }
-        function selectClient(id) {
-            currentActiveChatId = id;
-            let c = state.clients.find(x => x.id === id);
-            document.getElementById('activeChatName').innerText = c.name;
-            document.getElementById('activeChatAvatar').innerText = c.name.charAt(0);
-            renderMessages();
+
+        window.selectClient = function(clientId) {
+            currentActiveClientId = clientId;
+            let client = clientsList.find(x => x.id === clientId);
+            if (!client) return;
+
+            document.getElementById('activeChatName').innerText = client.name || 'عميل';
+            document.getElementById('activeChatAvatar').innerText = client.name ? client.name.charAt(0) : 'ع';
+
             renderContacts();
+            listenToMessages(clientId);
+        };
+
+        // الاستماع المباشر واللحظي للرسائل الخاصة بالعميل المختار
+        function listenToMessages(clientId) {
+            if (unsubscribeMessages) unsubscribeMessages();
+
+            const q = query(messagesRef, where("clientId", "==", clientId));
+
+            unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                messagesList = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // ترتيب الرسائل زمنياً
+                messagesList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+                renderMessages();
+            });
         }
+
         function renderMessages() {
             let area = document.getElementById('chatMessagesArea');
-            let msgs = state.chats[currentActiveChatId] || [];
-            area.innerHTML = msgs.map(m => `
-                <div class="flex flex-col ${m.sender==='me'?'items-end':'items-start'}">
-                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender==='me'?'bg-indigo-600 text-white':'bg-white border text-slate-800'}">${m.text}</div>
-                    <span class="text-[9px] text-slate-400 mt-0.5">${m.time}</span>
+            if (!currentActiveClientId) {
+                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-20">اختر محادثة من القائمة الجانبية.</div>`;
+                return;
+            }
+
+            if (messagesList.length === 0) {
+                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-20">لا توجد رسائل بعد. ابدأ المحادثة الآن!</div>`;
+                return;
+            }
+
+            area.innerHTML = messagesList.map(m => `
+                <div class="flex flex-col ${m.sender === 'me' ? 'items-end' : 'items-start'}">
+                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-800'}">${m.text}</div>
+                    <span class="text-[9px] text-slate-400 mt-0.5">${m.time || ''}</span>
                 </div>
             `).join('');
+
             area.scrollTop = area.scrollHeight;
         }
-        function sendChatMessage() {
-            if(!currentActiveChatId) return alert('اختر عميل أولاً');
-            let txt = document.getElementById('chatMessageInput').value.trim();
-            if(!txt) return;
-            if(!state.chats[currentActiveChatId]) state.chats[currentActiveChatId] = [];
-            state.chats[currentActiveChatId].push({ sender: 'me', text: txt, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
-            localStorage.setItem('eidco_v13_chats', JSON.stringify(state.chats));
-            document.getElementById('chatMessageInput').value = '';
-            renderMessages();
-            renderContacts();
-        }
-        function startAudioCall() {
-            if(!currentActiveChatId) return alert('اختر عميل أولاً');
-            let c = state.clients.find(x => x.id === currentActiveChatId);
-            document.getElementById('audioCallTargetName').innerText = c.name;
+
+        window.sendChatMessage = async function() {
+            if (!currentActiveClientId) return alert('الرجاء اختيار عميل أولاً');
+            let inputEl = document.getElementById('chatMessageInput');
+            let txt = inputEl.value.trim();
+            if (!txt) return;
+
+            try {
+                await addDoc(messagesRef, {
+                    clientId: currentActiveClientId,
+                    sender: 'me',
+                    text: txt,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    createdAt: Date.now()
+                });
+
+                inputEl.value = '';
+            } catch (err) {
+                alert('حدث خطأ أثناء إرسال الرسالة: ' + err.message);
+            }
+        };
+
+        window.startAudioCall = function() {
+            if (!currentActiveClientId) return alert('اختر عميل أولاً');
+            let client = clientsList.find(x => x.id === currentActiveClientId);
+            document.getElementById('audioCallTargetName').innerText = client ? client.name : 'جاري الاتصال...';
             document.getElementById('audioCallModal').classList.add('active');
+
             try {
                 ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
                 ringtoneTimer = setInterval(() => {
@@ -162,17 +260,22 @@
                     let g = ringtoneCtx.createGain();
                     osc.frequency.setValueAtTime(440, ringtoneCtx.currentTime);
                     g.gain.setValueAtTime(0.1, ringtoneCtx.currentTime);
-                    osc.connect(g); g.connect(ringtoneCtx.destination);
-                    osc.start(); osc.stop(ringtoneCtx.currentTime + 0.4);
+                    osc.connect(g); 
+                    g.connect(ringtoneCtx.destination);
+                    osc.start(); 
+                    osc.stop(ringtoneCtx.currentTime + 0.4);
                 }, 1200);
-            }catch(e){}
-        }
-        function startVideoCall() { alert('جاري بدء مكالمة فيديو آمنة...'); }
-        function endActiveCall() {
-            if(ringtoneTimer) clearInterval(ringtoneTimer);
+            } catch(e) {}
+        };
+
+        window.startVideoCall = function() { 
+            alert('جاري بدء مكالمة فيديو آمنة عبر السحابة...'); 
+        };
+
+        window.endActiveCall = function() {
+            if (ringtoneTimer) clearInterval(ringtoneTimer);
             document.getElementById('audioCallModal').classList.remove('active');
-        }
-        renderContacts();
+        };
     </script>
 </body>
 </html>

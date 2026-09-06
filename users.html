@@ -68,8 +68,8 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الحسابات وصلاحيات النظام</h1>
-                    <button onclick="openUserModal()" class="btn-primary text-xs flex items-center gap-2">
+                    <h1 class="font-black text-slate-900 text-sm">إدارة الحسابات وصلاحيات النظام (Firebase)</h1>
+                    <button onclick="window.openUserModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-user-plus"></i> إضافة مسؤول جديد
                     </button>
                 </div>
@@ -80,7 +80,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة الحسابات والمسؤولين المعتمدين</h3>
-                        <span class="text-xs text-slate-500 font-mono">متزامن بالكامل مع واجهة الدخول البيومترية</span>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية من Firebase</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -93,7 +93,9 @@
                                     <th class="p-4 text-center">الإجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody id="usersTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="usersTableBody" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">جاري تحميل بيانات الحسابات من السحابة...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -106,6 +108,7 @@
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
             <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد للنظام</h3>
             <input type="hidden" id="editUserId">
+            <input type="hidden" id="editDocId">
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">اسم المسؤول الكامل</label>
@@ -122,110 +125,157 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveUser()" class="btn-primary flex-1 py-2 text-xs">حفظ الحساب</button>
-                <button onclick="closeUserModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button onclick="window.saveUser()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحساب</button>
+                <button onclick="window.closeUserModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <script>
-        function renderUsersTable() {
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [
-                { id: 1, name: 'كرم حمدي عبدالعظيم', role: 'مدير نظام رئيسي', date: '2026-01-01' }
-            ];
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            updateDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+          apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+          authDomain: "w2a-37531-672997.firebaseapp.com",
+          projectId: "w2a-37531-672997",
+          storageBucket: "w2a-37531-672997.firebasestorage.app",
+          messagingSenderId: "515898424721",
+          appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const accountsRef = collection(db, "accounts");
+        let accountsList = [];
+
+        // المزامنة اللحظية الحية للحسابات والمسؤولين
+        onSnapshot(accountsRef, (snapshot) => {
+            accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accountsList));
+            window.renderUsersTable();
+        }, (error) => {
+            console.error("خطأ في جلب بيانات الحسابات:", error);
+            try {
+                let localData = localStorage.getItem('eidco_v13_accounts');
+                if (localData) accountsList = JSON.parse(localData);
+                window.renderUsersTable();
+            } catch(e) {}
+        });
+
+        window.renderUsersTable = function() {
             let tbody = document.getElementById('usersTableBody');
-            if(!accounts.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة.</td></tr>`;
+            
+            if(!accountsList.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = accounts.map(acc => `
+            tbody.innerHTML = accountsList.map((acc, index) => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">ACC-${acc.id}</td>
-                    <td class="p-4 font-bold text-slate-900">${acc.name}</td>
-                    <td class="p-4 font-semibold text-slate-600">${acc.role}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold">ACC-${acc.id || (index + 101)}</td>
+                    <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
+                    <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
                     <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <button onclick="editUser(${acc.id})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                        ${accounts.length > 1 ? `<button onclick="deleteUser(${acc.id})" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                        ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </td>
                 </tr>
             `).join('');
-        }
+        };
 
-        function openUserModal() {
+        window.openUserModal = function() {
             document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد للنظام';
             document.getElementById('editUserId').value = '';
+            document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
             document.getElementById('userRole').value = 'مدير نظام رئيسي';
             document.getElementById('userModal').classList.add('active');
-        }
+        };
 
-        function closeUserModal() {
+        window.closeUserModal = function() {
             document.getElementById('userModal').classList.remove('active');
-        }
+        };
 
-        function editUser(id) {
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
-            let acc = accounts.find(a => a.id === id);
+        window.editUser = function(docId, id) {
+            let acc = accountsList.find(a => (docId && a.docId === docId) || a.id == id);
             if(!acc) return;
 
             document.getElementById('userModalTitle').innerText = `تعديل بيانات الحساب (${acc.name})`;
-            document.getElementById('editUserId').value = acc.id;
-            document.getElementById('userName').value = acc.name;
-            document.getElementById('userRole').value = acc.role;
+            document.getElementById('editDocId').value = acc.docId || '';
+            document.getElementById('editUserId').value = acc.id || '';
+            document.getElementById('userName').value = acc.name || '';
+            document.getElementById('userRole').value = acc.role || 'مدير نظام رئيسي';
             document.getElementById('userModal').classList.add('active');
-        }
+        };
 
-        function saveUser() {
+        window.saveUser = async function() {
+            let editDocId = document.getElementById('editDocId').value;
             let editId = document.getElementById('editUserId').value;
             let name = document.getElementById('userName').value.trim();
             let role = document.getElementById('userRole').value;
 
             if(!name) return alert('الرجاء إدخال اسم المسؤول.');
 
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
+            let accountData = {
+                id: editId ? Number(editId) : Date.now(),
+                name: name,
+                role: role,
+                date: new Date().toISOString().split('T')[0]
+            };
 
-            if(editId) {
-                let acc = accounts.find(a => a.id == editId);
-                if(acc) {
-                    acc.name = name;
-                    acc.role = role;
+            try {
+                if(editDocId) {
+                    await updateDoc(doc(db, "accounts", editDocId), {
+                        name: name,
+                        role: role
+                    });
+                } else {
+                    if(accountsList.some(a => a.name === name)) {
+                        alert('هذا الاسم مسجل مسبقاً.');
+                        return;
+                    }
+                    await addDoc(accountsRef, accountData);
                 }
-            } else {
-                if(accounts.some(a => a.name === name)) {
-                    alert('هذا الاسم مسجل مسبقاً.');
-                    return;
-                }
-                accounts.push({
-                    id: Date.now(),
-                    name: name,
-                    role: role,
-                    date: new Date().toISOString().split('T')[0]
-                });
+
+                window.closeUserModal();
+                alert('✓ تم حفظ بيانات الحساب وسحب التحديثات سحابياً بنجاح.');
+            } catch(err) {
+                alert('حدث خطأ أثناء حفظ بيانات المستخدم في Firebase: ' + err.message);
             }
+        };
 
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
-            closeUserModal();
-            renderUsersTable();
-            alert('✓ تم حفظ بيانات الحساب بنجاح وتحديث النظام.');
-        }
-
-        function deleteUser(id) {
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
-            if(accounts.length <= 1) {
+        window.deleteUser = async function(docId) {
+            if(accountsList.length <= 1) {
                 alert('لا يمكن حذف الحساب الأخير في المنظومة.');
                 return;
             }
-            if(!confirm('هل أنت متأكد من حذف هذا الحساب نهائياً؟')) return;
+            if(!confirm('هل أنت متأكد من حذف هذا الحساب نهائياً من السحابة؟')) return;
 
-            accounts = accounts.filter(a => a.id !== id);
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
-            renderUsersTable();
-        }
-
-        renderUsersTable();
+            try {
+                if(docId) {
+                    await deleteDoc(doc(db, "accounts", docId));
+                    alert('✓ تم حذف الحساب سحابياً بنجاح.');
+                } else {
+                    alert('تعذر تحديد المستند السحابي المطلوب حذفه.');
+                }
+            } catch(err) {
+                alert('حدث خطأ أثناء حذف الحساب: ' + err.message);
+            }
+        };
     </script>
 </body>
 </html>

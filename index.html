@@ -4,10 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // لوحة التحكم الرئيسية</title>
+    
+    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+            window.location.href = 'auth.html';
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            });
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
@@ -19,11 +37,6 @@
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
     </style>
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth')) {
-            window.location.href = 'auth.html';
-        }
-    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -214,7 +227,6 @@
         
         document.getElementById('welcomeAdminName').innerText = state.adminName;
 
-        // جلب وعرض الصورة الشخصية المخزنة محلياً
         let savedAvatar = localStorage.getItem('eidco_v13_avatar');
         if(savedAvatar) {
             let img = document.getElementById('headerAvatarImg');
@@ -241,14 +253,5 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
     </script>
-    <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
-    });
-  }
-</script>
-
 </body>
 </html>

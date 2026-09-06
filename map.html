@@ -405,21 +405,30 @@
 
         let fleetMarkers = {};
         
-        // جلب بيانات الأسطول مرة واحدة لتوفير قراءات فايرستور
+        // جلب بيانات الأسطول وإنشاء تلقائي أول مركبة إذا كانت المجموعة فارغة لضمان عدم تعليق الجدول
         async function loadFleetData() {
             try {
                 let snapshot = await getDocs(fleetRef);
+                
+                // إذا كانت المجموعة فارغة تماماً، نقوم بإنشاء أول مركبة افتراضية تلقائياً
+                if (snapshot.empty) {
+                    await addDoc(fleetRef, {
+                        name: "شاحنة الأسطول الرئيسية 01",
+                        plate: "أ ب ج 1234",
+                        lat: 30.0444,
+                        lng: 31.2357,
+                        speed: 35,
+                        updatedAt: new Date().toISOString()
+                    });
+                    // إعادة الجلب بعد الإنشاء التلقائي
+                    snapshot = await getDocs(fleetRef);
+                }
+
                 let fleetDocs = [];
                 let tableHtml = '';
                 
                 Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
                 fleetMarkers = {};
-
-                if (snapshot.empty) {
-                    document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط على زر "إضافة مركبة جديدة" أعلاه للبدء.</td></tr>`;
-                    return;
-                }
 
                 snapshot.forEach(docSnap => {
                     let v = docSnap.data();
@@ -556,7 +565,7 @@
                 }
                 window.closeVehicleModal();
                 alert("تم حفظ بيانات المركبة بنجاح سحابياً.");
-                loadFleetData(); // تحديث الجدول والخريطة فوراً بدون الحاجة لـ onSnapshot
+                loadFleetData();
             } catch (err) {
                 console.error("Error saving vehicle: ", err);
                 alert("حدث خطأ أثناء حفظ المركبة: " + err.message);
@@ -568,7 +577,7 @@
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
                     alert("تم حذف المركبة بنجاح.");
-                    loadFleetData(); // تحديث الجدول فوراً
+                    loadFleetData();
                 } catch (err) {
                     alert("خطأ أثناء حذف المركبة: " + err.message);
                 }

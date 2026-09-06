@@ -49,7 +49,12 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
                     <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية</h1>
-                    <button onclick="openTxModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
+                    <div class="flex gap-2">
+                        <button onclick="rebuildVaultTransactions()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="حذف الفواتير القديمة غير الموجودة حالياً">
+                            <i class="fa-solid fa-rotate"></i> مزامنة وتطهير الخزنة
+                        </button>
+                        <button onclick="openTxModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
+                    </div>
                 </div>
             </header>
 
@@ -65,7 +70,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية فورية مع الفواتير</span>
+                        <span class="text-xs text-slate-500 font-mono">مطابق تماماً للفواتير الحالية</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -117,31 +122,57 @@
     </div>
 
     <script>
-        function syncVaultWithInvoices() {
-            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
-            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            
-            // جمع كافة معرفات الفواتير الحالية النشطة في النظام
-            let activeInvoiceIds = invoices.map(i => i.id);
+        // دالة إعادة بناء وتنظيف الخزنة بالكامل بناءً على الفواتير الحالية فقط
+        function rebuildVaultTransactions() {
+            if(!confirm('هل تريد تطهير ومزامنة الخزنة بالكامل بناءً على الفواتير الحالية فقط؟ سيتم إزالة أي حركات فواتير محذوفة.')) return;
 
-            // تصفية المعاملات: إزالة أي معاملة مرتبطة بفاتورة (INV أو BATCH) لم تعد موجودة في الفواتير
-            let cleanedTransactions = transactions.filter(t => {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+
+            // الاحتفاظ بالحركات اليدوية فقط (المصروفات أو التحصيلات التي ليس لها علاقة بفواتير المبيعات)
+            let manualTx = transactions.filter(t => {
+                let isInvoiceTx = t.desc.includes('INV-') || t.desc.includes('BATCH-') || t.desc.includes('فاتورة مبيعات');
+                return !isInvoiceTx;
+            });
+
+            // توليد حركات إيرادات جديدة دقيقة 100% مطابقة تماماً للفواتير الموجودة حالياً فقط
+            let invoiceTx = invoices.map(inv => {
+                return {
+                    id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                    type: 'إيراد',
+                    amount: Number(inv.total),
+                    desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
+                    date: inv.date || new Date().toISOString().split('T')[0]
+                };
+            });
+
+            let combinedTransactions = [...manualTx, ...invoiceTx];
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(combinedTransactions));
+            renderVault();
+            alert('✓ تم تطهير ومزامنة الخزنة بنجاح وأصبحت متطابقة مع الفواتير الحالية!');
+        }
+
+        // مزامنة تلقائية عند فتح الصفحة
+        function autoSync() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            let activeIds = invoices.map(i => i.id);
+
+            let cleaned = transactions.filter(t => {
                 let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
                 if (match) {
                     let invId = match[1];
-                    // إذا كانت الفاتورة موجودة في القائمة النشطة نبقي عليها، وإذا تم حذفها يتم حذف معاملتها فوراً
-                    return activeInvoiceIds.includes(invId);
+                    return activeIds.includes(invId);
                 }
-                return true; // الاحتفاظ بالحركات اليدوية الأخرى (مثل المصروفات أو التحصيلات)
+                return true; // الاحتفاظ بالحركات اليدوية
             });
 
-            // تحديث الذاكرة المحلية فوراً
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
-            return cleanedTransactions;
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleaned));
+            return cleaned;
         }
 
         function renderVault() {
-            let transactions = syncVaultWithInvoices();
+            let transactions = autoSync();
 
             let inc = transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
             let exp = transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
@@ -199,7 +230,7 @@
 
         function saveTx() {
             let editId = document.getElementById('editTxId').value;
-            let type = document.getElementById('txType').value;
+            let type = document.getElementById('txType.value' || 'txType').value;
             let amount = Number(document.getElementById('txAmount').value);
             let desc = document.getElementById('txDesc').value.trim();
 

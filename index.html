@@ -28,7 +28,7 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; overflow-x: hidden; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
         .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); border-color: var(--primary); }
@@ -36,11 +36,11 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
 
-        /* تصميم شريط الأخبار RSS العلوي */
+        /* شريط الأخبار RSS العلوي */
         .rss-ticker-wrapper {
             background: #0f172a;
             color: #f8fafc;
@@ -65,27 +65,25 @@
         }
 
         /* -------------------------------------------------------------------------- */
-        /* تصميم شاشة تلفزيون OLED 4K الحقيقية (REAL TV SIMULATION & SMART DISPLAY) */
+        /* تصميم شاشة تلفزيون OLED 4K العائمة المستقلة (TV MODAL OVERLAY) */
         /* -------------------------------------------------------------------------- */
         .real-tv-bezel {
             background: linear-gradient(145deg, #1e293b 0%, #090d16 100%);
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(79, 70, 229, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.2);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.95), 0 0 35px rgba(79, 70, 229, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .tv-screen-container {
             background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.9);
             position: relative;
         }
-        /* انعكاس زجاج الشاشة */
         .tv-glass-glare {
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.01) 40%, transparent 60%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, transparent 60%);
             pointer-events: none;
             z-index: 30;
         }
-        /* خطوط المسح الضوئي للشاشة Scanlines */
         .tv-scanlines {
             position: absolute;
             inset: 0;
@@ -93,9 +91,8 @@
             background-size: 100% 4px, 6px 100%;
             pointer-events: none;
             z-index: 25;
-            opacity: 0.6;
+            opacity: 0.5;
         }
-        /* حركة شريط الأخبار السفلي التلفزيوني Lower-Third Marquee */
         @keyframes tvMarquee {
             0% { transform: translate3d(0, 0, 0); }
             100% { transform: translate3d(-50%, 0, 0); }
@@ -107,13 +104,22 @@
         .animate-tv-marquee:hover {
             animation-play-state: paused;
         }
-        /* تأثير إطفاء الشاشة Screen Off Collapse */
         .tv-power-off {
             filter: brightness(0) grayscale(100%);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* تصميم اللوجو الثلاثي الأبعاد المضيء */
+        /* الزر المائل السحب السريع المتحرك Floating TV Button */
+        #floatingTvTrigger {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 999;
+            touch-action: none;
+            user-select: none;
+        }
+
+        /* اللوجو الثلاثي الأبعاد */
         .logo-3d-container { perspective: 1000px; display: inline-block; }
         .logo-3d-badge {
             background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
@@ -166,6 +172,19 @@
         </div>
     </div>
 
+    <!-- الزر المتحرك العائم المخصص لفتح الشاشة في أي مكان (Draggable Floating Button) -->
+    <div id="floatingTvTrigger" class="cursor-grab active:cursor-grabbing select-none">
+        <button onclick="window.openTvModal()" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm group-hover:rotate-12 transition-transform"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-and-down-left-from-center text-[10px] text-indigo-300 mr-1"></i>
+        </button>
+    </div>
+
     <div class="flex min-h-screen">
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <!-- اللوجو الثلاثي الأبعاد المضيء -->
@@ -209,8 +228,11 @@
                         <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (Firebase)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="window.openTvModal()" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90">
+                            <i class="fa-solid fa-tv text-amber-300"></i> فتح EIDCO TV
+                        </button>
                         <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-print text-indigo-600"></i> طباعة التقرير
+                            <i class="fa-solid fa-print text-indigo-600"></i> طباعة
                         </button>
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
@@ -225,145 +247,6 @@
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
 
-                <!-- ----------------------------------------------------------------------- -->
-                <!-- شاشة تلفزيون EIDCO 4K OLED الحقيقية المحاكية للتلفاز الذكي (REAL TV SCREEN) -->
-                <!-- ----------------------------------------------------------------------- -->
-                <div class="relative my-4">
-                    <!-- الإضاءة المحيطة المضيئة خلف التلفزيون (Ambilight Glow) -->
-                    <div id="tvAmbilight" class="absolute -inset-4 bg-indigo-600/30 blur-2xl rounded-3xl transition-all duration-500 opacity-80 pointer-events-none"></div>
-
-                    <div class="relative">
-                        <!-- إطار التلفزيون المعدني الفاخر (Real Metallic Bezel) -->
-                        <div class="real-tv-bezel p-3 sm:p-4 rounded-[28px] border-[4px] border-slate-800 relative overflow-hidden">
-                            
-                            <!-- شاشة العرض الرئيسية (TV Screen Container) -->
-                            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[380px] sm:min-h-[420px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-inner">
-                                
-                                <!-- انعكاس الزجاج وخطوط المسح الضوئي (Scanlines & Glare) -->
-                                <div class="tv-glass-glare pointer-events-none"></div>
-                                <div class="tv-scanlines pointer-events-none"></div>
-
-                                <!-- شاشة التوقف عند الإيقاف (Standby Screen) -->
-                                <div id="tvOffOverlay" class="hidden absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center text-slate-600 font-mono">
-                                    <i class="fa-solid fa-power-off text-5xl mb-3 text-rose-900/60 animate-pulse"></i>
-                                    <span class="text-xs tracking-widest uppercase">EIDCO OLED 4K • STANDBY MODE</span>
-                                    <span class="text-[10px] text-slate-700 mt-1">اضغط على زر الريموت للتشغيل</span>
-                                </div>
-
-                                <!-- OSD: شريط معلومات القناة المؤقت يظهر عند التبديل -->
-                                <div id="tvOsdBanner" class="absolute top-4 right-4 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-4 py-2.5 rounded-2xl text-xs flex items-center gap-3.5 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
-                                    <span class="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-xl mono-font text-xs" id="osdChNum">CH 01</span>
-                                    <div>
-                                        <div class="font-black text-slate-100 text-xs" id="osdChTitle">قناة المبيعات والفواتير</div>
-                                        <div class="text-[10px] text-slate-400 font-mono flex items-center gap-2">
-                                            <span>3840x2160 @ 60fps</span> • <span class="text-emerald-400">HDR10+ LIVE</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- الهيدر الداخلي للثث المباشر (TV HUD Broadcast Header) -->
-                                <div class="p-4 sm:p-5 flex justify-between items-center relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
-                                    <div class="flex items-center gap-3">
-                                        <!-- شعار القناة والبث المباشر -->
-                                        <div class="flex items-center gap-2 bg-rose-600 text-white px-3 py-1 rounded-xl text-xs font-black shadow-lg shadow-rose-900/40 border border-rose-400/30">
-                                            <i class="fa-solid fa-circle text-[8px] animate-ping"></i>
-                                            <span>EIDCO NEWS 4K</span>
-                                        </div>
-                                        <span class="bg-slate-800/80 text-slate-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border border-slate-700">LIVE BROADCAST</span>
-                                    </div>
-
-                                    <!-- أزرار التحكم المباشرة على الشاشة -->
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="تشغيل / كتم الصوت">
-                                            <i class="fa-solid fa-volume-high" id="tvMuteIcon"></i>
-                                        </button>
-                                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="ملء الشاشة">
-                                            <i class="fa-solid fa-expand"></i>
-                                        </button>
-                                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-rose-500" title="إطفاء / تشغيل التلفزيون">
-                                            <i class="fa-solid fa-power-off"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- منطقة بث المحتوى الحي والأنباء (Main Broadcast Area) -->
-                                <div id="realTvContent" class="p-4 sm:p-6 relative z-20 flex-1 flex flex-col justify-center my-auto transition-all duration-300">
-                                    <!-- يتم تحميل وتحديث المحتوى حياً بواسطة JS -->
-                                </div>
-
-                                <!-- الشريط السفلي التلفزيوني العاجل (Lower-Third Broadcast Ticker) -->
-                                <div class="relative z-20 bg-slate-950/95 border-t border-slate-800/80">
-                                    <div class="flex items-stretch text-xs">
-                                        <div class="bg-indigo-600 text-white font-black px-4 py-2.5 flex items-center gap-2 shrink-0 shadow-lg">
-                                            <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
-                                            <span>عاجل EIDCO</span>
-                                        </div>
-                                        <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-3 font-bold">
-                                            <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-8 text-xs">
-                                                <span>📊 دفق البيانات السحابية متصل ومستقر 100%</span>
-                                                <span>✦</span>
-                                                <span>🧾 آخر فاتورة صادرة بقيمة 18,500 ج.م</span>
-                                                <span>✦</span>
-                                                <span>💰 الخزنة تسجل زيادة ملحوظة في صافي التدفقات اليومية</span>
-                                            </div>
-                                        </div>
-                                        <div class="bg-slate-950 px-3.5 py-2 text-slate-400 font-mono text-[11px] flex items-center gap-2 border-r border-slate-800 shrink-0">
-                                            <i class="fa-solid fa-clock text-indigo-400"></i>
-                                            <span id="tvLiveClockText">--:--:--</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <!-- حافة التلفزيون السفلى مع الشعار ومؤشر الطاقة (Bottom Bezel with LED Indicator) -->
-                            <div class="flex justify-between items-center px-4 pt-2.5 pb-0.5 text-slate-500 text-[10px]">
-                                <div class="flex items-center gap-2">
-                                    <span id="tvPowerLed" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all"></span>
-                                    <span class="font-mono text-[9px] text-slate-400 uppercase tracking-widest" id="tvLedText">POWER ON</span>
-                                </div>
-                                <div class="font-black tracking-[0.25em] text-slate-300 text-[11px] uppercase font-mono">
-                                    EIDCO <span class="text-indigo-500">OLED</span> 4K
-                                </div>
-                                <div class="text-[9px] font-mono text-slate-500">SMART OS v4.2</div>
-                            </div>
-                        </div>
-
-                        <!-- أرجل/قاعدة التلفزيون المعدنية الواقعية (Metallic TV Stand Legs) -->
-                        <div class="flex justify-between px-16 -mt-1 relative z-0">
-                            <div class="w-12 h-3.5 bg-gradient-to-b from-slate-800 to-slate-950 rounded-b-xl border-x border-b border-slate-700 shadow-2xl transform -skew-x-12"></div>
-                            <div class="w-12 h-3.5 bg-gradient-to-b from-slate-800 to-slate-950 rounded-b-xl border-x border-b border-slate-700 shadow-2xl transform skew-x-12"></div>
-                        </div>
-                    </div>
-
-                    <!-- وحدة ريموت الكنترول التفاعلية للتلفزيون (Interactive TV Remote Control Bar) -->
-                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5 ml-2">
-                                <i class="fa-solid fa-gamepad text-indigo-600"></i> الريموت الكنترول:
-                            </span>
-                            <button onclick="window.switchTvChannel('invoices')" id="remoteCh1" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5">
-                                <span class="font-mono text-[10px] bg-indigo-800 px-1.5 py-0.2 rounded">CH 1</span> الفواتير
-                            </button>
-                            <button onclick="window.switchTvChannel('summary')" id="remoteCh2" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5">
-                                <span class="font-mono text-[10px] bg-slate-200 px-1.5 py-0.2 rounded">CH 2</span> الموجز
-                            </button>
-                            <button onclick="window.switchTvChannel('news')" id="remoteCh3" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5">
-                                <span class="font-mono text-[10px] bg-slate-200 px-1.5 py-0.2 rounded">CH 3</span> الأنباء
-                            </button>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                                <i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)
-                            </button>
-                            <button onclick="window.toggleTvFullscreen()" class="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                                <i class="fa-solid fa-tv ml-1"></i> وضع التلفاز الكامل
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- بطاقة الترحيب -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
@@ -376,6 +259,9 @@
                             <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">كرم حمدي عبدالعظيم</h2>
                         </div>
                     </div>
+                    <button onclick="window.openTvModal()" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700">
+                        <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> عرض شاشة التلفزيون المباشرة
+                    </button>
                 </div>
 
                 <!-- شريط البحث السريع -->
@@ -523,6 +409,142 @@
                     <div class="h-72 relative"><canvas id="analyticsChart"></canvas></div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- ----------------------------------------------------------------------- -->
+    <!-- النافذة العائمة المستقلة لشاشة التلفزيون OVERLAY FULL-SCREEN TV POPUP MODAL -->
+    <!-- ----------------------------------------------------------------------- -->
+    <div id="tvModalOverlay" class="custom-modal">
+        <div class="w-full max-w-5xl mx-auto p-2 sm:p-4 my-auto relative">
+            <!-- زر إغلاق النافذة العلوي -->
+            <button onclick="window.closeTvModal()" class="absolute -top-3 -right-2 sm:-right-4 z-50 bg-rose-600 hover:bg-rose-700 text-white w-10 h-10 rounded-full text-base font-bold flex items-center justify-center shadow-2xl transition border-2 border-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- هالة الإضاءة خلف التلفزيون Ambilight -->
+            <div id="tvAmbilight" class="absolute -inset-4 bg-indigo-600/30 blur-3xl rounded-3xl transition-all duration-500 opacity-80 pointer-events-none"></div>
+
+            <!-- إطار التلفزيون المعدني الفاخر -->
+            <div class="real-tv-bezel p-3 sm:p-5 rounded-[32px] border-[4px] border-slate-800 relative overflow-hidden">
+                
+                <!-- شاشة العرض الرئيسية -->
+                <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[380px] sm:min-h-[440px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
+                    
+                    <div class="tv-glass-glare pointer-events-none"></div>
+                    <div class="tv-scanlines pointer-events-none"></div>
+
+                    <!-- شاشة التوقف Standby -->
+                    <div id="tvOffOverlay" class="hidden absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center text-slate-600 font-mono">
+                        <i class="fa-solid fa-power-off text-6xl mb-4 text-rose-900/60 animate-pulse"></i>
+                        <span class="text-xs tracking-widest uppercase text-slate-400">EIDCO OLED 4K • STANDBY MODE</span>
+                        <span class="text-[10px] text-slate-600 mt-2">اضغط زر Power بالريموت للتشغيل</span>
+                    </div>
+
+                    <!-- OSD شريط معلومات القناة عند التبديل -->
+                    <div id="tvOsdBanner" class="absolute top-4 right-4 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-4 py-2.5 rounded-2xl text-xs flex items-center gap-3.5 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+                        <span class="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-xl mono-font text-xs" id="osdChNum">CH 01</span>
+                        <div>
+                            <div class="font-black text-slate-100 text-xs" id="osdChTitle">قناة المبيعات والفواتير</div>
+                            <div class="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                                <span>3840x2160 @ 60fps</span> • <span class="text-emerald-400">HDR10+ LIVE</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- الهيدر الداخلي للبث -->
+                    <div class="p-4 sm:p-5 flex justify-between items-center relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 bg-rose-600 text-white px-3 py-1 rounded-xl text-xs font-black shadow-lg shadow-rose-900/40 border border-rose-400/30">
+                                <i class="fa-solid fa-circle text-[8px] animate-ping"></i>
+                                <span>EIDCO NEWS 4K</span>
+                            </div>
+                            <span class="bg-slate-800/80 text-slate-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border border-slate-700">LIVE BROADCAST</span>
+                        </div>
+
+                        <!-- التحكم بالمباشر -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="تشغيل / كتم الصوت">
+                                <i class="fa-solid fa-volume-high" id="tvMuteIcon"></i>
+                            </button>
+                            <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="ملء الشاشة">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                            <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-8 h-8 rounded-xl text-xs flex items-center justify-center transition border border-rose-500" title="إطفاء / تشغيل التلفزيون">
+                                <i class="fa-solid fa-power-off"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- منطقة عرض محتوى البث -->
+                    <div id="realTvContent" class="p-4 sm:p-6 relative z-20 flex-1 flex flex-col justify-center my-auto transition-all duration-300">
+                        <!-- دفق محتوى القناة -->
+                    </div>
+
+                    <!-- الشريط السفلي التلفزيوني العاجل -->
+                    <div class="relative z-20 bg-slate-950/95 border-t border-slate-800/80">
+                        <div class="flex items-stretch text-xs">
+                            <div class="bg-indigo-600 text-white font-black px-4 py-2.5 flex items-center gap-2 shrink-0 shadow-lg">
+                                <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
+                                <span>عاجل EIDCO</span>
+                            </div>
+                            <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-3 font-bold">
+                                <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-8 text-xs">
+                                    <span>📊 دفق البيانات السحابية متصل ومستقر 100%</span>
+                                    <span>✦</span>
+                                    <span>🧾 أحدث المبيعات تحدّث تلقائياً فور إصدار الفاتورة</span>
+                                    <span>✦</span>
+                                    <span>💰 الخزنة تسجل زيادة ملحوظة في التدفق اليومي</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950 px-3.5 py-2 text-slate-400 font-mono text-[11px] flex items-center gap-2 border-r border-slate-800 shrink-0">
+                                <i class="fa-solid fa-clock text-indigo-400"></i>
+                                <span id="tvLiveClockText">--:--:--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- حافة التلفزيون السفلى -->
+                <div class="flex justify-between items-center px-4 pt-2.5 pb-0.5 text-slate-500 text-[10px]">
+                    <div class="flex items-center gap-2">
+                        <span id="tvPowerLed" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all"></span>
+                        <span class="font-mono text-[9px] text-slate-400 uppercase tracking-widest" id="tvLedText">POWER ON</span>
+                    </div>
+                    <div class="font-black tracking-[0.25em] text-slate-300 text-[11px] uppercase font-mono">
+                        EIDCO <span class="text-indigo-500">OLED</span> 4K
+                    </div>
+                    <div class="text-[9px] font-mono text-slate-500">SMART OS v4.2</div>
+                </div>
+            </div>
+
+            <!-- الريموت كنترول التفاعلي للشاشة -->
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-3.5 rounded-2xl border border-slate-800 shadow-2xl">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5 ml-2">
+                        <i class="fa-solid fa-gamepad text-indigo-400"></i> القنوات:
+                    </span>
+                    <button onclick="window.switchTvChannel('invoices')" id="remoteCh1" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5">
+                        <span class="font-mono text-[10px] bg-indigo-800 px-1.5 py-0.2 rounded">CH 1</span> الفواتير
+                    </button>
+                    <button onclick="window.switchTvChannel('summary')" id="remoteCh2" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                        <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.2 rounded">CH 2</span> الموجز
+                    </button>
+                    <button onclick="window.switchTvChannel('news')" id="remoteCh3" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                        <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.2 rounded">CH 3</span> الأنباء
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)
+                    </button>
+                    <button onclick="window.closeTvModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-1.5 rounded-xl text-xs font-bold transition">
+                        إغلاق الشاشة
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -719,13 +741,24 @@
         };
 
         // -------------------------------------------------------------------------
+        // إدارة فتح وإغلاق النافذة العائمة TV MODAL OVERLAY
+        // -------------------------------------------------------------------------
+        window.openTvModal = function() {
+            document.getElementById('tvModalOverlay').classList.add('active');
+            renderTvScreen();
+        };
+
+        window.closeTvModal = function() {
+            document.getElementById('tvModalOverlay').classList.remove('active');
+        };
+
+        // -------------------------------------------------------------------------
         // إدارة محاكاة تلفزيون EIDCO LIVE OLED TV التفاعلي
         // -------------------------------------------------------------------------
         window.switchTvChannel = function(channel) {
             if(!isTvPoweredOn) return;
             currentTvChannel = channel;
 
-            // تحديث تصميم أزرار الريموت والقنوات
             const channels = ['invoices', 'summary', 'news'];
             channels.forEach((ch, idx) => {
                 let btn = document.getElementById(`remoteCh${idx+1}`);
@@ -734,13 +767,12 @@
                         btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5";
                         btn.querySelector('span').className = "font-mono text-[10px] bg-indigo-800 px-1.5 py-0.2 rounded";
                     } else {
-                        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5";
-                        btn.querySelector('span').className = "font-mono text-[10px] bg-slate-200 px-1.5 py-0.2 rounded";
+                        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5";
+                        btn.querySelector('span').className = "font-mono text-[10px] bg-slate-700 px-1.5 py-0.2 rounded";
                     }
                 }
             });
 
-            // إظهار شريط OSD التلفزيوني لمدة 3 ثوانٍ
             showTvOsdBanner(channel);
             renderTvScreen();
         };
@@ -941,6 +973,62 @@
                 clock.innerText = d.toLocaleTimeString('ar-EG');
             }
         }, 1000);
+
+        // -------------------------------------------------------------------------
+        // كود تحريك زر الشاشة السريع بالسحب واللمس Draggable Logic
+        // -------------------------------------------------------------------------
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            let isDragging = false;
+            let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                if (e.type === 'touchstart') {
+                    initialX = e.touches[0].clientX - xOffset;
+                    initialY = e.touches[0].clientY - yOffset;
+                } else {
+                    initialX = e.clientX - xOffset;
+                    initialY = e.clientY - yOffset;
+                }
+                if (e.target.closest('#floatingTvTrigger')) {
+                    isDragging = true;
+                }
+            }
+
+            function dragEnd() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    if (e.type === 'touchmove') {
+                        currentX = e.touches[0].clientX - initialX;
+                        currentY = e.touches[0].clientY - initialY;
+                    } else {
+                        currentX = e.clientX - initialX;
+                        currentY = e.clientY - initialY;
+                    }
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    setTranslate(currentX, currentY, dragEl);
+                }
+            }
+
+            function setTranslate(xPos, yPos, el) {
+                el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+            }
+        })();
 
         function updateAdminHeader() {
             let adminName = localStorage.getItem('eidco_v13_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');

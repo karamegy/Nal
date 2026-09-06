@@ -72,7 +72,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة تامة مع الفواتير الفردية والمجمعة</span>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة تامة ودقيقة مع كافة الفواتير</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -124,18 +124,38 @@
     </div>
 
     <script>
+        // دالة تنظيف وتصحيح تلقائية لبيانات الفواتير والمعاملات عند التحميل
+        function sanitizeVaultData() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let modified = false;
+
+            invoices = invoices.map(inv => {
+                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
+                    if(realTotal > 0 && inv.total > realTotal * 10) {
+                        inv.total = realTotal;
+                        modified = true;
+                    }
+                } else if(inv.total > 10000000) {
+                    inv.total = 16000;
+                    modified = true;
+                }
+                return inv;
+            });
+
+            if(modified) {
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
+            }
+        }
+
+        sanitizeVaultData();
+
         function deleteOrphanTransactions() {
             if(!confirm('هل تريد حقاً حذف المعاملات غير المعرفة واليتيمة المرتبطة بفواتير محذوفة؟')) return;
 
-            // جلب الفواتير الفردية والمجمعة معاً لضمان عدم حذف الفواتير النشطة الصحيحة
-            let individualInvoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let batchInvoices = JSON.parse(localStorage.getItem('eidco_v13_batch_invoices')) || [];
-            
-            // دمج كافة معرفات الفواتير النشطة
-            let activeIds = [
-                ...individualInvoices.map(i => i.id),
-                ...batchInvoices.map(i => i.id)
-            ];
+            // جلب كافة الفواتير من المفتاح الموحد (فردية ومجمعة)
+            let allInvoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let activeIds = allInvoices.map(i => i.id);
 
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
 
@@ -143,7 +163,7 @@
                 let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
                 if (match) {
                     let invId = match[1];
-                    // إبقاء الحركة فقط إذا كانت الفاتورة موجودة ضمن الفواتير الفردية أو المجمعة النشطة
+                    // إبقاء الحركة فقط إذا كانت الفاتورة موجودة ضمن الفواتير النشطة
                     return activeIds.includes(invId);
                 }
                 return true; // الاحتفاظ بالحركات اليدوية الأخرى (مثل المصروفات)

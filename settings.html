@@ -29,7 +29,8 @@
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
     </style>
@@ -59,41 +60,141 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">إدارة قواعد البيانات والنظام</h1>
+                <h1 class="font-black text-slate-900 text-sm">إدارة قواعد البيانات والنظام (Firebase)</h1>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6">
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
                 <div class="corporate-card p-6 space-y-4">
-                    <h2 class="font-bold text-sm text-slate-900">خيارات النسخ الاحتياطي والضبط</h2>
-                    <div class="flex gap-4">
-                        <button onclick="exportDatabase()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية</button>
-                        <button onclick="resetSystemData()" class="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition">إعادة ضبط المصنع</button>
+                    <h2 class="font-bold text-sm text-slate-900">خيارات النسخ الاحتياطي والضبط السحابي</h2>
+                    <p class="text-xs text-slate-500">يمكنك تصدير كافة بيانات النظام من السحابة في ملف JSON أو إعادة ضبط المصنع.</p>
+                    <div id="statusMessage" class="hidden text-xs font-bold p-3 rounded-xl"></div>
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <button onclick="window.exportDatabase()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية (Firebase JSON)
+                        </button>
+                        <button onclick="window.resetSystemData()" class="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition">
+                            <i class="fa-solid fa-rotate-left ml-1"></i> إعادة ضبط المصنع ومسح البيانات
+                        </button>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
-    <script>
-        function exportDatabase() {
-            let state = {
-                adminName: localStorage.getItem('eidco_v13_admin'),
-                clients: JSON.parse(localStorage.getItem('eidco_v13_clients')),
-                products: JSON.parse(localStorage.getItem('eidco_v13_products')),
-                invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')),
-                transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')),
-                chats: JSON.parse(localStorage.getItem('eidco_v13_chats'))
-            };
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "EIDCO_v13_Backup.json");
-            document.body.appendChild(dl); dl.click(); dl.remove();
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            deleteDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const collectionsList = [
+            "accounts", 
+            "clients", 
+            "client_payments", 
+            "products", 
+            "invoices", 
+            "transactions", 
+            "messages", 
+            "chats", 
+            "learning_logs", 
+            "migrations", 
+            "fleet_locations", 
+            "settings"
+        ];
+
+        function showStatus(text, isError = false) {
+            const el = document.getElementById('statusMessage');
+            el.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'bg-rose-50', 'text-rose-700');
+            el.classList.add(isError ? 'bg-rose-50' : 'bg-emerald-50', isError ? 'text-rose-700' : 'text-emerald-700');
+            el.innerText = text;
         }
-        function resetSystemData() {
-            if(confirm('⚠️ تحذير: هل أنت متأكد من مسح كافة البيانات؟')) {
+
+        window.exportDatabase = async function() {
+            showStatus('⏳ جاري سحب وتجميع البيانات من Firebase...');
+            try {
+                let backupData = {
+                    exportDate: new Date().toISOString(),
+                    adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
+                    collections: {}
+                };
+
+                for (let colName of collectionsList) {
+                    try {
+                        let snapshot = await getDocs(collection(db, colName));
+                        backupData.collections[colName] = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                    } catch (e) {
+                        backupData.collections[colName] = [];
+                    }
+                }
+
+                // إضافة التخزين المحلي كنسخة احتياطية سريعة
+                backupData.localFallback = {
+                    adminName: localStorage.getItem('eidco_v13_admin'),
+                    clients: JSON.parse(localStorage.getItem('eidco_v13_clients') || '[]'),
+                    products: JSON.parse(localStorage.getItem('eidco_v13_products') || '[]'),
+                    invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices') || '[]'),
+                    transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions') || '[]')
+                };
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+                const dl = document.createElement('a'); 
+                dl.setAttribute("href", dataStr); 
+                dl.setAttribute("download", `EIDCO_Firebase_Backup_${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(dl); 
+                dl.click(); 
+                dl.remove();
+
+                showStatus('✓ تم تصدير النسخة الاحتياطية السحابية بنجاح!');
+            } catch (err) {
+                showStatus('حدث خطأ أثناء تصدير البيانات: ' + err.message, true);
+            }
+        };
+
+        window.resetSystemData = async function() {
+            if(!confirm('⚠️ تحذير شديد: هل أنت متأكد من مسح كافة البيانات من السحابة والنظام وتصفير المنظومة؟')) return;
+            
+            showStatus('⏳ جاري تفريغ قاعدة البيانات السحابية...');
+            try {
+                for (let colName of collectionsList) {
+                    try {
+                        let snapshot = await getDocs(collection(db, colName));
+                        for (let docSnap of snapshot.docs) {
+                            await deleteDoc(doc(db, colName, docSnap.id));
+                        }
+                    } catch (e) {}
+                }
+
                 localStorage.clear();
+                sessionStorage.clear();
+                showStatus('✓ تم إعادة ضبط المصنع وتصفير النظام بنجاح!');
+                setTimeout(() => {
+                    window.location.href = 'auth.html';
+                }, 1500);
+            } catch (err) {
+                localStorage.clear();
+                sessionStorage.clear();
                 location.reload();
             }
-        }
+        };
     </script>
 </body>
 </html>

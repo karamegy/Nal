@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // شاشة العرض المباشرة 4K TV</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+
+        /* تصميم شاشة OLED 4K المباشرة */
+        .real-tv-bezel {
+            background: linear-gradient(145deg, #1e293b 0%, #090d16 100%);
+            box-shadow: 0 30px 80px -10px rgba(0, 0, 0, 0.95), 0 0 40px rgba(79, 70, 229, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            border: 4px solid #1e293b;
+        }
+        .tv-screen-container {
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.95);
+            position: relative;
+        }
+        .tv-glass-glare {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, transparent 60%);
+            pointer-events: none;
+            z-index: 30;
+        }
+        .tv-scanlines {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 25;
+            opacity: 0.5;
+        }
+        @keyframes tvMarquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .animate-tv-marquee {
+            display: inline-flex;
+            animation: tvMarquee 22s linear infinite;
+        }
+        .animate-tv-marquee:hover {
+            animation-play-state: paused;
+        }
+        .tv-power-off {
+            filter: brightness(0) grayscale(100%);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-6">
+
+    <div class="w-full max-w-6xl mx-auto my-auto relative">
+        <!-- هالة الضوء Ambient Glow -->
+        <div id="tvAmbilight" class="absolute -inset-6 bg-indigo-600/30 blur-3xl rounded-3xl transition-all duration-500 opacity-90 pointer-events-none"></div>
+
+        <!-- إطار التلفزيون المعدني -->
+        <div class="real-tv-bezel p-3 sm:p-6 rounded-[36px] relative overflow-hidden">
+            
+            <!-- شاشة التلفزيون OLED -->
+            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[450px] sm:min-h-[520px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
+                
+                <div class="tv-glass-glare"></div>
+                <div class="tv-scanlines"></div>
+
+                <!-- شاشة التوقف Standby -->
+                <div id="tvOffOverlay" class="hidden absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center text-slate-600 font-mono">
+                    <i class="fa-solid fa-power-off text-7xl mb-4 text-rose-900/60 animate-pulse"></i>
+                    <span class="text-sm tracking-widest uppercase text-slate-400 font-bold">EIDCO OLED 4K • STANDBY MODE</span>
+                    <span class="text-xs text-slate-600 mt-2">اضغط على زر Power لتشغيل البث</span>
+                </div>
+
+                <!-- OSD شريط معلومات القناة -->
+                <div id="tvOsdBanner" class="absolute top-5 right-5 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-5 py-3 rounded-2xl text-xs flex items-center gap-4 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+                    <span class="bg-indigo-600 text-white font-black px-3 py-1 rounded-xl mono-font text-xs" id="osdChNum">CH 01</span>
+                    <div>
+                        <div class="font-black text-slate-100 text-sm" id="osdChTitle">قناة المبيعات والفواتير</div>
+                        <div class="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                            <span>3840x2160 @ 60fps</span> • <span class="text-emerald-400">HDR10+ LIVE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- هيدر البث العلوي -->
+                <div class="p-4 sm:p-6 flex justify-between items-center relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 bg-rose-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-rose-900/40 border border-rose-400/30">
+                            <i class="fa-solid fa-circle text-[8px] animate-ping"></i>
+                            <span>EIDCO NEWS 4K</span>
+                        </div>
+                        <span class="bg-slate-800/80 text-slate-300 text-[11px] font-mono font-bold px-3 py-1 rounded-lg border border-slate-700">LIVE BROADCAST</span>
+                    </div>
+
+                    <!-- أزرار التحكم بالشاشة -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="كتم / تشغيل الصوت">
+                            <i class="fa-solid fa-volume-high" id="tvMuteIcon"></i>
+                        </button>
+                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="ملء الشاشة">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500" title="تشغيل / إطفاء">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- منطقة البث الرئيسية -->
+                <div id="realTvContent" class="p-6 sm:p-8 relative z-20 flex-1 flex flex-col justify-center my-auto transition-all duration-300">
+                    <!-- يتم دفق المحتوى عبر JS -->
+                </div>
+
+                <!-- شريط الأخبار السفلي العاجل -->
+                <div class="relative z-20 bg-slate-950/95 border-t border-slate-800/80">
+                    <div class="flex items-stretch text-xs">
+                        <div class="bg-indigo-600 text-white font-black px-5 py-3 flex items-center gap-2 shrink-0 shadow-lg">
+                            <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
+                            <span>عاجل EIDCO</span>
+                        </div>
+                        <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-4 font-bold">
+                            <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-8 text-xs">
+                                <span>📊 دفق البيانات السحابية متصل ومستقر 100%</span>
+                                <span>✦</span>
+                                <span>🧾 أحدث الفواتير تحدّث لحظياً على شاشات الفروع</span>
+                                <span>✦</span>
+                                <span>💰 الخزنة تسجل زيادة ملحوظة في التدفق اليومي</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 px-4 py-2.5 text-slate-400 font-mono text-xs flex items-center gap-2 border-r border-slate-800 shrink-0">
+                            <i class="fa-solid fa-clock text-indigo-400"></i>
+                            <span id="tvLiveClockText">--:--:--</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- حافة التلفزيون السفلى -->
+            <div class="flex justify-between items-center px-4 pt-3 pb-0.5 text-slate-500 text-[10px]">
+                <div class="flex items-center gap-2">
+                    <span id="tvPowerLed" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all"></span>
+                    <span class="font-mono text-[9px] text-slate-400 uppercase tracking-widest" id="tvLedText">POWER ON</span>
+                </div>
+                <div class="font-black tracking-[0.25em] text-slate-300 text-xs uppercase font-mono">
+                    EIDCO <span class="text-indigo-500">OLED</span> 4K
+                </div>
+                <div class="text-[10px] font-mono text-slate-500">STANDALONE BROADCAST OS v4.2</div>
+            </div>
+        </div>
+
+        <!-- الريموت الكنترول وشريط التحكم -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-2xl">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-300 flex items-center gap-2 ml-2">
+                    <i class="fa-solid fa-gamepad text-indigo-400 text-sm"></i> الريموت كنترول:
+                </span>
+                <button onclick="window.switchTvChannel('invoices')" id="remoteCh1" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5">
+                    <span class="font-mono text-[10px] bg-indigo-800 px-1.5 py-0.5 rounded">CH 1</span> المبيعات
+                </button>
+                <button onclick="window.switchTvChannel('summary')" id="remoteCh2" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                    <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded">CH 2</span> الموجز المالي
+                </button>
+                <button onclick="window.switchTvChannel('news')" id="remoteCh3" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                    <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded">CH 3</span> الأنباء
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)
+                </button>
+                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition text-decoration-none flex items-center gap-1.5 border border-slate-700">
+                    <i class="fa-solid fa-arrow-right"></i> العودة للوحة الرئيسيّة
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Modules & Custom Application JS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let state = { invoices: [], transactions: [], clients: [], products: [] };
+        let currentTvChannel = 'invoices';
+        let tvAutoSlideInterval = null;
+        let isTvPoweredOn = true;
+        let isTvMuted = false;
+
+        // المزامنة اللحظية مع بيانات Firebase
+        onSnapshot(collection(db, "invoices"), (snapshot) => {
+            state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            renderTvScreen();
+        });
+
+        onSnapshot(collection(db, "transactions"), (snapshot) => {
+            state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            renderTvScreen();
+        });
+
+        onSnapshot(collection(db, "clients"), (snapshot) => {
+            state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            renderTvScreen();
+        });
+
+        window.switchTvChannel = function(channel) {
+            if(!isTvPoweredOn) return;
+            currentTvChannel = channel;
+
+            const channels = ['invoices', 'summary', 'news'];
+            channels.forEach((ch, idx) => {
+                let btn = document.getElementById(`remoteCh${idx+1}`);
+                if(btn) {
+                    if(ch === channel) {
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5";
+                        btn.querySelector('span').className = "font-mono text-[10px] bg-indigo-800 px-1.5 py-0.5 rounded";
+                    } else {
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5";
+                        btn.querySelector('span').className = "font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded";
+                    }
+                }
+            });
+
+            showTvOsdBanner(channel);
+            renderTvScreen();
+        };
+
+        function showTvOsdBanner(channel) {
+            let banner = document.getElementById('tvOsdBanner');
+            let osdNum = document.getElementById('osdChNum');
+            let osdTitle = document.getElementById('osdChTitle');
+            if(!banner) return;
+
+            if(channel === 'invoices') {
+                osdNum.innerText = "CH 01"; osdTitle.innerText = "قناة تفريغ ملخص الفواتير والمبيعات";
+            } else if(channel === 'summary') {
+                osdNum.innerText = "CH 02"; osdTitle.innerText = "قناة الموجز الإداري والمؤشرات المباشرة";
+            } else if(channel === 'news') {
+                osdNum.innerText = "CH 03"; osdTitle.innerText = "قناة الأخبار ومستجدات المنظومة";
+            }
+
+            banner.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+            banner.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                banner.classList.remove('opacity-100', 'translate-y-0');
+                banner.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
+            }, 2500);
+        }
+
+        window.toggleTvPower = function() {
+            isTvPoweredOn = !isTvPoweredOn;
+            let screenContainer = document.getElementById('realTvScreen');
+            let overlay = document.getElementById('tvOffOverlay');
+            let led = document.getElementById('tvPowerLed');
+            let ledText = document.getElementById('tvLedText');
+            let ambilight = document.getElementById('tvAmbilight');
+
+            if(isTvPoweredOn) {
+                overlay.classList.add('hidden');
+                screenContainer.classList.remove('tv-power-off');
+                led.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all";
+                ledText.innerText = "POWER ON";
+                ambilight.classList.remove('opacity-0');
+                ambilight.classList.add('opacity-90');
+                renderTvScreen();
+            } else {
+                overlay.classList.remove('hidden');
+                screenContainer.classList.add('tv-power-off');
+                led.className = "w-2.5 h-2.5 rounded-full bg-rose-600 shadow-[0_0_10px_#ef4444] transition-all";
+                ledText.innerText = "STANDBY";
+                ambilight.classList.remove('opacity-90');
+                ambilight.classList.add('opacity-0');
+            }
+        };
+
+        window.toggleTvAudio = function() {
+            isTvMuted = !isTvMuted;
+            let icon = document.getElementById('tvMuteIcon');
+            icon.className = isTvMuted ? "fa-solid fa-volume-xmark text-rose-400" : "fa-solid fa-volume-high text-emerald-400";
+        };
+
+        window.toggleTvFullscreen = function() {
+            let elem = document.getElementById('realTvScreen');
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        };
+
+        window.toggleTvAutoSlide = function() {
+            let btn = document.getElementById('tvAutoSlideBtn');
+            if(tvAutoSlideInterval) {
+                clearInterval(tvAutoSlideInterval);
+                tvAutoSlideInterval = null;
+                btn.classList.remove('bg-emerald-600'); btn.classList.add('bg-amber-500');
+                btn.innerHTML = `<i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)`;
+            } else {
+                tvAutoSlideInterval = setInterval(() => {
+                    const channels = ['invoices', 'summary', 'news'];
+                    let nextIdx = (channels.indexOf(currentTvChannel) + 1) % channels.length;
+                    switchTvChannel(channels[nextIdx]);
+                }, 6000);
+                btn.classList.remove('bg-amber-500'); btn.classList.add('bg-emerald-600');
+                btn.innerHTML = `<i class="fa-solid fa-pause ml-1"></i> إيقاف العرض التلقائي`;
+            }
+        };
+
+        function renderTvScreen() {
+            if(!isTvPoweredOn) return;
+            let screen = document.getElementById('realTvContent');
+            if(!screen) return;
+
+            if(currentTvChannel === 'invoices') {
+                let recentInv = state.invoices.slice(-3).reverse();
+                screen.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2.5">
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> تفريغ ملخص الفواتير المجمعة الحية</span>
+                            <span class="text-xs text-slate-400 font-mono">إجمالي الفواتير الصادرة: ${state.invoices.length}</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${recentInv.map(i => `
+                                <div class="bg-slate-900/90 border border-slate-700/70 p-4 rounded-2xl space-y-2 shadow-xl relative overflow-hidden group hover:border-indigo-500 transition">
+                                    <div class="flex justify-between items-center">
+                                        <span class="mono-font text-amber-400 font-bold text-xs">${i.id || 'INV'}</span>
+                                        <span class="text-[10px] text-slate-400 font-mono">${i.date || 'اليوم'}</span>
+                                    </div>
+                                    <div class="text-sm font-black text-slate-100 truncate">${i.client || 'عميل نقدي'}</div>
+                                    <div class="flex justify-between items-end pt-2 border-t border-slate-800/60">
+                                        <span class="text-indigo-400 font-black mono-font text-base">${Number(i.total||0).toLocaleString()} ج.م</span>
+                                        <span class="text-xs text-emerald-400 font-bold">+${Number(i.profit||0).toLocaleString()} ربح</span>
+                                    </div>
+                                </div>
+                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-8 font-bold text-sm">لا توجد فواتير مسجلة حالياً</div>'}
+                        </div>
+                    </div>
+                `;
+            } else if (currentTvChannel === 'summary') {
+                let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
+                let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
+                let vault = totalInc - totalExp;
+                let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
+                let totalProfit = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+
+                screen.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-xs font-black text-emerald-400 border-b border-slate-800 pb-2.5">
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-chart-line"></i> الموجز المالي والمؤشرات الإدارية الحية</span>
+                            <span class="text-xs text-slate-400 font-mono">مزامنة سحابية حية</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div class="bg-indigo-950/80 border border-indigo-800/80 p-4 rounded-2xl shadow-lg">
+                                <span class="text-xs text-indigo-300 font-bold block mb-1">رصيد الخزنة الصافي</span>
+                                <span class="text-xl sm:text-2xl font-black text-emerald-400 mono-font">${vault.toLocaleString()} ج.م</span>
+                            </div>
+                            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                                <span class="text-xs text-slate-400 font-bold block mb-1">المبيعات الإجمالية</span>
+                                <span class="text-xl sm:text-2xl font-black text-cyan-400 mono-font">${totalSales.toLocaleString()} ج.م</span>
+                            </div>
+                            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                                <span class="text-xs text-slate-400 font-bold block mb-1">صافي الأرباح</span>
+                                <span class="text-xl sm:text-2xl font-black text-amber-400 mono-font">${totalProfit.toLocaleString()} ج.م</span>
+                            </div>
+                            <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                                <span class="text-xs text-slate-400 font-bold block mb-1">العملاء والجهات</span>
+                                <span class="text-xl sm:text-2xl font-black text-purple-400 mono-font">${state.clients.length} جهة</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTvChannel === 'news') {
+                screen.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-xs font-black text-amber-400 border-b border-slate-800 pb-2.5">
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-newspaper"></i> أهم الأنباء ومستجدات المنظومة</span>
+                            <span class="text-xs text-slate-400 font-mono">تنبيهات فورية</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex items-start gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                                <i class="fa-solid fa-shield-halved text-emerald-400 text-2xl mt-1"></i>
+                                <div>
+                                    <h4 class="font-black text-sm text-slate-100">حماية بيومترية متكاملة</h4>
+                                    <p class="text-xs text-slate-400 mt-1">النظام مؤمن بنظام الجلسات السحابية وقفل الأمان بالبصمة.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                                <i class="fa-solid fa-cloud-arrow-up text-indigo-400 text-2xl mt-1"></i>
+                                <div>
+                                    <h4 class="font-black text-sm text-slate-100">المزامنة السحابية اللحظية (Firebase)</h4>
+                                    <p class="text-xs text-slate-400 mt-1">تحديثات فورية للمبيعات والمخزن بين كافة الأجهزة بالفروع.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        setInterval(() => {
+            let clock = document.getElementById('tvLiveClockText');
+            if(clock) clock.innerText = (new Date()).toLocaleTimeString('ar-EG');
+        }, 1000);
+    </script>
+</body>
+</html>

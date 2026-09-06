@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // الفواتير المجمعة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        table th, table td { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1">
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير المجمعة (Multi-Item Invoices)</h1>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <!-- نموذج إنشاء فاتورة مجمعة جديدة -->
+                <div class="corporate-card p-6 space-y-5">
+                    <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة لعدة أصناف</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <label class="block mb-1.5 text-slate-600 font-bold">اختر العميل / الشركة</label>
+                            <select id="batchClient" class="corporate-input w-full"></select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-700">أصناف الفاتورة:</span>
+                            <button onclick="addBatchItemRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                                <i class="fa-solid fa-plus ml-1"></i> إضافة صنف آخر للقائمة
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-right text-xs">
+                               <thead>
+                                    <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                        <th class="p-3">الصنف</th>
+                                        <th class="p-3">الكمية</th>
+                                        <th class="p-3">سعر الوحدة</th>
+                                        <th class="p-3">الإجمالي الفرعي</th>
+                                        <th class="p-3 text-center">حذف</th>
+                                    </tr>
+                               </thead>
+                               <tbody id="batchItemsTableBody" class="divide-y divide-slate-100 bg-white">
+                                   <!-- صف افتراضي أول -->
+                               ]</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div class="space-y-1 text-center sm:text-right">
+                            <span class="text-xs text-slate-600">إجمالي الفاتورة المجمعة: <strong id="batchGrandTotal" class="text-indigo-600 mono-font text-base">0.00 ج.م</strong></span>
+                            <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font">0.00 ج.م</strong></span>
+                        </div>
+                        <button onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 w-full sm:w-auto flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة المجمعة وتحديث المخزن
+                        </button>
+                    </div>
+                </div>
+
+                <!-- سجل الفواتير المجمعة السابقة -->
+                <div class="corporate-card p-6 space-y-4">
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل الفواتير المجمعة السابقة</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">رقم الفاتورة</th>
+                                    <th class="p-4">العميل</th>
+                                    <th class="p-4">عدد الأصناف</th>
+                                    <th class="p-4">الإجمالي الكلي</th>
+                                    <th class="p-4">صافي الربح</th>
+                                    <th class="p-4">التاريخ</th>
+                                    <th class="p-4 text-center">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchInvoicesTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
+            products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
+            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
+            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
+        };
+
+        function initBatchPage() {
+            let clientSel = document.getElementById('batchClient');
+            if(clientSel) {
+                clientSel.innerHTML = state.clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            }
+            addBatchItemRow();
+            renderBatchInvoicesList();
+        }
+
+        function addBatchItemRow() {
+            let tbody = document.getElementById('batchItemsTableBody');
+            let rowId = 'row-' + Date.now() + Math.random();
+            let productOptions = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}">${p.name} (المتاح: ${p.qty})</option>`).join('');
+
+            let tr = document.createElement('tr');
+            tr.id = rowId;
+            tr.className = "hover:bg-slate-50 transition";
+            tr.innerHTML = `
+                <td class="p-3"><select class="corporate-input w-full item-product" onchange="updateRowDetails('${rowId}')">${productOptions}</select></td>
+                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="1" min="1" oninput="calculateBatchTotals()"></td>
+                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="0" oninput="calculateBatchTotals()"></td>
+                <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal">0.00 ج.م</td>
+                <td class="p-3 text-center"><button onclick="document.getElementById('${rowId}').remove(); calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+            updateRowDetails(rowId);
+        }
+
+        function updateRowDetails(rowId) {
+            let row = document.getElementById(rowId);
+            if(!row) return;
+            let sel = row.querySelector('.item-product');
+            let priceInput = row.querySelector('.item-price');
+            if(sel && sel.options[sel.selectedIndex]) {
+                let price = sel.options[sel.selectedIndex].getAttribute('data-price') || 0;
+                priceInput.value = price;
+            }
+            calculateBatchTotals();
+        }
+
+        function calculateBatchTotals() {
+            let rows = document.querySelectorAll('#batchItemsTableBody tr');
+            let grandTotal = 0;
+            let totalProfit = 0;
+
+            rows.forEach(row => {
+                let sel = row.querySelector('.item-product');
+                let qty = Number(row.querySelector('.item-qty').value) || 0;
+                let price = Number(row.querySelector('.item-price').value) || 0;
+                let subtotal = qty * price;
+                row.querySelector('.item-subtotal').innerText = subtotal.toLocaleString() + ' ج.م';
+
+                grandTotal += subtotal;
+
+                if(sel && sel.options[sel.selectedIndex]) {
+                    let buyPrice = Number(sel.options[sel.selectedIndex].getAttribute('data-buy')) || 0;
+                    totalProfit += (price - buyPrice) * qty;
+                }
+            });
+
+            document.getElementById('batchGrandTotal').innerText = grandTotal.toLocaleString() + ' ج.م';
+            document.getElementById('batchTotalProfit').innerText = totalProfit.toLocaleString() + ' ج.م';
+        }
+
+        function saveBatchInvoice() {
+            let clientName = document.getElementById('batchClient').value;
+            if(!clientName) return alert('الرجاء اختيار العميل');
+
+            let rows = document.querySelectorAll('#batchItemsTableBody tr');
+            if(!rows.length) return alert('الرجاء إضافة صنف واحد على الأقل');
+
+            let items = [];
+            let grandTotal = 0;
+            let totalProfit = 0;
+
+            for(let row of rows) {
+                let sel = row.querySelector('.item-product');
+                let code = sel.value;
+                let prodName = sel.options[sel.selectedIndex].text.split(' (')[0];
+                let qty = Number(row.querySelector('.item-qty').value) || 1;
+                let unitPrice = Number(row.querySelector('.item-price').value) || 0;
+                let availableQty = Number(sel.options[sel.selectedIndex].getAttribute('data-qty')) || 0;
+                let buyPrice = Number(sel.options[sel.selectedIndex].getAttribute('data-buy')) || 0;
+
+                if(qty > availableQty) {
+                    return alert(`⚠️ الكمية المطلوبة للصنف (${prodName}) أكبر من المتاح في المخزن (${availableQty})`);
+                }
+
+                let subtotal = qty * unitPrice;
+                grandTotal += subtotal;
+                totalProfit += (unitPrice - buyPrice) * qty;
+
+                items.push({ code, prodName, qty, unitPrice, subtotal });
+            }
+
+            // خصم الكميات من المخزن
+            items.forEach(item => {
+                let p = state.products.find(x => x.code === item.code);
+                if(p) {
+                    p.qty = Number(p.qty) - item.qty;
+                }
+            });
+
+            let batchId = 'BATCH-' + Math.floor(1000 + Math.random() * 9000);
+            let today = new Date().toISOString().split('T')[0];
+
+            let newInvoice = {
+                id: batchId,
+                client: clientName,
+                isBatch: true,
+                items: items,
+                total: grandTotal,
+                profit: totalProfit,
+                date: today
+            };
+
+            state.invoices.push(newInvoice);
+
+            state.transactions.push({
+                id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                type: 'إيراد',
+                amount: grandTotal,
+                desc: `قيمة فاتورة مبيعات مجمعة ${batchId}`,
+                date: today
+            });
+
+            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+
+            alert('✓ تم حفظ الفاتورة المجمعة وتحديث المخزن والخزنة بنجاح');
+            location.reload();
+        }
+
+        function renderBatchInvoicesList() {
+            let tbody = document.getElementById('batchInvoicesTableBody');
+            let batchInvs = state.invoices.filter(i => i.isBatch);
+
+            if(!batchInvs.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة بعد.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = batchInvs.map(i => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id}</td>
+                    <td class="p-4 font-bold text-slate-900">${i.client}</td>
+                    <td class="p-4 mono-font">${i.items.length} أصناف</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-slate-500">${i.date}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteBatchInvoice(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(inv && inv.items) {
+                inv.items.forEach(it => {
+                    let p = state.products.find(x => x.code === it.code);
+                    if(p) p.qty += it.qty;
+                });
+                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            }
+            state.invoices = state.invoices.filter(i => i.id !== id);
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+            renderBatchInvoicesList();
+        }
+
+        initBatchPage();
+    </script>
+</body>
+</html>

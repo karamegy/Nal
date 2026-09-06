@@ -56,7 +56,7 @@
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 
-    <!-- سكربت عام للتحكم بالواجهة والنوافذ لضمان العمل الفوري قبل تحميل الوحدات -->
+    <!-- تعريف الدوال العامة للواجهة لضمان الاستجابة الفورية للنقر واللمس -->
     <script>
         window.openAddVehicleModal = function() {
             const modalTitle = document.getElementById('modalTitle');
@@ -204,7 +204,7 @@
                             <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase)</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
-                        <button onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
+                        <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -236,7 +236,7 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 id="modalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول</h3>
-                <button onclick="window.closeVehicleModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="window.closeVehicleModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="vehicleForm" onsubmit="window.saveVehicle(event)" class="space-y-3 text-xs">
                 <input type="hidden" id="vehicleId">
@@ -259,8 +259,8 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button type="button" onclick="window.closeVehicleModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition">إلغاء</button>
-                    <button type="submit" class="btn-primary py-2 px-5 text-xs">حفظ المركبة سحابياً</button>
+                    <button type="button" onclick="window.closeVehicleModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer">حفظ المركبة سحابياً</button>
                 </div>
             </form>
         </div>
@@ -299,7 +299,6 @@
         const clientsRef = collection(db, "clients");
         const fleetRef = collection(db, "fleet_locations");
 
-        // ضبط طي لوحة التحكم تلقائياً على الأجهزة الذكية والموبايل
         if (window.innerWidth < 1024) {
             const panel = document.getElementById('touchControlPanel');
             const icon = document.getElementById('panelToggleIcon');
@@ -310,14 +309,12 @@
             }
         }
 
-        // تهيئة الخريطة الأساسية
         let map = L.map('leafletMap', {
             zoomControl: false
         }).setView([30.0444, 31.2357], 13);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // طبقات الخريطة المتقدمة
         const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
         const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
@@ -331,7 +328,6 @@
             if(type === 'satellite') satelliteLayer.addTo(map);
         };
 
-        // أداة البحث الجغرافي
         const geocoder = L.Control.geocoder({ defaultMarkGeocode: true, placeholder: 'ابحث عن موقع أو عنوان...', errorMessage: 'لم يتم العثور على الموقع.' }).addTo(map);
 
         window.searchCustomLocation = function() {
@@ -348,7 +344,6 @@
             });
         };
 
-        // نظام التوجيه والملاحة (Routing) وحساب الـ ETA
         let routingControl = L.Routing.control({
             waypoints: [ L.latLng(30.0444, 31.2357), L.latLng(30.0131, 31.2089) ],
             routeWhileDragging: false,
@@ -385,7 +380,6 @@
             }
         };
 
-        // النطاق الجغرافي الآمن
         const geofenceCenter = [30.0444, 31.2357];
         const geofenceRadius = 15000;
         L.circle(geofenceCenter, {
@@ -406,7 +400,6 @@
             }
         }
 
-        // استماع حقيقي لمواقع الأسطول من Firebase وعرضها على الخريطة والجدول
         let fleetMarkers = {};
         onSnapshot(fleetRef, (snapshot) => {
             let fleetDocs = [];
@@ -440,8 +433,8 @@
                         <td class="p-3 mono-font text-slate-600">${v.lng ? Number(v.lng).toFixed(4) : '--'}</td>
                         <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
                         <td class="p-3 text-center">
-                            <button onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${v.lat || 30.0444}, ${v.lng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${v.lat || 30.0444}, ${v.lng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
@@ -454,7 +447,6 @@
             document.getElementById('fleetTableBody').innerHTML = tableHtml;
         });
 
-        // دوال حفظ وحذف وتعديل المركبات سحابياً
         window.editVehicle = function(id, name, plate, lat, lng) {
             const modalTitle = document.getElementById('modalTitle');
             const vehicleId = document.getElementById('vehicleId');
@@ -515,7 +507,6 @@
             }
         };
 
-        // استماع حقيقي لعملاء المنظومة وربط الحسابات التفاعلية
         let clientMarkers = [];
         onSnapshot(clientsRef, (snapshot) => {
             let clients = [];
@@ -536,7 +527,7 @@
                         <b style="font-size: 14px; color: #0f172a;"><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><hr style="margin: 5px 0; border-color: #e2e8f0;">
                         <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">الهاتف: <span class="mono-font">${phone}</span></div>
                         <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">الرصيد / الفواتير: <span class="mono-font font-bold text-indigo-600">${balance} ج.م</span></div>
-                        <button onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
+                        <button type="button" onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
                             <i class="fa-solid fa-route ml-1"></i> توجيه الأسطول إلى هنا
                         </button>
                     </div>
@@ -553,7 +544,6 @@
             });
         });
 
-        // تتبع موقع المستخدم والـ Telemetry
         let currentUserLatLng = null;
         if("geolocation" in navigator) {
             navigator.geolocation.watchPosition(async (pos) => {
@@ -569,7 +559,6 @@
             });
         }
 
-        // دوال التحكم الإضافية
         window.playRouteHistory = function() {
             alert("تم بدء تشغيل محاكاة السجل التاريخي لحركة أسطول EIDCO بنجاح.");
         };

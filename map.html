@@ -75,10 +75,10 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS - Firebase)</h1>
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span class="text-xs font-mono font-bold text-emerald-600">الأسطول متصل حياً</span>
+                        <span class="text-xs font-mono font-bold text-emerald-600">الأسطول متصل سحابياً</span>
                     </div>
                 </div>
             </header>
@@ -87,12 +87,12 @@
                 <!-- شريط مؤشرات الأسطول الحية -->
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-indigo-600">
-                        <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-lg font-black text-slate-900 mono-font">2 مركبة</h4></div>
+                        <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-lg font-black text-slate-900 mono-font" id="mapFleetCount">1 مركبة</h4></div>
                         <i class="fa-solid fa-truck text-indigo-600 text-xl"></i>
                     </div>
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-emerald-500">
-                        <div><span class="text-slate-500">مركبات متحركة</span><h4 class="text-lg font-black text-emerald-600 mono-font">2 نشط</h4></div>
-                        <i class="fa-solid fa-truck-fast text-emerald-500 textxl"></i>
+                        <div><span class="text-slate-500">مركبات متحركة</span><h4 class="text-lg font-black text-emerald-600 mono-font">1 نشط</h4></div>
+                        <i class="fa-solid fa-truck-fast text-emerald-500 text-xl"></i>
                     </div>
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-amber-500">
                         <div><span class="text-slate-500">عملاء المنظومة</span><h4 class="text-lg font-black text-amber-600 mono-font" id="mapClientsCount">0 جهة</h4></div>
@@ -109,13 +109,13 @@
                     <div class="flex items-center gap-2 flex-1 min-w-[280px]">
                         <span class="font-bold text-slate-700"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
                         <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، منطقة، أو فرع..." class="corporate-input flex-1">
-                        <button onclick="searchCustomLocation()" class="btn-primary py-2 px-4 text-xs">بحث</button>
+                        <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-700">طبقات الخريطة:</span>
-                        <button onclick="switchLayer('street')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition">القياسية</button>
-                        <button onclick="switchLayer('topo')" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition">التضاريس</button>
-                        <button onclick="switchLayer('satellite')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition"><i class="fa-solid fa-satellite ml-1"></i> القمر الصناعي</button>
+                        <button onclick="window.switchLayer('street')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition cursor-pointer">القياسية</button>
+                        <button onclick="window.switchLayer('topo')" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition cursor-pointer">التضاريس</button>
+                        <button onclick="window.switchLayer('satellite')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition cursor-pointer"><i class="fa-solid fa-satellite ml-1"></i> القمر الصناعي</button>
                     </div>
                 </div>
 
@@ -123,12 +123,12 @@
                 <div class="corporate-card p-4 relative">
                     <div class="touch-control-panel">
                         <span class="text-[10px] font-bold text-slate-400 font-mono px-1">التحكم السريع باللمس</span>
-                        <button onclick="panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
-                        <button onclick="panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
-                        <button onclick="toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
-                        <button onclick="playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
-                        <button onclick="shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
-                        <button onclick="resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
+                        <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
+                        <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
+                        <button onclick="window.toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
+                        <button onclick="window.playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
+                        <button onclick="window.shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
+                        <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
                     </div>
 
                     <div id="leafletMap"></div>
@@ -142,12 +142,35 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
-    <script>
-        // قراءة بيانات العملاء المخزنة في المنظومة لربطهم بالخريطة
-        let storedClients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
-        document.getElementById('mapClientsCount').innerText = storedClients.length + ' جهة';
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            doc, 
+            setDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // تهيئة الخريطة
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const clientsRef = collection(db, "clients");
+        const fleetRef = collection(db, "fleet_locations");
+
+        // تهيئة الخريطة الأساسية
         let map = L.map('leafletMap', {
             zoomControl: false
         }).setView([30.0444, 31.2357], 13);
@@ -161,17 +184,17 @@
 
         streetLayer.addTo(map);
 
-        function switchLayer(type) {
+        window.switchLayer = function(type) {
             map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
             if(type === 'street') streetLayer.addTo(map);
             if(type === 'topo') topoLayer.addTo(map);
             if(type === 'satellite') satelliteLayer.addTo(map);
-        }
+        };
 
         // أداة البحث الجغرافي
         const geocoder = L.Control.geocoder({ defaultMarkGeocode: true, placeholder: 'ابحث عن موقع أو عنوان...', errorMessage: 'لم يتم العثور على الموقع.' }).addTo(map);
 
-        function searchCustomLocation() {
+        window.searchCustomLocation = function() {
             let val = document.getElementById('customSearchInput').value;
             if(!val) return;
             geocoder.options.geocoder.geocode(val, results => {
@@ -183,7 +206,7 @@
                     alert('لم يتم العثور على النتيجة');
                 }
             });
-        }
+        };
 
         // نظام التوجيه والملاحة (Routing)
         let routingControl = L.Routing.control({
@@ -196,61 +219,105 @@
         });
 
         let routingVisible = true;
-        function toggleRouting() {
+        window.toggleRouting = function() {
             if(routingVisible) { map.removeControl(routingControl); routingVisible = false; }
             else { routingControl.addTo(map); routingVisible = true; }
-        }
+        };
         routingControl.addTo(map);
 
         // النطاق الجغرافي الآمن (Geofencing Circle)
-        let geofenceCircle = L.circle([30.0444, 31.2357], {
+        L.circle([30.0444, 31.2357], {
             color: '#8b5cf6',
             fillColor: '#c4b5fd',
             fillOpacity: 0.15,
             radius: 12000 // 12 كم نطاق أمان محافظات القاهرة الكبرى
         }).addTo(map).bindPopup("<b>النطاق الجغرافي الآمن للأسطول</b><br>التنبيهات مفعلة عند الخروج عن النطاق.");
 
-        // الأسطول الحي ومواقع العملاء
+        // الأسطول الحي الابتدائي
         let primaryFleetLatLng = [30.0555, 31.2450];
         let fleetMarker = L.marker(primaryFleetLatLng, {
             icon: L.divIcon({
                 html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
                 iconSize: [36, 36]
             })
-        }).addTo(map).bindPopup("<b>سيارة أسطول #01</b><br>الحالة: يتحرك حياً عبر GPS");
+        }).addTo(map).bindPopup("<b>سيارة أسطول #01</b><br>الحالة: يتحرك حياً عبر GPS و Firebase");
 
-        // ربط عملاء المنظومة على الخريطة (افتراضي أو مسجل)
-        let defaultClientsLocations = [
-            { name: 'شركة النيل للحبوب والأعلاف (عميل رئيسي)', lat: 30.0333, lng: 31.2333 },
-            { name: 'مؤسسة الدلتا التجارية', lat: 30.0600, lng: 31.2200 }
-        ];
-        defaultClientsLocations.forEach(c => {
-            L.marker([c.lat, c.lng], {
-                icon: L.divIcon({
-                    html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
-                    iconSize: [30, 30]
-                })
-            }).addTo(map).bindPopup(`<b>${c.name}</b><br>موقع مسجل بحسابات العملاء`);
+        // استماع حقيقي لمواقع الأسطول من Firebase Firestore
+        onSnapshot(fleetRef, (snapshot) => {
+            let fleetDocs = snapshot.docs.map(doc => doc.data());
+            if (fleetDocs.length > 0) {
+                document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
+                fleetDocs.forEach((v, index) => {
+                    if (v.lat && v.lng) {
+                        L.marker([v.lat, v.lng], {
+                            icon: L.divIcon({
+                                html: `<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>`,
+                                iconSize: [36, 36]
+                            })
+                        }).addTo(map).bindPopup(`<b>مركبة الأسطول ${v.name || '#' + (index + 1)}</b><br>محدثة لحظياً عبر Firebase`);
+                    }
+                });
+            }
         });
 
-        // تتبع موقع المستخدم
+        // استماع حقيقي لعملاء المنظومة وتعيينهم على الخريطة مباشرة
+        let clientMarkers = [];
+        onSnapshot(clientsRef, (snapshot) => {
+            let clients = snapshot.docs.map(doc => doc.data());
+            document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
+
+            // مسح العناوين القديمة
+            clientMarkers.forEach(m => map.removeLayer(m));
+            clientMarkers = [];
+
+            // إضافة العملاء الجدد من السحابة
+            clients.forEach(c => {
+                let lat = c.lat || (30.0333 + (Math.random() - 0.5) * 0.05);
+                let lng = c.lng || (31.2333 + (Math.random() - 0.5) * 0.05);
+                
+                let marker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
+                        iconSize: [30, 30]
+                    })
+                }).addTo(map).bindPopup(`<b>${c.name}</b><br>حساب عميل مسجل سحابياً (${c.phone || 'بدون هاتف'})`);
+
+                clientMarkers.push(marker);
+            });
+        });
+
+        // تتبع موقع المستخدم وتحديثه في Firebase
         let currentUserLatLng = null;
         if("geolocation" in navigator) {
-            navigator.geolocation.watchPosition(pos => {
+            navigator.geolocation.watchPosition(async (pos) => {
                 let lat = pos.coords.latitude, lng = pos.coords.longitude;
                 currentUserLatLng = [lat, lng];
+                
                 L.marker([lat, lng], {
                     icon: L.divIcon({
                         html: '<div style="background:#10b981; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-user-shield"></i></div>',
                         iconSize: [36, 36]
                     })
-                }).addTo(map).bindPopup("📍 موقعك الحالي المباشر");
+                }).addTo(map).bindPopup("📍 موقعك الحالي المباشر (تتبع حي)");
+
+                // إرسال الإحداثيات إلى Firestore
+                try {
+                    let userDocRef = doc(db, "fleet_locations", "my_location");
+                    await setDoc(userDocRef, {
+                        name: "مركبة القائد",
+                        lat: lat,
+                        lng: lng,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                } catch (e) {
+                    console.log("تتبع محلي للموقع فقط");
+                }
             });
         }
 
-        // ميزة سجل الحركة التاريخي (Route Playback Simulation)
+        // ميزة سجل الحركة التاريخي
         let historyPolyline = null;
-        function playRouteHistory() {
+        window.playRouteHistory = function() {
             let latlngs = [
                 [30.0444, 31.2357],
                 [30.0480, 31.2400],
@@ -261,18 +328,18 @@
             historyPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 5, dashArray: '5, 10' }).addTo(map);
             map.fitBounds(historyPolyline.getBounds());
             alert("تم تحميل وتفعيل سجل الحركة التاريخي للمركبة بنجاح.");
-        }
+        };
 
         // مشاركة المسار عبر واتساب
-        function shareRouteWhatsApp() {
+        window.shareRouteWhatsApp = function() {
             let text = encodeURIComponent("مرحباً، إليك تتبع مسار أسطول EIDCO الحي والموقع الحالي عبر نظام إدارة العمليات.");
             window.open(`https://wa.me/?text=${text}`, '_blank');
-        }
+        };
 
         // دوال التحكم السريع باللمس
-        function panToFleet() { map.setView(primaryFleetLatLng, 15); }
-        function panToUser() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); }
-        function resetMapView() { map.setView([30.0444, 31.2357], 13); }
+        window.panToFleet = function() { map.setView(primaryFleetLatLng, 15); };
+        window.panToUser = function() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); };
+        window.resetMapView = function() { map.setView([30.0444, 31.2357], 13); };
     </script>
 </body>
 </html>

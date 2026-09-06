@@ -20,16 +20,16 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; -webkit-tap-highlight-color: transparent; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 13px; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; width: 100%; font-size: 14px; }
         .corporate-input:read-only { background: #e2e8f0; color: var(--text-muted); cursor: not-allowed; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 14px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        .btn-primary:active { transform: scale(0.97); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
@@ -116,7 +116,7 @@
 
     <!-- نافذة إضافة / تعديل صنف -->
     <div id="productModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative z-50">
             <h3 id="modalTitle" class="font-bold text-sm text-slate-900">إضافة صنف جديد للمخزن</h3>
             <div class="space-y-3 text-xs">
                 <input type="hidden" id="editOriginalCode">
@@ -156,8 +156,8 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-3">
-                <button type="button" onclick="saveProductData()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer">حفظ الصنف</button>
-                <button type="button" onclick="closeProductModal()" class="bg-slate-200 text-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button type="button" onclick="saveProductData()" class="btn-primary flex-1 py-3 text-xs cursor-pointer">حفظ الصنف</button>
+                <button type="button" onclick="closeProductModal()" class="bg-slate-200 text-slate-700 flex-1 py-3 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
@@ -287,39 +287,43 @@
         }
 
         function saveProductData() {
-            let products = loadProducts();
-            let originalCode = document.getElementById('editOriginalCode').value.trim();
-            let code = document.getElementById('prodCode').value.trim();
-            let barcode = document.getElementById('prodBarcode').value.trim();
-            let name = document.getElementById('prodName').value.trim();
-            let buyPrice = Number(document.getElementById('prodBuyPrice').value) || 0;
-            let sellPrice = Number(document.getElementById('prodSellPrice').value) || 0;
-            let qty = Number(document.getElementById('prodQty').value) || 0;
-            let minQty = Number(document.getElementById('prodMinQty').value) || 3;
+            try {
+                let products = loadProducts();
+                let originalCode = document.getElementById('editOriginalCode').value.trim();
+                let code = document.getElementById('prodCode').value.trim();
+                let barcode = document.getElementById('prodBarcode').value.trim();
+                let name = document.getElementById('prodName').value.trim();
+                let buyPrice = Number(document.getElementById('prodBuyPrice').value) || 0;
+                let sellPrice = Number(document.getElementById('prodSellPrice').value) || 0;
+                let qty = Number(document.getElementById('prodQty').value) || 0;
+                let minQty = Number(document.getElementById('prodMinQty').value) || 3;
 
-            if(!code || !name) {
-                alert('⚠️ يرجى إدخال كود الصنف واسمه بشكل صحيح');
-                return;
-            }
+                if(!code || !name) {
+                    alert('⚠️ يرجى إدخال كود الصنف واسمه بشكل صحيح');
+                    return;
+                }
 
-            if(originalCode !== "") {
-                let index = products.findIndex(x => x.code === originalCode);
-                if(index !== -1) {
-                    products[index] = { code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty };
+                if(originalCode !== "") {
+                    let index = products.findIndex(x => x.code === originalCode);
+                    if(index !== -1) {
+                        products[index] = { code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty };
+                    } else {
+                        products.push({ code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty });
+                    }
                 } else {
-                    products.push({ code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty });
+                    if(products.some(x => x.code === code)) {
+                        code = 'PRD-' + Math.floor(1000 + Math.random() * 9000);
+                    }
+                    products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
                 }
-            } else {
-                if(products.some(x => x.code === code)) {
-                    code = 'PRD-' + Math.floor(1000 + Math.random() * 9000);
-                }
-                products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
-            }
 
-            saveProductsToStorage(products);
-            closeProductModal();
-            renderProducts();
-            alert('✓ تم حفظ الصنف وتحديث المخزن بنجاح');
+                saveProductsToStorage(products);
+                closeProductModal();
+                renderProducts();
+                alert('✓ تم حفظ الصنف وتحديث المخزن بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء الحفظ: ' + err.message);
+            }
         }
 
         function deleteProduct(code) {

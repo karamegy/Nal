@@ -52,8 +52,8 @@
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية</h1>
                     <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                        <button onclick="autoCleanAndSyncVault()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="مزامنة فورية وتطهير المعاملات">
-                            <i class="fa-solid fa-rotate"></i> مزامنة وتطهير فوري
+                        <button onclick="purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة فوراً">
+                            <i class="fa-solid fa-trash-can"></i> تطهير الفواتير المحذوفة
                         </button>
                         <button onclick="openTxModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
                     </div>
@@ -71,8 +71,8 @@
                 <!-- جدول حركات الخزنة -->
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية تامة مع الفواتير النشطة فقط</span>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية (تحكم كامل: تعديل وحذف)</h3>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية مع الفواتير النشطة فقط</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -83,8 +83,8 @@
                                     <th class="p-4">المبلغ</th>
                                     <th class="p-4">البيان</th>
                                     <th class="p-4">التاريخ</th>
-                                    <th class="p-4 text-center">إجراءات (تعديل وحذف)</th>
-                                /></tr>
+                                    <th class="p-4 text-center">إجراءات التحكم (تعديل وحذف)</th>
+                                </tr>
                             </thead>
                             <tbody id="vaultTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
                         </table>
@@ -113,7 +113,7 @@
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600">البيان</label>
-                    <input type="text" id="txDesc" class="corporate-input w-full" placeholder="سبب الحركة النقدية">
+                    <input type="text" id="txDesc" class="corporate-input w-full" placeholder="سبب الحركة النقدية أو البيان">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -124,58 +124,61 @@
     </div>
 
     <script>
-        // دالة المزامنة والتنظيف التلقائي الذكية (تُنفذ تلقائياً عند تحميل الصفحة)
-        function autoCleanAndSyncVault() {
+        // دالة التطهير والفلترة الذكية لمنع ظهور الحركات التابعة لفواتير تم حذفها
+        function purgeDeletedInvoicesTransactions() {
+            if(!confirm('هل تريد حقاً تطهير الخزنة وحذف أي معاملات مرتبطة بفواتير محذوفة؟')) return;
+
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
 
-            // 1. تصحيح الفواتير المضخمة أو الخاطئة لمنع الأرقام الفلكية
-            invoices = invoices.map(inv => {
-                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
-                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
-                    if(realTotal > 0 && inv.total > realTotal * 10) {
-                        inv.total = realTotal;
-                    }
-                } else if(inv.total > 1000000) {
-                    inv.total = 15000;
-                }
-                return inv;
-            });
-            localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
-
             let activeIds = invoices.map(i => i.id);
 
-            // 2. تصفية الحركات: الاحتفاظ بالمصروفات اليدوية وفقط حركات الفواتير التي ما زالت موجودة فعلياً
-            let cleanedTransactions = transactions.filter(t => {
-                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+            // تصفية المعاملات: إذا كانت الحركة تحتوي على رقم فاتورة (مثل INV أو BATCH)، احذفها إذا لم تعد الفاتورة موجودة في النشطة
+            let cleaned = transactions.filter(t => {
+                let match = t.desc.match(/(INV-[\w\d-]+|BATCH-[\w\d-]+)/i) || t.id.match(/(INV-[\w\d-]+|BATCH-[\w\d-]+)/i);
                 if (match) {
                     let invId = match[1];
                     return activeIds.includes(invId);
                 }
-                return true; // الاحتفاظ بالحركات اليدوية الأخرى
+                return true; // الاحتفاظ بالحركات اليدوية الأخرى (مثل المصروفات والإيرادات اليدوية)
             });
 
-            // 3. التأكد من وجود حركة إيراد لكل فاتورة نشطة (وإنشاء المفقود أو تحديثه بدقة دون تكرار)
-            let existingInvTxIds = cleanedTransactions.map(t => {
-                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
-                return match ? match[1] : null;
-            }).filter(Boolean);
-
-            invoices.forEach(inv => {
-                if (!existingInvTxIds.includes(inv.id)) {
-                    cleanedTransactions.push({
-                        id: 'TX-' + Math.floor(100 + Math.random() * 900),
-                        type: 'إيراد',
-                        amount: Number(inv.total || 0),
-                        desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
-                        date: inv.date || new Date().toISOString().split('T')[0]
-                    });
+            // إصلاح أي تاريخ يعرض كـ undefined
+            cleaned = cleaned.map(t => {
+                if (!t.date || t.date === 'undefined') {
+                    t.date = new Date().toISOString().split('T')[0];
                 }
+                return t;
             });
 
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleaned));
             renderVault();
+            alert('✓ تم تطهير المعاملات وإزالة الحركات الوهمية والمرتبطة بالفواتير المحذوفة بنجاح!');
         }
+
+        // تشغيل الفلترة تلقائياً عند فتح الصفحة
+        function autoSyncVault() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            let activeIds = invoices.map(i => i.id);
+
+            let cleaned = transactions.filter(t => {
+                let match = t.desc.match(/(INV-[\w\d-]+|BATCH-[\w\d-]+)/i);
+                if (match) {
+                    return activeIds.includes(match[1]);
+                }
+                return true;
+            }).map(t => {
+                if (!t.date || t.date === 'undefined') {
+                    t.date = new Date().toISOString().split('T')[0];
+                }
+                return t;
+            });
+
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleaned));
+        }
+
+        autoSyncVault();
 
         function renderVault() {
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
@@ -194,7 +197,7 @@
             }
 
             tbody.innerHTML = transactions.map(t => {
-                let safeDate = (t.date && t.date !== 'undefined') ? t.date : 'غير محدد';
+                let safeDate = (t.date && t.date !== 'undefined') ? t.date : new Date().toISOString().split('T')[0];
                 return `
                     <tr class="hover:bg-slate-50">
                         <td class="p-4 mono-font text-indigo-600 font-bold">${t.id}</td>
@@ -203,8 +206,12 @@
                         <td class="p-4 text-slate-600">${t.desc}</td>
                         <td class="p-4 mono-font text-slate-500">${safeDate}</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="editTx('${t.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="deleteTx('${t.id}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف هذه الحركة"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editTx('${t.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="تعديل">
+                                <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
+                            </button>
+                            <button onclick="deleteTx('${t.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="حذف">
+                                <i class="fa-solid fa-trash ml-1"></i> حذف
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -243,7 +250,7 @@
             let amount = Number(document.getElementById('txAmount').value);
             let desc = document.getElementById('txDesc').value.trim();
 
-            if(!amount || !desc) return alert('الرجاء إدخال المبلغ والبيان');
+            if(!amount || !desc) return alert('الرجاء إدخال المبلغ والبيان بشكل صحيح.');
 
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             let today = new Date().toISOString().split('T')[0];
@@ -254,6 +261,7 @@
                     t.type = type;
                     t.amount = amount;
                     t.desc = desc;
+                    t.date = t.date && t.date !== 'undefined' ? t.date : today;
                 }
             } else {
                 let newId = 'TX-' + Math.floor(100 + Math.random() * 900);
@@ -263,19 +271,19 @@
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
             closeModal();
             renderVault();
-            alert('✓ تم حفظ الحركة النقدية بنجاح');
+            alert('✓ تم الحفظ وتحديث المعاملات النقدية بنجاح.');
         }
 
         function deleteTx(id) {
-            if(!confirm('هل أنت متأكد من حذف هذه الحركة؟')) return;
+            if(!confirm('هل أنت متأكد من حذف هذه الحركة نهائياً؟')) return;
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             transactions = transactions.filter(t => t.id !== id);
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
             renderVault();
+            alert('✓ تم الحذف بنجاح.');
         }
 
-        // تشغيل المزامنة والتنظيف التلقائي عند فتح الصفحة لتصحيح الأرقام مباشرة
-        autoCleanAndSyncVault();
+        renderVault();
     </script>
 </body>
 </html>

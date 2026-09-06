@@ -31,7 +31,7 @@
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; -webkit-tap-highlight-color: transparent; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; user-select: none; }
@@ -62,6 +62,7 @@
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -111,7 +112,7 @@
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">اختر العميل / الشركة</label>
                             <select id="batchClient" class="corporate-input" onchange="updateClientLedgerInfo()"></select>
-                            <span id="clientLedgerInfo" class="block mt-1 text-[11px] text-slate-500 font-mono">رصيد المديونية: 0.00 ج.م</span>
+                            <span id="clientLedgerInfo" class="block mt-1 text-[11px] text-slate-500 font-mono" dir="ltr">رصيد المديونية: 0.00 ج.م</span>
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">طريقة الدفع</label>
@@ -156,8 +157,8 @@
 
                     <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div class="space-y-1 text-center sm:text-right">
-                            <span class="text-xs text-slate-600">الإجمالي النهائي بعد الخصم: <strong id="batchGrandTotal" class="text-indigo-600 mono-font text-base">0.00 ج.م</strong></span>
-                            <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font">0.00 ج.م</strong></span>
+                            <span class="text-xs text-slate-600">الإجمالي النهائي بعد الخصم: <strong id="batchGrandTotal" class="text-indigo-600 mono-font text-base" dir="ltr">0.00 ج.م</strong></span>
+                            <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font" dir="ltr">0.00 ج.م</strong></span>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
                             <button type="button" id="saveBtn" onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 flex-1 sm:flex-initial flex items-center justify-center gap-2">
@@ -199,10 +200,10 @@
                 <div class="flex justify-between items-center border-b pb-3">
                     <div>
                         <h2 class="font-black text-slate-900 text-base">EIDCO // فواتير المبيعات المجمعة</h2>
-                        <span id="prevInvId" class="text-xs text-indigo-600 font-mono font-bold"></span>
+                        <span id="prevInvId" class="text-xs text-indigo-600 font-mono font-bold" dir="ltr"></span>
                     </div>
                     <div class="text-left text-xs text-slate-500">
-                        <div>التاريخ: <span id="prevDate" class="mono-font"></span></div>
+                        <div>التاريخ: <span id="prevDate" class="mono-font" dir="ltr"></span></div>
                         <div class="mt-0.5">الدفع: <span id="prevPaymentType" class="font-bold text-indigo-600"></span></div>
                     </div>
                 </div>
@@ -226,15 +227,15 @@
                 <div class="space-y-1 pt-2 border-t text-xs">
                     <div class="flex justify-between text-slate-600">
                         <span>إجمالي الأصناف:</span>
-                        <span id="prevSubtotal" class="mono-font">0.00 ج.م</span>
+                        <span id="prevSubtotal" class="mono-font" dir="ltr">0.00 ج.م</span>
                     </div>
                     <div class="flex justify-between text-slate-600">
                         <span>الخصم:</span>
-                        <span id="prevDiscount" class="mono-font text-rose-600">0.00 ج.م</span>
+                        <span id="prevDiscount" class="mono-font text-rose-600" dir="ltr">0.00 ج.م</span>
                     </div>
                     <div class="flex justify-between items-center pt-1 border-t font-bold text-sm text-slate-900">
                         <span>الإجمالي النهائي:</span>
-                        <span id="prevTotal" class="text-indigo-600 mono-font"></span>
+                        <span id="prevTotal" class="text-indigo-600 mono-font" dir="ltr"></span>
                     </div>
                 </div>
             </div>
@@ -305,9 +306,9 @@
             tr.className = "hover:bg-slate-50 transition";
             tr.innerHTML = `
                 <td class="p-3"><select class="corporate-input item-product" onchange="updateRowDetails('${rowId}')">${productOptions}</select></td>
-                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="${qtyVal}" min="1" oninput="calculateBatchTotals()"></td>
-                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="${priceVal}" oninput="calculateBatchTotals()"></td>
-                <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal">0.00 ج.م</td>
+                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="${qtyVal}" min="1" oninput="calculateBatchTotals()" dir="ltr"></td>
+                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="${priceVal}" oninput="calculateBatchTotals()" dir="ltr"></td>
+                <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal" dir="ltr">0.00 ج.م</td>
                 <td class="p-3 text-center"><button type="button" onclick="document.getElementById('${rowId}').remove(); calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
@@ -499,13 +500,13 @@
 
             tbody.innerHTML = batchInvs.map(i => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id}</td>
                     <td class="p-4 font-bold text-slate-900">${i.client}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${i.paymentType === 'آجل' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}">${i.paymentType || 'نقدي'}</span></td>
-                    <td class="p-4 mono-font">${i.items.length} أصناف</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
+                    <td class="p-4 mono-font" dir="ltr">${i.items.length} أصناف</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit||0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
                         <button type="button" onclick="openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
                         <button type="button" onclick="sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
@@ -553,9 +554,9 @@
             let itemsHtml = inv.items.map(it => `
                 <tr>
                     <td class="p-2 font-bold text-slate-900" style="word-break: break-word;">${it.prodName}</td>
-                    <td class="p-2 mono-font text-center">${it.qty}</td>
-                    <td class="p-2 mono-font text-center">${Number(it.unitPrice).toLocaleString()}</td>
-                    <td class="p-2 mono-font text-left text-indigo-600 font-bold">${Number(it.subtotal).toLocaleString()}</td>
+                    <td class="p-2 mono-font text-center" dir="ltr">${it.qty}</td>
+                    <td class="p-2 mono-font text-center" dir="ltr">${Number(it.unitPrice).toLocaleString()}</td>
+                    <td class="p-2 mono-font text-left text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal).toLocaleString()}</td>
                 </tr>
             `).join('');
 
@@ -656,7 +657,6 @@
             });
         }
 
-        // إعداد ماسح الباركود بالكاميرا
         function openBarcodeScannerModal() {
             document.getElementById('barcodeScannerModal').classList.add('active');
             html5QrCode = new Html5Qrcode("reader");

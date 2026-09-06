@@ -12,12 +12,6 @@
         if (!sessionStorage.getItem('eidco_session_auth')) {
             window.location.href = 'auth.html';
         }
-        // إلغاء الـ Service Worker القديم لمنع تضارب الكاش وتحديث الصفحة فوراً
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let registration of registrations) { registration.unregister(); }
-            });
-        }
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -193,8 +187,8 @@
             let tbody = document.getElementById('productsTableBody');
             
             let filtered = products.filter(p => 
-                p.name.toLowerCase().includes(search) || 
-                p.code.toLowerCase().includes(search) || 
+                (p.name && p.name.toLowerCase().includes(search)) || 
+                (p.code && p.code.toLowerCase().includes(search)) || 
                 (p.barcode && p.barcode.toLowerCase().includes(search))
             );
 
@@ -220,8 +214,8 @@
                             ${p.code} ${p.barcode ? `<span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-barcode"></i> ${p.barcode}</span>` : ''}
                         </td>
                         <td class="p-4 font-bold text-slate-900">${p.name}</td>
-                        <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice).toLocaleString()} ج.م</td>
-                        <td class="p-4 mono-font text-emerald-600 font-bold">${Number(p.sellPrice).toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice || 0).toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font text-emerald-600 font-bold">${Number(p.sellPrice || 0).toLocaleString()} ج.م</td>
                         <td class="p-4 mono-font font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}">
                             ${p.qty} ${isLow ? '<i class="fa-solid fa-triangle-exclamation ml-1 text-rose-500" title="كمية منخفضة!"></i>' : ''}
                         </td>
@@ -243,7 +237,7 @@
                 let products = loadProducts();
                 let uniqueCode;
                 do {
-                    uniqueCode = 'PRD-' + Math.floor(100 + Math.random() * 900);
+                    uniqueCode = 'PRD-' + Math.floor(1000 + Math.random() * 9000);
                 } while(products.some(p => p.code === uniqueCode));
 
                 document.getElementById('prodCode').value = uniqueCode;
@@ -273,9 +267,9 @@
             document.getElementById('prodCode').readOnly = true;
             document.getElementById('prodBarcode').value = p.barcode || '';
             document.getElementById('prodName').value = p.name;
-            document.getElementById('prodBuyPrice').value = p.buyPrice;
-            document.getElementById('prodSellPrice').value = p.sellPrice;
-            document.getElementById('prodQty').value = p.qty;
+            document.getElementById('prodBuyPrice').value = p.buyPrice || 0;
+            document.getElementById('prodSellPrice').value = p.sellPrice || 0;
+            document.getElementById('prodQty').value = p.qty || 0;
             document.getElementById('prodMinQty').value = p.minQty || 3;
 
             openProductModal(true);

@@ -169,21 +169,26 @@
     </div>
 
     <script>
-        let state = {
-            products: JSON.parse(localStorage.getItem('eidco_v13_products')) || []
-        };
+        function loadProducts() {
+            return JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+        }
+
+        function saveProductsToStorage(products) {
+            localStorage.setItem('eidco_v13_products', JSON.stringify(products));
+        }
 
         function renderProducts() {
+            let products = loadProducts();
             let search = document.getElementById('searchInput').value.toLowerCase();
             let tbody = document.getElementById('productsTableBody');
             
-            let filtered = state.products.filter(p => 
+            let filtered = products.filter(p => 
                 p.name.toLowerCase().includes(search) || 
                 p.code.toLowerCase().includes(search) || 
                 (p.barcode && p.barcode.toLowerCase().includes(search))
             );
 
-            let lowStockItems = state.products.filter(p => Number(p.qty) <= Number(p.minQty || 3));
+            let lowStockItems = products.filter(p => Number(p.qty) <= Number(p.minQty || 3));
             let banner = document.getElementById('lowStockAlertBanner');
             if(lowStockItems.length > 0) {
                 banner.classList.remove('hidden');
@@ -241,7 +246,8 @@
         }
 
         function editProduct(code) {
-            let p = state.products.find(x => x.code === code);
+            let products = loadProducts();
+            let p = products.find(x => x.code === code);
             if(!p) return;
 
             document.getElementById('modalTitle').innerText = `تعديل الصنف (${p.name})`;
@@ -259,10 +265,11 @@
         }
 
         function saveProduct() {
-            let originalCode = document.getElementById('editOriginalCode').value;
+            let products = loadProducts();
+            let originalCode = document.getElementById('editOriginalCode').value.trim();
             let code = document.getElementById('prodCode').value.trim();
             let barcode = document.getElementById('prodBarcode').value.trim();
-            let name = document.getElementById('prodName').value.trim(); // تم تصحيح الخطأ هنا
+            let name = document.getElementById('prodName').value.trim();
             let buyPrice = Number(document.getElementById('prodBuyPrice').value) || 0;
             let sellPrice = Number(document.getElementById('prodSellPrice').value) || 0;
             let qty = Number(document.getElementById('prodQty').value) || 0;
@@ -270,24 +277,21 @@
 
             if(!code || !name) return alert('الرجاء إدخال كود الصنف واسمه');
 
-            if(originalCode) {
+            if(originalCode !== "") {
                 // تحديث صنف موجود
-                let p = state.products.find(x => x.code === originalCode);
-                if(p) {
-                    p.barcode = barcode;
-                    p.name = name;
-                    p.buyPrice = buyPrice;
-                    p.sellPrice = sellPrice;
-                    p.qty = qty;
-                    p.minQty = minQty;
+                let index = products.findIndex(x => x.code === originalCode);
+                if(index !== -1) {
+                    products[index] = { code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty };
+                } else {
+                    products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
                 }
             } else {
                 // إضافة صنف جديد
-                if(state.products.some(x => x.code === code)) return alert('هذا الكود مسجل مسبقاً');
-                state.products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
+                if(products.some(x => x.code === code)) return alert('هذا الكود مسجل مسبقاً');
+                products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
             }
 
-            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            saveProductsToStorage(products);
             closeProductModal();
             renderProducts();
             alert('✓ تم حفظ الصنف وتحديث المخزن بنجاح');
@@ -295,8 +299,9 @@
 
         function deleteProduct(code) {
             if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) return;
-            state.products = state.products.filter(x => x.code !== code);
-            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            let products = loadProducts();
+            products = products.filter(x => x.code !== code);
+            saveProductsToStorage(products);
             renderProducts();
         }
 

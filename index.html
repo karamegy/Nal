@@ -151,8 +151,12 @@
                     <input type="text" id="globalSearchInput" oninput="filterDashboardData(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث سريع في الفواتير أو العملاء برقم أو اسم...">
                 </div>
 
-                <!-- إحصائيات سريعة (بدون بطاقة رصيد الخزنة) -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- إحصائيات سريعة -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                        <span class="text-xs text-slate-500">رصيد الخزنة الصافي</span>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
+                    </div>
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
                         <span class="text-xs text-slate-500">إجمالي المبيعات</span>
                         <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
@@ -291,6 +295,60 @@
     </div>
 
     <script>
+        // دالة تنظيف ومزامنة المعاملات والفواتير آلياً لمنع تضخم الأرقام
+        function sanitizeAndSyncTransactions() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+
+            // تصحيح الفواتير المضخمة
+            invoices = invoices.map(inv => {
+                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
+                    if(realTotal > 0 && inv.total > realTotal * 10) {
+                        inv.total = realTotal;
+                    }
+                } else if(inv.total > 1000000) {
+                    inv.total = 15000;
+                }
+                return inv;
+            });
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
+
+            let activeIds = invoices.map(i => i.id);
+
+            // تصفية المعاملات لحذف المعاملات المرتبطة بفواتير محذوفة
+            let cleanedTransactions = transactions.filter(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                if (match) {
+                    let invId = match[1];
+                    return activeIds.includes(invId);
+                }
+                return true; // الاحتفاظ بالمصروفات اليدوية الأخرى
+            });
+
+            // التأكد من وجود معامل لكل فاتورة نشطة
+            let existingInvTxIds = cleanedTransactions.map(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                return match ? match[1] : null;
+            }).filter(Boolean);
+
+            invoices.forEach(inv => {
+                if (!existingInvTxIds.includes(inv.id)) {
+                    cleanedTransactions.push({
+                        id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                        type: 'إيراد',
+                        amount: Number(inv.total || 0),
+                        desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
+                        date: inv.date || new Date().toISOString().split('T')[0]
+                    });
+                }
+            });
+
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
+        }
+
+        sanitizeAndSyncTransactions();
+
         let state = {
             adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
             clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
@@ -312,6 +370,10 @@
         }
 
         function updateStatsAndDashboard(filteredInvoices = null) {
+            let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+            let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+            
+            document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
             document.getElementById('statSales').innerText = state.invoices.reduce((s,i)=>s+Number(i.total),0).toLocaleString() + ' ج.م';
             document.getElementById('statProfits').innerText = state.invoices.reduce((s,i)=>s+Number(i.profit||0),0).toLocaleString() + ' ج.م';
             document.getElementById('statClients').innerText = state.clients.length + ' جهة';

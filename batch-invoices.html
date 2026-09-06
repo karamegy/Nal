@@ -22,6 +22,7 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -35,6 +36,8 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
 </head>
@@ -69,9 +72,9 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
-                <!-- نموذج إنشاء فاتورة مجمعة جديدة -->
+                <!-- نموذج إنشاء أو تعديل فاتورة مجمعة -->
                 <div class="corporate-card p-6 space-y-5">
-                    <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة لعدة أصناف</h2>
+                    <h2 id="formTitle" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة لعدة أصناف</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div>
@@ -109,9 +112,12 @@
                             <span class="text-xs text-slate-600">إجمالي الفاتورة المجمعة: <strong id="batchGrandTotal" class="text-indigo-600 mono-font text-base">0.00 ج.م</strong></span>
                             <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font">0.00 ج.م</strong></span>
                         </div>
-                        <button onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 w-full sm:w-auto flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة المجمعة وتحديث المخزن
-                        </button>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button id="saveBtn" onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 flex-1 sm:flex-initial flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة المجمعة وتحديث المخزن
+                            </button>
+                            <button id="cancelEditBtn" onclick="resetBatchForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-3 rounded-xl text-xs font-bold cursor-pointer">إلغاء التعديل</button>
+                        </div>
                     </div>
                 </div>
 
@@ -128,7 +134,7 @@
                                     <th class="p-4">الإجمالي الكلي</th>
                                     <th class="p-4">صافي الربح</th>
                                     <th class="p-4">التاريخ</th>
-                                    <th class="p-4 text-center">إجراءات</th>
+                                    <th class="p-4 text-center">إجراءات (معاينة، واتساب، تعديل، حذف)</th>
                                 </tr>
                             </thead>
                             <tbody id="batchInvoicesTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -136,6 +142,47 @@
                     </div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- نافذة معاينة الفاتورة للتصدير كصورة -->
+    <div id="previewModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl">
+            <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base">EIDCO // فواتير المبيعات</h2>
+                        <span id="prevInvId" class="text-xs text-indigo-600 font-mono font-bold"></span>
+                    </div>
+                    <div class="text-left text-xs text-slate-500">
+                        <div>التاريخ: <span id="prevDate" class="mono-font"></span></div>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500">العميل:</span>
+                    <h3 id="prevClient" class="font-bold text-sm text-slate-900"></h3>
+                </div>
+                <table class="w-full text-right text-xs border rounded-lg overflow-hidden">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                            <th class="p-2">الصنف</th>
+                            <th class="p-2">الكمية</th>
+                            <th class="p-2">السعر</th>
+                            <th class="p-2">الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prevItemsBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+                <div class="flex justify-between items-center pt-2 border-t font-bold text-xs">
+                    <span>الإجمالي الكلي:</span>
+                    <span id="prevTotal" class="text-indigo-600 mono-font text-sm"></span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 pt-2">
+                <button onclick="downloadInvoiceImage()" class="btn-primary flex-1 py-2 text-xs flex items-center justify-center gap-1.5"><i class="fa-solid fa-image"></i> تحميل كصورة (PNG)</button>
+                <button onclick="closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -147,32 +194,40 @@
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
         };
 
+        let editingBatchId = null;
+
         function initBatchPage() {
             let clientSel = document.getElementById('batchClient');
             if(clientSel) {
                 clientSel.innerHTML = state.clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
             }
-            addBatchItemRow();
+            if(!editingBatchId) {
+                addBatchItemRow();
+            }
             renderBatchInvoicesList();
         }
 
-        function addBatchItemRow() {
+        function addBatchItemRow(productCode = '', qtyVal = 1, priceVal = 0) {
             let tbody = document.getElementById('batchItemsTableBody');
             let rowId = 'row-' + Date.now() + Math.random();
-            let productOptions = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}">${p.name} (المتاح: ${p.qty})</option>`).join('');
+            let productOptions = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === productCode ? 'selected' : ''}>${p.name} (المتاح: ${p.qty})</option>`).join('');
 
             let tr = document.createElement('tr');
             tr.id = rowId;
             tr.className = "hover:bg-slate-50 transition";
             tr.innerHTML = `
                 <td class="p-3"><select class="corporate-input w-full item-product" onchange="updateRowDetails('${rowId}')">${productOptions}</select></td>
-                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="1" min="1" oninput="calculateBatchTotals()"></td>
-                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="0" oninput="calculateBatchTotals()"></td>
+                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="${qtyVal}" min="1" oninput="calculateBatchTotals()"></td>
+                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="${priceVal}" oninput="calculateBatchTotals()"></td>
                 <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal">0.00 ج.م</td>
                 <td class="p-3 text-center"><button onclick="document.getElementById('${rowId}').remove(); calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
-            updateRowDetails(rowId);
+            if(!productCode) {
+                updateRowDetails(rowId);
+            } else {
+                calculateBatchTotals();
+            }
         }
 
         function updateRowDetails(rowId) {
@@ -228,12 +283,7 @@
                 let prodName = sel.options[sel.selectedIndex].text.split(' (')[0];
                 let qty = Number(row.querySelector('.item-qty').value) || 1;
                 let unitPrice = Number(row.querySelector('.item-price').value) || 0;
-                let availableQty = Number(sel.options[sel.selectedIndex].getAttribute('data-qty')) || 0;
                 let buyPrice = Number(sel.options[sel.selectedIndex].getAttribute('data-buy')) || 0;
-
-                if(qty > availableQty) {
-                    return alert(`⚠️ الكمية المطلوبة للصنف (${prodName}) أكبر من المتاح في المخزن (${availableQty})`);
-                }
 
                 let subtotal = qty * unitPrice;
                 grandTotal += subtotal;
@@ -242,15 +292,28 @@
                 items.push({ code, prodName, qty, unitPrice, subtotal });
             }
 
-            // خصم الكميات من المخزن
-            items.forEach(item => {
-                let p = state.products.find(x => x.code === item.code);
-                if(p) {
-                    p.qty = Number(p.qty) - item.qty;
+            // إذا كان في وضع التعديل، قم بإعادة الكميات القديمة للمخزن أولاً
+            if(editingBatchId) {
+                let oldInv = state.invoices.find(i => i.id === editingBatchId);
+                if(oldInv && oldInv.items) {
+                    oldInv.items.forEach(it => {
+                        let p = state.products.find(x => x.code === it.code);
+                        if(p) p.qty += it.qty;
+                    });
                 }
-            });
+                state.invoices = state.invoices.filter(i => i.id !== editingBatchId);
+            }
 
-            let batchId = 'BATCH-' + Math.floor(1000 + Math.random() * 9000);
+            // خصم الكميات الجديدة من المخزن
+            for(let item of items) {
+                let p = state.products.find(x => x.code === item.code);
+                if(!p || p.qty < item.qty) {
+                    return alert(`⚠️ الكمية المطلوبة للصنف (${item.prodName}) أكبر من المتاح في المخزن (${p ? p.qty : 0})`);
+                }
+                p.qty -= item.qty;
+            }
+
+            let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
             let today = new Date().toISOString().split('T')[0];
 
             let newInvoice = {
@@ -265,6 +328,8 @@
 
             state.invoices.push(newInvoice);
 
+            // تحديث المعاملات المالية
+            state.transactions = state.transactions.filter(t => t.desc !== `قيمة فاتورة مبيعات مجمعة ${batchId}`);
             state.transactions.push({
                 id: 'TX-' + Math.floor(100 + Math.random() * 900),
                 type: 'إيراد',
@@ -277,8 +342,38 @@
             localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
 
-            alert('✓ تم حفظ الفاتورة المجمعة وتحديث المخزن والخزنة بنجاح');
-            location.reload();
+            alert('✓ تم حفظ الفاتورة وتحديث المخزن بنجاح');
+            resetBatchForm();
+            renderBatchInvoicesList();
+        }
+
+        function editBatchInvoice(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+
+            editingBatchId = inv.id;
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square ml-2 text-indigo-600"></i> تعديل الفاتورة المجمعة (${inv.id})`;
+            document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> تحديث الفاتورة`;
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+            document.getElementById('batchClient').value = inv.client;
+            document.getElementById('batchItemsTableBody').innerHTML = '';
+
+            inv.items.forEach(it => {
+                addBatchItemRow(it.code, it.qty, it.unitPrice);
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetBatchForm() {
+            editingBatchId = null;
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة لعدة أصناف`;
+            document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة المجمعة وتحديث المخزن`;
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            document.getElementById('batchItemsTableBody').innerHTML = '';
+            addBatchItemRow();
+            calculateBatchTotals();
         }
 
         function renderBatchInvoicesList() {
@@ -297,15 +392,19 @@
                     <td class="p-4 mono-font">${i.items.length} أصناف</td>
                     <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-slate-500">${i.date}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="deleteBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                    <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
+                    <td class="p-4 text-center space-x-2 space-x-reverse">
+                        <button onclick="openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button onclick="editBatchInvoice('${i.id}')" class="text-amber-600 hover:text-amber-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
         }
 
         function deleteBatchInvoice(id) {
+            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إعادة الأصناف للمخزن.')) return;
             let inv = state.invoices.find(i => i.id === id);
             if(inv && inv.items) {
                 inv.items.forEach(it => {
@@ -317,6 +416,66 @@
             state.invoices = state.invoices.filter(i => i.id !== id);
             localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
             renderBatchInvoicesList();
+        }
+
+        // معاينة الفاتورة وتصديرها كصورة
+        function openInvoicePreview(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+
+            document.getElementById('prevInvId').innerText = inv.id;
+            document.getElementById('prevDate').innerText = inv.date || '---';
+            document.getElementById('prevClient').innerText = inv.client;
+            document.getElementById('prevTotal').innerText = Number(inv.total).toLocaleString() + ' ج.م';
+
+            let itemsHtml = inv.items.map(it => `
+                <tr>
+                    <td class="p-2 font-bold">${it.prodName}</td>
+                    <td class="p-2 mono-font">${it.qty}</td>
+                    <td class="p-2 mono-font">${Number(it.unitPrice).toLocaleString()} ج.م</td>
+                    <td class="p-2 mono-font text-indigo-600 font-bold">${Number(it.subtotal).toLocaleString()} ج.م</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('prevItemsBody').innerHTML = itemsHtml;
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.remove('active');
+        }
+
+        function downloadInvoiceImage() {
+            let element = document.getElementById('invoicePrintArea');
+            html2canvas(element, { scale: 2 }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = 'EIDCO-Invoice-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // إرسال الفاتورة عبر واتساب
+        function sendInvoiceWhatsApp(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+
+            let text = `📄 *EIDCO // فاتورة مبيعات مجمعة*\n`;
+            text += `🆔 رقم الفاتورة: *${inv.id}*\n`;
+            text += `👤 العميل: *${inv.client}*\n`;
+            text += `📅 التاريخ: ${inv.date || '---'}\n\n`;
+            text += `*الأصناف المطلوبة:*:\n`;
+            
+            inv.items.forEach((item, index) => {
+                text += `${index + 1}. ${item.prodName}\n   - الكمية: ${item.qty} | السعر: ${Number(item.unitPrice).toLocaleString()} ج.م\n   - الإجمالي: ${Number(item.subtotal).toLocaleString()} ج.م\n`;
+            });
+
+            text += `\n💰 *الإجمالي الكلي: ${Number(inv.total).toLocaleString()} ج.م*\n`;
+            text += `--------------------------\n`;
+            text += `شكراً لتعاملكم معنا! 🙏`;
+
+            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
         }
 
         initBatchPage();

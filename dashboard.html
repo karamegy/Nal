@@ -65,7 +65,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة</h1>
+                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة (Firebase)</h1>
                     <div class="flex items-center gap-3">
                         <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg" title="إصلاح وتصفير الأرقام الوهمية والمضخمة">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> إصلاح الأرقام الوهمية
@@ -84,7 +84,7 @@
                         <p class="text-xs text-slate-300">مراقبة حية لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
                     </div>
                     <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold">
-                        <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر
+                        <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر سحابياً
                     </div>
                 </div>
 
@@ -124,7 +124,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-clock-rotate-left ml-2 text-indigo-600"></i> أحدث الحركات والعمليات المسجلة في المنصة</h3>
-                        <span class="text-xs text-slate-400 font-mono">محدث فوراً عبر التخزين المحلي</span>
+                        <span class="text-xs text-slate-400 font-mono">محدث فوراً عبر السحابة (Firebase)</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -137,7 +137,9 @@
                                     <th class="p-3">التاريخ</th>
                                 </tr>
                             </thead>
-                            <tbody id="dashLogsTable" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="dashLogsTable" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -145,111 +147,164 @@
         </div>
     </div>
 
-    <script>
-        // دالة إصلاح البيانات المضخمة وتصحيح الفواتير والمعاملات وتصفير الوهمي
-        function fixCorruptedData() {
-            if(!confirm('هل تريد إصلاح وتصحيح جميع الأرقام الوهمية والمضخمة وإعادة ضبط الحسابات؟')) return;
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            doc, 
+            updateDoc, 
+            deleteDoc, 
+            addDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            
-            // تصحيح مجاميع الفواتير المضخمة بناءً على بنود الأصناف داخل كل فاتورة
-            invoices = invoices.map(inv => {
-                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
-                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || item.quantity || 1) * Number(item.price || item.unitPrice || 0)), 0);
-                    if(realTotal > 0 && inv.total > realTotal * 10) {
-                        inv.total = realTotal; // تصحيح المجموع الوهمي
-                    }
-                } else if(inv.total > 10000000) {
-                    // إذا كان الإجمالي أكبر من 10 مليون وليس له بنود واضحة، يتم ضبطه إلى حد معقول أو تصحيحه
-                    inv.total = 15000; 
-                }
-                return inv;
-            });
-            localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
 
-            // إعادة بناء المعاملات المالية في الخزنة لتكون مطابقة 100% للفواتير الصحيحة وفقط بدون تكرار
-            let manualTx = (JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []).filter(t => {
-                let isInv = t.desc.includes('INV-') || t.desc.includes('BATCH-') || t.desc.includes('فاتورة مبيعات');
-                return !isInv; // الاحتفاظ بالمصروفات اليدوية فقط
-            });
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-            let newInvoiceTx = invoices.map(inv => ({
-                id: 'TX-' + Math.floor(100 + Math.random() * 900),
-                type: 'إيراد',
-                amount: Number(inv.total),
-                desc: inv.isBatch ? `قيمة فاتورة مبيعات مجمعة ${inv.id}` : `فاتورة مبيعات ${inv.id}`,
-                date: inv.date || new Date().toISOString().split('T')[0]
-            }));
+        const invoicesRef = collection(db, "invoices");
+        const transactionsRef = collection(db, "transactions");
+        const productsRef = collection(db, "products");
+        const accountsRef = collection(db, "accounts");
 
-            let finalTransactions = [...manualTx, ...newInvoiceTx];
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(finalTransactions));
+        let state = {
+            invoices: [],
+            transactions: [],
+            products: [],
+            accounts: []
+        };
 
-            loadDashboard();
-            alert('✓ تم إصلاح جميع الأرقام الوهمية وضبط الحسابات بنجاح!');
-        }
+        let salesChartInstance = null;
+        let vaultChartInstance = null;
 
-        function loadDashboard() {
-            let adminName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
-            let clients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
-            let products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
-            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+        // المزامنة اللحظية للبيانات السحابية
+        onSnapshot(accountsRef, (snapshot) => {
+            state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            if (state.accounts.length > 0) {
+                document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
+            }
+        });
 
+        onSnapshot(invoicesRef, (snapshot) => {
+            state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            updateDashboard();
+        });
+
+        onSnapshot(transactionsRef, (snapshot) => {
+            state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            updateDashboard();
+        });
+
+        onSnapshot(productsRef, (snapshot) => {
+            state.products = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            updateDashboard();
+        });
+
+        function updateDashboard() {
+            let adminName = localStorage.getItem('eidco_v13_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');
             document.getElementById('dashAdminName').innerText = adminName;
 
-            let totalInc = transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
-            let totalExp = transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
-            let totalSales = invoices.reduce((s,i)=>s+Number(i.total),0);
-            let totalProfits = invoices.reduce((s,i)=>s+Number(i.profit||0),0);
+            let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
+            let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
+            let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
+            let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
 
             document.getElementById('dashVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
             document.getElementById('dashSales').innerText = totalSales.toLocaleString() + ' ج.م';
             document.getElementById('dashProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
-            document.getElementById('dashProductsCount').innerText = products.length + ' صنف';
+            document.getElementById('dashProductsCount').innerText = state.products.length + ' صنف';
 
-            // Render Recent Logs Table
+            // عرض جدول أحدث المعاملات الحية
             let logsTable = document.getElementById('dashLogsTable');
-            let recentTxs = [...transactions].reverse().slice(0, 8);
+            let recentTxs = [...state.transactions].reverse().slice(0, 8);
             if(!recentTxs.length) {
                 logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات مسجلة بعد.</td></tr>`;
             } else {
                 logsTable.innerHTML = recentTxs.map(t => `
                     <tr class="hover:bg-slate-50">
-                        <td class="p-3 mono-font text-indigo-600 font-bold">${t.id}</td>
-                        <td class="p-3 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
-                        <td class="p-3 mono-font font-bold">${Number(t.amount).toLocaleString()} ج.م</td>
-                        <td class="p-3 text-slate-600">${t.desc}</td>
+                        <td class="p-3 mono-font text-indigo-600 font-bold">${t.id || 'TX'}</td>
+                        <td class="p-3 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type || 'إيراد'}</td>
+                        <td class="p-3 mono-font font-bold">${Number(t.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-3 text-slate-600">${t.desc || '---'}</td>
                         <td class="p-3 mono-font text-slate-500">${t.date || 'اليوم'}</td>
                     </tr>
                 `).join('');
             }
+
+            renderCharts(totalInc, totalExp);
         }
 
-        loadDashboard();
+        function renderCharts(totalInc, totalExp) {
+            // رسم بياني للمبيعات
+            let salesCtx = document.getElementById('dashSalesChart').getContext('2d');
+            if (salesChartInstance) salesChartInstance.destroy();
 
-        // Charts
-        let invoicesData = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-        let txsData = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
-        let totalIncChart = txsData.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
-        let totalExpChart = txsData.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+            salesChartInstance = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: state.invoices.length ? state.invoices.map(i => i.id || 'INV') : ['بداية التشغيل', 'اليوم'],
+                    datasets: [{ 
+                        label: 'المبيعات الكلية', 
+                        data: state.invoices.length ? state.invoices.map(i => i.total || 0) : [0, 15000], 
+                        borderColor: '#4f46e5', 
+                        tension: 0.4, 
+                        fill: true, 
+                        backgroundColor: 'rgba(79, 70, 229, 0.08)' 
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
 
-        new Chart(document.getElementById('dashSalesChart'), {
-            type: 'line',
-            data: {
-                labels: invoicesData.length ? invoicesData.map(i=>i.id) : ['بداية التشغيل', 'اليوم'],
-                datasets: [{ label: 'المبيعات الكلية', data: invoicesData.length ? invoicesData.map(i=>i.total) : [0, 15000], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.08)' }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+            // رسم بياني للتدفقات المالية بالخزنة
+            let vaultCtx = document.getElementById('dashVaultChart').getContext('2d');
+            if (vaultChartInstance) vaultChartInstance.destroy();
 
-        new Chart(document.getElementById('dashVaultChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['الإيرادات', 'المصروفات'],
-                datasets: [{ data: [totalIncChart || 1, totalExpChart || 1], backgroundColor: ['#10b981', '#f43f5e'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+            vaultChartInstance = new Chart(vaultCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['الإيرادات', 'المصروفات'],
+                    datasets: [{ 
+                        data: [totalInc || 1, totalExp || 1], 
+                        backgroundColor: ['#10b981', '#f43f5e'] 
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // دالة إصلاح البيانات المضخمة وتصحيح الفواتير والمعاملات سحابياً
+        window.fixCorruptedData = async function() {
+            if(!confirm('هل تريد إصلاح وتصحيح جميع الأرقام الوهمية والمضخمة وإعادة ضبط الحسابات في Firebase؟')) return;
+
+            try {
+                for (let inv of state.invoices) {
+                    if (inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                        let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || item.quantity || 1) * Number(item.price || item.unitPrice || 0)), 0);
+                        if (realTotal > 0 && inv.total > realTotal * 10 && inv.docId) {
+                            await updateDoc(doc(db, "invoices", inv.docId), { total: realTotal });
+                        }
+                    } else if (inv.total > 10000000 && inv.docId) {
+                        await updateDoc(doc(db, "invoices", inv.docId), { total: 15000 });
+                    }
+                }
+
+                alert('✓ تم إصلاح جميع الأرقام الوهمية وضبط الحسابات السحابية بنجاح!');
+            } catch (err) {
+                alert('حدث خطأ أثناء إصلاح البيانات: ' + err.message);
+            }
+        };
     </script>
 </body>
 </html>

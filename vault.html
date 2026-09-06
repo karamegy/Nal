@@ -65,7 +65,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية مع الفواتير</span>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة تلقائية فورية مع الفواتير</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
@@ -120,18 +120,22 @@
         function syncVaultWithInvoices() {
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            
+            // جمع كافة معرفات الفواتير الحالية النشطة في النظام
             let activeInvoiceIds = invoices.map(i => i.id);
 
-            // تصفية وحذف الحركات المرتبطة بفواتير تم حذفها
+            // تصفية المعاملات: إزالة أي معاملة مرتبطة بفاتورة (INV أو BATCH) لم تعد موجودة في الفواتير
             let cleanedTransactions = transactions.filter(t => {
                 let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
                 if (match) {
                     let invId = match[1];
+                    // إذا كانت الفاتورة موجودة في القائمة النشطة نبقي عليها، وإذا تم حذفها يتم حذف معاملتها فوراً
                     return activeInvoiceIds.includes(invId);
                 }
-                return true; // الاحتفاظ بالحركات اليدوية الأخرى
+                return true; // الاحتفاظ بالحركات اليدوية الأخرى (مثل المصروفات أو التحصيلات)
             });
 
+            // تحديث الذاكرة المحلية فوراً
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
             return cleanedTransactions;
         }

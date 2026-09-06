@@ -117,63 +117,48 @@
     </div>
 
     <script>
-        let state = {
-            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [],
-            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || []
-        };
-
-        // دالة المزامنة التلقائية مع الفواتير المحذوفة
         function syncVaultWithInvoices() {
-            // استخراج معرفات الفواتير الحالية الموجودة في النظام
-            let activeInvoiceIds = state.invoices.map(i => i.id);
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let activeInvoiceIds = invoices.map(i => i.id);
 
-            // تصفية المعاملات النقدية:
-            // الاحتفاظ بجميع المصروفات والإيرادات اليدوية وتحصيلات العملاء،
-            // وحذف أي معاملة مرتبطة بفاتورة مبيعات (فردية أو مجمعة) تم حذفها بالفعل.
-            state.transactions = state.transactions.filter(t => {
-                if (t.desc.startsWith('فاتورة مبيعات INV-') || t.desc.startsWith('قيمة فاتورة مبيعات مجمعة BATCH-')) {
-                    // استخراج رقم الفاتورة من البيان
-                    let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
-                    if (match) {
-                        let invId = match[1];
-                        return activeInvoiceIds.includes(invId); // يبقى فقط إذا كانت الفاتورة موجودة
-                    }
+            // تصفية وحذف الحركات المرتبطة بفواتير تم حذفها
+            let cleanedTransactions = transactions.filter(t => {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                if (match) {
+                    let invId = match[1];
+                    return activeInvoiceIds.includes(invId);
                 }
-                return true; // الاحتفاظ بباقي الحركات غير المرتبطة بفواتير محذوفة
+                return true; // الاحتفاظ بالحركات اليدوية الأخرى
             });
 
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-        }
-
-        function saveData() {
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-            renderVault();
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
+            return cleanedTransactions;
         }
 
         function renderVault() {
-            // تشغيل المزامنة أولاً قبل العرض لضمان تطابق البيانات
-            syncVaultWithInvoices();
+            let transactions = syncVaultWithInvoices();
 
-            let inc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
-            let exp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+            let inc = transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+            let exp = transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
             
             document.getElementById('totalIncome').innerText = inc.toLocaleString() + ' ج.م';
             document.getElementById('totalExpense').innerText = exp.toLocaleString() + ' ج.م';
             document.getElementById('netVault').innerText = (inc - exp).toLocaleString() + ' ج.م';
 
             let tbody = document.getElementById('vaultTableBody');
-            if(!state.transactions.length) {
+            if(!transactions.length) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد حركات نقدية مسجلة.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = state.transactions.map(t => `
+            tbody.innerHTML = transactions.map(t => `
                 <tr class="hover:bg-slate-50">
                     <td class="p-4 mono-font text-indigo-600 font-bold">${t.id}</td>
                     <td class="p-4 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
                     <td class="p-4 mono-font font-bold">${Number(t.amount).toLocaleString()} ج.م</td>
                     <td class="p-4 text-slate-600">${t.desc}</td>
-                    <td class="p-4 mono-font text-slate-500">${t.date || '---'}</td>
+                    <td class="p-4 mono-font text-slate-500">${t.date || new Date().toISOString().split('T')[0]}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
                         <button onclick="editTx('${t.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="deleteTx('${t.id}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i></button>
@@ -196,7 +181,8 @@
         }
 
         function editTx(id) {
-            let t = state.transactions.find(x => x.id === id);
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            let t = transactions.find(x => x.id === id);
             if(!t) return;
 
             document.getElementById('modalTitle').innerText = `تعديل الحركة (${t.id})`;
@@ -215,10 +201,11 @@
 
             if(!amount || !desc) return alert('الرجاء إدخال المبلغ والبيان');
 
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             let today = new Date().toISOString().split('T')[0];
 
             if(editId) {
-                let t = state.transactions.find(x => x.id === editId);
+                let t = transactions.find(x => x.id === editId);
                 if(t) {
                     t.type = type;
                     t.amount = amount;
@@ -226,18 +213,21 @@
                 }
             } else {
                 let newId = 'TX-' + Math.floor(100 + Math.random() * 900);
-                state.transactions.push({ id: newId, type, amount, desc, date: today });
+                transactions.push({ id: newId, type, amount, desc, date: today });
             }
 
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
             closeModal();
-            saveData();
+            renderVault();
             alert('✓ تم حفظ الحركة النقدية بنجاح');
         }
 
         function deleteTx(id) {
             if(!confirm('هل أنت متأكد من حذف هذه الحركة النقدية؟')) return;
-            state.transactions = state.transactions.filter(t => t.id !== id);
-            saveData();
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            transactions = transactions.filter(t => t.id !== id);
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
+            renderVault();
         }
 
         renderVault();

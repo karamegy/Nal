@@ -120,6 +120,9 @@
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
                     <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS - Firebase)</h1>
                     <div class="flex items-center gap-3">
+                        <button onclick="window.refreshAllData()" class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer">
+                            <i class="fa-solid fa-rotate ml-1"></i> تحديث القراءات
+                        </button>
                         <span id="connectionBadge" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200">
                             <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة
                         </span>
@@ -221,7 +224,7 @@
                             </thead>
                             <tbody id="fleetTableBody" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري تهيئة الاتصال السحابي وتحميل الأسطول...</td>
+                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري قراءة البيانات من السحابة...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -277,7 +280,7 @@
         import { 
             getFirestore, 
             collection, 
-            onSnapshot, 
+            getDocs, 
             doc, 
             setDoc,
             deleteDoc,
@@ -402,72 +405,113 @@
 
         let fleetMarkers = {};
         
-        // استماع حقيقي مع ميزة الإنشاء التلقائي للمجموعة في فايرستور إذا كانت فارغة لضمان ظهور النتائج فوراً
-        onSnapshot(fleetRef, async (snapshot) => {
-            let fleetDocs = [];
-            let tableHtml = '';
+        // جلب بيانات الأسطول مرة واحدة لتوفير قراءات فايرستور
+        async function loadFleetData() {
+            try {
+                let snapshot = await getDocs(fleetRef);
+                let fleetDocs = [];
+                let tableHtml = '';
+                
+                Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
+                fleetMarkers = {};
 
-            // إذا كانت المجموعة فارغة تماماً، نقوم بإنشاء أول مركبة افتراضية لكي تظهر فوراً في فايرستور
-            if (snapshot.empty) {
-                try {
-                    await addDoc(fleetRef, {
-                        name: "شاحنة الأسطول الرئيسية 01",
-                        plate: "أ ب ج 1234",
-                        lat: 30.0444,
-                        lng: 31.2357,
-                        speed: 35,
-                        updatedAt: new Date().toISOString()
-                    });
-                    return; // ستتم إعادة تشغيل الـ snapshot تلقائياً بعد الإضافة
-                } catch (e) {
-                    console.error("Auto-seed error: ", e);
+                if (snapshot.empty) {
+                    document.getElementById('mapFleetCount').innerText = '0 مركبة';
+                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط على زر "إضافة مركبة جديدة" أعلاه للبدء.</td></tr>`;
+                    return;
                 }
+
+                snapshot.forEach(docSnap => {
+                    let v = docSnap.data();
+                    let id = docSnap.id;
+                    v.id = id;
+                    fleetDocs.push(v);
+
+                    if (v.lat && v.lng) {
+                        let marker = L.marker([v.lat, v.lng], {
+                            icon: L.divIcon({
+                                html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
+                                iconSize: [36, 36]
+                            })
+                        }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
+                        
+                        fleetMarkers[id] = marker;
+                    }
+
+                    tableHtml += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
+                            <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
+                            <td class="p-3 mono-font text-slate-600">${v.lat ? Number(v.lat).toFixed(4) : '--'}</td>
+                            <td class="p-3 mono-font text-slate-600">${v.lng ? Number(v.lng).toFixed(4) : '--'}</td>
+                            <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
+                            <td class="p-3 text-center">
+                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${v.lat || 30.0444}, ${v.lng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
+                document.getElementById('fleetTableBody').innerHTML = tableHtml;
+            } catch (error) {
+                console.error("Firestore Error: ", error);
+                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بقاعدة البيانات: ${error.message}</td></tr>`;
             }
-            
-            Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
-            fleetMarkers = {};
+        }
 
-            snapshot.forEach(docSnap => {
-                let v = docSnap.data();
-                let id = docSnap.id;
-                v.id = id;
-                fleetDocs.push(v);
+        let clientMarkers = [];
+        async function loadClientsData() {
+            try {
+                let snapshot = await getDocs(clientsRef);
+                let clients = [];
+                snapshot.forEach(docSnap => clients.push(docSnap.data()));
+                document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
 
-                if (v.lat && v.lng) {
-                    let marker = L.marker([v.lat, v.lng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
-                            iconSize: [36, 36]
-                        })
-                    }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
+                clientMarkers.forEach(m => map.removeLayer(m));
+                clientMarkers = [];
+
+                clients.forEach(c => {
+                    let lat = c.lat || (30.0333 + (Math.random() - 0.5) * 0.05);
+                    let lng = c.lng || (31.2333 + (Math.random() - 0.5) * 0.05);
+                    let balance = c.balance || 0;
+                    let phone = c.phone || 'غير مسجل';
                     
-                    fleetMarkers[id] = marker;
-                }
+                    let popupHtml = `
+                        <div style="font-family: 'Cairo', sans-serif; text-align: right; min-width: 180px;">
+                            <b style="font-size: 14px; color: #0f172a;"><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><hr style="margin: 5px 0; border-color: #e2e8f0;">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">الهاتف: <span class="mono-font">${phone}</span></div>
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">الرصيد / الفواتير: <span class="mono-font font-bold text-indigo-600">${balance} ج.م</span></div>
+                            <button type="button" onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
+                                <i class="fa-solid fa-route ml-1"></i> توجيه الأسطول إلى هنا
+                            </button>
+                        </div>
+                    `;
 
-                tableHtml += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
-                        <td class="p-3 mono-font text-slate-600">${v.lat ? Number(v.lat).toFixed(4) : '--'}</td>
-                        <td class="p-3 mono-font text-slate-600">${v.lng ? Number(v.lng).toFixed(4) : '--'}</td>
-                        <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
-                        <td class="p-3 text-center">
-                            <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${v.lat || 30.0444}, ${v.lng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
+                    let marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
+                            iconSize: [30, 30]
+                        })
+                    }).addTo(map).bindPopup(popupHtml);
 
-            document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
-            if(fleetDocs.length === 0) {
-                tableHtml = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط على "إضافة مركبة جديدة".</td></tr>`;
+                    clientMarkers.push(marker);
+                });
+            } catch (error) {
+                console.error("Clients fetch error: ", error);
             }
-            document.getElementById('fleetTableBody').innerHTML = tableHtml;
-        }, (error) => {
-            console.error("Firestore Error: ", error);
-            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بقاعدة البيانات. تأكد من قواعد الأمان (Rules).</td></tr>`;
-        });
+        }
+
+        // تشغيل الجلب الأولي عند فتح الصفحة
+        loadFleetData();
+        loadClientsData();
+
+        window.refreshAllData = function() {
+            loadFleetData();
+            loadClientsData();
+            alert("تم تحديث البيانات وقراءات السحابة بنجاح.");
+        };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
             const modalTitle = document.getElementById('modalTitle');
@@ -512,6 +556,7 @@
                 }
                 window.closeVehicleModal();
                 alert("تم حفظ بيانات المركبة بنجاح سحابياً.");
+                loadFleetData(); // تحديث الجدول والخريطة فوراً بدون الحاجة لـ onSnapshot
             } catch (err) {
                 console.error("Error saving vehicle: ", err);
                 alert("حدث خطأ أثناء حفظ المركبة: " + err.message);
@@ -523,50 +568,12 @@
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
                     alert("تم حذف المركبة بنجاح.");
+                    loadFleetData(); // تحديث الجدول فوراً
                 } catch (err) {
                     alert("خطأ أثناء حذف المركبة: " + err.message);
                 }
             }
         };
-
-        let clientMarkers = [];
-        onSnapshot(clientsRef, (snapshot) => {
-            let clients = [];
-            snapshot.forEach(docSnap => clients.push(docSnap.data()));
-            document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
-
-            clientMarkers.forEach(m => map.removeLayer(m));
-            clientMarkers = [];
-
-            clients.forEach(c => {
-                let lat = c.lat || (30.0333 + (Math.random() - 0.5) * 0.05);
-                let lng = c.lng || (31.2333 + (Math.random() - 0.5) * 0.05);
-                let balance = c.balance || 0;
-                let phone = c.phone || 'غير مسجل';
-                
-                let popupHtml = `
-                    <div style="font-family: 'Cairo', sans-serif; text-align: right; min-width: 180px;">
-                        <b style="font-size: 14px; color: #0f172a;"><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><hr style="margin: 5px 0; border-color: #e2e8f0;">
-                        <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">الهاتف: <span class="mono-font">${phone}</span></div>
-                        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">الرصيد / الفواتير: <span class="mono-font font-bold text-indigo-600">${balance} ج.م</span></div>
-                        <button type="button" onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
-                            <i class="fa-solid fa-route ml-1"></i> توجيه الأسطول إلى هنا
-                        </button>
-                    </div>
-                `;
-
-                let marker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
-                        iconSize: [30, 30]
-                    })
-                }).addTo(map).bindPopup(popupHtml);
-
-                clientMarkers.push(marker);
-            });
-        }, (error) => {
-            console.error("Clients fetch error: ", error);
-        });
 
         let currentUserLatLng = null;
         if("geolocation" in navigator) {

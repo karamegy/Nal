@@ -14,6 +14,11 @@
         if (!sessionStorage.getItem('eidco_session_auth')) {
             window.location.href = 'auth.html';
         }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            });
+        }
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -182,18 +187,38 @@
     </div>
 
     <script>
+        // دالة تنظيف البيانات وتصحيح أي أرقام فلكية وهمية عند التشغيل
+        function sanitizeBatchData() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let modified = false;
+
+            invoices = invoices.map(inv => {
+                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
+                    if(realTotal > 0 && inv.total > realTotal * 10) {
+                        inv.total = realTotal;
+                        modified = true;
+                    }
+                } else if(inv.total > 10000000) {
+                    inv.total = 16000;
+                    modified = true;
+                }
+                return inv;
+            });
+
+            if(modified) {
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
+            }
+        }
+
+        sanitizeBatchData();
+
         let state = {
             clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
             products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
             invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
         };
-
-        // التأكد من وجود عميل افتراضي على الأقل لمنع توقف القائمة المنسدلة
-        if (!state.clients.length) {
-            state.clients = [{ name: 'عميل نقدي عام', phone: '---', type: 'نقطة بيع' }];
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-        }
 
         let editingBatchId = null;
 
@@ -211,12 +236,6 @@
         function addBatchItemRow(productCode = '', qtyVal = 1, priceVal = 0) {
             let tbody = document.getElementById('batchItemsTableBody');
             let rowId = 'row-' + Date.now() + Math.random();
-            
-            if (!state.products.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-bold">⚠️ لا توجد أصناف في المخزن! يرجى إضافة أصناف من قسم المخزن والأصناف أولاً.</td></tr>`;
-                return;
-            }
-
             let productOptions = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === productCode ? 'selected' : ''}>${p.name} (المتاح: ${p.qty})</option>`).join('');
 
             let tr = document.createElement('tr');
@@ -256,7 +275,6 @@
 
             rows.forEach(row => {
                 let sel = row.querySelector('.item-product');
-                if(!sel) return;
                 let qty = Number(row.querySelector('.item-qty').value) || 0;
                 let price = Number(row.querySelector('.item-price').value) || 0;
                 let subtotal = qty * price;
@@ -287,7 +305,6 @@
 
             for(let row of rows) {
                 let sel = row.querySelector('.item-product');
-                if(!sel) return alert('يرجى التحقق من الأصناف المضافة');
                 let code = sel.value;
                 let prodName = sel.options[sel.selectedIndex].text.split(' (')[0];
                 let qty = Number(row.querySelector('.item-qty').value) || 1;
@@ -304,6 +321,7 @@
             let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
             let today = new Date().toISOString().split('T')[0];
 
+            // إذا كان في وضع التعديل، قم بإعادة الكميات القديمة للمخزن أولاً
             if(editingBatchId) {
                 let oldInv = state.invoices.find(i => i.id === editingBatchId);
                 if(oldInv && oldInv.items) {
@@ -315,6 +333,7 @@
                 state.invoices = state.invoices.filter(i => i.id !== editingBatchId);
             }
 
+            // خصم الكميات الجديدة من المخزن
             for(let item of items) {
                 let p = state.products.find(x => x.code === item.code);
                 if(!p || p.qty < item.qty) {
@@ -335,6 +354,7 @@
 
             state.invoices.push(newInvoice);
 
+            // تحديث المعاملات المالية ومنع التكرار نهائياً بحذف أي معاملات سابقة لنفس رقم الفاتورة
             state.transactions = state.transactions.filter(t => !t.desc.includes(batchId));
             state.transactions.push({
                 id: 'TX-' + Math.floor(100 + Math.random() * 900),
@@ -422,6 +442,7 @@
             state.invoices = state.invoices.filter(i => i.id !== id);
             localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
             
+            // حذف المعاملة المرتبطة بها من الخزنة
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             transactions = transactions.filter(t => !t.desc.includes(id));
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));

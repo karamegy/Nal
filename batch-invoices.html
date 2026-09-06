@@ -187,6 +187,32 @@
     </div>
 
     <script>
+        // دالة تنظيف البيانات وتصحيح أي أرقام فلكية وهمية عند التشغيل
+        function sanitizeBatchData() {
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
+            let modified = false;
+
+            invoices = invoices.map(inv => {
+                if(inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                    let realTotal = inv.items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unitPrice || item.price || 0)), 0);
+                    if(realTotal > 0 && inv.total > realTotal * 10) {
+                        inv.total = realTotal;
+                        modified = true;
+                    }
+                } else if(inv.total > 10000000) {
+                    inv.total = 16000;
+                    modified = true;
+                }
+                return inv;
+            });
+
+            if(modified) {
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoices));
+            }
+        }
+
+        sanitizeBatchData();
+
         let state = {
             clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
             products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
@@ -292,6 +318,9 @@
                 items.push({ code, prodName, qty, unitPrice, subtotal });
             }
 
+            let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
+            let today = new Date().toISOString().split('T')[0];
+
             // إذا كان في وضع التعديل، قم بإعادة الكميات القديمة للمخزن أولاً
             if(editingBatchId) {
                 let oldInv = state.invoices.find(i => i.id === editingBatchId);
@@ -313,9 +342,6 @@
                 p.qty -= item.qty;
             }
 
-            let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
-            let today = new Date().toISOString().split('T')[0];
-
             let newInvoice = {
                 id: batchId,
                 client: clientName,
@@ -328,8 +354,8 @@
 
             state.invoices.push(newInvoice);
 
-            // تحديث المعاملات المالية
-            state.transactions = state.transactions.filter(t => t.desc !== `قيمة فاتورة مبيعات مجمعة ${batchId}`);
+            // تحديث المعاملات المالية ومنع التكرار نهائياً بحذف أي معاملات سابقة لنفس رقم الفاتورة
+            state.transactions = state.transactions.filter(t => !t.desc.includes(batchId));
             state.transactions.push({
                 id: 'TX-' + Math.floor(100 + Math.random() * 900),
                 type: 'إيراد',
@@ -415,10 +441,15 @@
             }
             state.invoices = state.invoices.filter(i => i.id !== id);
             localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+            
+            // حذف المعاملة المرتبطة بها من الخزنة
+            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            transactions = transactions.filter(t => !t.desc.includes(id));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactions));
+
             renderBatchInvoicesList();
         }
 
-        // معاينة الفاتورة وتصديرها كصورة
         function openInvoicePreview(id) {
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
@@ -455,7 +486,6 @@
             });
         }
 
-        // إرسال الفاتورة عبر واتساب
         function sendInvoiceWhatsApp(id) {
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;

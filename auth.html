@@ -4,9 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // المصادقة البيومترية الآمنة</title>
+    
+    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة في الرأس لإخفاء شريط الروابط -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+        });
+      }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
@@ -86,7 +101,6 @@
                 statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // تعيين علامات الاعتماد لمنع إعادة التوجيه اللانهائي
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', adminName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
@@ -99,7 +113,6 @@
                 statusEl.innerText = "⚠️ فشل التحقق، تم السماح بالدخول الاحتياطي.";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                 
-                // تعيين علامات الاعتماد حتى في حالة الدخول الاحتياطي
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', adminName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
@@ -109,18 +122,6 @@
                 }, 1000);
             }
         }
-</script>
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
-    });
-  }
-</script>
-
+    </script>
 </body>
 </html>

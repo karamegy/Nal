@@ -55,6 +55,42 @@
         #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
+
+    <!-- سكربت عام للتحكم بالواجهة والنوافذ لضمان العمل الفوري قبل تحميل الوحدات -->
+    <script>
+        window.openAddVehicleModal = function() {
+            const modalTitle = document.getElementById('modalTitle');
+            const vehicleId = document.getElementById('vehicleId');
+            const vehicleName = document.getElementById('vehicleName');
+            const vehiclePlate = document.getElementById('vehiclePlate');
+            const vehicleLat = document.getElementById('vehicleLat');
+            const vehicleLng = document.getElementById('vehicleLng');
+            const vehicleModal = document.getElementById('vehicleModal');
+
+            if(modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول';
+            if(vehicleId) vehicleId.value = '';
+            if(vehicleName) vehicleName.value = '';
+            if(vehiclePlate) vehiclePlate.value = '';
+            if(vehicleLat) vehicleLat.value = '30.0444';
+            if(vehicleLng) vehicleLng.value = '31.2357';
+            if(vehicleModal) vehicleModal.classList.remove('hidden');
+        };
+
+        window.closeVehicleModal = function() {
+            const vehicleModal = document.getElementById('vehicleModal');
+            if(vehicleModal) vehicleModal.classList.add('hidden');
+        };
+
+        window.toggleTouchPanel = function() {
+            const panel = document.getElementById('touchControlPanel');
+            const icon = document.getElementById('panelToggleIcon');
+            if(panel && icon) {
+                panel.classList.toggle('collapsed');
+                icon.classList.toggle('fa-chevron-up');
+                icon.classList.toggle('fa-chevron-down');
+            }
+        };
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -376,7 +412,6 @@
             let fleetDocs = [];
             let tableHtml = '';
             
-            // مسح العلامات القديمة
             Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
             fleetMarkers = {};
 
@@ -419,29 +454,23 @@
             document.getElementById('fleetTableBody').innerHTML = tableHtml;
         });
 
-        // دوال الإضافة والتعديل والحذف المباشرة في Firebase
-        window.openAddVehicleModal = function() {
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول';
-            document.getElementById('vehicleId').value = '';
-            document.getElementById('vehicleName').value = '';
-            document.getElementById('vehiclePlate').value = '';
-            document.getElementById('vehicleLat').value = '30.0444';
-            document.getElementById('vehicleLng').value = '31.2357';
-            document.getElementById('vehicleModal').classList.remove('hidden');
-        };
-
+        // دوال حفظ وحذف وتعديل المركبات سحابياً
         window.editVehicle = function(id, name, plate, lat, lng) {
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة';
-            document.getElementById('vehicleId').value = id;
-            document.getElementById('vehicleName').value = name;
-            document.getElementById('vehiclePlate').value = plate;
-            document.getElementById('vehicleLat').value = lat;
-            document.getElementById('vehicleLng').value = lng;
-            document.getElementById('vehicleModal').classList.remove('hidden');
-        };
+            const modalTitle = document.getElementById('modalTitle');
+            const vehicleId = document.getElementById('vehicleId');
+            const vehicleName = document.getElementById('vehicleName');
+            const vehiclePlate = document.getElementById('vehiclePlate');
+            const vehicleLat = document.getElementById('vehicleLat');
+            const vehicleLng = document.getElementById('vehicleLng');
+            const vehicleModal = document.getElementById('vehicleModal');
 
-        window.closeVehicleModal = function() {
-            document.getElementById('vehicleModal').classList.add('hidden');
+            if(modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة';
+            if(vehicleId) vehicleId.value = id;
+            if(vehicleName) vehicleName.value = name;
+            if(vehiclePlate) vehiclePlate.value = plate;
+            if(vehicleLat) vehicleLat.value = lat;
+            if(vehicleLng) vehicleLng.value = lng;
+            if(vehicleModal) vehicleModal.classList.remove('hidden');
         };
 
         window.saveVehicle = async function(e) {
@@ -559,14 +588,6 @@
         window.panToFleet = function() { map.setView([30.0444, 31.2357], 14); };
         window.panToUser = function() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); };
         window.resetMapView = function() { map.setView([30.0444, 31.2357], 13); };
-
-        window.toggleTouchPanel = function() {
-            const panel = document.getElementById('touchControlPanel');
-            const icon = document.getElementById('panelToggleIcon');
-            panel.classList.toggle('collapsed');
-            icon.classList.toggle('fa-chevron-up');
-            icon.classList.toggle('fa-chevron-down');
-        };
     </script>
 
     <!-- الزر العائم المتحرك لبث EIDCO TV -->

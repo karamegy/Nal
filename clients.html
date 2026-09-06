@@ -167,7 +167,7 @@
                                     <th class="p-2.5">التفاصيل</th>
                                     <th class="p-2.5">المبلغ</th>
                                     <th class="p-2.5">التاريخ</th>
-                                    <th class="p-2.5 text-center">معاينة الفاتورة</th>
+                                    <th class="p-2.5 text-center">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -341,7 +341,7 @@
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center">
                             <button onclick="previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة كصورة">
-                                <i class="fa-solid fa-eye"></i>
+                                <i class="fa-solid fa-eye"></i> معاينة الفاتورة
                             </button>
                         </td>
                     </tr>
@@ -351,11 +351,18 @@
             clientPayments.forEach(pay => {
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
-                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">سداد دفعة</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
                         <td class="p-2.5">دفعة نقدية مسددة</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date}</td>
-                        <td class="p-2.5 text-center text-slate-400">---</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
+                        <td class="p-2.5 text-center space-x-1 space-x-reverse">
+                            <button onclick="editPayment('${pay.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل الدفعة">
+                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            </button>
+                            <button onclick="deletePayment('${pay.id}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف الدفعة">
+                                <i class="fa-solid fa-trash"></i> حذف
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
@@ -373,8 +380,52 @@
             currentActiveClient = null;
         }
 
+        function deletePayment(payId) {
+            if(!confirm('هل أنت متأكد من حذف دفعة السداد هذه؟')) return;
+            let pay = state.payments.find(p => p.id === payId);
+            if(!pay) return;
+
+            state.payments = state.payments.filter(p => p.id !== payId);
+            
+            let txIndex = state.transactions.findIndex(t => t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
+            if(txIndex !== -1) {
+                state.transactions.splice(txIndex, 1);
+            }
+
+            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+
+            alert('✓ تم حذف دفعة السداد وتحديث الحساب بنجاح');
+            openClientStatement(currentActiveClient.name);
+            renderClients();
+        }
+
+        function editPayment(payId) {
+            let pay = state.payments.find(p => p.id === payId);
+            if(!pay) return;
+
+            let newAmountStr = prompt('أدخل مبلغ دفعة السداد الجديد (ج.م):', pay.amount);
+            if(newAmountStr === null) return;
+            let newAmount = Number(newAmountStr);
+            if(!newAmount || newAmount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+
+            let oldAmount = pay.amount;
+            pay.amount = newAmount;
+
+            let tx = state.transactions.find(t => t.desc.includes(pay.clientName) && Number(t.amount) === Number(oldAmount));
+            if(tx) {
+                tx.amount = newAmount;
+            }
+
+            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+
+            alert('✓ تم تعديل مبلغ الدفعة وتحديث الحساب بنجاح');
+            openClientStatement(currentActiveClient.name);
+            renderClients();
+        }
+
         function previewInvoice(invId) {
-            // البحث في الفواتير الفردية أو المجمعة
             let inv = state.invoices.find(i => i.id === invId) || state.batchInvoices.find(b => b.id === invId);
             if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة');
 
@@ -399,14 +450,12 @@
 
             document.getElementById('prevSingleItemsBody').innerHTML = itemsHtml;
             
-            // إخفاء نافذة كشف الحساب مؤقتاً لتجنب التداخل أثناء التصوير
             document.getElementById('statementModal').classList.remove('active');
             document.getElementById('invoicePreviewModal').classList.add('active');
         }
 
         function closeInvoicePreviewModal() {
             document.getElementById('invoicePreviewModal').classList.remove('active');
-            // إعادة فتح كشف الحساب إذا كان هناك عميل نشط
             if(currentActiveClient) {
                 openClientStatement(currentActiveClient.name);
             }

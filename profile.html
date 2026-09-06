@@ -62,7 +62,7 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">الملف الشخصي وإدارة الحساب</h1>
+                <h1 class="font-black text-slate-900 text-sm">الملف الشخصي وإدارة الحساب (Firebase)</h1>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
@@ -77,12 +77,12 @@
                             <label for="imageUploadInput" class="absolute -bottom-2 -left-2 bg-indigo-600 hover:bg-indigo-700 text-white w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer shadow-lg transition" title="تغيير الصورة الشخصية">
                                 <i class="fa-solid fa-camera text-xs"></i>
                             </label>
-                            <input type="file" id="imageUploadInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                            <input type="file" id="imageUploadInput" accept="image/*" class="hidden" onchange="window.handleImageUpload(event)">
                         </div>
                         <div class="text-center sm:text-right space-y-1">
                             <h2 class="text-xl font-black text-slate-900" id="profileNameDisplay">كرم حمدي عبدالعظيم</h2>
                             <p class="text-xs text-indigo-600 font-mono font-bold">المدير العام والمؤسس - EIDCO</p>
-                            <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-mono rounded-full font-bold mt-1">حساب موثق وآمن</span>
+                            <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-mono rounded-full font-bold mt-1">حساب موثق وآمن سحابياً</span>
                         </div>
                     </div>
 
@@ -90,7 +90,7 @@
                         <div class="space-y-4">
                             <h3 class="font-bold text-sm text-slate-900">تعديل بيانات الحساب</h3>
                             <div><label class="block mb-1 text-slate-600">الاسم الكامل</label><input type="text" id="adminNameInput" class="corporate-input w-full"></div>
-                            <button onclick="saveProfile()" class="btn-primary w-full py-2.5 text-xs">حفظ التغييرات</button>
+                            <button onclick="window.saveProfile()" class="btn-primary w-full py-2.5 text-xs">حفظ التغييرات السحابية</button>
                         </div>
                     </div>
                 </div>
@@ -100,9 +100,9 @@
                     <div class="flex justify-between items-center border-b pb-4">
                         <div>
                             <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-bullhorn text-indigo-600 ml-2"></i> النشر الموجز للحسابات والنشاط التجاري</h3>
-                            <p class="text-xs text-slate-500 mt-0.5">أنشئ تقريراً موجزاً ومختصراً لأرصدة ومبيعات المنظومة لمشاركته أو توثيقه.</p>
+                            <p class="text-xs text-slate-500 mt-0.5">أنشئ تقريراً موجزاً ومختصراً لأرصدة ومبيعات المنظومة لمشاركته أو توثيقه من السحابة.</p>
                         </div>
-                        <button onclick="generateFinancialSummary()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">
+                        <button onclick="window.generateFinancialSummary()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">
                             <i class="fa-solid fa-wand-magic-sparkles ml-1"></i> توليد الموجز تلقائياً
                         </button>
                     </div>
@@ -113,10 +113,10 @@
                     </div>
 
                     <div class="flex gap-3">
-                        <button onclick="copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center gap-2">
+                        <button onclick="window.copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center gap-2">
                             <i class="fa-solid fa-copy"></i> نسخ الموجز للحافظة
                         </button>
-                        <button onclick="shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center gap-2 transition cursor-pointer">
+                        <button onclick="window.shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center gap-2 transition cursor-pointer">
                             <i class="fa-brands fa-whatsapp text-sm"></i> مشاركة عبر واتساب
                         </button>
                     </div>
@@ -125,51 +125,144 @@
         </div>
     </div>
 
-    <script>
-        let adminName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
-        let savedAvatar = localStorage.getItem('eidco_v13_avatar');
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            doc, 
+            setDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        document.getElementById('adminNameInput').value = adminName;
-        document.getElementById('profileNameDisplay').innerText = adminName;
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
 
-        if(savedAvatar) {
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const accountsRef = collection(db, "accounts");
+        const invoicesRef = collection(db, "invoices");
+        const transactionsRef = collection(db, "transactions");
+        const clientsRef = collection(db, "clients");
+        const productsRef = collection(db, "products");
+
+        let state = {
+            accounts: [],
+            invoices: [],
+            transactions: [],
+            clients: [],
+            products: []
+        };
+
+        let currentAdminDocId = "main_admin";
+
+        // المزامنة اللحظية الحية للحساب والملف الشخصي
+        onSnapshot(accountsRef, (snapshot) => {
+            state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            updateProfileUI();
+        });
+
+        onSnapshot(invoicesRef, (snapshot) => {
+            state.invoices = snapshot.docs.map(d => d.data());
+        });
+
+        onSnapshot(transactionsRef, (snapshot) => {
+            state.transactions = snapshot.docs.map(d => d.data());
+        });
+
+        onSnapshot(clientsRef, (snapshot) => {
+            state.clients = snapshot.docs.map(d => d.data());
+        });
+
+        onSnapshot(productsRef, (snapshot) => {
+            state.products = snapshot.docs.map(d => d.data());
+        });
+
+        function updateProfileUI() {
+            let adminName = localStorage.getItem('eidco_v13_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');
+            let savedAvatar = localStorage.getItem('eidco_v13_avatar') || (state.accounts[0] ? state.accounts[0].avatar : '');
+
+            document.getElementById('adminNameInput').value = adminName;
+            document.getElementById('profileNameDisplay').innerText = adminName;
+
             let img = document.getElementById('profileAvatarImg');
-            img.src = savedAvatar;
-            img.classList.remove('hidden');
-            document.getElementById('profileAvatarText').classList.add('hidden');
-        } else {
-            document.getElementById('profileAvatarText').innerText = adminName.charAt(0);
+            let avatarText = document.getElementById('profileAvatarText');
+
+            if (savedAvatar) {
+                img.src = savedAvatar;
+                img.classList.remove('hidden');
+                avatarText.classList.add('hidden');
+            } else {
+                img.classList.add('hidden');
+                avatarText.classList.remove('hidden');
+                avatarText.innerText = adminName ? adminName.charAt(0) : 'ك';
+            }
         }
 
-        function saveProfile() {
+        window.saveProfile = async function() {
             let val = document.getElementById('adminNameInput').value.trim();
             if(!val) return alert('الرجاء إدخال اسم صحيح');
-            localStorage.setItem('eidco_v13_admin', val);
-            alert('✓ تم تحديث الملف الشخصي بنجاح');
-            location.reload();
-        }
 
-        function handleImageUpload(event) {
+            localStorage.setItem('eidco_v13_admin', val);
+            document.getElementById('profileNameDisplay').innerText = val;
+
+            try {
+                let userDocRef = doc(db, "accounts", currentAdminDocId);
+                await setDoc(userDocRef, {
+                    name: val,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                alert('✓ تم تحديث الملف الشخصي في السحابة بنجاح');
+            } catch (err) {
+                alert('✓ تم تحديث الملف الشخصي محلياً بنجاح');
+            }
+        };
+
+        window.handleImageUpload = function(event) {
             let file = event.target.files[0];
             if(!file) return;
             let reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 let base64String = e.target.result;
                 localStorage.setItem('eidco_v13_avatar', base64String);
+
                 let img = document.getElementById('profileAvatarImg');
                 img.src = base64String;
                 img.classList.remove('hidden');
                 document.getElementById('profileAvatarText').classList.add('hidden');
-                alert('✓ تم رفع وتحديث الصورة الشخصية بنجاح');
+
+                try {
+                    let userDocRef = doc(db, "accounts", currentAdminDocId);
+                    await setDoc(userDocRef, {
+                        avatar: base64String,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+
+                    alert('✓ تم رفع وتحديث الصورة الشخصية سحابياً بنجاح');
+                } catch(err) {
+                    alert('✓ تم رفع وتحديث الصورة الشخصية بنجاح');
+                }
             };
             reader.readAsDataURL(file);
-        }
+        };
 
-        function generateFinancialSummary() {
-            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
-            let clients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
-            let products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+        window.generateFinancialSummary = function() {
+            let invoices = state.invoices.length ? state.invoices : (JSON.parse(localStorage.getItem('eidco_v13_invoices')) || []);
+            let transactions = state.transactions.length ? state.transactions : (JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []);
+            let clients = state.clients.length ? state.clients : (JSON.parse(localStorage.getItem('eidco_v13_clients')) || []);
+            let products = state.products.length ? state.products : (JSON.parse(localStorage.getItem('eidco_v13_products')) || []);
+            let adminName = document.getElementById('adminNameInput').value || 'كرم حمدي عبدالعظيم';
 
             let totalSales = invoices.reduce((s,i) => s + Number(i.total || 0), 0);
             let totalProfits = invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
@@ -187,22 +280,26 @@
 📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
 
             document.getElementById('feedTextContent').value = summary;
-        }
+        };
 
-        function copyFeedText() {
+        window.copyFeedText = function() {
             let txt = document.getElementById('feedTextContent');
             if(!txt.value) return alert('الرجاء توليد أو كتابة الموجز أولاً');
             txt.select();
             navigator.clipboard.writeText(txt.value);
             alert('✓ تم نسخ موجز الحسابات إلى الحافظة بنجاح');
-        }
+        };
 
-        function shareFeedWhatsApp() {
+        window.shareFeedWhatsApp = function() {
             let txt = document.getElementById('feedTextContent').value;
             if(!txt) return alert('الرجاء توليد أو كتابة الموجز أولاً');
             let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
             window.open(url, '_blank');
-        }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateProfileUI();
+        });
     </script>
 </body>
 </html>

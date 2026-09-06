@@ -67,7 +67,7 @@
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
                     <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة</h1>
                     <div class="flex items-center gap-3">
-                        <button onclick="syncAndCleanData()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="تطهير ومزامنة الحركات مع الفواتير الحالية">
+                        <button onclick="syncAndCleanData()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer" title="حذف الفواتير المحذوفة وإزالة التكرارات">
                             <i class="fa-solid fa-rotate"></i> مزامنة وتطهير البيانات
                         </button>
                         <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> فاتورة مجمعة سريعة</a>
@@ -146,45 +146,60 @@
     </div>
 
     <script>
-        // دالة المزامنة والتطهير التلقائي الفوري لضمان دقة الأرقام وعدم وجود فواتير محذوفة عالقة
-        function syncAndCleanData() {
+        // دالة مركزية لتنظيف وإزالة المعاملات المكررة والمحذوفة بشكل نهائي
+        function getCleanTransactions() {
             let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
             let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
             let activeIds = invoices.map(i => i.id);
 
-            // تطهير المعاملات: إزالة أي معاملة مرتبطة بفاتورة (INV أو BATCH) لم تعد موجودة في جدول الفواتير الحالي
-            let cleanedTransactions = transactions.filter(t => {
-                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
-                if (match) {
-                    let invId = match[1];
-                    return activeIds.includes(invId);
-                }
-                return true; // الاحتفاظ بالحركات اليدوية الأخرى (المصروفات، التحصيلات، إلخ)
-            });
-
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
-            loadDashboard();
-            alert('✓ تم تطهير ومزامنة البيانات بنجاح وأصبحت الأرقام مطابقة للفواتير الحالية!');
-        }
-
-        function loadDashboard() {
-            // تشغيل التطهير التلقائي في الخلفية عند تحميل الصفحة
-            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-            let transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
-            let activeIds = invoices.map(i => i.id);
-
-            let cleanedTransactions = transactions.filter(t => {
+            // 1. تصفية المعاملات المرتبطة بالفواتير المحذوفة
+            let filtered = transactions.filter(t => {
                 let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
                 if (match) {
                     return activeIds.includes(match[1]);
                 }
-                return true;
+                return true; // الاحتفاظ بالحركات اليدوية الأخرى
             });
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleanedTransactions));
+
+            // 2. إزالة التكرارات (Deduplication) لمنع تضخم الأرقام
+            let uniqueMap = new Map();
+            let cleaned = [];
+
+            for (let t of filtered) {
+                let match = t.desc.match(/(INV-\d+|BATCH-\d+)/);
+                if (match) {
+                    let invId = match[1];
+                    // إذا لم يتم تخزين معاملة لهذا رقم الفاتورة من قبل، أضفها مرة واحدة فقط
+                    if (!uniqueMap.has(invId)) {
+                        uniqueMap.set(invId, true);
+                        cleaned.push(t);
+                    }
+                } else {
+                    let sig = `${t.type}_${t.amount}_${t.desc}`;
+                    if (!uniqueMap.has(sig)) {
+                        uniqueMap.set(sig, true);
+                        cleaned.push(t);
+                    }
+                }
+            }
+
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(cleaned));
+            return cleaned;
+        }
+
+        function syncAndCleanData() {
+            let cleanedTransactions = getCleanTransactions();
+            loadDashboard();
+            alert('✓ تم تطهير ومزامنة البيانات وإزالة كافة التكرارات بنجاح!');
+        }
+
+        function loadDashboard() {
+            let cleanedTransactions = getCleanTransactions();
 
             let adminName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
             let clients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
             let products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+            let invoices = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
 
             document.getElementById('dashAdminName').innerText = adminName;
 
@@ -220,7 +235,7 @@
 
         // Charts
         let invoicesData = JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [];
-        let txsData = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+        let txsData = getCleanTransactions();
         let totalIncChart = txsData.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
         let totalExpChart = txsData.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
 

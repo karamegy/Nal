@@ -230,7 +230,15 @@
             if(!isEdit) {
                 document.getElementById('modalTitle').innerText = 'إضافة صنف جديد للمخزن';
                 document.getElementById('editOriginalCode').value = '';
-                document.getElementById('prodCode').value = 'PRD-' + Math.floor(100 + Math.random() * 900);
+                
+                // توليد كود فريد تماماً لا يتكرر مع الأكواد الحالية لتجنب تعارض الحفظ
+                let products = loadProducts();
+                let uniqueCode;
+                do {
+                    uniqueCode = 'PRD-' + Math.floor(100 + Math.random() * 900);
+                } while(products.some(p => p.code === uniqueCode));
+
+                document.getElementById('prodCode').value = uniqueCode;
                 document.getElementById('prodBarcode').value = '';
                 document.getElementById('prodName').value = '';
                 document.getElementById('prodBuyPrice').value = '';
@@ -290,9 +298,9 @@
                     products.push({ code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty });
                 }
             } else {
-                // إضافة صنف جديد
+                // إضافة صنف جديد مع التحقق من عدم تكرار الكود
                 if(products.some(x => x.code === code)) {
-                    alert('هذا الكود مسجل مسبقاً');
+                    alert('هذا الكود مسجل مسبقاً، يرجى تغييره');
                     return;
                 }
                 products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
@@ -305,7 +313,7 @@
         }
 
         function deleteProduct(code) {
-            if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) رقم تأكيد الحذف;
+            if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) return;
             let products = loadProducts();
             products = products.filter(x => x.code !== code);
             saveProductsToStorage(products);

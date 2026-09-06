@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth')) {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -30,17 +30,19 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
 </head>
 <body>
     <div class="flex min-h-screen">
+        <!-- القائمة الجانبية -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -62,24 +64,55 @@
             </nav>
         </aside>
 
+        <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">مخزن الأصناف والتسعير</h1>
-                    <button onclick="openNewProductModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-box-open"></i> إضافة صنف جديد</button>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود</h1>
+                    <button onclick="openProductModal()" class="btn-primary text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-circle-plus"></i> إضافة صنف جديد
+                    </button>
                 </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6">
-                <div class="corporate-card p-6 space-y-5">
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <!-- شريط تنبيهات انخفاض المخزون -->
+                <div id="lowStockAlertBanner" class="hidden p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <h4 class="font-bold text-rose-900 text-xs">تنبيه: أصناف وصلت للحد الأدنى أو نفدت!</h4>
+                            <p class="text-[11px] text-rose-700">يرجى مراجعة الجدول أدناه للأصناف التي تحتاج إعادة طلب.</p>
+                        </div>
+                    </div>
+                    <span id="lowStockCountBadge" class="bg-rose-600 text-white font-mono font-bold px-3 py-1 rounded-full text-xs">0 أصناف</span>
+                </div>
+
+                <!-- شريط البحث والباركود -->
+                <div class="corporate-card p-4 flex gap-3 items-center">
+                    <div class="flex-1 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
+                        <input type="text" id="searchInput" oninput="renderProducts()" placeholder="البحث باسم الصنف، الكود، أو باركود..." class="corporate-input w-full pr-10 text-xs">
+                    </div>
+                </div>
+
+                <!-- جدول الأصناف -->
+                <div class="corporate-card p-6 space-y-4">
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن الحالية</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
-                                <tr class="bg-slate-100 text-slate-700 font-mono border-b border-slate-200">
-                                    <th class="p-4">الكود</th><th class="p-4">اسم الصنف</th><th class="p-4">الكمية المتاحة</th><th class="p-4">سعر الشراء</th><th class="p-4">سعر البيع</th><th class="p-4 text-center">إجراء</th>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">كود / باركود الصنف</th>
+                                    <th class="p-4">اسم الصنف</th>
+                                    <th class="p-4">سعر الشراء</th>
+                                    <th class="p-4">سعر البيع</th>
+                                    <th class="p-4">الكمية المتاحة</th>
+                                    <th class="p-4">الحد الأدنى للتنبيه</th>
+                                    <th class="p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody id="inventoryTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="productsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
                         </table>
                     </div>
                 </div>
@@ -87,55 +120,186 @@
         </div>
     </div>
 
+    <!-- نافذة إضافة / تعديل صنف -->
     <div id="productModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 class="font-bold text-sm text-slate-900">إضافة صنف جديد للمخزن</h3>
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl">
+            <h3 id="modalTitle" class="font-bold text-sm text-slate-900">إضافة صنف جديد للمخزن</h3>
             <div class="space-y-3 text-xs">
-                <div><label class="block mb-1 text-slate-600">كود الصنف</label><input type="text" id="prodCode" class="corporate-input w-full mono-font" placeholder="01"></div>
-                <div><label class="block mb-1 text-slate-600">اسم الصنف</label><input type="text" id="prodName" class="corporate-input w-full" placeholder="مثال: أعلاف وحبوب"></div>
+                <input type="hidden" id="editOriginalCode">
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="prodQty" class="corporate-input w-full mono-font" value="100"></div>
-                    <div><label class="block mb-1 text-slate-600">سعر الشراء</label><input type="number" id="prodBuyPrice" class="corporate-input w-full mono-font" value="1000"></div>
+                    <div>
+                        <label class="block mb-1 text-slate-600">كود الصنف</label>
+                        <input type="text" id="prodCode" class="corporate-input w-full mono-font" placeholder="PRD-001">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-600">رقم الباركود (اختياري)</label>
+                        <input type="text" id="prodBarcode" class="corporate-input w-full mono-font" placeholder="622123456789">
+                    </div>
                 </div>
-                <div><label class="block mb-1 text-slate-600">سعر البيع</label><input type="number" id="prodSellPrice" class="corporate-input w-full mono-font" value="1500"></div>
+                <div>
+                    <label class="block mb-1 text-slate-600">اسم الصنف</label>
+                    <input type="text" id="prodName" class="corporate-input w-full" placeholder="اسم المنتج أو الخدمة">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 text-slate-600">سعر الشراء (ج.م)</label>
+                        <input type="number" id="prodBuyPrice" class="corporate-input w-full mono-font" value="0">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-600">سعر البيع (ج.م)</label>
+                        <input type="number" id="prodSellPrice" class="corporate-input w-full mono-font" value="0">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 text-slate-600">الكمية الحالية</label>
+                        <input type="number" id="prodQty" class="corporate-input w-full mono-font" value="10">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-600">الحد الأدنى للتنبيه</label>
+                        <input type="number" id="prodMinQty" class="corporate-input w-full mono-font" value="3">
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-2 pt-2"><button onclick="saveProduct()" class="btn-primary flex-1 py-2 text-xs">حفظ</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveProduct()" class="btn-primary flex-1 py-2 text-xs">حفظ الصنف</button>
+                <button onclick="closeProductModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
-        function saveData() {
-            localStorage.setItem('eidco_v13_products', JSON.stringify(products));
+        let state = {
+            products: JSON.parse(localStorage.getItem('eidco_v13_products')) || []
+        };
+
+        function renderProducts() {
+            let search = document.getElementById('searchInput').value.toLowerCase();
+            let tbody = document.getElementById('productsTableBody');
+            
+            let filtered = state.products.filter(p => 
+                p.name.toLowerCase().includes(search) || 
+                p.code.toLowerCase().includes(search) || 
+                (p.barcode && p.barcode.toLowerCase().includes(search))
+            );
+
+            let lowStockItems = state.products.filter(p => Number(p.qty) <= Number(p.minQty || 3));
+            let banner = document.getElementById('lowStockAlertBanner');
+            if(lowStockItems.length > 0) {
+                banner.classList.remove('hidden');
+                document.getElementById('lowStockCountBadge').innerText = lowStockItems.length + ' أصناف';
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            if(!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد أصناف مطابقة للبحث.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => {
+                let isLow = Number(p.qty) <= Number(p.minQty || 3);
+                return `
+                    <tr class="hover:bg-slate-50 ${isLow ? 'bg-rose-50/40' : ''}">
+                        <td class="p-4 mono-font text-indigo-600 font-bold">
+                            ${p.code} ${p.barcode ? `<span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-barcode"></i> ${p.barcode}</span>` : ''}
+                        </td>
+                        <td class="p-4 font-bold text-slate-900">${p.name}</td>
+                        <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice).toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font text-emerald-600 font-bold">${Number(p.sellPrice).toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}">
+                            ${p.qty} ${isLow ? '<i class="fa-solid fa-triangle-exclamation ml-1 text-rose-500" title="كمية منخفضة!"></i>' : ''}
+                        </td>
+                        <td class="p-4 mono-font text-slate-500">${p.minQty || 3}</td>
+                        <td class="p-4 text-center space-x-2 space-x-reverse">
+                            <button onclick="editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openProductModal(isEdit = false) {
+            if(!isEdit) {
+                document.getElementById('modalTitle').innerText = 'إضافة صنف جديد للمخزن';
+                document.getElementById('editOriginalCode').value = '';
+                document.getElementById('prodCode').value = 'PRD-' + Math.floor(100 + Math.random() * 900);
+                document.getElementById('prodBarcode').value = '';
+                document.getElementById('prodName').value = '';
+                document.getElementById('prodBuyPrice').value = '';
+                document.getElementById('prodSellPrice').value = '';
+                document.getElementById('prodQty').value = '10';
+                document.getElementById('prodMinQty').value = '3';
+                document.getElementById('prodCode').disabled = false;
+            }
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+
+        function editProduct(code) {
+            let p = state.products.find(x => x.code === code);
+            if(!p) return;
+
+            document.getElementById('modalTitle').innerText = `تعديل الصنف (${p.name})`;
+            document.getElementById('editOriginalCode').value = p.code;
+            document.getElementById('prodCode').value = p.code;
+            document.getElementById('prodCode').disabled = true;
+            document.getElementById('prodBarcode').value = p.barcode || '';
+            document.getElementById('prodName').value = p.name;
+            document.getElementById('prodBuyPrice').value = p.buyPrice;
+            document.getElementById('prodSellPrice').value = p.sellPrice;
+            document.getElementById('prodQty').value = p.qty;
+            document.getElementById('prodMinQty').value = p.minQty || 3;
+
+            openProductModal(true);
+        }
+
+        function saveProduct() {
+            let originalCode = document.getElementById('editOriginalCode').value;
+            let code = document.getElementById('prodCode').value.trim();
+            let barcode = document.getElementById('prodBarcode').value.trim();
+            let name = document.getElementById('prodName.value' || 'prodName').value.trim();
+            let buyPrice = Number(document.getElementById('prodBuyPrice').value) || 0;
+            let sellPrice = Number(document.getElementById('prodSellPrice').value) || 0;
+            let qty = Number(document.getElementById('prodQty').value) || 0;
+            let minQty = Number(document.getElementById('prodMinQty').value) || 3;
+
+            if(!code || !name) return alert('الرجاء إدخال كود الصنف واسمه');
+
+            if(originalCode) {
+                // تحديث صنف موجود
+                let p = state.products.find(x => x.code === originalCode);
+                if(p) {
+                    p.barcode = barcode;
+                    p.name = name;
+                    p.buyPrice = buyPrice;
+                    p.sellPrice = sellPrice;
+                    p.qty = qty;
+                    p.minQty = minQty;
+                }
+            } else {
+                // إضافة صنف جديد
+                if(state.products.some(x => x.code === code)) return alert('هذا الكود مسجل مسبقاً');
+                state.products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
+            }
+
+            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            closeProductModal();
+            renderProducts();
+            alert('✓ تم حفظ الصنف وتحديث المخزن بنجاح');
+        }
+
+        function deleteProduct(code) {
+            if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) return;
+            state.products = state.products.filter(x => x.code !== code);
+            localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
             renderProducts();
         }
-        function renderProducts() {
-            document.getElementById('inventoryTableBody').innerHTML = products.map(p => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-emerald-600 font-bold">${p.code}</td>
-                    <td class="p-4 font-bold text-slate-900">${p.name}</td>
-                    <td class="p-4 mono-font font-bold text-emerald-700">${p.qty} وحدة</td>
-                    <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600">${Number(p.sellPrice||0).toLocaleString()} ج.م</td>
-                    <td class="p-4 text-center"><button onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>
-            `).join('');
-        }
-        function openNewProductModal() { document.getElementById('productModal').classList.add('active'); }
-        function closeModal() { document.getElementById('productModal').classList.remove('active'); }
-        function saveProduct() {
-            let name = document.getElementById('prodName').value;
-            if(!name) return alert('أدخل اسم الصنف');
-            products.push({
-                code: document.getElementById('prodCode').value || 'PRD-'+Math.floor(100+Math.random()*900),
-                name,
-                qty: Number(document.getElementById('prodQty').value)||0,
-                buyPrice: Number(document.getElementById('prodBuyPrice').value)||0,
-                sellPrice: Number(document.getElementById('prodSellPrice').value)||0
-            });
-            closeModal(); saveData();
-        }
-        function deleteProduct(code) { products = products.filter(p => p.code !== code); saveData(); }
+
         renderProducts();
     </script>
 </body>

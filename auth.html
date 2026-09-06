@@ -64,8 +64,10 @@
 
         <!-- قائمة الحسابات المسجلة -->
         <div class="space-y-3 relative z-10">
-            <label class="block text-xs text-slate-300 font-bold">الحسابات والمسؤولون المعتمدون:</label>
-            <div id="accountsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            <label class="block text-xs text-slate-300 font-bold">الحسابات والمسؤولون المعتمدون (Firebase):</label>
+            <div id="accountsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div class="p-3 text-center text-slate-400 text-xs">جاري الاتصال بالسحابة وتحميل الحسابات...</div>
+            </div>
         </div>
 
         <!-- منطقة البصمة البيومترية -->
@@ -114,32 +116,79 @@
         </div>
     </div>
 
-    <script>
-        if (!localStorage.getItem('eidco_v13_accounts')) {
-            const defaultAccounts = [
-                { id: 1, name: 'كرم حمدي عبدالعظيم', role: 'مدير نظام رئيسي', date: '2026-01-01' }
-            ];
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(defaultAccounts));
-        }
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const accountsRef = collection(db, "accounts");
+
+        let accountsData = [];
         let selectedAccountName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
 
+        // الاستماع المباشر واللحظي للتغيرات في Firebase Firestore
+        onSnapshot(accountsRef, (snapshot) => {
+            accountsData = snapshot.docs.map(docSnap => ({
+                id: docSnap.id,
+                ...docSnap.data()
+            }));
+
+            // إذا كانت القائمة فارغة في السحابة، أضف الحساب الافتراضي تلقائياً
+            if (accountsData.length === 0) {
+                addDoc(accountsRef, {
+                    name: 'كرم حمدي عبدالعظيم',
+                    role: 'مدير نظام رئيسي',
+                    date: new Date().toISOString().split('T')[0]
+                });
+                return;
+            }
+
+            // التأكد من تحديد حساب نشط موجود
+            if (!accountsData.some(acc => acc.name === selectedAccountName)) {
+                selectedAccountName = accountsData[0].name;
+            }
+
+            renderAccountsList();
+        }, (error) => {
+            console.error("خطأ في الاتصال بـ Firebase:", error);
+            document.getElementById('accountsListContainer').innerHTML = `<div class="p-3 text-center text-rose-400 text-xs">تعذر الاتصال بالسحابة. يرجى التحقق من القواعد (Rules) في Firebase.</div>`;
+        });
+
         function renderAccountsList() {
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
             let container = document.getElementById('accountsListContainer');
             
-            if (accounts.length === 0) {
+            if (accountsData.length === 0) {
                 container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">لا توجد حسابات مسجلة.</div>`;
                 return;
             }
 
-            container.innerHTML = accounts.map(acc => {
+            container.innerHTML = accountsData.map(acc => {
                 let isActive = acc.name === selectedAccountName;
                 return `
-                    <div onclick="selectAccount('${acc.name}')" class="account-card p-3 rounded-xl flex items-center justify-between cursor-pointer ${isActive ? 'active border-indigo-500 bg-indigo-600/10' : ''}">
+                    <div onclick="window.selectAccount('${acc.name}')" class="account-card p-3 rounded-xl flex items-center justify-between cursor-pointer ${isActive ? 'active border-indigo-500 bg-indigo-600/10' : ''}">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                                ${acc.name.charAt(0)}
+                                ${acc.name ? acc.name.charAt(0) : 'U'}
                             </div>
                             <div>
                                 <h4 class="font-bold text-xs text-white">${acc.name}</h4>
@@ -148,7 +197,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             ${isActive ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono">نشط</span>' : ''}
-                            ${accounts.length > 1 ? `<button onclick="event.stopPropagation(); deleteAccount('${acc.name}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs cursor-pointer" title="حذف الحساب"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            ${accountsData.length > 1 ? `<button onclick="event.stopPropagation(); window.deleteAccount('${acc.id}', '${acc.name}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs cursor-pointer" title="حذف الحساب"><i class="fa-solid fa-trash"></i></button>` : ''}
                         </div>
                     </div>
                 `;
@@ -157,21 +206,23 @@
             document.getElementById('selectedAccountDisplay').innerText = `الحساب النشط: ${selectedAccountName}`;
         }
 
-        function selectAccount(name) {
+        // ربط الدوال بالـ window للعمل مع الأزرار والعناصر (onclick)
+        window.selectAccount = function(name) {
             selectedAccountName = name;
+            localStorage.setItem('eidco_v13_admin', name);
             renderAccountsList();
-        }
+        };
 
-        function openAddAccountModal() {
+        window.openAddAccountModal = function() {
             document.getElementById('newAccountName').value = '';
             document.getElementById('addAccountModal').classList.add('active');
-        }
+        };
 
-        function closeAddAccountModal() {
+        window.closeAddAccountModal = function() {
             document.getElementById('addAccountModal').classList.remove('active');
-        }
+        };
 
-        function saveNewAccount() {
+        window.saveNewAccount = async function() {
             let nameInput = document.getElementById('newAccountName').value.trim();
             let roleInput = document.getElementById('newAccountRole').value;
 
@@ -180,50 +231,59 @@
                 return;
             }
 
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
-            if (accounts.some(a => a.name === nameInput)) {
+            if (accountsData.some(a => a.name === nameInput)) {
                 alert('هذا الاسم مسجل مسبقاً.');
                 return;
             }
 
-            accounts.push({
-                id: Date.now(),
-                name: nameInput,
-                role: roleInput,
-                date: new Date().toISOString().split('T')[0]
-            });
+            try {
+                await addDoc(accountsRef, {
+                    name: nameInput,
+                    role: roleInput,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                selectedAccountName = nameInput;
+                localStorage.setItem('eidco_v13_admin', nameInput);
+                window.closeAddAccountModal();
+            } catch (err) {
+                alert('حدث خطأ أثناء حفظ الحساب في Firebase: ' + err.message);
+            }
+        };
 
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
-            selectedAccountName = nameInput;
-            closeAddAccountModal();
-            renderAccountsList();
-        }
-
-        function deleteAccount(name) {
-            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
-            if (accounts.length <= 1) {
+        window.deleteAccount = async function(docId, name) {
+            if (accountsData.length <= 1) {
                 alert('لا يمكن حذف الحساب الأخير في المنظومة.');
                 return;
             }
-            if (!confirm(`هل أنت متأكد من حذف الحساب (${name})؟`)) return;
+            if (!confirm(`هل أنت متأكد من حذف الحساب (${name}) من قاعدة البيانات السحابية؟`)) return;
 
-            accounts = accounts.filter(a => a.name !== name);
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
-            
-            if (selectedAccountName === name) {
-                selectedAccountName = accounts[0].name;
+            try {
+                await deleteDoc(doc(db, "accounts", docId));
+            } catch (err) {
+                alert('حدث خطأ أثناء حذف الحساب: ' + err.message);
             }
-            renderAccountsList();
-        }
+        };
 
-        function resetDefaultAccounts() {
-            if (!confirm('هل تريد إعادة تعيين الحسابات للافتراضي؟')) return;
-            localStorage.removeItem('eidco_v13_accounts');
-            selectedAccountName = 'كرم حمدي عبدالعظيم';
-            location.reload();
-        }
+        window.resetDefaultAccounts = async function() {
+            if (!confirm('هل تريد إعادة تعيين الحسابات للافتراضي وحذف كل الحسابات الأخرى من السحابة؟')) return;
 
-        async function performBiometricAuth() {
+            try {
+                for (let acc of accountsData) {
+                    await deleteDoc(doc(db, "accounts", acc.id));
+                }
+                await addDoc(accountsRef, {
+                    name: 'كرم حمدي عبدالعظيم',
+                    role: 'مدير نظام رئيسي',
+                    date: new Date().toISOString().split('T')[0]
+                });
+                selectedAccountName = 'كرم حمدي عبدالعظيم';
+                localStorage.setItem('eidco_v13_admin', selectedAccountName);
+            } catch (err) {
+                alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
+            }
+        };
+
+        window.performBiometricAuth = async function() {
             const statusEl = document.getElementById('bioStatusText');
             statusEl.innerText = `جاري التحقق البيومتري لـ (${selectedAccountName})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
@@ -263,9 +323,7 @@
                     window.location.href = 'index.html';
                 }, 1000);
             }
-        }
-
-        renderAccountsList();
+        };
     </script>
 </body>
 </html>

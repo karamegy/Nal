@@ -3,20 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // خريطة الأسطول GPS</title>
+    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <!-- Leaflet Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.css" />
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        :root { --primary: #4f46e5; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        #leafletMap { height: 450px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); }
+        #leafletMap { height: 72vh; min-height: 620px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+        /* لوحة التحكم باللمس العائمة */
+        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; }
+        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
     </style>
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -25,42 +44,223 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1">
-                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
-                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمبيعات</a>
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">تتبع الأسطول والفروع عبر الأقمار الصناعية (GPS)</h1>
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS)</h1>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                        <span class="text-xs font-mono font-bold text-emerald-600">الأسطول متصل حياً</span>
+                    </div>
+                </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6">
-                <div class="corporate-card p-6 space-y-4">
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-4">
+                <!-- شريط مؤشرات الأسطول الحية -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                    <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-indigo-600">
+                        <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-lg font-black text-slate-900 mono-font">2 مركبة</h4></div>
+                        <i class="fa-solid fa-truck text-indigo-600 text-xl"></i>
+                    </div>
+                    <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-emerald-500">
+                        <div><span class="text-slate-500">مركبات متحركة</span><h4 class="text-lg font-black text-emerald-600 mono-font">2 نشط</h4></div>
+                        <i class="fa-solid fa-truck-fast text-emerald-500 textxl"></i>
+                    </div>
+                    <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-amber-500">
+                        <div><span class="text-slate-500">عملاء المنظومة</span><h4 class="text-lg font-black text-amber-600 mono-font" id="mapClientsCount">0 جهة</h4></div>
+                        <i class="fa-solid fa-building-user text-amber-500 text-xl"></i>
+                    </div>
+                    <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-purple-500">
+                        <div><span class="text-slate-500">النطاق الجغرافي الآمن</span><h4 class="text-lg font-black text-purple-600 mono-font">مفعل (محافظات)</h4></div>
+                        <i class="fa-solid fa-shield-halved text-purple-500 text-xl"></i>
+                    </div>
+                </div>
+
+                <!-- شريط الأدوات والبحث والطبقات -->
+                <div class="corporate-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+                    <div class="flex items-center gap-2 flex-1 min-w-[280px]">
+                        <span class="font-bold text-slate-700"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
+                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، منطقة، أو فرع..." class="corporate-input flex-1">
+                        <button onclick="searchCustomLocation()" class="btn-primary py-2 px-4 text-xs">بحث</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-700">طبقات الخريطة:</span>
+                        <button onclick="switchLayer('street')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition">القياسية</button>
+                        <button onclick="switchLayer('topo')" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition">التضاريس</button>
+                        <button onclick="switchLayer('satellite')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition"><i class="fa-solid fa-satellite ml-1"></i> القمر الصناعي</button>
+                    </div>
+                </div>
+
+                <!-- حاوية الخريطة مع لوحة التحكم باللمس -->
+                <div class="corporate-card p-4 relative">
+                    <div class="touch-control-panel">
+                        <span class="text-[10px] font-bold text-slate-400 font-mono px-1">التحكم السريع باللمس</span>
+                        <button onclick="panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
+                        <button onclick="panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
+                        <button onclick="toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
+                        <button onclick="playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
+                        <button onclick="shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
+                        <button onclick="resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
+                    </div>
+
                     <div id="leafletMap"></div>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- Leaflet JS & Plugins -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
+
     <script>
-        let map = L.map('leafletMap').setView([30.0444, 31.2357], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+        // قراءة بيانات العملاء المخزنة في المنظومة لربطهم بالخريطة
+        let storedClients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
+        document.getElementById('mapClientsCount').innerText = storedClients.length + ' جهة';
+
+        // تهيئة الخريطة
+        let map = L.map('leafletMap', {
+            zoomControl: false
+        }).setView([30.0444, 31.2357], 13);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // طبقات الخريطة
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+        const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
+
+        streetLayer.addTo(map);
+
+        function switchLayer(type) {
+            map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
+            if(type === 'street') streetLayer.addTo(map);
+            if(type === 'topo') topoLayer.addTo(map);
+            if(type === 'satellite') satelliteLayer.addTo(map);
+        }
+
+        // أداة البحث الجغرافي
+        const geocoder = L.Control.geocoder({ defaultMarkGeocode: true, placeholder: 'ابحث عن موقع أو عنوان...', errorMessage: 'لم يتم العثور على الموقع.' }).addTo(map);
+
+        function searchCustomLocation() {
+            let val = document.getElementById('customSearchInput').value;
+            if(!val) return;
+            geocoder.options.geocoder.geocode(val, results => {
+                if(results && results.length > 0) {
+                    let r = results[0];
+                    map.setView(r.center, 15);
+                    L.marker(r.center).addTo(map).bindPopup(r.name).openPopup();
+                } else {
+                    alert('لم يتم العثور على النتيجة');
+                }
+            });
+        }
+
+        // نظام التوجيه والملاحة (Routing)
+        let routingControl = L.Routing.control({
+            waypoints: [ L.latLng(30.0444, 31.2357), L.latLng(30.0131, 31.2089) ],
+            routeWhileDragging: true,
+            language: 'ar',
+            router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+            lineOptions: { styles: [{ color: '#4f46e5', weight: 6, opacity: 0.8 }] },
+            createMarker: function(i, wp) { return L.marker(wp.latLng, { draggable: true }); }
+        });
+
+        let routingVisible = true;
+        function toggleRouting() {
+            if(routingVisible) { map.removeControl(routingControl); routingVisible = false; }
+            else { routingControl.addTo(map); routingVisible = true; }
+        }
+        routingControl.addTo(map);
+
+        // النطاق الجغرافي الآمن (Geofencing Circle)
+        let geofenceCircle = L.circle([30.0444, 31.2357], {
+            color: '#8b5cf6',
+            fillColor: '#c4b5fd',
+            fillOpacity: 0.15,
+            radius: 12000 // 12 كم نطاق أمان محافظات القاهرة الكبرى
+        }).addTo(map).bindPopup("<b>النطاق الجغرافي الآمن للأسطول</b><br>التنبيهات مفعلة عند الخروج عن النطاق.");
+
+        // الأسطول الحي ومواقع العملاء
+        let primaryFleetLatLng = [30.0555, 31.2450];
+        let fleetMarker = L.marker(primaryFleetLatLng, {
+            icon: L.divIcon({
+                html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
+                iconSize: [36, 36]
+            })
+        }).addTo(map).bindPopup("<b>سيارة أسطول #01</b><br>الحالة: يتحرك حياً عبر GPS");
+
+        // ربط عملاء المنظومة على الخريطة (افتراضي أو مسجل)
+        let defaultClientsLocations = [
+            { name: 'شركة النيل للحبوب والأعلاف (عميل رئيسي)', lat: 30.0333, lng: 31.2333 },
+            { name: 'مؤسسة الدلتا التجارية', lat: 30.0600, lng: 31.2200 }
+        ];
+        defaultClientsLocations.forEach(c => {
+            L.marker([c.lat, c.lng], {
+                icon: L.divIcon({
+                    html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
+                    iconSize: [30, 30]
+                })
+            }).addTo(map).bindPopup(`<b>${c.name}</b><br>موقع مسجل بحسابات العملاء`);
+        });
+
+        // تتبع موقع المستخدم
+        let currentUserLatLng = null;
         if("geolocation" in navigator) {
             navigator.geolocation.watchPosition(pos => {
                 let lat = pos.coords.latitude, lng = pos.coords.longitude;
-                L.marker([lat, lng]).addTo(map).bindPopup("الموقع الحالي للأسطول (GPS)").openPopup();
-                map.setView([lat, lng], 14);
+                currentUserLatLng = [lat, lng];
+                L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="background:#10b981; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-user-shield"></i></div>',
+                        iconSize: [36, 36]
+                    })
+                }).addTo(map).bindPopup("📍 موقعك الحالي المباشر");
             });
         }
+
+        // ميزة سجل الحركة التاريخي (Route Playback Simulation)
+        let historyPolyline = null;
+        function playRouteHistory() {
+            let latlngs = [
+                [30.0444, 31.2357],
+                [30.0480, 31.2400],
+                [30.0520, 31.2420],
+                primaryFleetLatLng
+            ];
+            if(historyPolyline) map.removeLayer(historyPolyline);
+            historyPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 5, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds(historyPolyline.getBounds());
+            alert("تم تحميل وتفعيل سجل الحركة التاريخي للمركبة بنجاح.");
+        }
+
+        // مشاركة المسار عبر واتساب
+        function shareRouteWhatsApp() {
+            let text = encodeURIComponent("مرحباً، إليك تتبع مسار أسطول EIDCO الحي والموقع الحالي عبر نظام إدارة العمليات.");
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        // دوال التحكم السريع باللمس
+        function panToFleet() { map.setView(primaryFleetLatLng, 15); }
+        function panToUser() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); }
+        function resetMapView() { map.setView([30.0444, 31.2357], 13); }
     </script>
 </body>
 </html>

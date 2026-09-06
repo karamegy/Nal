@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // المصادقة البيومترية الآمنة</title>
+    <title>EIDCO // إدارة الحسابات والمصادقة البيومترية</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة في الرأس لإخفاء شريط الروابط -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,6 +30,10 @@
         .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .account-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); transition: all 0.2s; }
+        .account-card:hover, .account-card.active { border-color: var(--primary); background: rgba(79, 70, 229, 0.1); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal.active { display: flex !important; }
         @keyframes pulseRing {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(79, 70, 229, 0); }
@@ -41,50 +44,189 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="corporate-card p-8 max-w-md w-full space-y-6 text-right relative overflow-hidden">
+    <div class="corporate-card p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
-        <div class="text-center space-y-3 relative z-10">
-            <div class="w-16 h-16 mx-auto bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <i class="fa-solid fa-cube text-2xl text-white"></i>
+        <div class="flex justify-between items-center relative z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-cube text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان</h1>
+                    <p class="text-[10px] text-slate-400 font-mono">البصمات والحسابات المسجلة</p>
+                </div>
             </div>
-            <h1 class="text-2xl font-black text-white">EIDCO v13 // Secure Auth</h1>
-            <p class="text-xs text-slate-400 font-mono">بوابة الدخول والتحقق البيومتري المتقدم</p>
-        </div>
-
-        <div class="p-6 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-4 relative z-10">
-            <div onclick="performBiometricAuth()" class="w-20 h-20 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء البصمة">
-                <i class="fa-solid fa-fingerprint text-3xl text-indigo-400"></i>
-            </div>
-            <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة بالبصمة أو الوجه</span>
-                <span class="text-[10px] text-slate-500 block mt-1">تشفير تام مع متصفحك المحلي</span>
-            </div>
-        </div>
-
-        <div class="space-y-4 relative z-10 text-xs">
-            <div>
-                <label class="block mb-1.5 text-slate-300 font-bold">اسم المدير المسؤول</label>
-                <input type="text" id="authAdminName" class="corporate-input w-full text-sm" value="كرم حمدي عبدالعظيم">
-            </div>
-
-            <button onclick="performBiometricAuth()" class="btn-primary w-full py-3.5 text-sm flex items-center justify-center gap-2">
-                <i class="fa-solid fa-shield-halved"></i> مصادقة والدخول لللوحة
+            <button onclick="openAddAccountModal()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-user-plus"></i> إضافة حساب
             </button>
         </div>
 
-        <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono">
-            EIDCO Business OS &copy; 2026 - All Rights Reserved
+        <!-- قائمة الحسابات المسجلة -->
+        <div class="space-y-3 relative z-10">
+            <label class="block text-xs text-slate-300 font-bold">الحسابات والمسؤولون المعتمدون:</label>
+            <div id="accountsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- منطقة البصمة البيومترية -->
+        <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
+            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء البصمة">
+                <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
+            </div>
+            <div>
+                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة بالبصمة للحساب المختار</span>
+                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">الحساب النشط: جاري التحديد...</span>
+            </div>
+        </div>
+
+        <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between items-center">
+            <span>EIDCO Business OS &copy; 2026</span>
+            <button onclick="resetDefaultAccounts()" class="text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة حساب جديد -->
+    <div id="addAccountModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-user-plus ml-2 text-indigo-500"></i> إضافة حساب / مسؤول جديد</h3>
+                <button onclick="closeAddAccountModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">اسم المسؤول / المستخدم</label>
+                    <input type="text" id="newAccountName" class="corporate-input w-full text-xs" placeholder="أدخل الاسم الكامل">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
+                    <select id="newAccountRole" class="corporate-input w-full text-xs">
+                        <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
+                        <option value="محاسب أول">محاسب أول</option>
+                        <option value="مسؤول مخزن">مسؤول مخزن</option>
+                        <option value="مشرف أسطول">مشرف أسطول</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ الحساب</button>
+                <button onclick="closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+            </div>
         </div>
     </div>
 
     <script>
+        if (!localStorage.getItem('eidco_v13_accounts')) {
+            const defaultAccounts = [
+                { id: 1, name: 'كرم حمدي عبدالعظيم', role: 'مدير نظام رئيسي', date: '2026-01-01' }
+            ];
+            localStorage.setItem('eidco_v13_accounts', JSON.stringify(defaultAccounts));
+        }
+
+        let selectedAccountName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
+
+        function renderAccountsList() {
+            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
+            let container = document.getElementById('accountsListContainer');
+            
+            if (accounts.length === 0) {
+                container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">لا توجد حسابات مسجلة.</div>`;
+                return;
+            }
+
+            container.innerHTML = accounts.map(acc => {
+                let isActive = acc.name === selectedAccountName;
+                return `
+                    <div onclick="selectAccount('${acc.name}')" class="account-card p-3 rounded-xl flex items-center justify-between cursor-pointer ${isActive ? 'active border-indigo-500 bg-indigo-600/10' : ''}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                                ${acc.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-xs text-white">${acc.name}</h4>
+                                <span class="text-[10px] text-slate-400 font-mono">${acc.role}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${isActive ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono">نشط</span>' : ''}
+                            ${accounts.length > 1 ? `<button onclick="event.stopPropagation(); deleteAccount('${acc.name}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs cursor-pointer" title="حذف الحساب"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('selectedAccountDisplay').innerText = `الحساب النشط: ${selectedAccountName}`;
+        }
+
+        function selectAccount(name) {
+            selectedAccountName = name;
+            renderAccountsList();
+        }
+
+        function openAddAccountModal() {
+            document.getElementById('newAccountName').value = '';
+            document.getElementById('addAccountModal').classList.add('active');
+        }
+
+        function closeAddAccountModal() {
+            document.getElementById('addAccountModal').classList.remove('active');
+        }
+
+        function saveNewAccount() {
+            let nameInput = document.getElementById('newAccountName').value.trim();
+            let roleInput = document.getElementById('newAccountRole').value;
+
+            if (!nameInput) {
+                alert('الرجاء إدخال اسم المسؤول.');
+                return;
+            }
+
+            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
+            if (accounts.some(a => a.name === nameInput)) {
+                alert('هذا الاسم مسجل مسبقاً.');
+                return;
+            }
+
+            accounts.push({
+                id: Date.now(),
+                name: nameInput,
+                role: roleInput,
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
+            selectedAccountName = nameInput;
+            closeAddAccountModal();
+            renderAccountsList();
+        }
+
+        function deleteAccount(name) {
+            let accounts = JSON.parse(localStorage.getItem('eidco_v13_accounts')) || [];
+            if (accounts.length <= 1) {
+                alert('لا يمكن حذف الحساب الأخير في المنظومة.');
+                return;
+            }
+            if (!confirm(`هل أنت متأكد من حذف الحساب (${name})؟`)) return;
+
+            accounts = accounts.filter(a => a.name !== name);
+            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accounts));
+            
+            if (selectedAccountName === name) {
+                selectedAccountName = accounts[0].name;
+            }
+            renderAccountsList();
+        }
+
+        function resetDefaultAccounts() {
+            if (!confirm('هل تريد إعادة تعيين الحسابات للافتراضي؟')) return;
+            localStorage.removeItem('eidco_v13_accounts');
+            selectedAccountName = 'كرم حمدي عبدالعظيم';
+            location.reload();
+        }
+
         async function performBiometricAuth() {
             const statusEl = document.getElementById('bioStatusText');
-            statusEl.innerText = "جاري التحقق من الهوية البيومترية...";
+            statusEl.innerText = `جاري التحقق البيومتري لـ (${selectedAccountName})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
-
-            let adminName = document.getElementById('authAdminName').value.trim() || "كرم حمدي عبدالعظيم";
 
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -102,7 +244,7 @@
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', adminName);
+                localStorage.setItem('eidco_v13_admin', selectedAccountName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
 
                 setTimeout(() => {
@@ -110,11 +252,11 @@
                 }, 800);
 
             } catch (error) {
-                statusEl.innerText = "⚠️ فشل التحقق، تم السماح بالدخول الاحتياطي.";
+                statusEl.innerText = "⚠️ فشل التحقق البيومتري، تم السماح بالدخول الاحتياطي.";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', adminName);
+                localStorage.setItem('eidco_v13_admin', selectedAccountName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 
                 setTimeout(() => {
@@ -122,6 +264,8 @@
                 }, 1000);
             }
         }
+
+        renderAccountsList();
     </script>
 </body>
 </html>

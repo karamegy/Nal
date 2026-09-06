@@ -66,10 +66,17 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <!-- بطاقة الترحيب مع عرض الصورة الشخصية -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
-                    <div>
-                        <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً</span>
-                        <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">كرم حمدي عبدالعظيم</h2>
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-md">
+                            <span id="headerAvatarText">ك</span>
+                            <img id="headerAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
+                        </div>
+                        <div>
+                            <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً</span>
+                            <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">كرم حمدي عبدالعظيم</h2>
+                        </div>
                     </div>
                 </div>
 
@@ -205,7 +212,20 @@
             invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
         };
+        
         document.getElementById('welcomeAdminName').innerText = state.adminName;
+
+        // تحميل وعرض الصورة الشخصية من الذاكرة المحلية إن وجدت
+        let savedAvatar = localStorage.getItem('eidco_v13_avatar');
+        if(savedAvatar) {
+            let img = document.getElementById('headerAvatarImg');
+            img.src = savedAvatar;
+            img.classList.remove('hidden');
+            document.getElementById('headerAvatarText').classList.add('hidden');
+        } else {
+            document.getElementById('headerAvatarText').innerText = state.adminName.charAt(0);
+        }
+
         let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
         let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
         document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';

@@ -221,7 +221,7 @@
                             </thead>
                             <tbody id="fleetTableBody" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري الاتصال بقاعدة البيانات السحابية وتحميل الأسطول...</td>
+                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري تهيئة الاتصال السحابي وتحميل الأسطول...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -402,10 +402,27 @@
 
         let fleetMarkers = {};
         
-        // استماع حقيقي مع معالجة الأخطاء لإظهار أي مشكلة في الصلاحيات فوراً في الجدول
-        onSnapshot(fleetRef, (snapshot) => {
+        // استماع حقيقي مع ميزة الإنشاء التلقائي للمجموعة في فايرستور إذا كانت فارغة لضمان ظهور النتائج فوراً
+        onSnapshot(fleetRef, async (snapshot) => {
             let fleetDocs = [];
             let tableHtml = '';
+
+            // إذا كانت المجموعة فارغة تماماً، نقوم بإنشاء أول مركبة افتراضية لكي تظهر فوراً في فايرستور
+            if (snapshot.empty) {
+                try {
+                    await addDoc(fleetRef, {
+                        name: "شاحنة الأسطول الرئيسية 01",
+                        plate: "أ ب ج 1234",
+                        lat: 30.0444,
+                        lng: 31.2357,
+                        speed: 35,
+                        updatedAt: new Date().toISOString()
+                    });
+                    return; // ستتم إعادة تشغيل الـ snapshot تلقائياً بعد الإضافة
+                } catch (e) {
+                    console.error("Auto-seed error: ", e);
+                }
+            }
             
             Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
             fleetMarkers = {};
@@ -448,8 +465,8 @@
             }
             document.getElementById('fleetTableBody').innerHTML = tableHtml;
         }, (error) => {
-            console.error("Firestore Permission Error: ", error);
-            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الصلاحيات أو الاتصال بقاعدة البيانات: تأكد من ضبط قواعد Firestore Rules</td></tr>`;
+            console.error("Firestore Error: ", error);
+            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بقاعدة البيانات. تأكد من قواعد الأمان (Rules).</td></tr>`;
         });
 
         window.editVehicle = function(id, name, plate, lat, lng) {

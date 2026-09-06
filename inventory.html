@@ -69,7 +69,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود (إصدار مباشر)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود (Firebase)</h1>
                 </div>
             </header>
 
@@ -86,15 +86,16 @@
                     <span id="lowStockCountBadge" class="bg-rose-600 text-white font-mono font-bold px-3 py-1 rounded-full text-xs">0 أصناف</span>
                 </div>
 
-                <!-- نموذج إضافة / تعديل صنف (ثابت ومباشر بدون نوافذ منبثقة لتجنب مشاكل اللمس) -->
+                <!-- نموذج إضافة / تعديل صنف -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 id="formTitleText" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن</h3>
-                        <button type="button" onclick="resetProductForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg">إلغاء التعديل</button>
+                        <button type="button" onclick="window.resetProductForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إلغاء التعديل</button>
                     </div>
 
                     <div class="space-y-4">
                         <input type="hidden" id="editOriginalCode">
+                        <input type="hidden" id="editDocId">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                             <div>
                                 <label class="block mb-1 text-slate-600 font-bold">كود الصنف</label>
@@ -108,7 +109,7 @@
 
                         <div class="text-xs">
                             <label class="block mb-1 text-slate-600 font-bold">اسم الصنف</label>
-                            <input type="text" id="prodName" class="corporate-input" placeholder="مثال: دقيق فاخر أو علاف">
+                            <input type="text" id="prodName" class="corporate-input" placeholder="مثال: دقيق فاخر أو أعلاف">
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -134,7 +135,7 @@
                         </div>
 
                         <div class="pt-2">
-                            <button type="button" id="directSaveBtn" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5">
+                            <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5">
                                 <i class="fa-solid fa-floppy-disk text-base"></i> حفظ الصنف وتحديث المخزن فوراً
                             </button>
                         </div>
@@ -145,13 +146,13 @@
                 <div class="corporate-card p-4 flex gap-3 items-center">
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="searchInput" oninput="renderProducts()" placeholder="البحث باسم الصنف، الكود، أو باركود..." class="corporate-input pr-10 text-xs">
+                        <input type="text" id="searchInput" oninput="window.renderProducts()" placeholder="البحث باسم الصنف، الكود، أو باركود..." class="corporate-input pr-10 text-xs">
                     </div>
                 </div>
 
                 <!-- جدول الأصناف -->
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن الحالية</h3>
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن الحالية (مزامنة حية)</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
@@ -165,7 +166,9 @@
                                     <th class="p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody id="productsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="productsTableBody" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">جاري تحميل أصناف المخزن من السحابة...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -173,45 +176,66 @@
         </div>
     </div>
 
-    <script>
-        function loadProducts() {
-            try {
-                let data = localStorage.getItem('eidco_v13_products');
-                if (!data) {
-                    let initial = [
-                        { code: 'PRD-101', barcode: '6221001', name: 'دقيق فاخر', buyPrice: 15000, sellPrice: 16000, qty: 50, minQty: 5 }
-                    ];
-                    localStorage.setItem('eidco_v13_products', JSON.stringify(initial));
-                    return initial;
-                }
-                return JSON.parse(data) || [];
-            } catch (e) {
-                console.error("Error reading products:", e);
-                return [];
-            }
-        }
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            updateDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        function saveProductsToStorage(products) {
-            try {
-                localStorage.setItem('eidco_v13_products', JSON.stringify(products));
-            } catch (e) {
-                alert('فشل حفظ البيانات في التخزين المحلي');
-            }
-        }
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
 
-        function renderProducts() {
-            let products = loadProducts();
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const productsRef = collection(db, "products");
+        let productsList = [];
+
+        // المزامنة اللحظية الحية من Firebase Firestore
+        onSnapshot(productsRef, (snapshot) => {
+            productsList = snapshot.docs.map(doc => ({
+                docId: doc.id,
+                ...doc.data()
+            }));
+            localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
+            window.renderProducts();
+        }, (error) => {
+            console.error("خطأ في جلب أصناف المخزن:", error);
+            // استخدام التخزين المحلي كخيار احتياطي عند انقطاع الشبكة
+            try {
+                let localData = localStorage.getItem('eidco_v13_products');
+                if (localData) productsList = JSON.parse(localData);
+                window.renderProducts();
+            } catch(e) {}
+        });
+
+        window.renderProducts = function() {
             let searchEl = document.getElementById('searchInput');
             let search = searchEl ? searchEl.value.toLowerCase().trim() : '';
             let tbody = document.getElementById('productsTableBody');
             
-            let filtered = products.filter(p => 
+            let filtered = productsList.filter(p => 
                 (p.name && p.name.toLowerCase().includes(search)) || 
                 (p.code && p.code.toLowerCase().includes(search)) || 
                 (p.barcode && p.barcode.toLowerCase().includes(search))
             );
 
-            let lowStockItems = products.filter(p => Number(p.qty) <= Number(p.minQty || 3));
+            let lowStockItems = productsList.filter(p => Number(p.qty) <= Number(p.minQty || 3));
             let banner = document.getElementById('lowStockAlertBanner');
             if(banner) {
                 if(lowStockItems.length > 0) {
@@ -242,25 +266,25 @@
                         </td>
                         <td class="p-4 mono-font text-slate-500">${p.minQty || 3}</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button type="button" onclick="editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-                            <button type="button" onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>
+                            <button type="button" onclick="window.editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                            <button type="button" onclick="window.deleteProduct('${p.code}', '${p.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>
                         </td>
                     </tr>
                 `;
             }).join('');
-        }
+        };
 
         function generateNewCode() {
-            let products = loadProducts();
             let uniqueCode;
             do {
                 uniqueCode = 'PRD-' + Math.floor(1000 + Math.random() * 9000);
-            } while(products.some(p => p.code === uniqueCode));
+            } while(productsList.some(p => p.code === uniqueCode));
             return uniqueCode;
         }
 
-        function resetProductForm() {
+        window.resetProductForm = function() {
             document.getElementById('editOriginalCode').value = '';
+            document.getElementById('editDocId').value = '';
             document.getElementById('prodCode').value = generateNewCode();
             document.getElementById('prodBarcode').value = '';
             document.getElementById('prodName').value = '';
@@ -271,15 +295,15 @@
             document.getElementById('prodCode').readOnly = false;
             document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن`;
             document.getElementById('cancelEditBtn').classList.add('hidden');
-        }
+        };
 
-        function editProduct(code) {
-            let products = loadProducts();
-            let p = products.find(x => x.code === code);
+        window.editProduct = function(code) {
+            let p = productsList.find(x => x.code === code);
             if(!p) return;
 
             document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-pen-to-square ml-2 text-indigo-600"></i> تعديل الصنف (${p.name})`;
             document.getElementById('editOriginalCode').value = p.code;
+            document.getElementById('editDocId').value = p.docId || '';
             document.getElementById('prodCode').value = p.code;
             document.getElementById('prodCode').readOnly = true;
             document.getElementById('prodBarcode').value = p.barcode || '';
@@ -291,12 +315,12 @@
             document.getElementById('cancelEditBtn').classList.remove('hidden');
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        };
 
-        function executeSaveProduct() {
+        window.executeSaveProduct = async function() {
             try {
-                let products = loadProducts();
                 let originalCode = document.getElementById('editOriginalCode').value.trim();
+                let docId = document.getElementById('editDocId').value.trim();
                 let code = document.getElementById('prodCode').value.trim();
                 let barcode = document.getElementById('prodBarcode').value.trim();
                 let name = document.getElementById('prodName').value.trim();
@@ -310,49 +334,56 @@
                     return;
                 }
 
-                if(originalCode !== "") {
-                    let index = products.findIndex(x => x.code === originalCode);
-                    if(index !== -1) {
-                        products[index] = { code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty };
+                let productData = { code, barcode, name, buyPrice, sellPrice, qty, minQty };
+
+                if(docId) {
+                    // تحديث صنف موجود في Firestore
+                    await updateDoc(doc(db, "products", docId), productData);
+                } else if(originalCode !== "") {
+                    let existing = productsList.find(x => x.code === originalCode);
+                    if(existing && existing.docId) {
+                        await updateDoc(doc(db, "products", existing.docId), productData);
                     } else {
-                        products.push({ code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty });
+                        await addDoc(productsRef, productData);
                     }
                 } else {
-                    if(products.some(x => x.code === code)) {
+                    if(productsList.some(x => x.code === code)) {
                         code = generateNewCode();
+                        productData.code = code;
                     }
-                    products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
+                    // إضافة صنف جديد إلى Firestore
+                    await addDoc(productsRef, productData);
                 }
 
-                saveProductsToStorage(products);
-                resetProductForm();
-                renderProducts();
-                alert('✓ تم حفظ الصنف وتحديث المخزن بنجاح!');
+                window.resetProductForm();
+                alert('✓ تم حفظ الصنف وتحديث المخزن سحابياً بنجاح!');
             } catch (err) {
-                alert('خطأ أثناء الحفظ: ' + err.message);
+                alert('خطأ أثناء الحفظ في Firebase: ' + err.message);
             }
-        }
+        };
 
-        function deleteProduct(code) {
-            if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن؟')) return;
-            let products = loadProducts();
-            products = products.filter(x => x.code !== code);
-            saveProductsToStorage(products);
-            renderProducts();
-        }
+        window.deleteProduct = async function(code, docId) {
+            if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن السحابي؟')) return;
+            try {
+                let targetDocId = docId;
+                if(!targetDocId) {
+                    let p = productsList.find(x => x.code === code);
+                    if(p) targetDocId = p.docId;
+                }
 
-        // ربط زر الحفظ مباشرة برمجياً لمنع أي تعليق على الموبايل
+                if(targetDocId) {
+                    await deleteDoc(doc(db, "products", targetDocId));
+                    alert('✓ تم حذف الصنف من السحابة بنجاح');
+                } else {
+                    alert('تعذر تحديد المستند المطلوب حذفه');
+                }
+            } catch(err) {
+                alert('خطأ أثناء الحذف من Firebase: ' + err.message);
+            }
+        };
+
         window.addEventListener('DOMContentLoaded', () => {
-            resetProductForm();
-            renderProducts();
-            
-            let btn = document.getElementById('directSaveBtn');
-            if(btn) {
-                btn.onclick = function(e) {
-                    e.preventDefault();
-                    executeSaveProduct();
-                };
-            }
+            window.resetProductForm();
         });
     </script>
 </body>

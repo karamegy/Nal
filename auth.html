@@ -170,18 +170,21 @@
             window.checkFounderAccess();
         });
 
-        // التحقق مما إذا كان المستخدم الحالي هو المؤسس لإظهار خيار إضافة الحسابات
+        // التحقق مما إذا كان المستخدم الحالي هو المؤسس لإظهار خيار إضافة الحسابات وزر التلفزيون العائم
         window.checkFounderAccess = function() {
             const inputVal = document.getElementById('usernameInput').value.trim();
             const addBtn = document.getElementById('addAccountBtn');
             const resetBtn = document.getElementById('resetBtn');
+            const floatingTv = document.getElementById('floatingTvTrigger');
 
             if (inputVal === FOUNDER_NAME) {
                 addBtn.classList.remove('hidden');
                 resetBtn.classList.remove('hidden');
+                if (floatingTv) floatingTv.classList.remove('hidden'); // إظهار زر التلفزيون حصرياً لكرم
             } else {
                 addBtn.classList.add('hidden');
                 resetBtn.classList.add('hidden');
+                if (floatingTv) floatingTv.classList.add('hidden'); // إخفاء زر التلفزيون عن أي شخص آخر
             }
 
             if (inputVal) {
@@ -293,8 +296,9 @@
             }
         };
     </script>
-   <!-- الزر العائم المتحرك لبث EIDCO TV (يُوضع قبل إغلاق وسم </body> في أي صفحة) -->
-<div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+
+   <!-- الزر العائم المتحرك لبث EIDCO TV (مخفي افتراضياً ولن يظهر إلا لكرم حمدي عبدالعظيم) -->
+<div id="floatingTvTrigger" class="hidden fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
     <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
         <span class="relative flex h-3 w-3">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // لوحة التحكم الشاملة للمنصة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
+        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        table th, table td { white-space: nowrap; }
+    </style>
+    <script>
+        if (localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+            window.location.href = 'auth.html';
+        }
+    </script>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+                <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-1 flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة</h1>
+                    <div class="flex items-center gap-3">
+                        <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> فاتورة مجمعة سريعة</a>
+                    </div>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <!-- بطاقة الترحيب والملخص العام -->
+                <div class="corporate-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-indigo-900 to-slate-900 text-white">
+                    <div class="space-y-1">
+                        <span class="text-xs text-indigo-300 font-mono font-bold">إدارة النظام المركزية</span>
+                        <h2 class="text-xl font-black" id="dashAdminName">كرم حمدي عبدالعظيم</h2>
+                        <p class="text-xs text-slate-300">مراقبة حية لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
+                    </div>
+                    <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold">
+                        <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر
+                    </div>
+                </div>
+
+                <!-- إحصائيات الأداء الكلي -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                        <span class="text-xs text-slate-500 font-medium">إجمالي رصيد الخزنة</span>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="dashVault">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
+                        <span class="text-xs text-slate-500 font-medium">إجمالي المبيعات (فردي + مجمع)</span>
+                        <div class="text-2xl font-black text-cyan-600 mono-font" id="dashSales">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                        <span class="text-xs text-slate-500 font-medium">صافي الأرباح المحققة</span>
+                        <div class="text-2xl font-black text-emerald-600 mono-font" id="dashProfits">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
+                        <span class="text-xs text-slate-500 font-medium">إجمالي الأصناف بالمخزن</span>
+                        <div class="text-2xl font-black text-purple-600 mono-font" id="dashProductsCount">0 صنف</div>
+                    </div>
+                </div>
+
+                <!-- رسوم بيانية تحليلية مقارنة -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="corporate-card p-6 space-y-4">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-chart-line ml-2 text-indigo-600"></i> حركة الإيرادات والمبيعات</h3>
+                        <div class="h-64 relative"><canvas id="dashSalesChart"></canvas></div>
+                    </div>
+                    <div class="corporate-card p-6 space-y-4">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-chart-pie ml-2 text-emerald-600"></i> نسبة التدفقات المالية بالخزنة</h3>
+                        <div class="h-64 relative"><canvas id="dashVaultChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- جدول العمليات الحديثة الشاملة -->
+                <div class="corporate-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-clock-rotate-left ml-2 text-indigo-600"></i> أحدث الحركات والعمليات المسجلة في المنصة</h3>
+                        <span class="text-xs text-slate-400 font-mono">محدث فوراً عبر التخزين المحلي</span>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-3">رقم العملية</th>
+                                    <th class="p-3">نوع النشاط</th>
+                                    <th class="p-3">القيمة / المبلغ</th>
+                                    <th class="p-3">البيان والتفاصيل</th>
+                                    <th class="p-3">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashLogsTable" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
+            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
+            products: JSON.parse(localStorage.getItem('eidco_v13_products')) || [],
+            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
+            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
+        };
+
+        document.getElementById('dashAdminName').innerText = state.adminName;
+
+        let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+        let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+        let totalSales = state.invoices.reduce((s,i)=>s+Number(i.total),0);
+        let totalProfits = state.invoices.reduce((s,i)=>s+Number(i.profit||0),0);
+
+        document.getElementById('dashVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
+        document.getElementById('dashSales').innerText = totalSales.toLocaleString() + ' ج.م';
+        document.getElementById('dashProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
+        document.getElementById('dashProductsCount').innerText = state.products.length + ' صنف';
+
+        // Render Recent Logs Table
+        let logsTable = document.getElementById('dashLogsTable');
+        let recentTxs = [...state.transactions].reverse().slice(0, 8);
+        if(!recentTxs.length) {
+            logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات مسجلة بعد.</td></tr>`;
+        } else {
+            logsTable.innerHTML = recentTxs.map(t => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 mono-font text-indigo-600 font-bold">${t.id}</td>
+                    <td class="p-3 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
+                    <td class="p-3 mono-font font-bold">${Number(t.amount).toLocaleString()} ج.م</td>
+                    <td class="p-3 text-slate-600">${t.desc}</td>
+                    <td class="p-3 mono-font text-slate-500">${t.date || 'اليوم'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Charts
+        new Chart(document.getElementById('dashSalesChart'), {
+            type: 'line',
+            data: {
+                labels: state.invoices.length ? state.invoices.map(i=>i.id) : ['بداية التشغيل', 'اليوم'],
+                datasets: [{ label: 'المبيعات الكلية', data: state.invoices.length ? state.invoices.map(i=>i.total) : [0, 15000], borderColor: '#4f46e5', tension: 0.4, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.08)' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        new Chart(document.getElementById('dashVaultChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['الإيرادات', 'المصروفات'],
+                datasets: [{ data: [totalInc || 1, totalExp || 1], backgroundColor: ['#10b981', '#f43f5e'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    </script>
+</body>
+</html>

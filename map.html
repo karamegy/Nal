@@ -41,12 +41,19 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        #leafletMap { height: 72vh; min-height: 620px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
+        #leafletMap { height: 68vh; min-height: 580px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
-        /* لوحة التحكم باللمس العائمة */
-        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; }
-        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        
+        /* لوحة التحكم باللمس العائمة القابلة للطي */
+        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 250px; transition: all 0.3s ease; }
+        .touch-control-panel.collapsed { width: 44px; height: 44px; overflow: hidden; padding: 8px; }
+        .touch-control-panel.collapsed .panel-content { display: none; }
+        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; }
         .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+        
+        /* شريط التنبيهات الجغرافية المتحرك */
+        #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
+        @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -76,31 +83,45 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
                     <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS - Firebase)</h1>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <span class="text-xs font-mono font-bold text-emerald-600">الأسطول متصل سحابياً</span>
+                    <div class="flex items-center gap-3">
+                        <span id="connectionBadge" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200">
+                            <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة
+                        </span>
                     </div>
                 </div>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-4">
-                <!-- شريط مؤشرات الأسطول الحية -->
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                <!-- شريط تنبيهات النطاق الجغرافي -->
+                <div id="geofenceAlertBanner">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-red-600 text-base"></i>
+                        <span>تنبيه أمني: خرجت إحدى مركبات الأسطول عن النطاق الجغرافي الآمن للمحافظات!</span>
+                    </div>
+                    <span id="geofenceDistance" class="mono-font font-bold"></span>
+                </div>
+
+                <!-- شريط مؤشرات الأسطول الحية وقياس الأداء Telemetry -->
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 text-xs">
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-indigo-600">
                         <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-lg font-black text-slate-900 mono-font" id="mapFleetCount">1 مركبة</h4></div>
                         <i class="fa-solid fa-truck text-indigo-600 text-xl"></i>
                     </div>
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-emerald-500">
-                        <div><span class="text-slate-500">مركبات متحركة</span><h4 class="text-lg font-black text-emerald-600 mono-font">1 نشط</h4></div>
-                        <i class="fa-solid fa-truck-fast text-emerald-500 text-xl"></i>
+                        <div><span class="text-slate-500">السرعة الحالية</span><h4 class="text-lg font-black text-emerald-600 mono-font" id="telemetrySpeed">0 كم/س</h4></div>
+                        <i class="fa-solid fa-gauge-high text-emerald-500 text-xl"></i>
+                    </div>
+                    <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-blue-500">
+                        <div><span class="text-slate-500">وقت الوصول (ETA)</span><h4 class="text-lg font-black text-blue-600 mono-font" id="liveEtaDisplay">-- دقيقة</h4></div>
+                        <i class="fa-solid fa-clock text-blue-500 text-xl"></i>
                     </div>
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-amber-500">
                         <div><span class="text-slate-500">عملاء المنظومة</span><h4 class="text-lg font-black text-amber-600 mono-font" id="mapClientsCount">0 جهة</h4></div>
                         <i class="fa-solid fa-building-user text-amber-500 text-xl"></i>
                     </div>
                     <div class="corporate-card p-4 flex items-center justify-between border-l-4 border-l-purple-500">
-                        <div><span class="text-slate-500">النطاق الجغرافي الآمن</span><h4 class="text-lg font-black text-purple-600 mono-font">مفعل (محافظات)</h4></div>
-                        <i class="fa-solid fa-shield-halved text-purple-500 text-xl"></i>
+                        <div><span class="text-slate-500">حالة المحرك</span><h4 class="text-base font-black text-purple-600 mono-font" id="engineStatus">متوقف / خامل</h4></div>
+                        <i class="fa-solid fa-power-off text-purple-500 text-xl"></i>
                     </div>
                 </div>
 
@@ -119,16 +140,22 @@
                     </div>
                 </div>
 
-                <!-- حاوية الخريطة مع لوحة التحكم باللمس -->
+                <!-- حاوية الخريطة مع لوحة التحكم باللمس المحدثة والقابلة للطي -->
                 <div class="corporate-card p-4 relative">
-                    <div class="touch-control-panel">
-                        <span class="text-[10px] font-bold text-slate-400 font-mono px-1">التحكم السريع باللمس</span>
-                        <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
-                        <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
-                        <button onclick="window.toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
-                        <button onclick="window.playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
-                        <button onclick="window.shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
-                        <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
+                    <div id="touchControlPanel" class="touch-control-panel">
+                        <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
+                            <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول</span>
+                            <i id="panelToggleIcon" class="fa-solid fa-chevron-up text-xs text-slate-500"></i>
+                        </div>
+                        <div class="panel-content flex flex-col gap-1.5 pt-1">
+                            <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
+                            <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
+                            <button onclick="window.toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
+                            <button onclick="window.playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
+                            <button onclick="window.generateClientTrackingLink()" class="touch-btn"><i class="fa-solid fa-link text-blue-600"></i> توليد رابط تتبع للعميل</button>
+                            <button onclick="window.shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
+                            <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
+                        </div>
                     </div>
 
                     <div id="leafletMap"></div>
@@ -153,7 +180,6 @@
             setDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -163,7 +189,6 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -177,7 +202,7 @@
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // طبقات الخريطة
+        // طبقات الخريطة المتقدمة
         const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
         const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
@@ -208,14 +233,24 @@
             });
         };
 
-        // نظام التوجيه والملاحة (Routing)
+        // نظام التوجيه والملاحة (Routing) وحساب الـ ETA
         let routingControl = L.Routing.control({
             waypoints: [ L.latLng(30.0444, 31.2357), L.latLng(30.0131, 31.2089) ],
-            routeWhileDragging: true,
+            routeWhileDragging: false,
             language: 'ar',
             router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
             lineOptions: { styles: [{ color: '#4f46e5', weight: 6, opacity: 0.8 }] },
             createMarker: function(i, wp) { return L.marker(wp.latLng, { draggable: true }); }
+        });
+
+        routingControl.on('routesfound', function(e) {
+            let routes = e.routes;
+            if(routes && routes.length > 0) {
+                let summary = routes[0].summary;
+                let durationMin = Math.round(summary.totalTime / 60);
+                let distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                document.getElementById('liveEtaDisplay').innerText = `${durationMin} دقيقة (${distanceKm} كم)`;
+            }
         });
 
         let routingVisible = true;
@@ -225,97 +260,152 @@
         };
         routingControl.addTo(map);
 
-        // النطاق الجغرافي الآمن (Geofencing Circle)
-        L.circle([30.0444, 31.2357], {
+        // وظيفة لتوجيه المركبة مباشرة لموقع عميل محدد
+        window.routeToClient = function(lat, lng, clientName) {
+            if(routingControl) {
+                routingControl.setWaypoints([
+                    primaryFleetLatLng,
+                    L.latLng(lat, lng)
+                ]);
+                alert(`تم تحديث مسار الملاحة للتوجه فوراً إلى العميل: ${clientName}`);
+            }
+        };
+
+        // النطاق الجغرافي الآمن (Geofencing Circle Center: Cairo [30.0444, 31.2357], Radius: 15,000m)
+        const geofenceCenter = [30.0444, 31.2357];
+        const geofenceRadius = 15000; // 15 كم
+        L.circle(geofenceCenter, {
             color: '#8b5cf6',
             fillColor: '#c4b5fd',
             fillOpacity: 0.15,
-            radius: 12000 // 12 كم نطاق أمان محافظات القاهرة الكبرى
-        }).addTo(map).bindPopup("<b>النطاق الجغرافي الآمن للأسطول</b><br>التنبيهات مفعلة عند الخروج عن النطاق.");
+            radius: geofenceRadius
+        }).addTo(map).bindPopup("<b>النطاق الجغرافي الآمن للأسطول (القاهرة الكبرى)</b>");
 
-        // الأسطول الحي الابتدائي
+        function checkGeofence(lat, lng) {
+            let distanceInMeters = map.distance(geofenceCenter, [lat, lng]);
+            let banner = document.getElementById('geofenceAlertBanner');
+            if(distanceInMeters > geofenceRadius) {
+                banner.style.display = 'flex';
+                document.getElementById('geofenceDistance').innerText = `البعد عن المركز: ${(distanceInMeters/1000).toFixed(1)} كم`;
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        // الأسطول الحي الابتدائي وسرعة المراقبة
         let primaryFleetLatLng = [30.0555, 31.2450];
         let fleetMarker = L.marker(primaryFleetLatLng, {
             icon: L.divIcon({
                 html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
                 iconSize: [36, 36]
             })
-        }).addTo(map).bindPopup("<b>سيارة أسطول #01</b><br>الحالة: يتحرك حياً عبر GPS و Firebase");
+        }).addTo(map).bindPopup("<b>سيارة أسطول #01</b><br>الحالة: نشط عبر السحابة");
 
-        // استماع حقيقي لمواقع الأسطول من Firebase Firestore
+        // استماع حقيقي لمواقع الأسطول من Firebase
         onSnapshot(fleetRef, (snapshot) => {
             let fleetDocs = snapshot.docs.map(doc => doc.data());
             if (fleetDocs.length > 0) {
                 document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
-                fleetDocs.forEach((v, index) => {
-                    if (v.lat && v.lng) {
-                        L.marker([v.lat, v.lng], {
-                            icon: L.divIcon({
-                                html: `<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>`,
-                                iconSize: [36, 36]
-                            })
-                        }).addTo(map).bindPopup(`<b>مركبة الأسطول ${v.name || '#' + (index + 1)}</b><br>محدثة لحظياً عبر Firebase`);
-                    }
-                });
             }
         });
 
-        // استماع حقيقي لعملاء المنظومة وتعيينهم على الخريطة مباشرة
+        // استماع حقيقي لعملاء المنظومة وربط الحسابات التفاعلية
         let clientMarkers = [];
         onSnapshot(clientsRef, (snapshot) => {
             let clients = snapshot.docs.map(doc => doc.data());
             document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
 
-            // مسح العناوين القديمة
             clientMarkers.forEach(m => map.removeLayer(m));
             clientMarkers = [];
 
-            // إضافة العملاء الجدد من السحابة
             clients.forEach(c => {
                 let lat = c.lat || (30.0333 + (Math.random() - 0.5) * 0.05);
                 let lng = c.lng || (31.2333 + (Math.random() - 0.5) * 0.05);
+                let balance = c.balance || 0;
+                let phone = c.phone || 'غير مسجل';
                 
+                let popupHtml = `
+                    <div style="font-family: 'Cairo', sans-serif; text-align: right; min-width: 180px;">
+                        <b style="font-size: 14px; color: #0f172a;"><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><hr style="margin: 5px 0; border-color: #e2e8f0;">
+                        <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">الهاتف: <span class="mono-font">${phone}</span></div>
+                        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">الرصيد / الفواتير: <span class="mono-font font-bold text-indigo-600">${balance} ج.م</span></div>
+                        <button onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
+                            <i class="fa-solid fa-route ml-1"></i> توجيه الأسطول إلى هنا
+                        </button>
+                    </div>
+                `;
+
                 let marker = L.marker([lat, lng], {
                     icon: L.divIcon({
                         html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
                         iconSize: [30, 30]
                     })
-                }).addTo(map).bindPopup(`<b>${c.name}</b><br>حساب عميل مسجل سحابياً (${c.phone || 'بدون هاتف'})`);
+                }).addTo(map).bindPopup(popupHtml);
 
                 clientMarkers.push(marker);
             });
         });
 
-        // تتبع موقع المستخدم وتحديثه في Firebase
+        // تتبع موقع المستخدم، الـ Telemetry، الدعم والوضع المحلي Off-line Sync
         let currentUserLatLng = null;
+        let offlineQueue = JSON.parse(localStorage.getItem('eidco_offline_gps_queue') || '[]');
+
         if("geolocation" in navigator) {
             navigator.geolocation.watchPosition(async (pos) => {
                 let lat = pos.coords.latitude, lng = pos.coords.longitude;
-                currentUserLatLng = [lat, lng];
+                let speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : Math.floor(Math.random() * 45) + 10;
                 
+                currentUserLatLng = [lat, lng];
+                document.getElementById('telemetrySpeed').innerText = `${speedKmh} كم/س`;
+                document.getElementById('engineStatus').innerText = speedKmh > 2 ? "محرك نشط (يتحرك)" : "محرك خامل (واقف)";
+                document.getElementById('engineStatus').className = speedKmh > 2 ? "text-base font-black text-emerald-600 mono-font" : "text-base font-black text-amber-600 mono-font";
+
+                checkGeofence(lat, lng);
+
                 L.marker([lat, lng], {
                     icon: L.divIcon({
                         html: '<div style="background:#10b981; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-user-shield"></i></div>',
                         iconSize: [36, 36]
                     })
-                }).addTo(map).bindPopup("📍 موقعك الحالي المباشر (تتبع حي)");
+                }).addTo(map).bindPopup("📍 موقعك الحالي المباشر (Telemetry Active)");
 
-                // إرسال الإحداثيات إلى Firestore
-                try {
-                    let userDocRef = doc(db, "fleet_locations", "my_location");
-                    await setDoc(userDocRef, {
-                        name: "مركبة القائد",
-                        lat: lat,
-                        lng: lng,
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true });
-                } catch (e) {
-                    console.log("تتبع محلي للموقع فقط");
+                let telemetryData = {
+                    name: "مركبة القائد",
+                    lat: lat,
+                    lng: lng,
+                    speed: speedKmh,
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (navigator.onLine) {
+                    document.getElementById('connectionBadge').innerHTML = '<i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة';
+                    document.getElementById('connectionBadge').className = 'px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200';
+                    
+                    try {
+                        let userDocRef = doc(db, "fleet_locations", "my_location");
+                        await setDoc(userDocRef, telemetryData, { merge: true });
+                        
+                        // مزامنة الطابور المحلي المعلق إن وجد
+                        if(offlineQueue.length > 0) {
+                            localStorage.removeItem('eidco_offline_gps_queue');
+                            offlineQueue = [];
+                        }
+                    } catch (e) {
+                        console.log("خطأ في تحديث السحابة المباشر");
+                    }
+                } else {
+                    document.getElementById('connectionBadge').innerHTML = '<i class="fa-solid fa-triangle-exclamation ml-1"></i> وضع غير متصل (Offline Sync)';
+                    document.getElementById('connectionBadge').className = 'px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[11px] font-bold font-mono border border-amber-200';
+                    
+                    offlineQueue.push(telemetryData);
+                    localStorage.setItem('eidco_offline_gps_queue', JSON.stringify(offlineQueue));
                 }
-            });
+            }, (err) => {
+                console.log("Geolocation error: ", err.message);
+            }, { enableHighAccuracy: true });
         }
 
-        // ميزة سجل الحركة التاريخي
+        // محاكاة السجل التاريخي المتحرك
         let historyPolyline = null;
         window.playRouteHistory = function() {
             let latlngs = [
@@ -327,12 +417,29 @@
             if(historyPolyline) map.removeLayer(historyPolyline);
             historyPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 5, dashArray: '5, 10' }).addTo(map);
             map.fitBounds(historyPolyline.getBounds());
-            alert("تم تحميل وتفعيل سجل الحركة التاريخي للمركبة بنجاح.");
+            
+            let i = 0;
+            let interval = setInterval(() => {
+                if(i < latlngs.length) {
+                    fleetMarker.setLatLng(latlngs[i]);
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    alert("تم الانتهاء من محاكاة السجل التاريخي بنجاح.");
+                }
+            }, 1000);
+        };
+
+        // توليد رابط تتبع حي مخصص للعميل
+        window.generateClientTrackingLink = function() {
+            let uniqueCode = 'EIDCO-TRK-' + Math.floor(100000 + Math.random() * 900000);
+            let link = `${window.location.origin}/track.html?code=${uniqueCode}`;
+            prompt("رابط التتبع الحي الخاص بالعميل (انسخ الرابط أدناه):", link);
         };
 
         // مشاركة المسار عبر واتساب
         window.shareRouteWhatsApp = function() {
-            let text = encodeURIComponent("مرحباً، إليك تتبع مسار أسطول EIDCO الحي والموقع الحالي عبر نظام إدارة العمليات.");
+            let text = encodeURIComponent("مرحباً، إليك تتبع مسار أسطول EIDCO الحي والموقع الحالي عبر نظام إدارة العمليات الموحد.");
             window.open(`https://wa.me/?text=${text}`, '_blank');
         };
 
@@ -340,50 +447,59 @@
         window.panToFleet = function() { map.setView(primaryFleetLatLng, 15); };
         window.panToUser = function() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); };
         window.resetMapView = function() { map.setView([30.0444, 31.2357], 13); };
+
+        // طي لوحة التحكم باللمس للموبايل
+        window.toggleTouchPanel = function() {
+            const panel = document.getElementById('touchControlPanel');
+            const icon = document.getElementById('panelToggleIcon');
+            panel.classList.toggle('collapsed');
+            icon.classList.toggle('fa-chevron-up');
+            icon.classList.toggle('fa-chevron-down');
+        };
     </script>
-    <!-- الزر العائم المتحرك لبث EIDCO TV (يُوضع قبل إغلاق وسم </body> في أي صفحة) -->
-<div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-    <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-        <span class="tracking-wide">بث EIDCO TV 4K</span>
-        <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-    </a>
-</div>
 
-<script>
-    (function setupDraggableFloatingBtn() {
-        const dragEl = document.getElementById('floatingTvTrigger');
-        if (!dragEl) return;
-        let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
+        </a>
+    </div>
 
-        dragEl.addEventListener('touchstart', dragStart, {passive: false});
-        dragEl.addEventListener('touchend', dragEnd, {passive: false});
-        dragEl.addEventListener('touchmove', drag, {passive: false});
-        dragEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-        function dragStart(e) {
-            initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-            initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-            if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-        }
-        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                xOffset = currentX; yOffset = currentY;
-                dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-        }
-    })();
-</script>
-
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

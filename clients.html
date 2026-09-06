@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // حسابات العملاء</title>
+    <title>EIDCO // حسابات العملاء والمديونيات</title>
     
     <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
@@ -30,16 +30,19 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
+        table th, table td { white-space: nowrap; }
     </style>
 </head>
 <body>
     <div class="flex min-h-screen">
+        <!-- القائمة الجانبية -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -61,60 +64,302 @@
             </nav>
         </aside>
 
+        <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الشركات والعملاء</h1>
-                    <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2"><i class="fa-solid fa-user-plus"></i> إضافة عميل جديد</button>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة حسابات العملاء والمديونيات</h1>
+                    <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> إضافة عميل جديد
+                    </button>
                 </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="clientsGrid"></div>
+            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+                <!-- جدول العملاء -->
+                <div class="corporate-card p-6 space-y-4">
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة العملاء والشركات</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">اسم العميل / الشركة</th>
+                                    <th class="p-4">رقم الهاتف</th>
+                                    <th class="p-4">العنوان</th>
+                                    <th class="p-4">إجمالي المشتريات</th>
+                                    <th class="p-4">المديونية المتبقية</th>
+                                    <th class="p-4 text-center">إجراءات وكشف الحساب</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
 
+    <!-- نافذة إضافة عميل -->
     <div id="clientModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 class="font-bold text-sm text-slate-900">إضافة عميل أو شركة جديدة</h3>
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl">
+            <h3 class="font-bold text-sm text-slate-900">إضافة عميل / شركة جديدة</h3>
             <div class="space-y-3 text-xs">
-                <div><label class="block mb-1 text-slate-600">اسم العميل</label><input type="text" id="clientName" class="corporate-input w-full"></div>
-                <div><label class="block mb-1 text-slate-600">الهاتف</label><input type="text" id="clientPhone" class="corporate-input w-full mono-font"></div>
-                <div><label class="block mb-1 text-slate-600">العنوان</label><input type="text" id="clientAddress" class="corporate-input w-full"></div>
+                <div>
+                    <label class="block mb-1 text-slate-600">اسم العميل / الشركة</label>
+                    <input type="text" id="clientNameInput" class="corporate-input w-full" placeholder="مثال: شركة النور للتجارة">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-600">رقم الهاتف (للواتساب)</label>
+                    <input type="text" id="clientPhoneInput" class="corporate-input w-full mono-font" placeholder="010xxxxxxxx">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-600">العنوان</label>
+                    <input type="text" id="clientAddressInput" class="corporate-input w-full" placeholder="المدينة - الشارع">
+                </div>
             </div>
-            <div class="flex gap-2 pt-2"><button onclick="saveClient()" class="btn-primary flex-1 py-2 text-xs">حفظ</button><button onclick="closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveClient()" class="btn-primary flex-1 py-2 text-xs">حفظ العميل</button>
+                <button onclick="closeClientModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة كشف حساب العميل التفصيلي -->
+    <div id="statementModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div>
+                    <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
+                    <span class="text-[11px] text-slate-500">كشف الحساب التفصيلي والمديونيات</span>
+                </div>
+                <button onclick="closeStatementModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="p-3 bg-slate-50 rounded-xl border">
+                    <span class="text-[10px] text-slate-500 block">إجمالي المشتريات</span>
+                    <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm">0 ج.م</strong>
+                </div>
+                <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <span class="text-[10px] text-emerald-600 block">إجمالي المدفوعات</span>
+                    <strong id="stmtTotalPaid" class="text-emerald-700 mono-font text-sm">0 ج.م</strong>
+                </div>
+                <div class="p-3 bg-rose-50 rounded-xl border border-rose-100">
+                    <span class="text-[10px] text-rose-600 block">المتبقي (المديونية)</span>
+                    <strong id="stmtTotalDue" class="text-rose-700 mono-font text-sm">0 ج.م</strong>
+                </div>
+            </div>
+
+            <!-- زر تسجيل دفعة نقدية -->
+            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex gap-2 items-center">
+                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input flex-1 mono-font text-xs">
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 px-4 whitespace-nowrap"><i class="fa-solid fa-money-bill-wave ml-1"></i> تسجيل دفعة نقدية</button>
+            </div>
+
+            <div class="space-y-2">
+                <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات:</span>
+                <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-right text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                <th class="p-2.5">الرقم / المعاملة</th>
+                                <th class="p-2.5">التفاصيل</th>
+                                <th class="p-2.5">المبلغ</th>
+                                <th class="p-2.5">التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال كشف الحساب واتساب
+                </button>
+                <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let clients = JSON.parse(localStorage.getItem('eidco_v13_clients')) || [];
-        function saveData() {
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(clients));
+        let state = {
+            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
+            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
+            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [],
+            payments: JSON.parse(localStorage.getItem('eidco_v13_client_payments')) || []
+        };
+
+        let currentActiveClient = null;
+
+        function renderClients() {
+            let tbody = document.getElementById('clientsTableBody');
+            if(!state.clients.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد عملاء مسجلون حالياً.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.clients.map(c => {
+                // حساب إجمالي المشتريات للعميل
+                let clientInvoices = state.invoices.filter(i => i.client === c.name);
+                let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+
+                // حساب إجمالي المدفوعات المسجلة للعميل
+                let clientPayments = state.payments.filter(p => p.clientName === c.name);
+                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+                let dueBalance = totalPurchases - totalPaid;
+
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-bold text-slate-900">${c.name}</td>
+                        <td class="p-4 mono-font text-slate-600">${c.phone || '---'}</td>
+                        <td class="p-4 text-slate-600">${c.address || '---'}</td>
+                        <td class="p-4 mono-font text-indigo-600 font-bold">${totalPurchases.toLocaleString()} ج.م</td>
+                        <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}">${dueBalance.toLocaleString()} ج.م</td>
+                        <td class="p-4 text-center space-x-2 space-x-reverse">
+                            <button onclick="openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                                <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
+                            </button>
+                            <button onclick="deleteClient('${c.name}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف العميل"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openClientModal() { document.getElementById('clientModal').classList.add('active'); }
+        function closeClientModal() { document.getElementById('clientModal').classList.remove('active'); }
+
+        function saveClient() {
+            let name = document.getElementById('clientNameInput').value.trim();
+            let phone = document.getElementById('clientPhoneInput').value.trim();
+            let address = document.getElementById('clientAddressInput').value.trim();
+
+            if(!name) return alert('الرجاء إدخال اسم العميل');
+            if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
+
+            state.clients.push({ name, phone, address });
+            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
+            closeClientModal();
+            renderClients();
+            alert('✓ تم إضافة العميل بنجاح');
+        }
+
+        function deleteClient(name) {
+            if(!confirm(`هل أنت متأكد من حذف العميل (${name})؟`)) return;
+            state.clients = state.clients.filter(c => c.name !== name);
+            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
             renderClients();
         }
-        function renderClients() {
-            document.getElementById('clientsGrid').innerHTML = clients.map(c => `
-                <div class="corporate-card p-4 space-y-2">
-                    <h4 class="font-bold text-sm text-slate-900">${c.name}</h4>
-                    <p class="text-xs text-slate-500"><i class="fa-solid fa-phone text-indigo-600 ml-1"></i> ${c.phone||'غير مسجل'}</p>
-                    <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot text-purple-600 ml-1"></i> ${c.address||'القاهرة'}</p>
-                    <div class="pt-2 flex justify-between">
-                        <a href="chat.html" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold"><i class="fa-solid fa-comments ml-1"></i>مراسلة</a>
-                        <button onclick="deleteClient(${c.id})" class="text-rose-500 hover:text-rose-700 text-xs font-bold"><i class="fa-solid fa-trash ml-1"></i>حذف</button>
-                    </div>
-                </div>
-            `).join('');
+
+        function openClientStatement(clientName) {
+            currentActiveClient = state.clients.find(c => c.name === clientName);
+            if(!currentActiveClient) return;
+
+            document.getElementById('stmtClientName').innerText = currentActiveClient.name;
+
+            let clientInvoices = state.invoices.filter(i => i.client === clientName);
+            let clientPayments = state.payments.filter(p => p.clientName === clientName);
+
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            let dueBalance = totalPurchases - totalPaid;
+
+            document.getElementById('stmtTotalPurchases').innerText = totalPurchases.toLocaleString() + ' ج.م';
+            document.getElementById('stmtTotalPaid').innerText = totalPaid.toLocaleString() + ' ج.م';
+            document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
+
+            let rowsHtml = '';
+            clientInvoices.forEach(inv => {
+                rowsHtml += `
+                    <tr>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600">${inv.id}</td>
+                        <td class="p-2.5">فاتورة مبيعات (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500">${inv.date || '---'}</td>
+                    </tr>
+                `;
+            });
+
+            clientPayments.forEach(pay => {
+                rowsHtml += `
+                    <tr class="bg-emerald-50/50">
+                        <td class="p-2.5 mono-font font-bold text-emerald-600">سداد دفعة</td>
+                        <td class="p-2.5">دفعة نقدية مسددة</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600">-${Number(pay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500">${pay.date}</td>
+                    </tr>
+                `;
+            });
+
+            if(!rowsHtml) {
+                rowsHtml = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا توجد معاملات مسجلة بعد.</td></tr>`;
+            }
+
+            document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
+            document.getElementById('statementModal').classList.add('active');
         }
-        function openClientModal() { document.getElementById('clientModal').classList.add('active'); }
-        function closeModal() { document.getElementById('clientModal').classList.remove('active'); }
-        function saveClient() {
-            let name = document.getElementById('clientName').value;
-            if(!name) return alert('أدخل اسم العميل');
-            clients.push({ id: Date.now(), name, phone: document.getElementById('clientPhone').value, address: document.getElementById('clientAddress').value });
-            closeModal(); saveData();
+
+        function closeStatementModal() {
+            document.getElementById('statementModal').classList.remove('active');
+            currentActiveClient = null;
         }
-        function deleteClient(id) { clients = clients.filter(c => c.id !== id); saveData(); }
+
+        function recordClientPayment() {
+            if(!currentActiveClient) return;
+            let amount = Number(document.getElementById('paymentAmountInput').value);
+            if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+
+            let today = new Date().toISOString().split('T')[0];
+
+            // حفظ الدفعة
+            state.payments.push({
+                id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
+                clientName: currentActiveClient.name,
+                amount: amount,
+                date: today
+            });
+
+            // إضافة الدفعة للخزنة النقدية كإيراد / تحصيل
+            state.transactions.push({
+                id: 'TX-' + Math.floor(100 + Math.random() * 900),
+                type: 'إيراد',
+                amount: amount,
+                desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,
+                date: today
+            });
+
+            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+
+            document.getElementById('paymentAmountInput').value = '';
+            alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة بنجاح');
+            openClientStatement(currentActiveClient.name);
+            renderClients();
+        }
+
+        function sendStatementWhatsApp() {
+            if(!currentActiveClient) return;
+            let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
+            let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
+
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            let dueBalance = totalPurchases - totalPaid;
+
+            let text = `📊 *EIDCO // كشف حساب العميل*\n`;
+            text += `👤 العميل: *${currentActiveClient.name}*\n\n`;
+            text += `💰 إجمالي المشتريات: ${totalPurchases.toLocaleString()} ج.م\n`;
+            text += `✅ إجمالي المدفوعات: ${totalPaid.toLocaleString()} ج.م\n`;
+            text += `📌 *الرصيد المتبقي (المديونية): ${dueBalance.toLocaleString()} ج.م*\n\n`;
+            text += `شكراً لتعاملكم المستمر معنا! 🙏`;
+
+            let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+            let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
         renderClients();
     </script>
 </body>

@@ -72,24 +72,22 @@
             let adminName = document.getElementById('authAdminName').value.trim() || "كرم حمدي عبدالعظيم";
 
             try {
-                // محاولة استخدام WebAuthn الحقيقي إذا كان مدعوماً من الجهاز والمتصفح
                 if (window.PublicKeyCredential && navigator.credentials) {
                     const publicKeyCredentialRequestOptions = {
                         challenge: Uint8Array.from("eidco_secure_challenge_2026", c => c.charCodeAt(0)),
                         timeout: 60000,
                         userVerification: "preferred"
                     };
-                    // استدعاء قارئ البصمة البيومترية في المتصفح/النظام
                     await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions }).catch(() => {});
                 } else {
-                    // محاكاة تأكيد أمني في حال عدم توفر عتاد البصمة المباشر
                     await new Promise(r => setTimeout(r, 1200));
                 }
 
                 statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // حفظ بيانات الاعتماد في التخزين المحلي
+                // تعيين علامات الاعتماد لمنع إعادة التوجيه اللانهائي
+                sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', adminName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
 
@@ -100,7 +98,12 @@
             } catch (error) {
                 statusEl.innerText = "⚠️ فشل التحقق، تم السماح بالدخول الاحتياطي.";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                
+                // تعيين علامات الاعتماد حتى في حالة الدخول الاحتياطي
+                sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', adminName);
+                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 1000);

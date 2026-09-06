@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS</title>
+    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات</title>
     
     <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
@@ -44,41 +44,44 @@
         #leafletMap { height: 68vh; min-height: 520px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; }
         
-        /* لوحة التحكم باللمس العائمة القابلة للطي */
         .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 250px; transition: all 0.3s ease; }
         .touch-control-panel.collapsed { width: 44px; height: 44px; overflow: hidden; padding: 8px; }
         .touch-control-panel.collapsed .panel-content { display: none; }
         .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; }
         .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
         
-        /* شريط التنبيهات الجغرافية المتحرك */
         #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 
-    <!-- تعريف الدوال العامة للواجهة لضمان الاستجابة الفورية للنقر واللمس -->
     <script>
         window.openAddVehicleModal = function() {
-            const modalTitle = document.getElementById('modalTitle');
-            const vehicleId = document.getElementById('vehicleId');
-            const vehicleName = document.getElementById('vehicleName');
-            const vehiclePlate = document.getElementById('vehiclePlate');
-            const vehicleLat = document.getElementById('vehicleLat');
-            const vehicleLng = document.getElementById('vehicleLng');
-            const vehicleModal = document.getElementById('vehicleModal');
-
-            if(modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول';
-            if(vehicleId) vehicleId.value = '';
-            if(vehicleName) vehicleName.value = '';
-            if(vehiclePlate) vehiclePlate.value = '';
-            if(vehicleLat) vehicleLat.value = '30.0444';
-            if(vehicleLng) vehicleLng.value = '31.2357';
-            if(vehicleModal) vehicleModal.classList.remove('hidden');
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول';
+            document.getElementById('vehicleId').value = '';
+            document.getElementById('vehicleName').value = '';
+            document.getElementById('vehiclePlate').value = '';
+            document.getElementById('vehicleLat').value = '30.0444';
+            document.getElementById('vehicleLng').value = '31.2357';
+            document.getElementById('vehicleModal').classList.remove('hidden');
         };
 
         window.closeVehicleModal = function() {
-            const vehicleModal = document.getElementById('vehicleModal');
-            if(vehicleModal) vehicleModal.classList.add('hidden');
+            document.getElementById('vehicleModal').classList.add('hidden');
+        };
+
+        window.openAddShipmentModal = function() {
+            document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة';
+            document.getElementById('shipmentId').value = '';
+            document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('shipmentReceiver').value = '';
+            document.getElementById('shipmentStatus').value = 'قيد التوصيل';
+            document.getElementById('shipmentLat').value = '30.0500';
+            document.getElementById('shipmentLng').value = '31.2400';
+            document.getElementById('shipmentModal').classList.remove('hidden');
+        };
+
+        window.closeShipmentModal = function() {
+            document.getElementById('shipmentModal').classList.add('hidden');
         };
 
         window.toggleTouchPanel = function() {
@@ -118,7 +121,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة والأقمار الصناعية وتتبع الأسطول الحي (GPS - Firebase)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - Firebase)</h1>
                     <div class="flex items-center gap-3">
                         <button onclick="window.refreshAllData()" class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer">
                             <i class="fa-solid fa-rotate ml-1"></i> تحديث القراءات
@@ -131,7 +134,6 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
-                <!-- شريط تنبيهات النطاق الجغرافي -->
                 <div id="geofenceAlertBanner">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-triangle-exclamation text-red-600 text-base"></i>
@@ -140,15 +142,19 @@
                     <span id="geofenceDistance" class="mono-font font-bold"></span>
                 </div>
 
-                <!-- شريط مؤشرات الأسطول الحية وقياس الأداء Telemetry -->
-                <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                <!-- شريط مؤشرات الأسطول الشامل متضمناً كارت الشحنات -->
+                <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
                     <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-indigo-600">
                         <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-base sm:text-lg font-black text-slate-900 mono-font" id="mapFleetCount">0 مركبة</h4></div>
                         <i class="fa-solid fa-truck text-indigo-600 text-lg sm:text-xl"></i>
                     </div>
-                    <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-emerald-500">
-                        <div><span class="text-slate-500">السرعة الحالية</span><h4 class="text-base sm:text-lg font-black text-emerald-600 mono-font" id="telemetrySpeed">0 كم/س</h4></div>
-                        <i class="fa-solid fa-gauge-high text-emerald-500 text-lg sm:text-xl"></i>
+                    <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-emerald-600">
+                        <div><span class="text-slate-500">إجمالي الشحنات</span><h4 class="text-base sm:text-lg font-black text-emerald-600 mono-font" id="mapShipmentsCount">0 شحنة</h4></div>
+                        <i class="fa-solid fa-boxes-packing text-emerald-600 text-lg sm:text-xl"></i>
+                    </div>
+                    <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-teal-500">
+                        <div><span class="text-slate-500">السرعة الحالية</span><h4 class="text-base sm:text-lg font-black text-teal-600 mono-font" id="telemetrySpeed">0 كم/س</h4></div>
+                        <i class="fa-solid fa-gauge-high text-teal-500 text-lg sm:text-xl"></i>
                     </div>
                     <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-blue-500">
                         <div><span class="text-slate-500">وقت الوصول (ETA)</span><h4 class="text-base sm:text-lg font-black text-blue-600 mono-font" id="liveEtaDisplay">-- دقيقة</h4></div>
@@ -159,7 +165,7 @@
                         <i class="fa-solid fa-building-user text-amber-500 text-lg sm:text-xl"></i>
                     </div>
                     <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-purple-500 col-span-2 lg:col-span-1">
-                        <div><span class="text-slate-500">حالة المحرك</span><h4 class="text-sm sm:text-base font-black text-purple-600 mono-font" id="engineStatus">متوقف / خامل</h4></div>
+                        <div><span class="text-slate-500">حالة المحرك</span><h4 class="text-xs sm:text-sm font-black text-purple-600 mono-font" id="engineStatus">متوقف / خامل</h4></div>
                         <i class="fa-solid fa-power-off text-purple-500 text-lg sm:text-xl"></i>
                     </div>
                 </div>
@@ -168,7 +174,7 @@
                 <div class="corporate-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
                     <div class="flex items-center gap-2 flex-1 min-w-[260px]">
                         <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
-                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، منطقة، أو فرع..." class="corporate-input flex-1">
+                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، شحنة، أو فرع..." class="corporate-input flex-1">
                         <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
                     </div>
                     <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
@@ -179,7 +185,7 @@
                     </div>
                 </div>
 
-                <!-- حاوية الخريطة مع لوحة التحكم باللمس المحدثة والقابلة للطي تلقائياً على الموبايل -->
+                <!-- حاوية الخريطة -->
                 <div class="corporate-card p-4 relative">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
@@ -200,11 +206,41 @@
                     <div id="leafletMap"></div>
                 </div>
 
-                <!-- لوحة إدارة مركبات الأسطول (إضافة، تعديل، حذف، وسرد) -->
+                <!-- قسم إدارة الشحنات النشطة سحابياً -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase)</h3>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً (Firebase Shipments)</h3>
+                            <p class="text-xs text-slate-500">سجل الشحنات الحالية ومواقع تسليمها لتظهر مباشرة على خريطة الملاحة.</p>
+                        </div>
+                        <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                    <th class="p-3 font-bold">كود الشحنة</th>
+                                    <th class="p-3 font-bold">المستلم / العنوان</th>
+                                    <th class="p-3 font-bold">حالة الشحنة</th>
+                                    <th class="p-3 font-bold">الإحداثيات (Lat, Lng)</th>
+                                    <th class="p-3 font-bold text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shipmentsTableBody" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="5" class="p-4 text-center text-slate-400">جاري قراءة بيانات الشحنات من السحابة...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- لوحة إدارة مركبات الأسطول -->
+                <div class="corporate-card p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase Fleet)</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
                         <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
@@ -269,6 +305,49 @@
         </div>
     </div>
 
+    <!-- Modal إضافة / تعديل شحنة -->
+    <div id="shipmentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 id="shipmentModalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة</h3>
+                <button type="button" onclick="window.closeShipmentModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="shipmentForm" onsubmit="window.saveShipment(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="shipmentId">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">كود/تتبع الشحنة</label>
+                    <input type="text" id="shipmentCode" required placeholder="مثال: SHP-1001" class="corporate-input mono-font">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">اسم المستلم / جهة التسليم</label>
+                    <input type="text" id="shipmentReceiver" required placeholder="مثال: شركة النور - القاهرة" class="corporate-input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">حالة الشحنة</label>
+                    <select id="shipmentStatus" class="corporate-input font-bold">
+                        <option value="قيد التوصيل">قيد التوصيل</option>
+                        <option value="تم التسليم">تم التسليم</option>
+                        <option value="معلقة">معلقة</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">خط العرض (Lat)</label>
+                        <input type="number" step="any" id="shipmentLat" required value="30.0500" class="corporate-input mono-font">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">خط الطول (Lng)</label>
+                        <input type="number" step="any" id="shipmentLng" required value="31.2400" class="corporate-input mono-font">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="window.closeShipmentModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700">حفظ الشحنة سحابياً</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Leaflet JS & Plugins -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
@@ -287,6 +366,7 @@
             addDoc
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // إعدادات Firebase الخاصة بحساب EIDCO الحفاظ الكامل عليها
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -301,6 +381,7 @@
 
         const clientsRef = collection(db, "clients");
         const fleetRef = collection(db, "fleet_locations");
+        const shipmentsRef = collection(db, "shipments"); // مرجع الشحنات الجديد
 
         if (window.innerWidth < 1024) {
             const panel = document.getElementById('touchControlPanel');
@@ -379,7 +460,7 @@
                     [30.0444, 31.2357],
                     L.latLng(lat, lng)
                 ]);
-                alert(`تم تحديث مسار الملاحة للتوجه فوراً إلى العميل: ${clientName}`);
+                alert(`تم تحديث مسار الملاحة للتوجه فوراً إلى: ${clientName}`);
             }
         };
 
@@ -403,14 +484,118 @@
             }
         }
 
+        // --- 1. إدارة جلب وعرض الشحنات (Shipments) ---
+        let shipmentMarkers = {};
+        async function loadShipmentsData() {
+            try {
+                let snapshot = await getDocs(shipmentsRef);
+                
+                // إضافة شحنة نموذجية أولية تلقائياً في حالة كانت المجموعة فارغة
+                if (snapshot.empty) {
+                    await addDoc(shipmentsRef, {
+                        code: "SHP-1001",
+                        receiver: "مستودع EIDCO المركزي",
+                        status: "قيد التوصيل",
+                        lat: 30.0550,
+                        lng: 31.2450,
+                        createdAt: new Date().toISOString()
+                    });
+                    snapshot = await getDocs(shipmentsRef);
+                }
+
+                let shipmentDocs = [];
+                let tableHtml = '';
+                
+                Object.values(shipmentMarkers).forEach(m => map.removeLayer(m));
+                shipmentMarkers = {};
+
+                snapshot.forEach(docSnap => {
+                    let s = docSnap.data();
+                    let id = docSnap.id;
+                    s.id = id;
+                    shipmentDocs.push(s);
+
+                    if (s.lat && s.lng) {
+                        let marker = L.marker([s.lat, s.lng], {
+                            icon: L.divIcon({
+                                html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
+                                iconSize: [34, 34]
+                            })
+                        }).addTo(map).bindPopup(`
+                            <div style="font-family:'Cairo',sans-serif; text-align:right;">
+                                <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
+                                <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
+                                <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                                <button onclick="window.routeToClient(${s.lat}, ${s.lng}, '${s.code || 'الشحنة'}')" style="margin-top:6px; background:#10b981; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer; width:100%;">توجيه الملاحة للشحنة</button>
+                            </div>
+                        `);
+                        
+                        shipmentMarkers[id] = marker;
+                    }
+
+                    tableHtml += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
+                            <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
+                            <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
+                            <td class="p-3 mono-font text-slate-600">${s.lat ? Number(s.lat).toFixed(4) : '--'}, ${s.lng ? Number(s.lng).toFixed(4) : '--'}</td>
+                            <td class="p-3 text-center">
+                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
+                document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
+            } catch (error) {
+                console.error("Shipments fetch error: ", error);
+                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">خطأ في جلب الشحنات: ${error.message}</td></tr>`;
+            }
+        }
+
+        window.saveShipment = async function(e) {
+            e.preventDefault();
+            let code = document.getElementById('shipmentCode').value;
+            let receiver = document.getElementById('shipmentReceiver').value;
+            let status = document.getElementById('shipmentStatus').value;
+            let lat = parseFloat(document.getElementById('shipmentLat').value);
+            let lng = parseFloat(document.getElementById('shipmentLng').value);
+
+            try {
+                await addDoc(shipmentsRef, {
+                    code: code,
+                    receiver: receiver,
+                    status: status,
+                    lat: lat,
+                    lng: lng,
+                    createdAt: new Date().toISOString()
+                });
+                window.closeShipmentModal();
+                alert("تم إضافة الشحنة سحابياً بنجاح.");
+                loadShipmentsData();
+            } catch (err) {
+                alert("حدث خطأ أثناء حفظ الشحنة: " + err.message);
+            }
+        };
+
+        window.deleteShipment = async function(id) {
+            if(confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
+                try {
+                    await deleteDoc(doc(db, "shipments", id));
+                    alert("تم حذف الشحنة بنجاح.");
+                    loadShipmentsData();
+                } catch (err) {
+                    alert("خطأ أثناء حذف الشحنة: " + err.message);
+                }
+            }
+        };
+
+        // --- 2. إدارة جلب وعرض المركبات (Fleet) ---
         let fleetMarkers = {};
-        
-        // جلب بيانات الأسطول وإنشاء تلقائي أول مركبة إذا كانت المجموعة فارغة لضمان عدم تعليق الجدول
         async function loadFleetData() {
             try {
                 let snapshot = await getDocs(fleetRef);
-                
-                // إذا كانت المجموعة فارغة تماماً، نقوم بإنشاء أول مركبة افتراضية تلقائياً
                 if (snapshot.empty) {
                     await addDoc(fleetRef, {
                         name: "شاحنة الأسطول الرئيسية 01",
@@ -420,7 +605,6 @@
                         speed: 35,
                         updatedAt: new Date().toISOString()
                     });
-                    // إعادة الجلب بعد الإنشاء التلقائي
                     snapshot = await getDocs(fleetRef);
                 }
 
@@ -470,6 +654,7 @@
             }
         }
 
+        // --- 3. إدارة العملاء (Clients) ---
         let clientMarkers = [];
         async function loadClientsData() {
             try {
@@ -512,32 +697,26 @@
             }
         }
 
-        // تشغيل الجلب الأولي عند فتح الصفحة
+        // تشغيل جميع التحميلات الأولية للبيانات
         loadFleetData();
+        loadShipmentsData();
         loadClientsData();
 
         window.refreshAllData = function() {
             loadFleetData();
+            loadShipmentsData();
             loadClientsData();
-            alert("تم تحديث البيانات وقراءات السحابة بنجاح.");
+            alert("تم تحديث كافة بيانات الأسطول والشحنات والعملاء من السحابة بنجاح.");
         };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
-            const modalTitle = document.getElementById('modalTitle');
-            const vehicleId = document.getElementById('vehicleId');
-            const vehicleName = document.getElementById('vehicleName');
-            const vehiclePlate = document.getElementById('vehiclePlate');
-            const vehicleLat = document.getElementById('vehicleLat');
-            const vehicleLng = document.getElementById('vehicleLng');
-            const vehicleModal = document.getElementById('vehicleModal');
-
-            if(modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة';
-            if(vehicleId) vehicleId.value = id;
-            if(vehicleName) vehicleName.value = name;
-            if(vehiclePlate) vehiclePlate.value = plate;
-            if(vehicleLat) vehicleLat.value = lat;
-            if(vehicleLng) vehicleLng.value = lng;
-            if(vehicleModal) vehicleModal.classList.remove('hidden');
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة';
+            document.getElementById('vehicleId').value = id;
+            document.getElementById('vehicleName').value = name;
+            document.getElementById('vehiclePlate').value = plate;
+            document.getElementById('vehicleLat').value = lat;
+            document.getElementById('vehicleLng').value = lng;
+            document.getElementById('vehicleModal').classList.remove('hidden');
         };
 
         window.saveVehicle = async function(e) {
@@ -567,7 +746,6 @@
                 alert("تم حفظ بيانات المركبة بنجاح سحابياً.");
                 loadFleetData();
             } catch (err) {
-                console.error("Error saving vehicle: ", err);
                 alert("حدث خطأ أثناء حفظ المركبة: " + err.message);
             }
         };
@@ -593,7 +771,7 @@
                 currentUserLatLng = [lat, lng];
                 document.getElementById('telemetrySpeed').innerText = `${speedKmh} كم/س`;
                 document.getElementById('engineStatus').innerText = speedKmh > 2 ? "محرك نشط (يتحرك)" : "محرك خامل (واقف)";
-                document.getElementById('engineStatus').className = speedKmh > 2 ? "text-sm sm:text-base font-black text-emerald-600 mono-font" : "text-sm sm:text-base font-black text-amber-600 mono-font";
+                document.getElementById('engineStatus').className = speedKmh > 2 ? "text-xs sm:text-sm font-black text-emerald-600 mono-font" : "text-xs sm:text-sm font-black text-amber-600 mono-font";
 
                 checkGeofence(lat, lng);
             });

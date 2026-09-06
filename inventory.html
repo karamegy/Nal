@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // المخزن والأصناف</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
@@ -14,9 +12,10 @@
         if (!sessionStorage.getItem('eidco_session_auth')) {
             window.location.href = 'auth.html';
         }
+        // إلغاء الـ Service Worker القديم لمنع تضارب الكاش وتحديث الصفحة فوراً
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let registration of registrations) { registration.unregister(); }
             });
         }
     </script>
@@ -171,11 +170,21 @@
 
     <script>
         function loadProducts() {
-            return JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+            try {
+                let data = localStorage.getItem('eidco_v13_products');
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error("Error reading products:", e);
+                return [];
+            }
         }
 
         function saveProductsToStorage(products) {
-            localStorage.setItem('eidco_v13_products', JSON.stringify(products));
+            try {
+                localStorage.setItem('eidco_v13_products', JSON.stringify(products));
+            } catch (e) {
+                alert('فشل الحفظ في التخزين المحلي');
+            }
         }
 
         function renderProducts() {
@@ -231,7 +240,6 @@
                 document.getElementById('modalTitle').innerText = 'إضافة صنف جديد للمخزن';
                 document.getElementById('editOriginalCode').value = '';
                 
-                // توليد كود فريد تماماً لا يتكرر مع الأكواد الحالية لتجنب تعارض الحفظ
                 let products = loadProducts();
                 let uniqueCode;
                 do {
@@ -290,7 +298,6 @@
             }
 
             if(originalCode !== "") {
-                // تحديث صنف موجود
                 let index = products.findIndex(x => x.code === originalCode);
                 if(index !== -1) {
                     products[index] = { code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty };
@@ -298,7 +305,6 @@
                     products.push({ code: originalCode, barcode, name, buyPrice, sellPrice, qty, minQty });
                 }
             } else {
-                // إضافة صنف جديد مع التحقق من عدم تكرار الكود
                 if(products.some(x => x.code === code)) {
                     alert('هذا الكود مسجل مسبقاً، يرجى تغييره');
                     return;

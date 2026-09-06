@@ -63,7 +63,7 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
                     <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود</h1>
-                    <button onclick="openProductModal()" class="btn-primary text-xs flex items-center gap-2">
+                    <button onclick="openProductModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-circle-plus"></i> إضافة صنف جديد
                     </button>
                 </div>
@@ -156,20 +156,29 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveProduct()" class="btn-primary flex-1 py-2 text-xs">حفظ الصنف</button>
+                <button onclick="saveProduct()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الصنف</button>
                 <button onclick="closeProductModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
     <script>
+        const defaultProducts = [
+            { code: 'PRD-101', barcode: '6221001', name: 'دقيق فاخر', buyPrice: 15000, sellPrice: 16000, qty: 50, minQty: 5 },
+            { code: 'PRD-102', barcode: '6221002', name: 'علاف ماشية', buyPrice: 12000, sellPrice: 13500, qty: 30, minQty: 4 }
+        ];
+
         function loadProducts() {
             try {
                 let data = localStorage.getItem('eidco_v13_products');
-                return data ? JSON.parse(data) : [];
+                if (!data || JSON.parse(data).length === 0) {
+                    localStorage.setItem('eidco_v13_products', JSON.stringify(defaultProducts));
+                    return defaultProducts;
+                }
+                return JSON.parse(data);
             } catch (e) {
                 console.error("Error reading products:", e);
-                return [];
+                return defaultProducts;
             }
         }
 
@@ -183,7 +192,8 @@
 
         function renderProducts() {
             let products = loadProducts();
-            let search = document.getElementById('searchInput').value.toLowerCase();
+            let searchEl = document.getElementById('searchInput');
+            let search = searchEl ? searchEl.value.toLowerCase() : '';
             let tbody = document.getElementById('productsTableBody');
             
             let filtered = products.filter(p => 
@@ -194,11 +204,13 @@
 
             let lowStockItems = products.filter(p => Number(p.qty) <= Number(p.minQty || 3));
             let banner = document.getElementById('lowStockAlertBanner');
-            if(lowStockItems.length > 0) {
-                banner.classList.remove('hidden');
-                document.getElementById('lowStockCountBadge').innerText = lowStockItems.length + ' أصناف';
-            } else {
-                banner.classList.add('hidden');
+            if(banner) {
+                if(lowStockItems.length > 0) {
+                    banner.classList.remove('hidden');
+                    document.getElementById('lowStockCountBadge').innerText = lowStockItems.length + ' أصناف';
+                } else {
+                    banner.classList.add('hidden');
+                }
             }
 
             if(!filtered.length) {
@@ -221,8 +233,8 @@
                         </td>
                         <td class="p-4 mono-font text-slate-500">${p.minQty || 3}</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                            <button onclick="deleteProduct('${p.code}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>
                         </td>
                     </tr>
                 `;
@@ -272,7 +284,7 @@
             document.getElementById('prodQty').value = p.qty || 0;
             document.getElementById('prodMinQty').value = p.minQty || 3;
 
-            openProductModal(true);
+            document.getElementById('productModal').classList.add('active');
         }
 
         function saveProduct() {
@@ -287,7 +299,7 @@
             let minQty = Number(document.getElementById('prodMinQty').value) || 3;
 
             if(!code || !name) {
-                alert('الرجاء إدخال كود الصنف واسمه');
+                alert('الرجاء إدخال كود الصنف واسمه بشكل صحيح');
                 return;
             }
 
@@ -300,8 +312,7 @@
                 }
             } else {
                 if(products.some(x => x.code === code)) {
-                    alert('هذا الكود مسجل مسبقاً، يرجى تغييره');
-                    return;
+                    code = 'PRD-' + Math.floor(1000 + Math.random() * 9000);
                 }
                 products.push({ code, barcode, name, buyPrice, sellPrice, qty, minQty });
             }
@@ -320,7 +331,9 @@
             renderProducts();
         }
 
-        renderProducts();
+        window.addEventListener('DOMContentLoaded', () => {
+            renderProducts();
+        });
     </script>
 </body>
 </html>

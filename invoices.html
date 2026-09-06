@@ -112,6 +112,7 @@
             invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
             transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || []
         };
+        
         function saveData() {
             localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
             localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
@@ -119,6 +120,7 @@
             localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
             renderInvoices();
         }
+
         function renderInvoices() {
             document.getElementById('invoicesTableBody').innerHTML = state.invoices.map(i => `
                 <tr class="hover:bg-slate-50">
@@ -130,8 +132,9 @@
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
                     <td class="p-4 text-center"><button onclick="deleteInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
                 </tr>
-            `).join('');
+            `).join('') || `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة.</td></tr>`;
         }
+
         function openNewInvoiceModal() {
             if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف أولاً.');
             document.getElementById('invClient').innerHTML = state.clients.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
@@ -139,37 +142,83 @@
             document.getElementById('invoiceModal').classList.add('active');
             updateInvPrice();
         }
-        function closeModal() { document.getElementById('invoiceModal').classList.remove('active'); }
+
+        function closeModal() { 
+            document.getElementById('invoiceModal').classList.remove('active'); 
+        }
+
         function updateInvPrice() {
             let sel = document.getElementById('invProduct');
             if(sel.options[sel.selectedIndex]) document.getElementById('invPriceUnit').value = sel.options[sel.selectedIndex].getAttribute('data-price');
             calcInvTotal();
         }
+
         function calcInvTotal() {
             let qty = Number(document.getElementById('invQty').value) || 1;
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
             document.getElementById('invTotalDisplay').innerText = `${(qty*price).toLocaleString()} ج.م`;
         }
+
         function saveInvoice() {
             let code = document.getElementById('invProduct').value;
             let prod = state.products.find(p => p.code === code);
             let qty = Number(document.getElementById('invQty').value) || 1;
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
-            if(prod.qty < qty) return alert('⚠️ الكمية غير متوفرة');
+            
+            if(!prod) return alert('⚠️ يرجى اختيار الصنف بشكل صحيح');
+            if(prod.qty < qty) return alert('⚠️ الكمية غير متوفرة في المخزن');
+            
             prod.qty -= qty;
             let total = qty * price;
             let profit = (price - Number(prod.buyPrice)) * qty;
             let id = 'INV-' + Math.floor(1000 + Math.random()*9000);
-            state.invoices.push({ id, client: document.getElementById('invClient').value, productCode: code, productName: prod.name, qty, unitPrice: price, total, profit });
-            state.transactions.push({ id: 'TX-'+Math.floor(100+Math.random()*900), type: 'إيراد', amount: total, desc: `فاتورة مبيعات ${id}` });
-            closeModal(); saveData();
-        }
-        function deleteInvoice(id) {
-            let inv = state.invoices.find(i => i.id === id);
-            if(inv) { let p = state.products.find(x => x.code === inv.productCode); if(p) p.qty += inv.qty; }
-            state.invoices = state.invoices.filter(i => i.id !== id);
+            let today = new Date().toISOString().split('T')[0];
+
+            state.invoices.push({ 
+                id, 
+                client: document.getElementById('invClient').value, 
+                productCode: code, 
+                productName: prod.name, 
+                qty, 
+                unitPrice: price, 
+                total, 
+                profit, 
+                date: today 
+            });
+
+            // إضافة الحركة المالية للخزنة مع التاريخ وتجنب قيم undefined
+            state.transactions.push({ 
+                id: 'TX-'+Math.floor(100+Math.random()*900), 
+                type: 'إيراد', 
+                amount: total, 
+                desc: `فاتورة مبيعات ${id}`, 
+                date: today 
+            });
+
+            closeModal(); 
             saveData();
+            alert('✓ تم إصدار الفاتورة وتحديث المخزن والخزنة بنجاح');
         }
+
+        function deleteInvoice(id) {
+            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة.')) return;
+            
+            let inv = state.invoices.find(i => i.id === id);
+            if(inv) { 
+                let p = state.products.find(x => x.code === inv.productCode); 
+                if(p) p.qty += inv.qty; 
+            }
+            
+            // حذف الفاتورة
+            state.invoices = state.invoices.filter(i => i.id !== id);
+            
+            // حذف المعاملة المالية المرتبطة بهذه الفاتورة حصرياً من الخزنة لتجنب ظهور فواتير محذوفة
+            state.transactions = state.transactions.filter(t => !t.desc.includes(id));
+            
+            saveData();
+            alert('✓ تم حذف الفاتورة وتحديث النظام بنجاح');
+        }
+
         renderInvoices();
     </script>
 </body>

@@ -30,8 +30,6 @@
         .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
-        .account-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); transition: all 0.2s; }
-        .account-card:hover, .account-card.active { border-color: var(--primary); background: rgba(79, 70, 229, 0.1); }
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         @keyframes pulseRing {
@@ -54,20 +52,20 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">البصمات والحسابات المسجلة</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول والمصادقة البيومترية</p>
                 </div>
             </div>
-            <button onclick="openAddAccountModal()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+            
+            <!-- زر إضافة حساب: مخفي افتراضياً ويظهر فقط للمؤسس -->
+            <button id="addAccountBtn" onclick="openAddAccountModal()" class="hidden bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-user-plus"></i> إضافة حساب
             </button>
         </div>
 
-        <!-- قائمة الحسابات المسجلة -->
-        <div class="space-y-3 relative z-10">
-            <label class="block text-xs text-slate-300 font-bold">الحسابات والمسؤولون المعتمدون (Firebase):</label>
-            <div id="accountsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                <div class="p-3 text-center text-slate-400 text-xs">جاري الاتصال بالسحابة وتحميل الحسابات...</div>
-            </div>
+        <!-- حقل إدخال اسم الحساب بدلاً من عرض قائمة الحسابات -->
+        <div class="space-y-2 relative z-10">
+            <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب:</label>
+            <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب للبدء..." oninput="checkFounderAccess()">
         </div>
 
         <!-- منطقة البصمة البيومترية -->
@@ -76,14 +74,14 @@
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
             <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة بالبصمة للحساب المختار</span>
-                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">الحساب النشط: جاري التحديد...</span>
+                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة بالبصمة</span>
+                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة الاسم ثم النقر على البصمة للدخول</span>
             </div>
         </div>
 
         <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between items-center">
             <span>EIDCO Business OS &copy; 2026</span>
-            <button onclick="resetDefaultAccounts()" class="text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
+            <button id="resetBtn" onclick="resetDefaultAccounts()" class="hidden text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
         </div>
     </div>
 
@@ -128,7 +126,7 @@
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
+        // إعدادات Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -138,79 +136,59 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const accountsRef = collection(db, "accounts");
 
+        // اسم المؤسس المعتمد للتحكم والإضافة
+        const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
-        let selectedAccountName = localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم';
 
-        // الاستماع المباشر واللحظي للتغيرات في Firebase Firestore
+        // الاستماع للتغيرات في Firebase
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
                 ...docSnap.data()
             }));
 
-            // إذا كانت القائمة فارغة في السحابة، أضف الحساب الافتراضي تلقائياً
             if (accountsData.length === 0) {
                 addDoc(accountsRef, {
-                    name: 'كرم حمدي عبدالعظيم',
+                    name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     date: new Date().toISOString().split('T')[0]
                 });
-                return;
             }
-
-            // التأكد من تحديد حساب نشط موجود
-            if (!accountsData.some(acc => acc.name === selectedAccountName)) {
-                selectedAccountName = accountsData[0].name;
-            }
-
-            renderAccountsList();
-        }, (error) => {
-            console.error("خطأ في الاتصال بـ Firebase:", error);
-            document.getElementById('accountsListContainer').innerHTML = `<div class="p-3 text-center text-rose-400 text-xs">تعذر الاتصال بالسحابة. يرجى التحقق من القواعد (Rules) في Firebase.</div>`;
         });
 
-        function renderAccountsList() {
-            let container = document.getElementById('accountsListContainer');
-            
-            if (accountsData.length === 0) {
-                container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">لا توجد حسابات مسجلة.</div>`;
-                return;
+        // تعبئة حقل الاسم تلقائياً بالحساب المحفوظ مسبقاً إن وجد
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedAdmin = localStorage.getItem('eidco_v13_admin') || '';
+            const inputEl = document.getElementById('usernameInput');
+            if (savedAdmin) {
+                inputEl.value = savedAdmin;
+            }
+            window.checkFounderAccess();
+        });
+
+        // التحقق مما إذا كان المستخدم الحالي هو المؤسس لإظهار خيار إضافة الحسابات
+        window.checkFounderAccess = function() {
+            const inputVal = document.getElementById('usernameInput').value.trim();
+            const addBtn = document.getElementById('addAccountBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            if (inputVal === FOUNDER_NAME) {
+                addBtn.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+            } else {
+                addBtn.classList.add('hidden');
+                resetBtn.classList.add('hidden');
             }
 
-            container.innerHTML = accountsData.map(acc => {
-                let isActive = acc.name === selectedAccountName;
-                return `
-                    <div onclick="window.selectAccount('${acc.name}')" class="account-card p-3 rounded-xl flex items-center justify-between cursor-pointer ${isActive ? 'active border-indigo-500 bg-indigo-600/10' : ''}">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                                ${acc.name ? acc.name.charAt(0) : 'U'}
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-xs text-white">${acc.name}</h4>
-                                <span class="text-[10px] text-slate-400 font-mono">${acc.role}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            ${isActive ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono">نشط</span>' : ''}
-                            ${accountsData.length > 1 ? `<button onclick="event.stopPropagation(); window.deleteAccount('${acc.id}', '${acc.name}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs cursor-pointer" title="حذف الحساب"><i class="fa-solid fa-trash"></i></button>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            document.getElementById('selectedAccountDisplay').innerText = `الحساب النشط: ${selectedAccountName}`;
-        }
-
-        // ربط الدوال بالـ window للعمل مع الأزرار والعناصر (onclick)
-        window.selectAccount = function(name) {
-            selectedAccountName = name;
-            localStorage.setItem('eidco_v13_admin', name);
-            renderAccountsList();
+            if (inputVal) {
+                document.getElementById('selectedAccountDisplay').innerText = `الحساب المستهدف: ${inputVal}`;
+            } else {
+                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة الاسم ثم النقر على البصمة للدخول`;
+            }
         };
 
         window.openAddAccountModal = function() {
@@ -242,25 +220,10 @@
                     role: roleInput,
                     date: new Date().toISOString().split('T')[0]
                 });
-                selectedAccountName = nameInput;
-                localStorage.setItem('eidco_v13_admin', nameInput);
+                alert('تمت إضافة الحساب بنجاح إلى النظام!');
                 window.closeAddAccountModal();
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الحساب في Firebase: ' + err.message);
-            }
-        };
-
-        window.deleteAccount = async function(docId, name) {
-            if (accountsData.length <= 1) {
-                alert('لا يمكن حذف الحساب الأخير في المنظومة.');
-                return;
-            }
-            if (!confirm(`هل أنت متأكد من حذف الحساب (${name}) من قاعدة البيانات السحابية؟`)) return;
-
-            try {
-                await deleteDoc(doc(db, "accounts", docId));
-            } catch (err) {
-                alert('حدث خطأ أثناء حذف الحساب: ' + err.message);
             }
         };
 
@@ -272,20 +235,25 @@
                     await deleteDoc(doc(db, "accounts", acc.id));
                 }
                 await addDoc(accountsRef, {
-                    name: 'كرم حمدي عبدالعظيم',
+                    name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     date: new Date().toISOString().split('T')[0]
                 });
-                selectedAccountName = 'كرم حمدي عبدالعظيم';
-                localStorage.setItem('eidco_v13_admin', selectedAccountName);
+                alert('تمت إعادة ضبط الحسابات بنجاح.');
             } catch (err) {
                 alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
         };
 
         window.performBiometricAuth = async function() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('يرجى إدخال اسم المستخدم أولاً لعمل المصادقة.');
+                return;
+            }
+
             const statusEl = document.getElementById('bioStatusText');
-            statusEl.innerText = `جاري التحقق البيومتري لـ (${selectedAccountName})...`;
+            statusEl.innerText = `جاري التحقق البيومتري لـ (${username})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
             try {
@@ -304,7 +272,7 @@
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', selectedAccountName);
+                localStorage.setItem('eidco_v13_admin', username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
 
                 setTimeout(() => {
@@ -316,7 +284,7 @@
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', selectedAccountName);
+                localStorage.setItem('eidco_v13_admin', username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 
                 setTimeout(() => {

@@ -221,7 +221,7 @@
                             </thead>
                             <tbody id="fleetTableBody" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري تحميل بيانات الأسطول من السحابة...</td>
+                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري الاتصال بقاعدة البيانات السحابية وتحميل الأسطول...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -401,6 +401,8 @@
         }
 
         let fleetMarkers = {};
+        
+        // استماع حقيقي مع معالجة الأخطاء لإظهار أي مشكلة في الصلاحيات فوراً في الجدول
         onSnapshot(fleetRef, (snapshot) => {
             let fleetDocs = [];
             let tableHtml = '';
@@ -445,6 +447,9 @@
                 tableHtml = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط على "إضافة مركبة جديدة".</td></tr>`;
             }
             document.getElementById('fleetTableBody').innerHTML = tableHtml;
+        }, (error) => {
+            console.error("Firestore Permission Error: ", error);
+            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الصلاحيات أو الاتصال بقاعدة البيانات: تأكد من ضبط قواعد Firestore Rules</td></tr>`;
         });
 
         window.editVehicle = function(id, name, plate, lat, lng) {
@@ -492,7 +497,7 @@
                 alert("تم حفظ بيانات المركبة بنجاح سحابياً.");
             } catch (err) {
                 console.error("Error saving vehicle: ", err);
-                alert("حدث خطأ أثناء حفظ المركبة.");
+                alert("حدث خطأ أثناء حفظ المركبة: " + err.message);
             }
         };
 
@@ -502,7 +507,7 @@
                     await deleteDoc(doc(db, "fleet_locations", id));
                     alert("تم حذف المركبة بنجاح.");
                 } catch (err) {
-                    alert("خطأ أثناء حذف المركبة.");
+                    alert("خطأ أثناء حذف المركبة: " + err.message);
                 }
             }
         };
@@ -542,6 +547,8 @@
 
                 clientMarkers.push(marker);
             });
+        }, (error) => {
+            console.error("Clients fetch error: ", error);
         });
 
         let currentUserLatLng = null;

@@ -73,7 +73,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة حسابات العملاء والمديونيات</h1>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة حسابات العملاء والمديونيات (Firebase)</h1>
                     <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2 !w-auto">
                         <i class="fa-solid fa-user-plus"></i> إضافة عميل جديد
                     </button>
@@ -96,7 +96,9 @@
                                     <th class="p-4 text-center">إجراءات وكشف الحساب</th>
                                 </tr>
                             </thead>
-                            <tbody id="clientsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                            <tbody id="clientsTableBody" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="6" class="p-4 text-center text-slate-400">جاري تحميل حسابات العملاء من السحابة...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -241,16 +243,68 @@
         </div>
     </div>
 
-    <script>
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            updateDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // إعدادات Firebase الخاصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        // تهيئة Firebase و Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const clientsRef = collection(db, "clients");
+        const invoicesRef = collection(db, "invoices");
+        const transactionsRef = collection(db, "transactions");
+        const paymentsRef = collection(db, "client_payments");
+
         let state = {
-            clients: JSON.parse(localStorage.getItem('eidco_v13_clients')) || [],
-            invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices')) || [],
-            batchInvoices: JSON.parse(localStorage.getItem('eidco_v13_batch_invoices')) || [],
-            transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [],
-            payments: JSON.parse(localStorage.getItem('eidco_v13_client_payments')) || []
+            clients: [],
+            invoices: [],
+            transactions: [],
+            payments: []
         };
 
         let currentActiveClient = null;
+
+        // المزامنة اللحظية من Firebase
+        onSnapshot(clientsRef, (snapshot) => {
+            state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            renderClients();
+        });
+
+        onSnapshot(invoicesRef, (snapshot) => {
+            state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            renderClients();
+            if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+        });
+
+        onSnapshot(transactionsRef, (snapshot) => {
+            state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+        });
+
+        onSnapshot(paymentsRef, (snapshot) => {
+            state.payments = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            renderClients();
+            if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+        });
 
         function renderClients() {
             let tbody = document.getElementById('clientsTableBody');
@@ -261,11 +315,10 @@
 
             tbody.innerHTML = state.clients.map(c => {
                 let clientInvoices = state.invoices.filter(i => i.client === c.name);
-                let clientBatches = state.batchInvoices.filter(b => b.client === c.name);
-                let totalPurchases = [...clientInvoices, ...clientBatches].reduce((sum, inv) => sum + Number(inv.total), 0);
+                let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
 
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
-                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
                 let dueBalance = totalPurchases - totalPaid;
 
@@ -277,20 +330,20 @@
                         <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${totalPurchases.toLocaleString()} ج.م</td>
                         <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}" dir="ltr">${dueBalance.toLocaleString()} ج.م</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <button onclick="window.openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                             </button>
-                            <button onclick="deleteClient('${c.name}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف العميل"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="window.deleteClient('${c.docId}', '${c.name}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف العميل"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        function openClientModal() { document.getElementById('clientModal').classList.add('active'); }
-        function closeClientModal() { document.getElementById('clientModal').classList.remove('active'); }
+        window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
+        window.closeClientModal = function() { document.getElementById('clientModal').classList.remove('active'); };
 
-        function saveClient() {
+        window.saveClient = async function() {
             let name = document.getElementById('clientNameInput').value.trim();
             let phone = document.getElementById('clientPhoneInput').value.trim();
             let address = document.getElementById('clientAddressInput').value.trim();
@@ -298,33 +351,43 @@
             if(!name) return alert('الرجاء إدخال اسم العميل');
             if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
 
-            state.clients.push({ name, phone, address });
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-            closeClientModal();
-            renderClients();
-            alert('✓ تم إضافة العميل بنجاح');
-        }
+            try {
+                await addDoc(clientsRef, { name, phone, address });
+                window.closeClientModal();
+                document.getElementById('clientNameInput').value = '';
+                document.getElementById('clientPhoneInput').value = '';
+                document.getElementById('clientAddressInput').value = '';
+                alert('✓ تم إضافة العميل بنجاح في Firebase');
+            } catch (err) {
+                alert('حدث خطأ أثناء حفظ العميل: ' + err.message);
+            }
+        };
 
-        function deleteClient(name) {
-            if(!confirm(`هل أنت متأكد من حذف العميل (${name})؟`)) return;
-            state.clients = state.clients.filter(c => c.name !== name);
-            localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-            renderClients();
-        }
+        window.deleteClient = async function(docId, name) {
+            if(!confirm(`هل أنت متأكد من حذف العميل (${name}) من قاعدة البيانات السحابية؟`)) return;
+            try {
+                if (docId) {
+                    await deleteDoc(doc(db, "clients", docId));
+                } else {
+                    let c = state.clients.find(x => x.name === name);
+                    if (c && c.docId) await deleteDoc(doc(db, "clients", c.docId));
+                }
+            } catch (err) {
+                alert('حدث خطأ أثناء حذف العميل: ' + err.message);
+            }
+        };
 
-        function openClientStatement(clientName) {
+        window.openClientStatement = function(clientName) {
             currentActiveClient = state.clients.find(c => c.name === clientName);
             if(!currentActiveClient) return;
 
             document.getElementById('stmtClientName').innerText = currentActiveClient.name;
 
             let clientInvoices = state.invoices.filter(i => i.client === clientName);
-            let clientBatches = state.batchInvoices.filter(b => b.client === clientName);
-            let allClientInvoices = [...clientInvoices, ...clientBatches];
             let clientPayments = state.payments.filter(p => p.clientName === clientName);
 
-            let totalPurchases = allClientInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
             document.getElementById('stmtTotalPurchases').innerText = totalPurchases.toLocaleString() + ' ج.م';
@@ -332,15 +395,15 @@
             document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
 
             let rowsHtml = '';
-            allClientInvoices.forEach(inv => {
+            clientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
                         <td class="p-2.5">فاتورة مبيعات (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center">
-                            <button onclick="previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة كصورة">
+                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة كصورة">
                                 <i class="fa-solid fa-eye"></i> معاينة الفاتورة
                             </button>
                         </td>
@@ -356,10 +419,10 @@
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
                         <td class="p-2.5 text-center space-x-1 space-x-reverse">
-                            <button onclick="editPayment('${pay.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل الدفعة">
+                            <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل الدفعة">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
-                            <button onclick="deletePayment('${pay.id}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف الدفعة">
+                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف الدفعة">
                                 <i class="fa-solid fa-trash"></i> حذف
                             </button>
                         </td>
@@ -373,60 +436,55 @@
 
             document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
             document.getElementById('statementModal').classList.add('active');
-        }
+        };
 
-        function closeStatementModal() {
+        window.closeStatementModal = function() {
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
-        }
+        };
 
-        function deletePayment(payId) {
-            if(!confirm('هل أنت متأكد من حذف دفعة السداد هذه؟')) return;
-            let pay = state.payments.find(p => p.id === payId);
-            if(!pay) return;
+        window.deletePayment = async function(payDocId) {
+            if(!confirm('هل أنت متأكد من حذف دفعة السداد هذه من قاعدة البيانات؟')) return;
+            try {
+                let pay = state.payments.find(p => p.docId === payDocId);
+                await deleteDoc(doc(db, "client_payments", payDocId));
 
-            state.payments = state.payments.filter(p => p.id !== payId);
-            
-            let txIndex = state.transactions.findIndex(t => t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
-            if(txIndex !== -1) {
-                state.transactions.splice(txIndex, 1);
+                if (pay) {
+                    let tx = state.transactions.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
+                    if (tx && tx.docId) {
+                        await deleteDoc(doc(db, "transactions", tx.docId));
+                    }
+                }
+                alert('✓ تم حذف دفعة السداد وتحديث الحساب السحابي');
+            } catch (err) {
+                alert('حدث خطأ أثناء الحذف: ' + err.message);
             }
+        };
 
-            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-
-            alert('✓ تم حذف دفعة السداد وتحديث الحساب بنجاح');
-            openClientStatement(currentActiveClient.name);
-            renderClients();
-        }
-
-        function editPayment(payId) {
-            let pay = state.payments.find(p => p.id === payId);
-            if(!pay) return;
-
-            let newAmountStr = prompt('أدخل مبلغ دفعة السداد الجديد (ج.م):', pay.amount);
+        window.editPayment = async function(payDocId, oldAmount) {
+            let newAmountStr = prompt('أدخل مبلغ دفعة السداد الجديد (ج.م):', oldAmount);
             if(newAmountStr === null) return;
             let newAmount = Number(newAmountStr);
             if(!newAmount || newAmount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
 
-            let oldAmount = pay.amount;
-            pay.amount = newAmount;
+            try {
+                let pay = state.payments.find(p => p.docId === payDocId);
+                await updateDoc(doc(db, "client_payments", payDocId), { amount: newAmount });
 
-            let tx = state.transactions.find(t => t.desc.includes(pay.clientName) && Number(t.amount) === Number(oldAmount));
-            if(tx) {
-                tx.amount = newAmount;
+                if (pay) {
+                    let tx = state.transactions.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(oldAmount));
+                    if (tx && tx.docId) {
+                        await updateDoc(doc(db, "transactions", tx.docId), { amount: newAmount });
+                    }
+                }
+                alert('✓ تم تعديل مبلغ الدفعة وتحديث الحساب بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء التعديل: ' + err.message);
             }
+        };
 
-            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-
-            alert('✓ تم تعديل مبلغ الدفعة وتحديث الحساب بنجاح');
-            openClientStatement(currentActiveClient.name);
-            renderClients();
-        }
-
-        function previewInvoice(invId) {
-            let inv = state.invoices.find(i => i.id === invId) || state.batchInvoices.find(b => b.id === invId);
+        window.previewInvoice = function(invId) {
+            let inv = state.invoices.find(i => i.id === invId);
             if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة');
 
             document.getElementById('prevSingleInvId').innerText = inv.id;
@@ -449,19 +507,18 @@
             }
 
             document.getElementById('prevSingleItemsBody').innerHTML = itemsHtml;
-            
             document.getElementById('statementModal').classList.remove('active');
             document.getElementById('invoicePreviewModal').classList.add('active');
-        }
+        };
 
-        function closeInvoicePreviewModal() {
+        window.closeInvoicePreviewModal = function() {
             document.getElementById('invoicePreviewModal').classList.remove('active');
             if(currentActiveClient) {
-                openClientStatement(currentActiveClient.name);
+                window.openClientStatement(currentActiveClient.name);
             }
-        }
+        };
 
-        function downloadSingleInvoiceImage() {
+        window.downloadSingleInvoiceImage = function() {
             let element = document.getElementById('singleInvoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
@@ -469,9 +526,9 @@
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
-        }
+        };
 
-        function downloadStatementImage() {
+        window.downloadStatementImage = function() {
             let element = document.getElementById('statementPrintArea');
             html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
@@ -479,46 +536,43 @@
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
-        }
+        };
 
-        function recordClientPayment() {
+        window.recordClientPayment = async function() {
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
             if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
 
             let today = new Date().toISOString().split('T')[0];
 
-            state.payments.push({
-                id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
-                clientName: currentActiveClient.name,
-                amount: amount,
-                date: today
-            });
+            try {
+                await addDoc(paymentsRef, {
+                    id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
+                    clientName: currentActiveClient.name,
+                    amount: amount,
+                    date: today
+                });
 
-            state.transactions.push({
-                id: 'TX-' + Math.floor(100 + Math.random() * 900),
-                type: 'إيراد',
-                amount: amount,
-                desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,
-                date: today
-            });
+                await addDoc(transactionsRef, {
+                    type: 'إيراد',
+                    amount: amount,
+                    desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,
+                    date: today
+                });
 
-            localStorage.setItem('eidco_v13_client_payments', JSON.stringify(state.payments));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+                document.getElementById('paymentAmountInput').value = '';
+                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة السحابية بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء إدخال الدفعة: ' + err.message);
+            }
+        };
 
-            document.getElementById('paymentAmountInput').value = '';
-            alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة بنجاح');
-            openClientStatement(currentActiveClient.name);
-            renderClients();
-        }
-
-        function sendStatementWhatsApp() {
+        window.sendStatementWhatsApp = function() {
             if(!currentActiveClient) return;
             let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
-            let clientBatches = state.batchInvoices.filter(b => b.client === currentActiveClient.name);
-            let totalPurchases = [...clientInvoices, ...clientBatches].reduce((sum, inv) => sum + Number(inv.total), 0);
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
             let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
             let text = `📊 *EIDCO // كشف حساب العميل*\n`;
@@ -531,9 +585,7 @@
             let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
             let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
             window.open(whatsappUrl, '_blank');
-        }
-
-        renderClients();
+        };
     </script>
 </body>
 </html>

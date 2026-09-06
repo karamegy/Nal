@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شاشة العرض المباشرة 4K TV</title>
+    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -109,12 +109,18 @@
                             <span>EIDCO NEWS 4K</span>
                         </div>
                         <span class="bg-slate-800/80 text-slate-300 text-[11px] font-mono font-bold px-3 py-1 rounded-lg border border-slate-700">LIVE BROADCAST</span>
+                        <span id="tvNetStatus" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/50 font-mono">
+                            <i class="fa-solid fa-wifi"></i> PING 24ms
+                        </span>
                     </div>
 
                     <!-- أزرار التحكم بالشاشة -->
                     <div class="flex items-center gap-2">
-                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="كتم / تشغيل الصوت">
-                            <i class="fa-solid fa-volume-high" id="tvMuteIcon"></i>
+                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center gap-1.5" title="تفعيل/إيقاف الإعلان الصوتي للفواتير">
+                            <i class="fa-solid fa-bullhorn text-amber-400" id="tvSpeechIcon"></i> <span class="hidden md:inline">الناطق الصوتي</span>
+                        </button>
+                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="كتم / تشغيل أصوات الريموت">
+                            <i class="fa-solid fa-volume-high text-emerald-400" id="tvMuteIcon"></i>
                         </button>
                         <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700" title="ملء الشاشة">
                             <i class="fa-solid fa-expand"></i>
@@ -162,14 +168,14 @@
                     <span class="font-mono text-[9px] text-slate-400 uppercase tracking-widest" id="tvLedText">POWER ON</span>
                 </div>
                 <div class="font-black tracking-[0.25em] text-slate-300 text-xs uppercase font-mono">
-                    EIDCO <span class="text-indigo-500">OLED</span> 4K
+                    EIDCO <span class="text-indigo-500">OLED</span> 4K PRO
                 </div>
-                <div class="text-[10px] font-mono text-slate-500">STANDALONE BROADCAST OS v4.2</div>
+                <div class="text-[10px] font-mono text-slate-500">STANDALONE BROADCAST OS v4.5</div>
             </div>
         </div>
 
         <!-- الريموت الكنترول وشريط التحكم -->
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-2xl">
+        <div id="tvRemoteControlBar" class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-2xl transition-all duration-300">
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-300 flex items-center gap-2 ml-2">
                     <i class="fa-solid fa-gamepad text-indigo-400 text-sm"></i> الريموت كنترول:
@@ -188,6 +194,9 @@
             <div class="flex items-center gap-2">
                 <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                     <i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)
+                </button>
+                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition border border-slate-700" title="إخفاء لوحة التحكم للتعليق الجداري">
+                    <i class="fa-solid fa-tv ml-1"></i> الوضع الجداري Pure OLED
                 </button>
                 <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition text-decoration-none flex items-center gap-1.5 border border-slate-700">
                     <i class="fa-solid fa-arrow-right"></i> العودة للوحة الرئيسيّة
@@ -218,10 +227,54 @@
         let tvAutoSlideInterval = null;
         let isTvPoweredOn = true;
         let isTvMuted = false;
+        let isSpeechEnabled = true;
+        let isWallMode = false;
+        let initialLoadDone = false;
+
+        // توليد الأصوات برمجياً (Audio Synthesizer)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeepSound(freq = 440, type = 'sine', duration = 0.1) {
+            if (isTvMuted || !isTvPoweredOn) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function playInvoiceBellSound() {
+            if (isTvMuted || !isTvPoweredOn) return;
+            playBeepSound(587.33, 'triangle', 0.15);
+            setTimeout(() => playBeepSound(880, 'sine', 0.3), 100);
+        }
+
+        function announceNewInvoice(inv) {
+            if (!isSpeechEnabled || !('speechSynthesis' in window)) return;
+            let msgText = `تم إصدار فاتورة جديدة رقم ${inv.id || ''} للعميل ${inv.client || 'عام'} بقيمة ${inv.total || 0} جنيه`;
+            let utterance = new SpeechSynthesisUtterance(msgText);
+            utterance.lang = 'ar-SA';
+            utterance.rate = 0.95;
+            window.speechSynthesis.speak(utterance);
+        }
 
         // المزامنة اللحظية مع بيانات Firebase
         onSnapshot(collection(db, "invoices"), (snapshot) => {
+            let previousCount = state.invoices.length;
             state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            
+            if (initialLoadDone && state.invoices.length > previousCount) {
+                let newest = state.invoices[state.invoices.length - 1];
+                playInvoiceBellSound();
+                announceNewInvoice(newest);
+            }
+            initialLoadDone = true;
             renderTvScreen();
         });
 
@@ -237,6 +290,7 @@
 
         window.switchTvChannel = function(channel) {
             if(!isTvPoweredOn) return;
+            playBeepSound(600, 'sine', 0.08);
             currentTvChannel = channel;
 
             const channels = ['invoices', 'summary', 'news'];
@@ -281,6 +335,7 @@
         }
 
         window.toggleTvPower = function() {
+            playBeepSound(isTvPoweredOn ? 250 : 800, 'square', 0.15);
             isTvPoweredOn = !isTvPoweredOn;
             let screenContainer = document.getElementById('realTvScreen');
             let overlay = document.getElementById('tvOffOverlay');
@@ -308,11 +363,34 @@
 
         window.toggleTvAudio = function() {
             isTvMuted = !isTvMuted;
+            playBeepSound(400, 'sine', 0.1);
             let icon = document.getElementById('tvMuteIcon');
             icon.className = isTvMuted ? "fa-solid fa-volume-xmark text-rose-400" : "fa-solid fa-volume-high text-emerald-400";
         };
 
+        window.toggleSpeechAnnouncer = function() {
+            isSpeechEnabled = !isSpeechEnabled;
+            playBeepSound(520, 'sine', 0.1);
+            let icon = document.getElementById('tvSpeechIcon');
+            icon.className = isSpeechEnabled ? "fa-solid fa-bullhorn text-amber-400" : "fa-solid fa-volume-xmark text-slate-500";
+        };
+
+        window.toggleWallMode = function() {
+            isWallMode = !isWallMode;
+            playBeepSound(700, 'sine', 0.1);
+            let bar = document.getElementById('tvRemoteControlBar');
+            let btn = document.getElementById('wallModeBtn');
+            if(isWallMode) {
+                bar.classList.add('opacity-10', 'hover:opacity-100');
+                btn.innerHTML = `<i class="fa-solid fa-eye ml-1"></i> إظهار التحكم الكامل`;
+            } else {
+                bar.classList.remove('opacity-10', 'hover:opacity-100');
+                btn.innerHTML = `<i class="fa-solid fa-tv ml-1"></i> الوضع الجداري Pure OLED`;
+            }
+        };
+
         window.toggleTvFullscreen = function() {
+            playBeepSound(500, 'sine', 0.1);
             let elem = document.getElementById('realTvScreen');
             if (!document.fullscreenElement) {
                 if (elem.requestFullscreen) elem.requestFullscreen();
@@ -323,6 +401,7 @@
         };
 
         window.toggleTvAutoSlide = function() {
+            playBeepSound(480, 'sine', 0.1);
             let btn = document.getElementById('tvAutoSlideBtn');
             if(tvAutoSlideInterval) {
                 clearInterval(tvAutoSlideInterval);

@@ -29,7 +29,7 @@
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 13px; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
@@ -38,7 +38,6 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
-        table th, table td { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -138,7 +137,7 @@
                     <button onclick="closeStatementModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                     <div class="p-3 bg-slate-50 rounded-xl border">
                         <span class="text-[10px] text-slate-500 block">إجمالي المشتريات</span>
                         <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm" dir="ltr">0 ج.م</strong>
@@ -155,7 +154,7 @@
 
                 <div class="space-y-2">
                     <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات:</span>
-                    <div class="max-h-48 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
+                    <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
@@ -163,6 +162,7 @@
                                     <th class="p-2.5">التفاصيل</th>
                                     <th class="p-2.5">المبلغ</th>
                                     <th class="p-2.5">التاريخ</th>
+                                    <th class="p-2.5 text-center">معاينة الفاتورة</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -171,20 +171,69 @@
                 </div>
             </div>
 
-            <!-- زر تسجيل دفعة نقدية بتصميم متجاوب لعدم الخروج عن الشاشة -->
-            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row gap-2 items-center">
-                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input flex-1 mono-font text-xs" dir="ltr">
-                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 px-4 w-full sm:w-auto whitespace-nowrap"><i class="fa-solid fa-money-bill-wave ml-1"></i> تسجيل دفعة نقدية</button>
+            <!-- زر تسجيل دفعة نقدية -->
+            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2">
+                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs" dir="ltr">
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
+                </button>
             </div>
 
             <div class="flex flex-wrap gap-2 pt-2">
                 <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-image"></i> تصدير صورة
+                    <i class="fa-solid fa-image"></i> تصدير كشف الحساب صورة
                 </button>
                 <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
                     <i class="fa-brands fa-whatsapp text-sm"></i> إرسال واتساب
                 </button>
                 <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة معاينة الفاتورة الفردية لتصديرها كصورة -->
+    <div id="invoicePreviewModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative">
+            <div id="singleInvoicePrintArea" class="p-4 bg-white rounded-xl border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <div>
+                        <h4 class="font-black text-slate-900 text-sm">EIDCO // فاتورة مبيعات</h4>
+                        <span id="prevSingleInvId" class="text-xs text-indigo-600 font-mono font-bold" dir="ltr"></span>
+                    </div>
+                    <div class="text-left text-[11px] text-slate-500">
+                        <div>التاريخ: <span id="prevSingleDate" class="mono-font" dir="ltr"></span></div>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-[11px] text-slate-500">العميل:</span>
+                    <h5 id="prevSingleClient" class="font-bold text-xs text-slate-900"></h5>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-xs border rounded-lg">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                <th class="p-2">الصنف</th>
+                                <th class="p-2 text-center">الكمية</th>
+                                <th class="p-2 text-center">السعر</th>
+                                <th class="p-2 text-left">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prevSingleItemsBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div class="space-y-1 pt-2 border-t text-xs">
+                    <div class="flex justify-between items-center font-bold text-slate-900">
+                        <span>الإجمالي النهائي:</span>
+                        <span id="prevSingleTotal" class="text-indigo-600 mono-font text-sm" dir="ltr"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 pt-2">
+                <button onclick="downloadSingleInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-image"></i> تحميل الفاتورة صورة
+                </button>
+                <button onclick="closeInvoicePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
             </div>
         </div>
     </div>
@@ -283,6 +332,11 @@
                         <td class="p-2.5">فاتورة مبيعات (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة كصورة">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
@@ -294,12 +348,13 @@
                         <td class="p-2.5">دفعة نقدية مسددة</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date}</td>
+                        <td class="p-2.5 text-center text-slate-400">---</td>
                     </tr>
                 `;
             });
 
             if(!rowsHtml) {
-                rowsHtml = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا توجد معاملات مسجلة بعد.</td></tr>`;
+                rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد معاملات مسجلة بعد.</td></tr>`;
             }
 
             document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
@@ -309,6 +364,47 @@
         function closeStatementModal() {
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
+        }
+
+        function previewInvoice(invId) {
+            let inv = state.invoices.find(i => i.id === invId);
+            if(!inv) return;
+
+            document.getElementById('prevSingleInvId').innerText = inv.id;
+            document.getElementById('prevSingleDate').innerText = inv.date || '---';
+            document.getElementById('prevSingleClient').innerText = inv.client;
+            document.getElementById('prevSingleTotal').innerText = Number(inv.total).toLocaleString() + ' ج.م';
+
+            let itemsHtml = '';
+            if(inv.items && inv.items.length) {
+                itemsHtml = inv.items.map(it => `
+                    <tr>
+                        <td class="p-2 font-bold text-slate-900">${it.prodName || it.name}</td>
+                        <td class="p-2 text-center mono-font" dir="ltr">${it.qty}</td>
+                        <td class="p-2 text-center mono-font" dir="ltr">${Number(it.unitPrice || it.price).toLocaleString()}</td>
+                        <td class="p-2 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal || (it.qty * it.price)).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } else {
+                itemsHtml = `<tr><td colspan="4" class="p-2 text-center text-slate-500">فاتورة فردية / مبيعات عامة</td></tr>`;
+            }
+
+            document.getElementById('prevSingleItemsBody').innerHTML = itemsHtml;
+            document.getElementById('invoicePreviewModal').classList.add('active');
+        }
+
+        function closeInvoicePreviewModal() {
+            document.getElementById('invoicePreviewModal').classList.remove('active');
+        }
+
+        function downloadSingleInvoiceImage() {
+            let element = document.getElementById('singleInvoicePrintArea');
+            html2canvas(element, { scale: 2 }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
         }
 
         function downloadStatementImage() {

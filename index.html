@@ -36,6 +36,7 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        table th, table td { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -78,7 +79,7 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
-                <!-- بطاقة الترحيب مع إضافة حاوية الصورة الشخصية -->
+                <!-- بطاقة الترحيب -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-md">
@@ -109,6 +110,30 @@
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
                         <span class="text-xs text-slate-500">العملاء والشركات</span>
                         <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
+                    </div>
+                </div>
+
+                <!-- قسم عرض وإدارة الفواتير المجمعة وتأثيرها على رصيد الخزنة -->
+                <div class="corporate-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة (وتحديث الخزنة)</h3>
+                        <a href="batch-invoices.html" class="text-xs text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-plus ml-1"></i> إضافة فاتورة جديدة</a>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">رقم الفاتورة</th>
+                                    <th class="p-4">العميل</th>
+                                    <th class="p-4">عدد الأصناف</th>
+                                    <th class="p-4">الإجمالي الكلي</th>
+                                    <th class="p-4">صافي الربح</th>
+                                    <th class="p-4">التاريخ</th>
+                                    <th class="p-4 text-center">إجراءات (تعديل وحذف)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardBatchTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -237,12 +262,73 @@
             document.getElementById('headerAvatarText').innerText = state.adminName.charAt(0);
         }
 
-        let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
-        let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
-        document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
-        document.getElementById('statSales').innerText = state.invoices.reduce((s,i)=>s+Number(i.total),0).toLocaleString() + ' ج.م';
-        document.getElementById('statProfits').innerText = state.invoices.reduce((s,i)=>s+Number(i.profit||0),0).toLocaleString() + ' ج.م';
-        document.getElementById('statClients').innerText = state.clients.length + ' جهة';
+        function updateStatsAndDashboard() {
+            let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t)=>s+Number(t.amount),0);
+            let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t)=>s+Number(t.amount),0);
+            document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
+            document.getElementById('statSales').innerText = state.invoices.reduce((s,i)=>s+Number(i.total),0).toLocaleString() + ' ج.م';
+            document.getElementById('statProfits').innerText = state.invoices.reduce((s,i)=>s+Number(i.profit||0),0).toLocaleString() + ' ج.م';
+            document.getElementById('statClients').innerText = state.clients.length + ' جهة';
+
+            // عرض الفواتير المجمعة في الجدول
+            let tbody = document.getElementById('dashboardBatchTableBody');
+            let batchInvs = state.invoices.filter(i => i.isBatch);
+
+            if(!batchInvs.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة حالياً.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = batchInvs.map(i => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id}</td>
+                    <td class="p-4 font-bold text-slate-900">${i.client}</td>
+                    <td class="p-4 mono-font">${i.items.length} أصناف</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit||0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
+                    <td class="p-4 text-center space-x-2 space-x-reverse">
+                        <a href="batch-invoices.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block">
+                            <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل في صفحة المجمعة
+                        </a>
+                        <button onclick="deleteDashboardBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1" title="حذف الفاتورة وإلغاء تأثيرها من الخزنة والمخزن">
+                            <i class="fa-solid fa-trash"></i> حذف
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteDashboardBatchInvoice(id) {
+            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة المجمعة؟ سيتم إرجاع الأصناف للمخزن وخصم قيمتها من الخزنة النقدية.')) return;
+            
+            let inv = state.invoices.find(i => i.id === id);
+            if(inv && inv.items) {
+                // إرجاع المخزون
+                inv.items.forEach(it => {
+                    let p = state.products.find(x => x.code === it.code);
+                    if(p) p.qty += it.qty;
+                });
+                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            }
+
+            // إزالة الفاتورة
+            state.invoices = state.invoices.filter(i => i.id !== id);
+            localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+
+            // إزالة المعاملة المالية المرتبطة من الخزنة
+            state.transactions = state.transactions.filter(t => t.desc !== `قيمة فاتورة مبيعات مجمعة ${id}`);
+            localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+
+            // إعادة تحديث الحالة في الذاكرة
+            state.products = JSON.parse(localStorage.getItem('eidco_v13_products')) || [];
+            state.transactions = JSON.parse(localStorage.getItem('eidco_v13_transactions')) || [];
+            
+            updateStatsAndDashboard();
+            alert('✓ تم حذف الفاتورة وتحديث رصيد الخزنة والمخزن بنجاح');
+        }
+
+        updateStatsAndDashboard();
 
         new Chart(document.getElementById('analyticsChart'), {
             type: 'line',

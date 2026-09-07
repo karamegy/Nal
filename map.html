@@ -350,7 +350,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
-    <!-- Firebase SDK Modules (Real-time Mapped) -->
+    <!-- Firebase SDK Modules & Bulletproof Script Initialization -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -379,263 +379,14 @@
         const fleetRef = collection(db, "fleet_locations");
         const shipmentsRef = collection(db, "shipments");
 
-        if (window.innerWidth < 1024) {
-            const panel = document.getElementById('touchControlPanel');
-            const icon = document.getElementById('panelToggleIcon');
-            if (panel && icon) {
-                panel.classList.add('collapsed');
-                icon.classList.remove('fa-chevron-up');
-                icon.classList.add('fa-chevron-down');
-            }
-        }
-
-        let map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
-        const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
-
-        streetLayer.addTo(map);
-
-        window.switchLayer = function(type) {
-            map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
-            if(type === 'street') streetLayer.addTo(map);
-            if(type === 'topo') topoLayer.addTo(map);
-            if(type === 'satellite') satelliteLayer.addTo(map);
-        };
-
-        const geocoder = L.Control.geocoder({ defaultMarkGeocode: true, placeholder: 'ابحث عن موقع أو عنوان...', errorMessage: 'لم يتم العثور على الموقع.' }).addTo(map);
-
-        window.searchCustomLocation = function() {
-            let val = document.getElementById('customSearchInput').value;
-            if(!val) return;
-            geocoder.options.geocoder.geocode(val, results => {
-                if(results && results.length > 0) {
-                    let r = results[0];
-                    map.setView(r.center, 15);
-                    L.marker(r.center).addTo(map).bindPopup(r.name).openPopup();
-                } else {
-                    alert('لم يتم العثور على النتيجة');
-                }
-            });
-        };
-
-        let routingControl = L.Routing.control({
-            waypoints: [ L.latLng(30.0444, 31.2357), L.latLng(30.0131, 31.2089) ],
-            routeWhileDragging: false,
-            language: 'ar',
-            router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-            lineOptions: { styles: [{ color: '#4f46e5', weight: 6, opacity: 0.8 }] },
-            createMarker: function(i, wp) { return L.marker(wp.latLng, { draggable: true }); }
-        });
-
-        routingControl.on('routesfound', function(e) {
-            let routes = e.routes;
-            if(routes && routes.length > 0) {
-                let summary = routes[0].summary;
-                let durationMin = Math.round(summary.totalTime / 60);
-                let distanceKm = (summary.totalDistance / 1000).toFixed(1);
-                document.getElementById('liveEtaDisplay').innerText = `${durationMin} دقيقة (${distanceKm} كم)`;
-            }
-        });
-
-        let routingVisible = true;
-        window.toggleRouting = function() {
-            if(routingVisible) { map.removeControl(routingControl); routingVisible = false; }
-            else { routingControl.addTo(map); routingVisible = true; }
-        };
-        routingControl.addTo(map);
-
-        window.routeToClient = function(lat, lng, clientName) {
-            if(routingControl) {
-                routingControl.setWaypoints([
-                    [30.0444, 31.2357],
-                    L.latLng(lat, lng)
-                ]);
-                alert(`تم تحديث مسار الملاحة للتوجه فوراً إلى: ${clientName}`);
-            }
-        };
-
-        const geofenceCenter = [30.0444, 31.2357];
-        const geofenceRadius = 15000;
-        L.circle(geofenceCenter, {
-            color: '#8b5cf6',
-            fillColor: '#c4b5fd',
-            fillOpacity: 0.15,
-            radius: geofenceRadius
-        }).addTo(map).bindPopup("<b>النطاق الجغرافي الآمن للأسطول (القاهرة الكبرى)</b>");
-
-        function checkGeofence(lat, lng) {
-            let distanceInMeters = map.distance(geofenceCenter, [lat, lng]);
-            let banner = document.getElementById('geofenceAlertBanner');
-            if(distanceInMeters > geofenceRadius) {
-                banner.style.display = 'flex';
-                document.getElementById('geofenceDistance').innerText = `البعد عن المركز: ${(distanceInMeters/1000).toFixed(1)} كم`;
-            } else {
-                banner.style.display = 'none';
-            }
-        }
-
-        // --- 1. المزامنة اللحظية للأسطول (Fleet Real-Time) ---
-        let fleetMarkers = {};
-        onSnapshot(fleetRef, (snapshot) => {
-            Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
-            fleetMarkers = {};
-
-            if (snapshot.empty) {
-                document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة في الأسطول حالياً. اضغط "إضافة مركبة جديدة".</td></tr>`;
-                return;
-            }
-
-            let fleetDocs = [];
-            let tableHtml = '';
-
-            snapshot.forEach(docSnap => {
-                let v = docSnap.data();
-                let id = docSnap.id;
-                v.id = id;
-                fleetDocs.push(v);
-
-                if (v.lat && v.lng) {
-                    let marker = L.marker([v.lat, v.lng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
-                            iconSize: [36, 36]
-                        })
-                    }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
-                    
-                    fleetMarkers[id] = marker;
-                }
-
-                tableHtml += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
-                        <td class="p-3 mono-font text-slate-600">${v.lat ? Number(v.lat).toFixed(4) : '--'}</td>
-                        <td class="p-3 mono-font text-slate-600">${v.lng ? Number(v.lng).toFixed(4) : '--'}</td>
-                        <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
-                        <td class="p-3 text-center">
-                            <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${v.lat || 30.0444}, ${v.lng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
-            document.getElementById('fleetTableBody').innerHTML = tableHtml;
-        }, (err) => {
-            console.error("Fleet Snapshot Error: ", err);
-            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بالسحابة: ${err.message}</td></tr>`;
-        });
-
-        // --- 2. المزامنة اللحظية للشحنات (Shipments Real-Time) ---
-        let shipmentMarkers = {};
-        onSnapshot(shipmentsRef, (snapshot) => {
-            Object.values(shipmentMarkers).forEach(m => map.removeLayer(m));
-            shipmentMarkers = {};
-
-            if (snapshot.empty) {
-                document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
-                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة حالياً. اضغط "إضافة شحنة جديدة".</td></tr>`;
-                return;
-            }
-
-            let shipmentDocs = [];
-            let tableHtml = '';
-
-            snapshot.forEach(docSnap => {
-                let s = docSnap.data();
-                let id = docSnap.id;
-                s.id = id;
-                shipmentDocs.push(s);
-
-                if (s.lat && s.lng) {
-                    let marker = L.marker([s.lat, s.lng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
-                            iconSize: [34, 34]
-                        })
-                    }).addTo(map).bindPopup(`
-                        <div style="font-family:'Cairo',sans-serif; text-align:right;">
-                            <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
-                            <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
-                            <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
-                            <button onclick="window.routeToClient(${s.lat}, ${s.lng}, '${s.code || 'الشحنة'}')" style="margin-top:6px; background:#10b981; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer; width:100%;">توجيه الملاحة للشحنة</button>
-                        </div>
-                    `);
-                    
-                    shipmentMarkers[id] = marker;
-                }
-
-                tableHtml += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
-                        <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
-                        <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
-                        <td class="p-3 mono-font text-slate-600">${s.lat ? Number(s.lat).toFixed(4) : '--'}, ${s.lng ? Number(s.lng).toFixed(4) : '--'}</td>
-                        <td class="p-3 text-center">
-                            <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
-            document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
-        }, (err) => {
-            console.error("Shipments Snapshot Error: ", err);
-            document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">خطأ في جلب الشحنات: ${err.message}</td></tr>`;
-        });
-
-        // --- 3. المزامنة اللحظية للعملاء (Clients Real-Time) ---
-        let clientMarkers = [];
-        onSnapshot(clientsRef, (snapshot) => {
-            let clients = [];
-            snapshot.forEach(docSnap => clients.push(docSnap.data()));
-            document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
-
-            clientMarkers.forEach(m => map.removeLayer(m));
-            clientMarkers = [];
-
-            clients.forEach(c => {
-                let lat = c.lat || (30.0333 + (Math.random() - 0.5) * 0.05);
-                let lng = c.lng || (31.2333 + (Math.random() - 0.5) * 0.05);
-                let balance = c.balance || 0;
-                let phone = c.phone || 'غير مسجل';
-                
-                let popupHtml = `
-                    <div style="font-family: 'Cairo', sans-serif; text-align: right; min-width: 180px;">
-                        <b style="font-size: 14px; color: #0f172a;"><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><hr style="margin: 5px 0; border-color: #e2e8f0;">
-                        <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">الهاتف: <span class="mono-font">${phone}</span></div>
-                        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">الرصيد / الفواتير: <span class="mono-font font-bold text-indigo-600">${balance} ج.م</span></div>
-                        <button type="button" onclick="window.routeToClient(${lat}, ${lng}, '${c.name}')" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;">
-                            <i class="fa-solid fa-route ml-1"></i> توجيه الأسطول إلى هنا
-                        </button>
-                    </div>
-                `;
-
-                let marker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
-                        iconSize: [30, 30]
-                    })
-                }).addTo(map).bindPopup(popupHtml);
-
-                clientMarkers.push(marker);
-            });
-        });
-
-        // --- 4. إجراءات الحفظ والحذف سحابياً ---
+        // 1. إسناد دوال الحذف والحفظ فوراً لمنع حدوث Undefined Error عند الضغط
         window.saveVehicle = async function(e) {
-            if (e) e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
             let name = document.getElementById('vehicleName').value;
             let plate = document.getElementById('vehiclePlate').value;
-            let lat = parseFloat(document.getElementById('vehicleLat').value);
-            let lng = parseFloat(document.getElementById('vehicleLng').value);
+            let lat = parseFloat(document.getElementById('vehicleLat').value) || 30.0444;
+            let lng = parseFloat(document.getElementById('vehicleLng').value) || 31.2357;
 
             let vehicleData = {
                 name: name,
@@ -681,12 +432,12 @@
         };
 
         window.saveShipment = async function(e) {
-            if (e) e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
             let code = document.getElementById('shipmentCode').value;
             let receiver = document.getElementById('shipmentReceiver').value;
             let status = document.getElementById('shipmentStatus').value;
-            let lat = parseFloat(document.getElementById('shipmentLat').value);
-            let lng = parseFloat(document.getElementById('shipmentLng').value);
+            let lat = parseFloat(document.getElementById('shipmentLat').value) || 30.0500;
+            let lng = parseFloat(document.getElementById('shipmentLng').value) || 31.2400;
 
             try {
                 await addDoc(shipmentsRef, {
@@ -715,39 +466,189 @@
             }
         };
 
-        let currentUserLatLng = null;
-        if("geolocation" in navigator) {
-            navigator.geolocation.watchPosition(async (pos) => {
-                let lat = pos.coords.latitude, lng = pos.coords.longitude;
-                let speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 25;
-                
-                currentUserLatLng = [lat, lng];
-                document.getElementById('telemetrySpeed').innerText = `${speedKmh} كم/س`;
-                document.getElementById('engineStatus').innerText = speedKmh > 2 ? "محرك نشط (يتحرك)" : "محرك خامل (واقف)";
-                document.getElementById('engineStatus').className = speedKmh > 2 ? "text-xs sm:text-sm font-black text-emerald-600 mono-font" : "text-xs sm:text-sm font-black text-amber-600 mono-font";
+        // 2. تهيئة الخريطة بأمان
+        let map;
+        try {
+            map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-                checkGeofence(lat, lng);
-            });
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+            const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
+
+            streetLayer.addTo(map);
+
+            window.switchLayer = function(type) {
+                map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
+                if(type === 'street') streetLayer.addTo(map);
+                if(type === 'topo') topoLayer.addTo(map);
+                if(type === 'satellite') satelliteLayer.addTo(map);
+            };
+        } catch (e) {
+            console.warn("Leaflet Map setup warning:", e);
         }
 
-        window.playRouteHistory = function() {
-            alert("تم بدء تشغيل محاكاة السجل التاريخي لحركة أسطول EIDCO بنجاح.");
-        };
+        // 3. المزامنة اللحظية للأسطول (Real-Time Fleet)
+        let fleetMarkers = {};
+        onSnapshot(fleetRef, (snapshot) => {
+            if (map) {
+                Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
+                fleetMarkers = {};
+            }
 
-        window.generateClientTrackingLink = function() {
-            let uniqueCode = 'EIDCO-TRK-' + Math.floor(100000 + Math.random() * 900000);
-            let link = `${window.location.origin}/track.html?code=${uniqueCode}`;
-            prompt("رابط التتبع الحي الخاص بالعميل (انسخ الرابط أدناه):", link);
-        };
+            if (snapshot.empty) {
+                document.getElementById('mapFleetCount').innerText = '0 مركبة';
+                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط "إضافة مركبة جديدة".</td></tr>`;
+                return;
+            }
 
-        window.shareRouteWhatsApp = function() {
-            let text = encodeURIComponent("مرحباً، إليك تتبع مسار أسطول EIDCO الحي والموقع الحالي عبر نظام إدارة العمليات الموحد.");
-            window.open(`https://wa.me/?text=${text}`, '_blank');
-        };
+            let fleetDocs = [];
+            let tableHtml = '';
 
-        window.panToFleet = function() { map.setView([30.0444, 31.2357], 14); };
-        window.panToUser = function() { if(currentUserLatLng) map.setView(currentUserLatLng, 16); else alert('جاري تحديد موقعك الجغرافي...'); };
-        window.resetMapView = function() { map.setView([30.0444, 31.2357], 13); };
+            snapshot.forEach(docSnap => {
+                let v = docSnap.data();
+                let id = docSnap.id;
+                v.id = id;
+                fleetDocs.push(v);
+
+                let vLat = parseFloat(v.lat);
+                let vLng = parseFloat(v.lng);
+
+                if (map && !isNaN(vLat) && !isNaN(vLng)) {
+                    let marker = L.marker([vLat, vLng], {
+                        icon: L.divIcon({
+                            html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
+                            iconSize: [36, 36]
+                        })
+                    }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
+                    
+                    fleetMarkers[id] = marker;
+                }
+
+                tableHtml += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
+                        <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
+                        <td class="p-3 mono-font text-slate-600">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
+                        <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
+                        <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
+                        <td class="p-3 text-center">
+                            <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat || 30.0444}, ${vLng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
+            document.getElementById('fleetTableBody').innerHTML = tableHtml;
+        }, (err) => {
+            console.error("Fleet Snapshot Error: ", err);
+            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بالسحابة: ${err.message}</td></tr>`;
+        });
+
+        // 4. المزامنة اللحظية للشحنات (Real-Time Shipments)
+        let shipmentMarkers = {};
+        onSnapshot(shipmentsRef, (snapshot) => {
+            if (map) {
+                Object.values(shipmentMarkers).forEach(m => map.removeLayer(m));
+                shipmentMarkers = {};
+            }
+
+            if (snapshot.empty) {
+                document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
+                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة حالياً. اضغط "إضافة شحنة جديدة".</td></tr>`;
+                return;
+            }
+
+            let shipmentDocs = [];
+            let tableHtml = '';
+
+            snapshot.forEach(docSnap => {
+                let s = docSnap.data();
+                let id = docSnap.id;
+                s.id = id;
+                shipmentDocs.push(s);
+
+                let sLat = parseFloat(s.lat);
+                let sLng = parseFloat(s.lng);
+
+                if (map && !isNaN(sLat) && !isNaN(sLng)) {
+                    let marker = L.marker([sLat, sLng], {
+                        icon: L.divIcon({
+                            html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
+                            iconSize: [34, 34]
+                        })
+                    }).addTo(map).bindPopup(`
+                        <div style="font-family:'Cairo',sans-serif; text-align:right;">
+                            <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
+                            <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
+                            <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                        </div>
+                    `);
+                    
+                    shipmentMarkers[id] = marker;
+                }
+
+                tableHtml += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
+                        <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
+                        <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
+                        <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
+                        <td class="p-3 text-center">
+                            <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
+            document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
+        }, (err) => {
+            console.error("Shipments Snapshot Error: ", err);
+            document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">خطأ في جلب الشحنات: ${err.message}</td></tr>`;
+        });
+
+        // 5. المزامنة اللحظية للعملاء
+        let clientMarkers = [];
+        onSnapshot(clientsRef, (snapshot) => {
+            let clients = [];
+            snapshot.forEach(docSnap => clients.push(docSnap.data()));
+            document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
+
+            if (map) {
+                clientMarkers.forEach(m => map.removeLayer(m));
+                clientMarkers = [];
+
+                clients.forEach(c => {
+                    let lat = parseFloat(c.lat) || (30.0333 + (Math.random() - 0.5) * 0.05);
+                    let lng = parseFloat(c.lng) || (31.2333 + (Math.random() - 0.5) * 0.05);
+                    let balance = c.balance || 0;
+                    let phone = c.phone || 'غير مسجل';
+                    
+                    let marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
+                            iconSize: [30, 30]
+                        })
+                    }).addTo(map).bindPopup(`<b>${c.name}</b><br>هاتف: ${phone}<br>الرصيد: ${balance} ج.م`);
+
+                    clientMarkers.push(marker);
+                });
+            }
+        });
+
+        // 6. أدوات التحكم الإضافية بأسلوب آمن
+        window.panToFleet = function() { if(map) map.setView([30.0444, 31.2357], 14); };
+        window.panToUser = function() { 
+            if("geolocation" in navigator && map) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                });
+            }
+        };
+        window.resetMapView = function() { if(map) map.setView([30.0444, 31.2357], 13); };
     </script>
 
     <!-- الزر العائم المتحرك لبث EIDCO TV -->

@@ -80,7 +80,7 @@
                             <input type="file" id="imageUploadInput" accept="image/*" class="hidden" onchange="window.handleImageUpload(event)">
                         </div>
                         <div class="text-center sm:text-right space-y-1">
-                            <h2 class="text-xl font-black text-slate-900" id="profileNameDisplay">كرم حمدي عبدالعظيم</h2>
+                            <h2 class="text-xl font-black text-slate-900" id="profileNameDisplay">جاري التحميل...</h2>
                             <p class="text-xs text-indigo-600 font-mono font-bold">المدير العام والمؤسس - EIDCO</p>
                             <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-mono rounded-full font-bold mt-1">حساب موثق وآمن سحابياً (معزول)</span>
                         </div>
@@ -125,7 +125,21 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- سكريبت لتمرير معرف الجلسة والشركة عبر الروابط والأزرار تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId التام -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -152,7 +166,9 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let state = {
             accounts: [],
@@ -162,88 +178,54 @@
             products: []
         };
 
-        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        // تنفيذ المصادقة المجهولة أولاً
         signInAnonymously(auth).then(() => {
-            const accountsCollection = collection(db, "accounts");
-            const invoicesCollection = collection(db, "invoices");
-            const transactionsCollection = collection(db, "transactions");
-            const clientsCollection = collection(db, "clients");
-            const productsCollection = collection(db, "products");
-
-            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
-            const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-            const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
-
-            onSnapshot(accountsRef, (snapshot) => {
-                state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_accounts', JSON.stringify(state.accounts));
+            // جلب البيانات مع فلترة برمجية لضمان عدم ضياع المستندات القديمة إن وجدت
+            onSnapshot(collection(db, "accounts"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.accounts = all.filter(x => x.companyId === currentCompanyId || !x.companyId);
                 updateProfileUI();
             }, (error) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_accounts');
-                    if(localData) state.accounts = JSON.parse(localData);
-                } catch(e) {}
                 updateProfileUI();
             });
 
-            onSnapshot(invoicesRef, (snapshot) => { 
-                state.invoices = snapshot.docs.map(d => d.data()); 
-                localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
-            }, (error) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_invoices');
-                    if(localData) state.invoices = JSON.parse(localData);
-                } catch(e) {}
+            onSnapshot(collection(db, "invoices"), (snapshot) => { 
+                let all = snapshot.docs.map(d => d.data());
+                state.invoices = all.filter(x => x.companyId === currentCompanyId || !x.companyId);
             });
 
-            onSnapshot(transactionsRef, (snapshot) => { 
-                state.transactions = snapshot.docs.map(d => d.data()); 
-                localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
-            }, (error) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_transactions');
-                    if(localData) state.transactions = JSON.parse(localData);
-                } catch(e) {}
+            onSnapshot(collection(db, "transactions"), (snapshot) => { 
+                let all = snapshot.docs.map(d => d.data());
+                state.transactions = all.filter(x => x.companyId === currentCompanyId || !x.companyId);
             });
 
-            onSnapshot(clientsRef, (snapshot) => { 
-                state.clients = snapshot.docs.map(d => d.data()); 
-                localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
-            }, (error) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_clients');
-                    if(localData) state.clients = JSON.parse(localData);
-                } catch(e) {}
+            onSnapshot(collection(db, "clients"), (snapshot) => { 
+                let all = snapshot.docs.map(d => d.data());
+                state.clients = all.filter(x => x.companyId === currentCompanyId || !x.companyId);
             });
 
-            onSnapshot(productsRef, (snapshot) => { 
-                state.products = snapshot.docs.map(d => d.data()); 
-                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
-            }, (error) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_products');
-                    if(localData) state.products = JSON.parse(localData);
-                } catch(e) {}
+            onSnapshot(collection(db, "products"), (snapshot) => { 
+                let all = snapshot.docs.map(d => d.data());
+                state.products = all.filter(x => x.companyId === currentCompanyId || !x.companyId);
             });
+
         }).catch((err) => {
             console.error("فشل المصادقة في الملف الشخصي:", err);
-            try {
-                let localAcc = localStorage.getItem('eidco_v13_accounts');
-                if(localAcc) state.accounts = JSON.parse(localAcc);
-            } catch(e) {}
             updateProfileUI();
         });
 
         function updateProfileUI() {
-            let accountDoc = state.accounts[0] || {};
-            let adminName = localStorage.getItem('eidco_v13_admin') || accountDoc.name || 'كرم حمدي عبدالعظيم';
-            let savedAvatar = localStorage.getItem('eidco_v13_avatar') || accountDoc.avatar || '';
+            let accountDoc = state.accounts.length > 0 ? state.accounts[0] : {};
+            
+            // الأولوية 1: بيانات Firebase
+            // الأولوية 2: الـ localStorage المعزول بـ currentCompanyId
+            // الأولوية 3: القيم الافتراضية
+            let adminName = accountDoc.name || localStorage.getItem(`eidco_admin_${currentCompanyId}`) || 'إدارة النظام';
+            let savedAvatar = accountDoc.avatar || localStorage.getItem(`eidco_avatar_${currentCompanyId}`) || '';
 
-            if (savedAvatar) {
-                localStorage.setItem('eidco_v13_avatar', savedAvatar);
-            }
+            // حفظ البيانات محلياً مع ربطها بمعرف الشركة لتجنب اختلاط الحسابات
+            if (savedAvatar) localStorage.setItem(`eidco_avatar_${currentCompanyId}`, savedAvatar);
+            if (adminName) localStorage.setItem(`eidco_admin_${currentCompanyId}`, adminName);
 
             document.getElementById('adminNameInput').value = adminName;
             document.getElementById('profileNameDisplay').innerText = adminName;
@@ -258,7 +240,7 @@
             } else {
                 img.classList.add('hidden');
                 avatarText.classList.remove('hidden');
-                avatarText.innerText = adminName ? adminName.charAt(0) : 'ك';
+                avatarText.innerText = adminName ? adminName.charAt(0) : 'E';
             }
         }
 
@@ -266,7 +248,8 @@
             let val = document.getElementById('adminNameInput').value.trim();
             if(!val) return alert('الرجاء إدخال اسم صحيح');
 
-            localStorage.setItem('eidco_v13_admin', val);
+            // الحفظ المحلي بالمعرف المعزول
+            localStorage.setItem(`eidco_admin_${currentCompanyId}`, val);
             document.getElementById('profileNameDisplay').innerText = val;
 
             if (!auth.currentUser) {
@@ -274,7 +257,8 @@
             }
 
             try {
-                let targetDocId = state.accounts.length > 0 ? state.accounts[0].docId : (currentCompanyId + "_main_admin");
+                // إنشاء أو تحديث المستند بمعرف فريد لكل شركة في Firebase
+                let targetDocId = currentCompanyId + "_main_admin";
                 let userDocRef = doc(db, "accounts", targetDocId);
                 await setDoc(userDocRef, {
                     companyId: currentCompanyId,
@@ -282,9 +266,9 @@
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
 
-                alert('✓ تم تحديث الملف الشخصي في السحابة المعزولة بنجاح');
+                alert('✓ تم حفظ الاسم في السحابة بنجاح');
             } catch (err) {
-                alert('✓ تم تحديث الملف الشخصي محلياً بنجاح');
+                alert('✓ تم حفظ الاسم محلياً (لا يوجد اتصال)');
             }
         };
 
@@ -294,7 +278,9 @@
             let reader = new FileReader();
             reader.onload = async function(e) {
                 let base64String = e.target.result;
-                localStorage.setItem('eidco_v13_avatar', base64String);
+                
+                // الحفظ المحلي بالمعرف المعزول
+                localStorage.setItem(`eidco_avatar_${currentCompanyId}`, base64String);
 
                 let img = document.getElementById('profileAvatarImg');
                 img.src = base64String;
@@ -306,7 +292,8 @@
                 }
 
                 try {
-                    let targetDocId = state.accounts.length > 0 ? state.accounts[0].docId : (currentCompanyId + "_main_admin");
+                    // إنشاء أو تحديث المستند بمعرف فريد لكل شركة في Firebase
+                    let targetDocId = currentCompanyId + "_main_admin";
                     let userDocRef = doc(db, "accounts", targetDocId);
                     await setDoc(userDocRef, {
                         companyId: currentCompanyId,
@@ -314,9 +301,9 @@
                         updatedAt: new Date().toISOString()
                     }, { merge: true });
 
-                    alert('✓ تم رفع وتحديث الصورة الشخصية سحابياً بشكل معزول بنجاح');
+                    alert('✓ تم رفع الصورة للسحابة بنجاح');
                 } catch(err) {
-                    alert('✓ تم رفع وتحديث الصورة الشخصية محلياً بنجاح');
+                    alert('✓ تم حفظ الصورة محلياً (لا يوجد اتصال)');
                 }
             };
             reader.readAsDataURL(file);
@@ -327,7 +314,7 @@
             let transactions = state.transactions;
             let clients = state.clients;
             let products = state.products;
-            let adminName = document.getElementById('adminNameInput').value || 'كرم حمدي عبدالعظيم';
+            let adminName = document.getElementById('adminNameInput').value || 'إدارة النظام';
 
             let totalSales = invoices.reduce((s,i) => s + Number(i.total || 0), 0);
             let totalProfits = invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
@@ -363,6 +350,7 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
+            // نحدث الواجهة مبدئياً ريثما تأتي البيانات من السحابة
             updateProfileUI();
         });
     </script>

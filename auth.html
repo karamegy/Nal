@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم مصادقة فايربيس السحابية الفعالة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -125,6 +125,7 @@
             doc, 
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -137,6 +138,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         const accountsRef = collection(db, "accounts");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
@@ -214,7 +216,6 @@
             }
 
             try {
-                // توليد معرف فريد ومستقل لكل حساب جديد لعزل بياناته تماً
                 let generatedCompanyId = 'company_' + Date.now();
                 await addDoc(accountsRef, {
                     name: nameInput,
@@ -256,10 +257,13 @@
             }
 
             const statusEl = document.getElementById('bioStatusText');
-            statusEl.innerText = `جاري التحقق البيومتري لـ (${username})...`;
+            statusEl.innerText = `جاري التحقق وتسجيل الدخول السحابي لـ (${username})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
             try {
+                // تفعيل جلسة Firebase Auth لكي لا تظهر أخطاء الصلاحيات (Missing or insufficient permissions)
+                await signInAnonymously(auth);
+
                 if (window.PublicKeyCredential && navigator.credentials) {
                     const publicKeyCredentialRequestOptions = {
                         challenge: Uint8Array.from("eidco_secure_challenge_2026", c => c.charCodeAt(0)),
@@ -274,35 +278,21 @@
                 statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // العثور على الـ companyId الخاص بهذا المستخدم أو تعيين معرف افتراضي خاص به
                 let matchedAccount = accountsData.find(a => a.name === username);
                 let assignedCompanyId = matchedAccount && matchedAccount.companyId ? matchedAccount.companyId : ('company_user_' + username.replace(/\s+/g, '_'));
 
-                // حفظ الجلسة ومعرف العزل في localStorage ليتم استخدامه في باقي صفحات المنظومة
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId); // ربط العزل التام
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 800);
 
             } catch (error) {
-                statusEl.innerText = "⚠️ فشل التحقق البيومتري، تم السماح بالدخول الاحتياطي.";
+                statusEl.innerText = "⚠️ خطأ في الاتصال بالسحابة: " + error.message;
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                
-                let matchedAccount = accountsData.find(a => a.name === username);
-                let assignedCompanyId = matchedAccount && matchedAccount.companyId ? matchedAccount.companyId : ('company_user_' + username.replace(/\s+/g, '_'));
-
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', username);
-                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId); // ربط العزل التام
-                
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1000);
             }
         };
     </script>

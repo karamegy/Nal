@@ -205,10 +205,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة والبدائل المحلية لمنع أي أخطاء مفقودة في المجموعات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -221,14 +222,9 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        // استعلامات الاستماع المعزولة مع شرط companyId
-        const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
-        const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
         let state = { invoices: [], transactions: [], clients: [], products: [] };
         let currentTvChannel = 'invoices';
@@ -272,27 +268,64 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // المزامنة اللحظية المعزولة مع بيانات Firebase
-        onSnapshot(invoicesRef, (snapshot) => {
-            let previousCount = state.invoices.length;
-            state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            
-            if (initialLoadDone && state.invoices.length > previousCount) {
-                let newest = state.invoices[state.invoices.length - 1];
-                playInvoiceBellSound();
-                announceNewInvoice(newest);
-            }
-            initialLoadDone = true;
-            renderTvScreen();
-        });
+        // المصادقة التلقائية المجهولة ثم بدء الاستماع مع توفير بدائل محلية في حال عدم توفر المجموعات سحابياً بعد
+        signInAnonymously(auth).then(() => {
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
-        onSnapshot(transactionsRef, (snapshot) => {
-            state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            renderTvScreen();
-        });
+            onSnapshot(invoicesRef, (snapshot) => {
+                let previousCount = state.invoices.length;
+                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                
+                if (initialLoadDone && state.invoices.length > previousCount) {
+                    let newest = state.invoices[state.invoices.length - 1];
+                    playInvoiceBellSound();
+                    announceNewInvoice(newest);
+                }
+                initialLoadDone = true;
+                renderTvScreen();
+            }, (error) => {
+                console.warn("مجموعة الفواتير غير متوفرة بعد سحابياً، يتم الاعتماد على التخزين المحلي:", error);
+                try {
+                    let localInv = localStorage.getItem('eidco_v13_invoices') || localStorage.getItem('eidco_invoices');
+                    if(localInv) state.invoices = JSON.parse(localInv);
+                } catch(e) {}
+                renderTvScreen();
+            });
 
-        onSnapshot(clientsRef, (snapshot) => {
-            state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTvScreen();
+            }, (error) => {
+                try {
+                    let localTx = localStorage.getItem('eidco_v13_transactions');
+                    if(localTx) state.transactions = JSON.parse(localTx);
+                } catch(e) {}
+                renderTvScreen();
+            });
+
+            onSnapshot(clientsRef, (snapshot) => {
+                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTvScreen();
+            }, (error) => {
+                try {
+                    let localClients = localStorage.getItem('eidco_v13_clients');
+                    if(localClients) state.clients = JSON.parse(localClients);
+                } catch(e) {}
+                renderTvScreen();
+            });
+        }).catch((error) => {
+            console.error("فشل المصادقة في شاشة TV:", error);
+            // تحميل البيانات محلياً في حال تعذر الاتصال بـ Firebase
+            try {
+                let localInv = localStorage.getItem('eidco_v13_invoices');
+                if(localInv) state.invoices = JSON.parse(localInv);
+                let localTx = localStorage.getItem('eidco_v13_transactions');
+                if(localTx) state.transactions = JSON.parse(localTx);
+                let localClients = localStorage.getItem('eidco_v13_clients');
+                if(localClients) state.clients = JSON.parse(localClients);
+            } catch(e) {}
             renderTvScreen();
         });
 

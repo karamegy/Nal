@@ -243,7 +243,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId وتحقق المصادقة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -257,6 +257,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -268,24 +269,37 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let unsubscribers = [];
+
+        // التحقق من حالة المستخدم وجلب الـ UID الحقيقي تلقائياً
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentCompanyId = user.uid;
+                localStorage.setItem('eidco_current_company_id', user.uid);
+                initApp(user.uid);
+            } else {
+                if (auth.currentUser) {
+                    currentCompanyId = auth.currentUser.uid;
+                    initApp(auth.currentUser.uid);
+                } else if (currentCompanyId && currentCompanyId !== 'default_company') {
+                    initApp(currentCompanyId);
+                } else {
+                    console.warn("⚠️ تنبيه: لم يتم رصد مستخدم مسجل الدخول بـ Firebase Auth.");
+                }
+            }
+        });
 
         // المراجع الأساسية للمجموعات (Collection References)
         const clientsCollection = collection(db, "clients");
         const invoicesCollection = collection(db, "invoices");
         const transactionsCollection = collection(db, "transactions");
         const paymentsCollection = collection(db, "client_payments");
-
-        // استعلامات الاستماع مع شروط العزل (Query References)
-        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-        const paymentsRef = query(paymentsCollection, where("companyId", "==", currentCompanyId));
 
         let state = {
             clients: [],
@@ -296,32 +310,43 @@
 
         let currentActiveClient = null;
 
-        // المزامنة اللحظية من Firebase مع العزل
-        onSnapshot(clientsRef, (snapshot) => {
-            state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            renderClients();
-        });
+        function initApp(companyId) {
+            // إلغاء أي اشتراكات سابقة لتجنب التكرار
+            unsubscribers.forEach(unsub => unsub());
+            unsubscribers = [];
 
-        onSnapshot(invoicesRef, (snapshot) => {
-            state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            renderClients();
-            if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-        });
+            // استعلامات الاستماع مع شروط العزل التام
+            const clientsRef = query(clientsCollection, where("companyId", "==", companyId));
+            const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
+            const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
+            const paymentsRef = query(paymentsCollection, where("companyId", "==", companyId));
 
-        onSnapshot(transactionsRef, (snapshot) => {
-            state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-        });
+            unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
+                state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                renderClients();
+            }));
 
-        onSnapshot(paymentsRef, (snapshot) => {
-            state.payments = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            renderClients();
-            if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-        });
+            unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
+                state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                renderClients();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            }));
+
+            unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            }));
+
+            unsubscribers.push(onSnapshot(paymentsRef, (snapshot) => {
+                state.payments = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                renderClients();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            }));
+        }
 
         function renderClients() {
             let tbody = document.getElementById('clientsTableBody');
             if(!state.clients.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد عملاء مسجلون لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد عملاء مسجلون لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
@@ -363,9 +388,11 @@
             if(!name) return alert('الرجاء إدخال اسم العميل');
             if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
 
+            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
+
             try {
                 await addDoc(clientsCollection, { 
-                    companyId: currentCompanyId, // تضمين معرف العزل التام
+                    companyId: activeCompanyId, 
                     name, 
                     phone, 
                     address 
@@ -561,10 +588,11 @@
             if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
 
             let today = new Date().toISOString().split('T')[0];
+            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
 
             try {
                 await addDoc(paymentsCollection, {
-                    companyId: currentCompanyId, // تضمين معرف العزل التام
+                    companyId: activeCompanyId,
                     id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
                     clientName: currentActiveClient.name,
                     amount: amount,
@@ -572,7 +600,7 @@
                 });
 
                 await addDoc(transactionsCollection, {
-                    companyId: currentCompanyId, // تضمين معرف العزل التام
+                    companyId: activeCompanyId,
                     type: 'إيراد',
                     amount: amount,
                     desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,

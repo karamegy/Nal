@@ -15,8 +15,8 @@
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -350,7 +350,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -364,6 +364,7 @@
             query,
             where
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -376,18 +377,10 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const clientsCollection = collection(db, "clients");
-        const fleetCollection = collection(db, "fleet_locations");
-        const shipmentsCollection = collection(db, "shipments");
-
-        // استعلامات الاستماع مع شروط العزل (Query References)
-        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-        const fleetRef = query(fleetCollection, where("companyId", "==", currentCompanyId));
-        const shipmentsRef = query(shipmentsCollection, where("companyId", "==", currentCompanyId));
 
         // 1. إسناد دوال الحذف والحفظ فوراً لمنع حدوث Undefined Error عند الضغط مع تضمين companyId
         window.saveVehicle = async function(e) {
@@ -408,7 +401,12 @@
                 updatedAt: new Date().toISOString()
             };
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const fleetCollection = collection(db, "fleet_locations");
                 if (id) {
                     await setDoc(doc(db, "fleet_locations", id), vehicleData, { merge: true });
                 } else {
@@ -433,6 +431,9 @@
 
         window.deleteVehicle = async function(id) {
             if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول؟")) {
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) {}
+                }
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
                     alert("✓ تم حذف المركبة بنجاح.");
@@ -450,7 +451,12 @@
             let lat = parseFloat(document.getElementById('shipmentLat').value) || 30.0500;
             let lng = parseFloat(document.getElementById('shipmentLng').value) || 31.2400;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const shipmentsCollection = collection(db, "shipments");
                 await addDoc(shipmentsCollection, {
                     companyId: currentCompanyId, // تضمين العزل التام
                     code: code,
@@ -469,6 +475,9 @@
 
         window.deleteShipment = async function(id) {
             if(confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) {}
+                }
                 try {
                     await deleteDoc(doc(db, "shipments", id));
                     alert("✓ تم حذف الشحنة بنجاح.");
@@ -500,155 +509,166 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        // 3. المزامنة اللحظية للأسطول المعزول
-        let fleetMarkers = {};
-        onSnapshot(fleetRef, (snapshot) => {
-            if (map) {
-                Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
-                fleetMarkers = {};
-            }
+        // تنفيذ المصادقة المجهولة أولاً ثم تفعيل الاستماع اللحظي للبيانات المعزولة
+        signInAnonymously(auth).then(() => {
+            const clientsCollection = collection(db, "clients");
+            const fleetCollection = collection(db, "fleet_locations");
+            const shipmentsCollection = collection(db, "shipments");
 
-            if (snapshot.empty) {
-                document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة لهذا الحساب. اضغط "إضافة مركبة جديدة".</td></tr>`;
-                return;
-            }
+            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
+            const fleetRef = query(fleetCollection, where("companyId", "==", currentCompanyId));
+            const shipmentsRef = query(shipmentsCollection, where("companyId", "==", currentCompanyId));
 
-            let fleetDocs = [];
-            let tableHtml = '';
-
-            snapshot.forEach(docSnap => {
-                let v = docSnap.data();
-                let id = docSnap.id;
-                v.id = id;
-                fleetDocs.push(v);
-
-                let vLat = parseFloat(v.lat);
-                let vLng = parseFloat(v.lng);
-
-                if (map && !isNaN(vLat) && !isNaN(vLng)) {
-                    let marker = L.marker([vLat, vLng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
-                            iconSize: [36, 36]
-                        })
-                    }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
-                    
-                    fleetMarkers[id] = marker;
+            // 3. المزامنة اللحظية للأسطول المعزول
+            let fleetMarkers = {};
+            onSnapshot(fleetRef, (snapshot) => {
+                if (map) {
+                    Object.values(fleetMarkers).forEach(m => map.removeLayer(m));
+                    fleetMarkers = {};
                 }
 
-                tableHtml += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
-                        <td class="p-3 mono-font text-slate-600">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
-                        <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
-                        <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
-                        <td class="p-3 text-center">
-                            <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat || 30.0444}, ${vLng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
-            document.getElementById('fleetTableBody').innerHTML = tableHtml;
-        }, (err) => {
-            console.error("Fleet Snapshot Error: ", err);
-            document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بالسحابة: ${err.message}</td></tr>`;
-        });
-
-        // 4. المزامنة اللحظية للشحنات المعزولة
-        let shipmentMarkers = {};
-        onSnapshot(shipmentsRef, (snapshot) => {
-            if (map) {
-                Object.values(shipmentMarkers).forEach(m => map.removeLayer(m));
-                shipmentMarkers = {};
-            }
-
-            if (snapshot.empty) {
-                document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
-                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة لهذا الحساب. اضغط "إضافة شحنة جديدة".</td></tr>`;
-                return;
-            }
-
-            let shipmentDocs = [];
-            let tableHtml = '';
-
-            snapshot.forEach(docSnap => {
-                let s = docSnap.data();
-                let id = docSnap.id;
-                s.id = id;
-                shipmentDocs.push(s);
-
-                let sLat = parseFloat(s.lat);
-                let sLng = parseFloat(s.lng);
-
-                if (map && !isNaN(sLat) && !isNaN(sLng)) {
-                    let marker = L.marker([sLat, sLng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
-                            iconSize: [34, 34]
-                        })
-                    }).addTo(map).bindPopup(`
-                        <div style="font-family:'Cairo',sans-serif; text-align:right;">
-                            <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
-                            <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
-                            <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
-                        </div>
-                    `);
-                    
-                    shipmentMarkers[id] = marker;
+                if (snapshot.empty) {
+                    document.getElementById('mapFleetCount').innerText = '0 مركبة';
+                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة لهذا الحساب. اضغط "إضافة مركبة جديدة".</td></tr>`;
+                    return;
                 }
 
-                tableHtml += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
-                        <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
-                        <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
-                        <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
-                        <td class="p-3 text-center">
-                            <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
+                let fleetDocs = [];
+                let tableHtml = '';
 
-            document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
-            document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
-        }, (err) => {
-            console.error("Shipments Snapshot Error: ", err);
-            document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">خطأ في جلب الشحنات: ${err.message}</td></tr>`;
-        });
+                snapshot.forEach(docSnap => {
+                    let v = docSnap.data();
+                    let id = docSnap.id;
+                    v.id = id;
+                    fleetDocs.push(v);
 
-        // 5. المزامنة اللحظية للعملاء المعزولين
-        let clientMarkers = [];
-        onSnapshot(clientsRef, (snapshot) => {
-            let clients = [];
-            snapshot.forEach(docSnap => clients.push(docSnap.data()));
-            document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
+                    let vLat = parseFloat(v.lat);
+                    let vLng = parseFloat(v.lng);
 
-            if (map) {
-                clientMarkers.forEach(m => map.removeLayer(m));
-                clientMarkers = [];
+                    if (map && !isNaN(vLat) && !isNaN(vLng)) {
+                        let marker = L.marker([vLat, vLng], {
+                            icon: L.divIcon({
+                                html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
+                                iconSize: [36, 36]
+                            })
+                        }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
+                        
+                        fleetMarkers[id] = marker;
+                    }
 
-                clients.forEach(c => {
-                    let lat = parseFloat(c.lat) || (30.0333 + (Math.random() - 0.5) * 0.05);
-                    let lng = parseFloat(c.lng) || (31.2333 + (Math.random() - 0.5) * 0.05);
-                    let balance = c.balance || 0;
-                    let phone = c.phone || 'غير مسجل';
-                    
-                    let marker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
-                            iconSize: [30, 30]
-                        })
-                    }).addTo(map).bindPopup(`<b>${c.name}</b><br>هاتف: ${phone}<br>الرصيد: ${balance} ج.م`);
-
-                    clientMarkers.push(marker);
+                    tableHtml += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
+                            <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
+                            <td class="p-3 mono-font text-slate-600">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
+                            <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
+                            <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
+                            <td class="p-3 text-center">
+                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat || 30.0444}, ${vLng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
                 });
-            }
+
+                document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
+                document.getElementById('fleetTableBody').innerHTML = tableHtml;
+            }, (err) => {
+                console.error("Fleet Snapshot Error: ", err);
+            });
+
+            // 4. المزامنة اللحظية للشحنات المعزولة
+            let shipmentMarkers = {};
+            onSnapshot(shipmentsRef, (snapshot) => {
+                if (map) {
+                    Object.values(shipmentMarkers).forEach(m => map.removeLayer(m));
+                    shipmentMarkers = {};
+                }
+
+                if (snapshot.empty) {
+                    document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
+                    document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة لهذا الحساب. اضغط "إضافة شحنة جديدة".</td></tr>`;
+                    return;
+                }
+
+                let shipmentDocs = [];
+                let tableHtml = '';
+
+                snapshot.forEach(docSnap => {
+                    let s = docSnap.data();
+                    let id = docSnap.id;
+                    s.id = id;
+                    shipmentDocs.push(s);
+
+                    let sLat = parseFloat(s.lat);
+                    let sLng = parseFloat(s.lng);
+
+                    if (map && !isNaN(sLat) && !isNaN(sLng)) {
+                        let marker = L.marker([sLat, sLng], {
+                            icon: L.divIcon({
+                                html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
+                                iconSize: [34, 34]
+                            })
+                        }).addTo(map).bindPopup(`
+                            <div style="font-family:'Cairo',sans-serif; text-align:right;">
+                                <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
+                                <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
+                                <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                            </div>
+                        `);
+                        
+                        shipmentMarkers[id] = marker;
+                    }
+
+                    tableHtml += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
+                            <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
+                            <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
+                            <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
+                            <td class="p-3 text-center">
+                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
+                document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
+            }, (err) => {
+                console.error("Shipments Snapshot Error: ", err);
+            });
+
+            // 5. المزامنة اللحظية للعملاء المعزولين
+            let clientMarkers = [];
+            onSnapshot(clientsRef, (snapshot) => {
+                let clients = [];
+                snapshot.forEach(docSnap => clients.push(docSnap.data()));
+                document.getElementById('mapClientsCount').innerText = clients.length + ' جهة';
+
+                if (map) {
+                    clientMarkers.forEach(m => map.removeLayer(m));
+                    clientMarkers = [];
+
+                    clients.forEach(c => {
+                        let lat = parseFloat(c.lat) || (30.0333 + (Math.random() - 0.5) * 0.05);
+                        let lng = parseFloat(c.lng) || (31.2333 + (Math.random() - 0.5) * 0.05);
+                        let balance = c.balance || 0;
+                        let phone = c.phone || 'غير مسجل';
+                        
+                        let marker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
+                                iconSize: [30, 30]
+                            })
+                        }).addTo(map).bindPopup(`<b>${c.name}</b><br>هاتف: ${phone}<br>الرصيد: ${balance} ج.م`);
+
+                        clientMarkers.push(marker);
+                    });
+                }
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة في خريطة الأسطول:", err);
         });
 
         // 6. أدوات التحكم الإضافية بأسلوب آمن

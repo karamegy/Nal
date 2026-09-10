@@ -202,38 +202,37 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore والمصادقة لمنع مشاكل الصلاحيات
+        // تهيئة Firebase و Firestore والمصادقة
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تسجيل الدخول بشكل مجهول تلقائياً لتجاوز قيود الصلاحيات (Missing or insufficient permissions)
-        signInAnonymously(auth).catch((error) => {
-            console.error("خطأ في المصادقة التلقائية:", error);
-        });
-
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const productsCollection = collection(db, "products");
-        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
         let productsList = [];
+        let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        // المزامنة اللحظية الحية من Firebase Firestore مع العزل
-        onSnapshot(productsRef, (snapshot) => {
-            productsList = snapshot.docs.map(doc => ({
-                docId: doc.id,
-                ...doc.data()
-            }));
-            localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
-            window.renderProducts();
-        }, (error) => {
-            console.error("خطأ في جلب أصناف المخزن:", error);
-            try {
-                let localData = localStorage.getItem('eidco_v13_products');
-                if (localData) productsList = JSON.parse(localData);
+        // الانتظار حتى اكتمال المصادقة بنجاح قبل تفعيل استعلامات وقواعد Firestore لمنع خطأ الصلاحيات
+        signInAnonymously(auth).then(() => {
+            const productsCollection = collection(db, "products");
+            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
+
+            // المزامنة اللحظية الحية من Firebase Firestore بعد اعتماد المصادقة
+            onSnapshot(productsRef, (snapshot) => {
+                productsList = snapshot.docs.map(doc => ({
+                    docId: doc.id,
+                    ...doc.data()
+                }));
+                localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
                 window.renderProducts();
-            } catch(e) {}
+            }, (error) => {
+                console.error("خطأ في جلب أصناف المخزن:", error);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_products');
+                    if (localData) productsList = JSON.parse(localData);
+                    window.renderProducts();
+                } catch(e) {}
+            });
+        }).catch((error) => {
+            console.error("خطأ في المصادقة التلقائية:", error);
         });
 
         window.renderProducts = function() {
@@ -346,6 +345,7 @@
                     return;
                 }
 
+                let productsCollection = collection(db, "products");
                 let productData = { 
                     companyId: currentCompanyId, 
                     code, 

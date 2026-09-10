@@ -388,7 +388,11 @@
             if(!name) return alert('الرجاء إدخال اسم العميل');
             if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
 
+            // إلزام النظام حصرياً باستخدام الـ UID الحقيقي للمستخدم النشط
             let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
+            if (!auth.currentUser && currentCompanyId === 'default_company') {
+                return alert('⚠️ تنبيه: يرجى تسجيل الدخول أولاً من صفحة auth.html لضمان صلاحيات الحفظ السحابي.');
+            }
 
             try {
                 await addDoc(clientsCollection, { 

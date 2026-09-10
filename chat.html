@@ -64,7 +64,7 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة (Firebase)</h1>
+                <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة (Firebase المعزول)</h1>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6">
@@ -106,7 +106,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -133,8 +133,14 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const clientsRef = collection(db, "clients");
-        const messagesRef = collection(db, "messages");
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        const clientsCollection = collection(db, "clients");
+        const messagesCollection = collection(db, "messages");
+
+        // استعلامات الاستماع مع شروط العزل (Query References)
+        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
 
         let clientsList = [];
         let messagesList = [];
@@ -142,7 +148,7 @@
         let unsubscribeMessages = null;
         let ringtoneCtx = null, ringtoneTimer = null;
 
-        // الاستماع المباشر لجدول العملاء من السحابة
+        // الاستماع المباشر لجدول العملاء المعزول من السحابة
         onSnapshot(clientsRef, (snapshot) => {
             clientsList = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -158,7 +164,7 @@
         function renderContacts() {
             let container = document.getElementById('chatContactsList');
             if (clientsList.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">لا يوجد عملاء مسجلين حالياً.</div>`;
+                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">لا يوجد عملاء مسجلون لهذا الحساب.</div>`;
                 return;
             }
 
@@ -185,11 +191,11 @@
             listenToMessages(clientId);
         };
 
-        // الاستماع المباشر واللحظي للرسائل الخاصة بالعميل المختار
+        // الاستماع المباشر واللحظي للرسائل المعزولة الخاصة بالعميل المختار ضمن نفس الشركة
         function listenToMessages(clientId) {
             if (unsubscribeMessages) unsubscribeMessages();
 
-            const q = query(messagesRef, where("clientId", "==", clientId));
+            const q = query(messagesCollection, where("clientId", "==", clientId), where("companyId", "==", currentCompanyId));
 
             unsubscribeMessages = onSnapshot(q, (snapshot) => {
                 messagesList = snapshot.docs.map(doc => ({
@@ -233,7 +239,8 @@
             if (!txt) return;
 
             try {
-                await addDoc(messagesRef, {
+                await addDoc(messagesCollection, {
+                    companyId: currentCompanyId, // تضمين معرف العزل التام
                     clientId: currentActiveClientId,
                     sender: 'me',
                     text: txt,
@@ -277,49 +284,49 @@
             document.getElementById('audioCallModal').classList.remove('active');
         };
     </script>
-    <!-- الزر العائم المتحرك لبث EIDCO TV (يُوضع قبل إغلاق وسم </body> في أي صفحة) -->
-<div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-    <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-        <span class="tracking-wide">بث EIDCO TV 4K</span>
-        <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-    </a>
-</div>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
+        </a>
+    </div>
 
-<script>
-    (function setupDraggableFloatingBtn() {
-        const dragEl = document.getElementById('floatingTvTrigger');
-        if (!dragEl) return;
-        let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-        dragEl.addEventListener('touchstart', dragStart, {passive: false});
-        dragEl.addEventListener('touchend', dragEnd, {passive: false});
-        dragEl.addEventListener('touchmove', drag, {passive: false});
-        dragEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
 
-        function dragStart(e) {
-            initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-            initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-            if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-        }
-        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                xOffset = currentX; yOffset = currentY;
-                dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-        }
-    })();
-</script>
-
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

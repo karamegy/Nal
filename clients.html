@@ -243,7 +243,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId وتحقق المصادقة -->
+    <!-- Firebase SDK Modules مع دعم المصادقة التلقائية وتجنب أخطاء الصلاحيات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -257,7 +257,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -277,20 +277,20 @@
         let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
         let unsubscribers = [];
 
-        // التحقق من حالة المستخدم وجلب الـ UID الحقيقي تلقائياً
-        onAuthStateChanged(auth, (user) => {
+        // التحقق من حالة المصادقة أو تسجيل الدخول تلقائياً لتفادي خطأ الصلاحيات
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentCompanyId = user.uid;
                 localStorage.setItem('eidco_current_company_id', user.uid);
                 initApp(user.uid);
             } else {
-                if (auth.currentUser) {
-                    currentCompanyId = auth.currentUser.uid;
-                    initApp(auth.currentUser.uid);
-                } else if (currentCompanyId && currentCompanyId !== 'default_company') {
-                    initApp(currentCompanyId);
-                } else {
-                    console.warn("⚠️ تنبيه: لم يتم رصد مستخدم مسجل الدخول بـ Firebase Auth.");
+                try {
+                    const cred = await signInAnonymously(auth);
+                    currentCompanyId = cred.user.uid;
+                    localStorage.setItem('eidco_current_company_id', cred.user.uid);
+                    initApp(cred.user.uid);
+                } catch (err) {
+                    console.error("فشل المصادقة التلقائية:", err);
                 }
             }
         });
@@ -388,11 +388,16 @@
             if(!name) return alert('الرجاء إدخال اسم العميل');
             if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
 
-            // إلزام النظام حصرياً باستخدام الـ UID الحقيقي للمستخدم النشط
-            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
-            if (!auth.currentUser && currentCompanyId === 'default_company') {
-                return alert('⚠️ تنبيه: يرجى تسجيل الدخول أولاً من صفحة auth.html لضمان صلاحيات الحفظ السحابي.');
+            // التأكد من تسجيل الدخول السحابي قبل الحفظ لمنع خطأ الصلاحيات
+            if (!auth.currentUser) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    return alert('⚠️ تعذر الاتصال بالسحابة وتحقيق الأمان: ' + e.message);
+                }
             }
+
+            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
 
             try {
                 await addDoc(clientsCollection, { 
@@ -590,6 +595,10 @@
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
             if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
 
             let today = new Date().toISOString().split('T')[0];
             let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;

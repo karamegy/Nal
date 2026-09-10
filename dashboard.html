@@ -147,7 +147,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -161,6 +161,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -172,24 +173,13 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        // المراجع الأساسية للمجموعات (Collection References)
-        const invoicesCollection = collection(db, "invoices");
-        const transactionsCollection = collection(db, "transactions");
-        const productsCollection = collection(db, "products");
-        const accountsCollection = collection(db, "accounts");
-
-        // استعلامات الاستماع مع شروط العزل (Query References)
-        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
-        const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
         let state = {
             invoices: [],
@@ -201,26 +191,76 @@
         let salesChartInstance = null;
         let vaultChartInstance = null;
 
-        // المزامنة اللحظية للبيانات السحابية المعزولة
-        onSnapshot(accountsRef, (snapshot) => {
-            state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            if (state.accounts.length > 0) {
-                document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
-            }
-        });
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const invoicesCollection = collection(db, "invoices");
+            const transactionsCollection = collection(db, "transactions");
+            const productsCollection = collection(db, "products");
+            const accountsCollection = collection(db, "accounts");
 
-        onSnapshot(invoicesRef, (snapshot) => {
-            state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            updateDashboard();
-        });
+            const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
+            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
+            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
-        onSnapshot(transactionsRef, (snapshot) => {
-            state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            updateDashboard();
-        });
+            onSnapshot(accountsRef, (snapshot) => {
+                state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_accounts', JSON.stringify(state.accounts));
+                if (state.accounts.length > 0) {
+                    document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
+                }
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_accounts');
+                    if(localData) state.accounts = JSON.parse(localData);
+                } catch(e) {}
+            });
 
-        onSnapshot(productsRef, (snapshot) => {
-            state.products = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+            onSnapshot(invoicesRef, (snapshot) => {
+                state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+                updateDashboard();
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_invoices');
+                    if(localData) state.invoices = JSON.parse(localData);
+                } catch(e) {}
+                updateDashboard();
+            });
+
+            onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+                updateDashboard();
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_transactions');
+                    if(localData) state.transactions = JSON.parse(localData);
+                } catch(e) {}
+                updateDashboard();
+            });
+
+            onSnapshot(productsRef, (snapshot) => {
+                state.products = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+                updateDashboard();
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_products');
+                    if(localData) state.products = JSON.parse(localData);
+                } catch(e) {}
+                updateDashboard();
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة في لوحة التحكم:", err);
+            try {
+                let localInv = localStorage.getItem('eidco_v13_invoices');
+                if(localInv) state.invoices = JSON.parse(localInv);
+                let localTx = localStorage.getItem('eidco_v13_transactions');
+                if(localTx) state.transactions = JSON.parse(localTx);
+                let localProd = localStorage.getItem('eidco_v13_products');
+                if(localProd) state.products = JSON.parse(localProd);
+            } catch(e) {}
             updateDashboard();
         });
 
@@ -299,6 +339,10 @@
         // دالة إصلاح البيانات المضخمة وتصحيح الفواتير والمعاملات سحابياً ضمن النطاق المعزول
         window.fixCorruptedData = async function() {
             if(!confirm('هل تريد إصلاح وتصحيح جميع الأرقام الوهمية والمضخمة وإعادة ضبط الحسابات في Firebase؟')) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
 
             try {
                 for (let inv of state.invoices) {

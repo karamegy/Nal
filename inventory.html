@@ -176,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مطابقة تماماً لطريقة index.html المعزولة -->
+    <!-- Firebase SDK Modules مع تضمين المصادقة لتجاوز خطأ الصلاحيات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -190,6 +190,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -202,27 +203,33 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const productsCollection = collection(db, "products");
-        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
         let productsList = [];
+        let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        onSnapshot(productsRef, (snapshot) => {
-            productsList = snapshot.docs.map(doc => ({
-                docId: doc.id,
-                ...doc.data()
-            }));
-            localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
-            window.renderProducts();
-        }, (error) => {
-            console.error("خطأ في جلب أصناف المخزن:", error);
-            try {
-                let localData = localStorage.getItem('eidco_v13_products');
-                if (localData) productsList = JSON.parse(localData);
+        // الانتظار حتى تسجيل الدخول بنجاح لتمرير شرط isAuthenticated() في قواعد فايربيس
+        signInAnonymously(auth).then(() => {
+            const productsCollection = collection(db, "products");
+            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
+
+            onSnapshot(productsRef, (snapshot) => {
+                productsList = snapshot.docs.map(doc => ({
+                    docId: doc.id,
+                    ...doc.data()
+                }));
+                localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
                 window.renderProducts();
-            } catch(e) {}
+            }, (error) => {
+                console.error("خطأ في جلب أصناف المخزن:", error);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_products');
+                    if (localData) productsList = JSON.parse(localData);
+                    window.renderProducts();
+                } catch(e) {}
+            });
+        }).catch((error) => {
+            console.error("فشل المصادقة:", error);
         });
 
         window.renderProducts = function() {
@@ -335,6 +342,7 @@
                     return;
                 }
 
+                let productsCollection = collection(db, "products");
                 let productData = { 
                     companyId: currentCompanyId, 
                     code, 

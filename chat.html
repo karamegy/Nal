@@ -11,12 +11,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth')) {
+        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -106,7 +106,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -118,6 +118,7 @@
             where, 
             orderBy 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -132,15 +133,10 @@
         // تهيئة Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const clientsCollection = collection(db, "clients");
-        const messagesCollection = collection(db, "messages");
-
-        // استعلامات الاستماع مع شروط العزل (Query References)
-        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
 
         let clientsList = [];
         let messagesList = [];
@@ -148,17 +144,33 @@
         let unsubscribeMessages = null;
         let ringtoneCtx = null, ringtoneTimer = null;
 
-        // الاستماع المباشر لجدول العملاء المعزول من السحابة
-        onSnapshot(clientsRef, (snapshot) => {
-            clientsList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const clientsCollection = collection(db, "clients");
+            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
 
+            onSnapshot(clientsRef, (snapshot) => {
+                clientsList = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                localStorage.setItem('eidco_v13_chat_clients', JSON.stringify(clientsList));
+                renderContacts();
+            }, (error) => {
+                console.warn("جاري جلب جهات الاتصال من التخزين المحلي:", error);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_chat_clients') || localStorage.getItem('eidco_v13_clients');
+                    if(localData) clientsList = JSON.parse(localData);
+                } catch(e) {}
+                renderContacts();
+            });
+        }).catch((error) => {
+            console.error("فشل المصادقة في الشات:", error);
+            try {
+                let localData = localStorage.getItem('eidco_v13_chat_clients') || localStorage.getItem('eidco_v13_clients');
+                if(localData) clientsList = JSON.parse(localData);
+            } catch(e) {}
             renderContacts();
-        }, (error) => {
-            console.error("خطأ في جلب العملاء:", error);
-            document.getElementById('chatContactsList').innerHTML = `<div class="p-4 text-center text-xs text-rose-500">تعذر تحميل جهات الاتصال.</div>`;
         });
 
         function renderContacts() {
@@ -169,7 +181,7 @@
             }
 
             container.innerHTML = clientsList.map(c => `
-                <div onclick="window.selectClient('${c.id}')" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${currentActiveClientId === c.id ? 'bg-indigo-50 border-r-4 border-indigo-600' : ''}">
+                <div onclick="window.selectClient('${c.id || c.docId}')" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${(currentActiveClientId === c.id || currentActiveClientId === c.docId) ? 'bg-indigo-50 border-r-4 border-indigo-600' : ''}">
                     <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">${c.name ? c.name.charAt(0) : 'ع'}</div>
                     <div>
                         <h4 class="font-bold text-xs text-slate-900">${c.name || 'عميل'}</h4>
@@ -181,7 +193,7 @@
 
         window.selectClient = function(clientId) {
             currentActiveClientId = clientId;
-            let client = clientsList.find(x => x.id === clientId);
+            let client = clientsList.find(x => x.id === clientId || x.docId === clientId);
             if (!client) return;
 
             document.getElementById('activeChatName').innerText = client.name || 'عميل';
@@ -195,6 +207,7 @@
         function listenToMessages(clientId) {
             if (unsubscribeMessages) unsubscribeMessages();
 
+            const messagesCollection = collection(db, "messages");
             const q = query(messagesCollection, where("clientId", "==", clientId), where("companyId", "==", currentCompanyId));
 
             unsubscribeMessages = onSnapshot(q, (snapshot) => {
@@ -207,6 +220,8 @@
                 messagesList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
                 renderMessages();
+            }, (error) => {
+                console.warn("خطأ في جلب الرسائل سحابياً:", error);
             });
         }
 
@@ -238,7 +253,12 @@
             let txt = inputEl.value.trim();
             if (!txt) return;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const messagesCollection = collection(db, "messages");
                 await addDoc(messagesCollection, {
                     companyId: currentCompanyId, // تضمين معرف العزل التام
                     clientId: currentActiveClientId,
@@ -256,7 +276,7 @@
 
         window.startAudioCall = function() {
             if (!currentActiveClientId) return alert('اختر عميل أولاً');
-            let client = clientsList.find(x => x.id === currentActiveClientId);
+            let client = clientsList.find(x => x.id === currentActiveClientId || x.docId === currentActiveClientId);
             document.getElementById('audioCallTargetName').innerText = client ? client.name : 'جاري الاتصال...';
             document.getElementById('audioCallModal').classList.add('active');
 

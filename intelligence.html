@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth')) {
+        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
             window.location.href = 'auth.html';
         }
     </script>
@@ -153,7 +153,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -164,6 +164,7 @@
             collection,
             addDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -175,31 +176,34 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        // توثيق إعدادات الذكاء مع معرف الشركة المعزول
-        const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
-        const learningLogsRef = collection(db, "learning_logs");
-        const migrationsRef = collection(db, "migrations");
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
 
-        // الاستماع المباشر لإعدادات الذكاء المعزولة من السحابة
-        onSnapshot(settingsDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const saved = docSnap.data();
-                if (saved) {
-                    if (document.getElementById('srcGmail')) document.getElementById('srcGmail').checked = saved.gmail ?? true;
-                    if (document.getElementById('srcCalendar')) document.getElementById('srcCalendar').checked = saved.calendar ?? true;
-                    if (document.getElementById('srcDrive')) document.getElementById('srcDrive').checked = saved.drive ?? true;
-                    if (document.getElementById('srcPhotos')) document.getElementById('srcPhotos').checked = saved.photos ?? false;
+            // الاستماع المباشر لإعدادات الذكاء المعزولة من السحابة
+            onSnapshot(settingsDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const saved = docSnap.data();
+                    if (saved) {
+                        if (document.getElementById('srcGmail')) document.getElementById('srcGmail').checked = saved.gmail ?? true;
+                        if (document.getElementById('srcCalendar')) document.getElementById('srcCalendar').checked = saved.calendar ?? true;
+                        if (document.getElementById('srcDrive')) document.getElementById('srcDrive').checked = saved.drive ?? true;
+                        if (document.getElementById('srcPhotos')) document.getElementById('srcPhotos').checked = saved.photos ?? false;
+                    }
                 }
-            }
-        }, (error) => {
-            console.log("استخدام الإعدادات المحلية عند تعذر الاتصال:", error);
+            }, (error) => {
+                console.log("استخدام الإعدادات المحلية عند تعذر الاتصال:", error);
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة في مركز الذكاء:", err);
         });
 
         window.saveIntelligenceSettings = async function() {
@@ -214,7 +218,12 @@
             
             localStorage.setItem('eidco_v13_intelligence_settings', JSON.stringify(settings));
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
                 await setDoc(settingsDocRef, settings, { merge: true });
             } catch (err) {
                 console.error("خطأ أثناء حفظ الإعدادات في Firebase:", err);
@@ -249,8 +258,13 @@
 
             resultText.innerHTML = generatedHtml;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             // حفظ سجل المحتوى التعليمي المولّد سحابياً ضمن النطاق المعزول
             try {
+                const learningLogsRef = collection(db, "learning_logs");
                 await addDoc(learningLogsRef, {
                     companyId: currentCompanyId, // تضمين العزل التام
                     topic: topic,
@@ -268,7 +282,12 @@
             let status = document.getElementById('migrationStatus');
             status.innerHTML = `<i class="fa-solid fa-spinner fa-spin ml-1"></i> جاري فحص ومعالجة أرشيف (${file.name}) وسحبه للسحابة المعزولة...`;
             
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const migrationsRef = collection(db, "migrations");
                 await addDoc(migrationsRef, {
                     companyId: currentCompanyId, // تضمين العزل التام
                     fileName: file.name,

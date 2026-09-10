@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // لوحة التحكم الرئيسية</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -40,57 +39,20 @@
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
 
-        /* شريط الأخبار RSS العلوي */
-        .rss-ticker-wrapper {
-            background: #0f172a;
-            color: #f8fafc;
-            border-bottom: 1px solid #1e293b;
-            font-size: 0.8rem;
-            position: relative;
-            z-index: 50;
-            overflow: hidden;
-        }
-        .rss-ticker-content {
-            display: inline-block;
-            white-space: nowrap;
-            padding-right: 100%;
-            animation: tickerMarquee 35s linear infinite;
-        }
-        .rss-ticker-content.paused {
-            animation-play-state: paused !important;
-        }
+        .rss-ticker-wrapper { background: #0f172a; color: #f8fafc; border-bottom: 1px solid #1e293b; font-size: 0.8rem; position: relative; z-index: 50; overflow: hidden; }
+        .rss-ticker-content { display: inline-block; white-space: nowrap; padding-right: 100%; animation: tickerMarquee 35s linear infinite; }
+        .rss-ticker-content.paused { animation-play-state: paused !important; }
         @keyframes tickerMarquee {
             0% { transform: translate3d(0, 0, 0); }
             100% { transform: translate3d(100%, 0, 0); }
         }
-
-        /* الزر المائل السحب السريع المتحرك Floating TV Button */
-        #floatingTvTrigger {
-            position: fixed;
-            bottom: 24px;
-            left: 24px;
-            z-index: 999;
-            touch-action: none;
-            user-select: none;
-        }
-
-        /* اللوجو الثلاثي الأبعاد */
+        #floatingTvTrigger { position: fixed; bottom: 24px; left: 24px; z-index: 999; touch-action: none; user-select: none; }
         .logo-3d-container { perspective: 1000px; display: inline-block; }
         .logo-3d-badge {
             background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
-            color: #ffffff;
-            font-weight: 900;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            transform-style: preserve-3d;
-            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 
-                        0 0 15px rgba(99, 102, 241, 0.6),
-                        inset 0 2px 4px rgba(255, 255, 255, 0.4);
-            animation: neonPulse 3s infinite alternate;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff; font-weight: 900; border-radius: 16px; display: flex; align-items: center; justify-content: center; position: relative; transform-style: preserve-3d;
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 0 0 15px rgba(99, 102, 241, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            animation: neonPulse 3s infinite alternate; border: 1px solid rgba(255, 255, 255, 0.3);
         }
         @keyframes neonPulse {
             0% { box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4), 0 0 10px rgba(99, 102, 241, 0.4); transform: rotateX(5deg) rotateY(-5deg); }
@@ -100,20 +62,16 @@
 </head>
 <body>
 
-    <!-- شريط RSS الإخباري العلوي مع شريط التحكم -->
     <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800">
         <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
             <i class="fa-solid fa-rss text-amber-400 animate-pulse"></i>
             <span>عاجل EIDCO RSS</span>
         </div>
-
         <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
             <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
                 <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري تحميل أحدث الأخبار والتحديثات من النظام...</span>
             </div>
         </div>
-
-        <!-- أدوات التحكم في شريط الأخبار -->
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
             <button onclick="window.toggleRssSpeed()" class="text-slate-400 hover:text-amber-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="سرعة الشريط">
                 <i class="fa-solid fa-gauge-simple-high"></i> <span id="rssSpeedText">1x</span>
@@ -127,7 +85,6 @@
         </div>
     </div>
 
-    <!-- الزر المتحرك العائم المخصص لفتح شاشة التلفزيون بصفحة جديدة -->
     <div id="floatingTvTrigger" class="cursor-grab active:cursor-grabbing select-none">
         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none">
             <span class="relative flex h-3 w-3">
@@ -142,7 +99,6 @@
 
     <div class="flex min-h-screen">
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
-            <!-- اللوجو الثلاثي الأبعاد المضيء -->
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="logo-3d-container">
                     <div class="logo-3d-badge w-11 h-11 text-lg">
@@ -203,7 +159,7 @@
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
 
-                <!-- بطاقة الترحيب -->
+                <!-- بطاقة الترحيب مع دعم عرض الصورة الشخصية -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
@@ -282,80 +238,47 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <a href="dashboard.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-gauge-high"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">لوحة التحكم الشاملة</h4>
-                                <span class="text-[11px] text-slate-500">مركز القيادة والتحكم العام</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">لوحة التحكم الشاملة</h4><span class="text-[11px] text-slate-500">مركز القيادة والتحكم العام</span></div>
                         </a>
                         <a href="invoices.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-500">
                             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الفواتير الفردية</h4>
-                                <span class="text-[11px] text-slate-500">إصدار ومتابعة الفواتير</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الفواتير الفردية</h4><span class="text-[11px] text-slate-500">إصدار ومتابعة الفواتير</span></div>
                         </a>
                         <a href="batch-invoices.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-file-lines"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الفواتير المجمعة</h4>
-                                <span class="text-[11px] text-slate-500">إصدار فاتورة لأصناف متعددة</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الفواتير المجمعة</h4><span class="text-[11px] text-slate-500">إصدار فاتورة لأصناف متعددة</span></div>
                         </a>
                         <a href="inventory.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-emerald-500">
                             <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-emerald-600 group-hover:text-white transition"><i class="fa-solid fa-boxes-stacked"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">المخزن والأصناف</h4>
-                                <span class="text-[11px] text-slate-500">إدارة الكميات والتسعير</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">المخزن والأصناف</h4><span class="text-[11px] text-slate-500">إدارة الكميات والتسعير</span></div>
                         </a>
                         <a href="clients.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-blue-500">
                             <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-blue-600 group-hover:text-white transition"><i class="fa-solid fa-building-user"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">حسابات العملاء</h4>
-                                <span class="text-[11px] text-slate-500">إدارة الشركات والجهات</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">حسابات العملاء</h4><span class="text-[11px] text-slate-500">إدارة الشركات والجهات</span></div>
                         </a>
                         <a href="chat.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-cyan-500">
                             <div class="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-cyan-600 group-hover:text-white transition"><i class="fa-solid fa-comments"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الشات والاتصالات</h4>
-                                <span class="text-[11px] text-slate-500">مراسلات واتصال صوت وفيديو</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الشات والاتصالات</h4><span class="text-[11px] text-slate-500">مراسلات واتصال صوت وفيديو</span></div>
                         </a>
                         <a href="profile.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-500">
                             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-id-badge"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الملف الشخصي</h4>
-                                <span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الملف الشخصي</h4><span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span></div>
                         </a>
                         <a href="vault.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500">
                             <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-rose-600 group-hover:text-white transition"><i class="fa-solid fa-vault"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الخزنة النقدية</h4>
-                                <span class="text-[11px] text-slate-500">متابعة الإيرادات والمصروفات</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الخزنة النقدية</h4><span class="text-[11px] text-slate-500">متابعة الإيرادات والمصروفات</span></div>
                         </a>
                         <a href="map.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-purple-500">
                             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition"><i class="fa-solid fa-map-location-dot"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4>
-                                <span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4><span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span></div>
                         </a>
                         <a href="auth.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية</h4>
-                                <span class="text-[11px] text-slate-500">بوابة الأمان والبصمة</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية</h4><span class="text-[11px] text-slate-500">بوابة الأمان والبصمة</span></div>
                         </a>
                         <a href="settings.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-slate-600">
                             <div class="w-12 h-12 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-slate-800 group-hover:text-white transition"><i class="fa-solid fa-sliders"></i></div>
-                            <div>
-                                <h4 class="font-bold text-sm text-slate-900">الإعدادات والنسخ</h4>
-                                <span class="text-[11px] text-slate-500">تصدير وتأمين البيانات</span>
-                            </div>
+                            <div><h4 class="font-bold text-sm text-slate-900">الإعدادات والنسخ</h4><span class="text-[11px] text-slate-500">تصدير وتأمين البيانات</span></div>
                         </a>
                     </div>
                 </div>
@@ -411,7 +334,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules & Custom Application JS (مع تفعيل العزل التام للبيانات عبر companyId) -->
+    <!-- Firebase SDK Modules & Custom Application JS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -437,7 +360,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
@@ -465,7 +387,6 @@
 
         let analyticsChartInstance = null;
 
-        // المزامنة اللحظية مع Firebase مع العزل
         onSnapshot(accountsRef, (snapshot) => {
             state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateAdminHeader();
@@ -496,7 +417,6 @@
             renderRssTicker();
         });
 
-        // إدارة شريط الأخبار RSS
         function renderRssTicker() {
             let container = document.getElementById('rssTickerContent');
             if(!container) return;
@@ -533,21 +453,13 @@
             document.getElementById('rssSpeedText').innerText = rssSpeedLabels[currentRssSpeedIndex];
         };
 
-        window.openAddNewsModal = function() {
-            document.getElementById('addNewsModal').classList.add('active');
-        };
-
-        window.closeAddNewsModal = function() {
-            document.getElementById('addNewsModal').classList.remove('active');
-        };
+        window.openAddNewsModal = function() { document.getElementById('addNewsModal').classList.add('active'); };
+        window.closeAddNewsModal = function() { document.getElementById('addNewsModal').classList.remove('active'); };
 
         window.submitCustomNews = function() {
             let text = document.getElementById('newRssTextInput').value.trim();
             let cat = document.getElementById('newRssCategoryInput').value;
-            if(!text) {
-                alert('الرجاء كتابة نص الخبر أولاً');
-                return;
-            }
+            if(!text) return alert('الرجاء كتابة نص الخبر أولاً');
             rssNewsList.unshift(`📌 [${cat}] ${text}`);
             document.getElementById('newRssTextInput').value = '';
             closeAddNewsModal();
@@ -555,72 +467,52 @@
             alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار.');
         };
 
-        // كود تحريك زر الشاشة السريع بالسحب واللمس Draggable Logic
         (function setupDraggableFloatingBtn() {
             const dragEl = document.getElementById('floatingTvTrigger');
-            let isDragging = false;
-            let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+            let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
 
             dragEl.addEventListener('touchstart', dragStart, {passive: false});
             dragEl.addEventListener('touchend', dragEnd, {passive: false});
             dragEl.addEventListener('touchmove', drag, {passive: false});
-
             dragEl.addEventListener('mousedown', dragStart);
             document.addEventListener('mouseup', dragEnd);
             document.addEventListener('mousemove', drag);
 
             function dragStart(e) {
-                if (e.type === 'touchstart') {
-                    initialX = e.touches[0].clientX - xOffset;
-                    initialY = e.touches[0].clientY - yOffset;
-                } else {
-                    initialX = e.clientX - xOffset;
-                    initialY = e.clientY - yOffset;
-                }
-                if (e.target.closest('#floatingTvTrigger')) {
-                    isDragging = true;
-                }
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-
-            function dragEnd() {
-                initialX = currentX;
-                initialY = currentY;
-                isDragging = false;
-            }
-
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
             function drag(e) {
                 if (isDragging) {
                     e.preventDefault();
-                    if (e.type === 'touchmove') {
-                        currentX = e.touches[0].clientX - initialX;
-                        currentY = e.touches[0].clientY - initialY;
-                    } else {
-                        currentX = e.clientX - initialX;
-                        currentY = e.clientY - initialY;
-                    }
-                    xOffset = currentX;
-                    yOffset = currentY;
-                    setTranslate(currentX, currentY, dragEl);
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
                 }
-            }
-
-            function setTranslate(xPos, yPos, el) {
-                el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
             }
         })();
 
         function updateAdminHeader() {
-            let adminName = localStorage.getItem('eidco_v13_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');
+            let accountDoc = state.accounts[0] || {};
+            let adminName = localStorage.getItem('eidco_v13_admin') || accountDoc.name || 'كرم حمدي عبدالعظيم';
             document.getElementById('welcomeAdminName').innerText = adminName;
 
-            let savedAvatar = localStorage.getItem('eidco_v13_avatar');
+            let savedAvatar = localStorage.getItem('eidco_v13_avatar') || accountDoc.avatar || '';
+            let img = document.getElementById('headerAvatarImg');
+            let avatarText = document.getElementById('headerAvatarText');
+
             if(savedAvatar) {
-                let img = document.getElementById('headerAvatarImg');
+                localStorage.setItem('eidco_v13_avatar', savedAvatar);
                 img.src = savedAvatar;
                 img.classList.remove('hidden');
-                document.getElementById('headerAvatarText').classList.add('hidden');
+                avatarText.classList.add('hidden');
             } else {
-                document.getElementById('headerAvatarText').innerText = adminName ? adminName.charAt(0) : 'ك';
+                img.classList.add('hidden');
+                avatarText.classList.remove('hidden');
+                avatarText.innerText = adminName ? adminName.charAt(0) : 'ك';
             }
         }
 
@@ -734,27 +626,20 @@
             document.getElementById('summaryModal').classList.add('active');
         };
 
-        window.closeSummaryModal = function() {
-            document.getElementById('summaryModal').classList.remove('active');
-        };
+        window.closeSummaryModal = function() { document.getElementById('summaryModal').classList.remove('active'); };
 
         window.filterDashboardData = function(query) {
             let q = query.trim().toLowerCase();
             let batchInvs = state.invoices.filter(i => i.isBatch);
-            if(!q) {
-                updateStatsAndDashboard(batchInvs);
-                return;
-            }
+            if(!q) return updateStatsAndDashboard(batchInvs);
             let filtered = batchInvs.filter(i => (i.id && i.id.toLowerCase().includes(q)) || (i.client && i.client.toLowerCase().includes(q)));
             updateStatsAndDashboard(filtered);
         };
 
         window.deleteDashboardBatchInvoice = async function(id, docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة السحابية.')) return;
-            
             try {
                 let inv = state.invoices.find(i => i.id === id);
-
                 if(inv && inv.items) {
                     for(let it of inv.items) {
                         let p = state.products.find(x => x.code === it.code);
@@ -763,17 +648,10 @@
                         }
                     }
                 }
-
                 let targetDocId = docId || (inv ? inv.docId : null);
-                if(targetDocId) {
-                    await deleteDoc(doc(db, "invoices", targetDocId));
-                }
-
+                if(targetDocId) await deleteDoc(doc(db, "invoices", targetDocId));
                 let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
-                if(tx && tx.docId) {
-                    await deleteDoc(doc(db, "transactions", tx.docId));
-                }
-
+                if(tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
                 alert('✓ تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء الحذف: ' + err.message);
@@ -784,10 +662,7 @@
             let canvas = document.getElementById('analyticsChart');
             if (!canvas) return;
             let ctx = canvas.getContext('2d');
-
-            if (analyticsChartInstance) {
-                analyticsChartInstance.destroy();
-            }
+            if (analyticsChartInstance) analyticsChartInstance.destroy();
 
             analyticsChartInstance = new Chart(ctx, {
                 type: 'line',

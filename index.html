@@ -411,7 +411,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules & Custom Application JS -->
+    <!-- Firebase SDK Modules & Custom Application JS (مع تفعيل العزل التام للبيانات عبر companyId) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -420,7 +420,9 @@
             onSnapshot, 
             doc, 
             deleteDoc, 
-            updateDoc 
+            updateDoc,
+            query,
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -435,11 +437,14 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const accountsRef = collection(db, "accounts");
-        const clientsRef = collection(db, "clients");
-        const productsRef = collection(db, "products");
-        const invoicesRef = collection(db, "invoices");
-        const transactionsRef = collection(db, "transactions");
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
+        const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+        const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
+        const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+        const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
         let state = {
             accounts: [],
@@ -450,7 +455,7 @@
         };
 
         let rssNewsList = [
-            "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المحدثة.",
+            "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
             "💡 يمكنك التحكم بشريط الأخبار وإيقافه أو تسريعه وتدوين أنباء المؤسسة بكل سهولة."
         ];
 
@@ -460,7 +465,7 @@
 
         let analyticsChartInstance = null;
 
-        // المزامنة اللحظية مع Firebase
+        // المزامنة اللحظية مع Firebase مع العزل
         onSnapshot(accountsRef, (snapshot) => {
             state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             updateAdminHeader();
@@ -632,7 +637,7 @@
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة للبحث أو لا توجد فواتير مجمعة مسجلة.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة للبحث أو لا توجد فواتير مجمعة مسجلة لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -663,7 +668,7 @@
             if (type === 'vault') {
                 let inc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
                 let exp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
-                modalTitle.innerText = 'ملخص الخزنة النقدية (Firebase)';
+                modalTitle.innerText = 'ملخص الخزنة النقدية المعزولة';
                 modalBody.innerHTML = `
                     <div class="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-xl mb-3">
                         <div><span class="text-[10px] text-slate-500 block">إيرادات</span><span class="font-bold text-cyan-600 mono-font">${inc.toLocaleString()} ج.م</span></div>

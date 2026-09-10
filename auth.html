@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // إدارة الحسابات والمصادقة البيومترية</title>
+    <title>EIDCO // إدارة الحسابات والمصادقة البيومترية المعزولة</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -51,7 +51,7 @@
                     <i class="fa-solid fa-cube text-xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان</h1>
+                    <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
                     <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول والمصادقة البيومترية</p>
                 </div>
             </div>
@@ -64,7 +64,7 @@
 
         <!-- حقل إدخال اسم الحساب بدلاً من عرض قائمة الحسابات -->
         <div class="space-y-2 relative z-10">
-            <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب:</label>
+            <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب / الشركة:</label>
             <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب للبدء..." oninput="checkFounderAccess()">
         </div>
 
@@ -126,7 +126,6 @@
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -140,11 +139,9 @@
         const db = getFirestore(app);
         const accountsRef = collection(db, "accounts");
 
-        // اسم المؤسس المعتمد للتحكم والإضافة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
 
-        // الاستماع للتغيرات في Firebase
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
@@ -155,12 +152,12 @@
                 addDoc(accountsRef, {
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
+                    companyId: 'company_founder_karm',
                     date: new Date().toISOString().split('T')[0]
                 });
             }
         });
 
-        // تعبئة حقل الاسم تلقائياً بالحساب المحفوظ مسبقاً إن وجد
         window.addEventListener('DOMContentLoaded', () => {
             const savedAdmin = localStorage.getItem('eidco_v13_admin') || '';
             const inputEl = document.getElementById('usernameInput');
@@ -170,7 +167,6 @@
             window.checkFounderAccess();
         });
 
-        // التحقق مما إذا كان المستخدم الحالي هو المؤسس لإظهار خيار إضافة الحسابات وزر التلفزيون العائم
         window.checkFounderAccess = function() {
             const inputVal = document.getElementById('usernameInput').value.trim();
             const addBtn = document.getElementById('addAccountBtn');
@@ -180,11 +176,11 @@
             if (inputVal === FOUNDER_NAME) {
                 addBtn.classList.remove('hidden');
                 resetBtn.classList.remove('hidden');
-                if (floatingTv) floatingTv.classList.remove('hidden'); // إظهار زر التلفزيون حصرياً لكرم
+                if (floatingTv) floatingTv.classList.remove('hidden');
             } else {
                 addBtn.classList.add('hidden');
                 resetBtn.classList.add('hidden');
-                if (floatingTv) floatingTv.classList.add('hidden'); // إخفاء زر التلفزيون عن أي شخص آخر
+                if (floatingTv) floatingTv.classList.add('hidden');
             }
 
             if (inputVal) {
@@ -218,12 +214,15 @@
             }
 
             try {
+                // توليد معرف فريد ومستقل لكل حساب جديد لعزل بياناته تماً
+                let generatedCompanyId = 'company_' + Date.now();
                 await addDoc(accountsRef, {
                     name: nameInput,
                     role: roleInput,
+                    companyId: generatedCompanyId,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert('تمت إضافة الحساب بنجاح إلى النظام!');
+                alert('✓ تمت إضافة الحساب وتخصيص بيئة معزولة له بنجاح!');
                 window.closeAddAccountModal();
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الحساب في Firebase: ' + err.message);
@@ -240,6 +239,7 @@
                 await addDoc(accountsRef, {
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
+                    companyId: 'company_founder_karm',
                     date: new Date().toISOString().split('T')[0]
                 });
                 alert('تمت إعادة ضبط الحسابات بنجاح.');
@@ -274,9 +274,15 @@
                 statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
+                // العثور على الـ companyId الخاص بهذا المستخدم أو تعيين معرف افتراضي خاص به
+                let matchedAccount = accountsData.find(a => a.name === username);
+                let assignedCompanyId = matchedAccount && matchedAccount.companyId ? matchedAccount.companyId : ('company_user_' + username.replace(/\s+/g, '_'));
+
+                // حفظ الجلسة ومعرف العزل في localStorage ليتم استخدامه في باقي صفحات المنظومة
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId); // ربط العزل التام
 
                 setTimeout(() => {
                     window.location.href = 'index.html';
@@ -286,9 +292,13 @@
                 statusEl.innerText = "⚠️ فشل التحقق البيومتري، تم السماح بالدخول الاحتياطي.";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                 
+                let matchedAccount = accountsData.find(a => a.name === username);
+                let assignedCompanyId = matchedAccount && matchedAccount.companyId ? matchedAccount.companyId : ('company_user_' + username.replace(/\s+/g, '_'));
+
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId); // ربط العزل التام
                 
                 setTimeout(() => {
                     window.location.href = 'index.html';
@@ -297,49 +307,48 @@
         };
     </script>
 
-   <!-- الزر العائم المتحرك لبث EIDCO TV (مخفي افتراضياً ولن يظهر إلا لكرم حمدي عبدالعظيم) -->
-<div id="floatingTvTrigger" class="hidden fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-    <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-        <span class="tracking-wide">بث EIDCO TV 4K</span>
-        <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-    </a>
-</div>
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="hidden fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
+        </a>
+    </div>
 
-<script>
-    (function setupDraggableFloatingBtn() {
-        const dragEl = document.getElementById('floatingTvTrigger');
-        if (!dragEl) return;
-        let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-        dragEl.addEventListener('touchstart', dragStart, {passive: false});
-        dragEl.addEventListener('touchend', dragEnd, {passive: false});
-        dragEl.addEventListener('touchmove', drag, {passive: false});
-        dragEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
 
-        function dragStart(e) {
-            initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-            initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-            if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-        }
-        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                xOffset = currentX; yOffset = currentY;
-                dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-        }
-    })();
-</script>
- 
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

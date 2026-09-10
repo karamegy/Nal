@@ -14,8 +14,8 @@
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -131,7 +131,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -145,6 +145,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -156,24 +157,36 @@
           appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        const accountsCollection = collection(db, "accounts");
-        const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
         let accountsList = [];
 
-        // المزامنة اللحظية الحية للحسابات والمسؤولين مع العزل
-        onSnapshot(accountsRef, (snapshot) => {
-            accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            localStorage.setItem('eidco_v13_accounts', JSON.stringify(accountsList));
-            window.renderUsersTable();
-        }, (error) => {
-            console.error("خطأ في جلب بيانات الحسابات:", error);
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const accountsCollection = collection(db, "accounts");
+            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
+
+            // المزامنة اللحظية الحية للحسابات والمسؤولين مع العزل
+            onSnapshot(accountsRef, (snapshot) => {
+                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                localStorage.setItem('eidco_v13_accounts', JSON.stringify(accountsList));
+                window.renderUsersTable();
+            }, (error) => {
+                console.error("خطأ في جلب بيانات الحسابات:", error);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_accounts');
+                    if (localData) accountsList = JSON.parse(localData);
+                    window.renderUsersTable();
+                } catch(e) {}
+            });
+        }).catch((error) => {
+            console.error("فشل المصادقة في إدارة المستخدمين:", error);
             try {
                 let localData = localStorage.getItem('eidco_v13_accounts');
                 if (localData) accountsList = JSON.parse(localData);
@@ -244,7 +257,12 @@
                 date: new Date().toISOString().split('T')[0]
             };
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const accountsCollection = collection(db, "accounts");
                 if(editDocId) {
                     await updateDoc(doc(db, "accounts", editDocId), {
                         name: name,
@@ -271,6 +289,10 @@
                 return;
             }
             if(!confirm('هل أنت متأكد من حذف هذا الحساب نهائياً من السحابة؟')) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
 
             try {
                 if(docId) {

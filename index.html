@@ -146,7 +146,7 @@
                                 <i class="fa-solid fa-cube"></i>
                             </div>
                         </div>
-                        <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (Firebase)</h1>
+                        <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (Firebase المعزول)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 text-decoration-none">
@@ -293,7 +293,7 @@
                 </div>
 
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي (Firebase)</h3>
+                    <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي (Firebase المعزول)</h3>
                     <div class="h-72 relative"><canvas id="analyticsChart"></canvas></div>
                 </div>
             </main>
@@ -343,7 +343,22 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules & Custom Application JS -->
+    <!-- سكريبت لتمرير معرف الجلسة والشركة عبر الروابط والأزرار تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+            // تحديث كافة الروابط لتتضمن معرف الشركة/الجلسة في الـ Query Parameters لضمان استمرار العزل والتمرير
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules & Custom Application JS مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -356,6 +371,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -368,14 +384,12 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
-        const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
-        const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
-        const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
+        // جلب معرف الشركة/الجلسة من الرابط أو التخزين المحلي لضمان العزل التام
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let state = {
             accounts: [],
@@ -396,34 +410,46 @@
 
         let analyticsChartInstance = null;
 
-        onSnapshot(accountsRef, (snapshot) => {
-            state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            updateAdminHeader();
-        });
+        // تنفيذ المصادقة المجهولة أولاً لتجاوز قيود أمان قواعد بيانات فايربيس
+        signInAnonymously(auth).then(() => {
+            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
-        onSnapshot(clientsRef, (snapshot) => {
-            state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            updateStatsAndDashboard();
-            renderRssTicker();
-        });
+            onSnapshot(accountsRef, (snapshot) => {
+                state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateAdminHeader();
+            }, (err) => console.log("Accounts error:", err));
 
-        onSnapshot(productsRef, (snapshot) => {
-            state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            updateStatsAndDashboard();
-            renderRssTicker();
-        });
+            onSnapshot(clientsRef, (snapshot) => {
+                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateStatsAndDashboard();
+                renderRssTicker();
+            }, (err) => console.log("Clients error:", err));
 
-        onSnapshot(invoicesRef, (snapshot) => {
-            state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            updateStatsAndDashboard();
-            renderAnalyticsChart();
-            renderRssTicker();
-        });
+            onSnapshot(productsRef, (snapshot) => {
+                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateStatsAndDashboard();
+                renderRssTicker();
+            }, (err) => console.log("Products error:", err));
 
-        onSnapshot(transactionsRef, (snapshot) => {
-            state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            updateStatsAndDashboard();
-            renderRssTicker();
+            onSnapshot(invoicesRef, (snapshot) => {
+                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateStatsAndDashboard();
+                renderAnalyticsChart();
+                renderRssTicker();
+            }, (err) => console.log("Invoices error:", err));
+
+            onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateStatsAndDashboard();
+                renderRssTicker();
+            }, (err) => console.log("Transactions error:", err));
+
+        }).catch((err) => {
+            console.error("فشل المصادقة المجهولة في الصفحة الرئيسية:", err);
         });
 
         function renderRssTicker() {
@@ -478,6 +504,7 @@
 
         (function setupDraggableFloatingBtn() {
             const dragEl = document.getElementById('floatingTvTrigger');
+            if(!dragEl) return;
             let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
 
             dragEl.addEventListener('touchstart', dragStart, {passive: false});
@@ -509,7 +536,6 @@
             let adminName = localStorage.getItem('eidco_v13_admin') || accountDoc.name || 'كرم حمدي عبدالعظيم';
             document.getElementById('welcomeAdminName').innerText = adminName;
 
-            // التحقق من كافة مفاتيح التخزين المحلية وسحابة Firebase لضمان مزامنة الصورة تماماً
             let savedAvatar = localStorage.getItem('eidco_v13_avatar') || 
                               localStorage.getItem('eidco_avatar') || 
                               localStorage.getItem('avatar') || 
@@ -556,7 +582,7 @@
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <a href="batch-invoices.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block">
+                        <a href="batch-invoices.html?companyId=${currentCompanyId}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block">
                             <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
                         </a>
                         <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1" title="حذف الفاتورة">
@@ -652,6 +678,9 @@
 
         window.deleteDashboardBatchInvoice = async function(id, docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة السحابية.')) return;
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
             try {
                 let inv = state.invoices.find(i => i.id === id);
                 if(inv && inv.items) {

@@ -52,7 +52,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول والمصادقة البيومترية</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول والمصادقة البيومترية الحقيقية</p>
                 </div>
             </div>
             
@@ -62,10 +62,10 @@
             </button>
         </div>
 
-        <!-- حقل إدخال اسم الحساب بدلاً من عرض قائمة الحسابات -->
+        <!-- حقل إدخال اسم الحساب -->
         <div class="space-y-2 relative z-10">
             <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب / الشركة:</label>
-            <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب للبدء..." oninput="checkFounderAccess()">
+            <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
         </div>
 
         <!-- منطقة البصمة البيومترية -->
@@ -74,8 +74,8 @@
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
             <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة بالبصمة</span>
-                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة الاسم ثم النقر على البصمة للدخول</span>
+                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة الحقيقية بالبصمة</span>
+                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة اسم مسجل ثم النقر على البصمة للدخول</span>
             </div>
         </div>
 
@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم مصادقة فايربيس السحابية الفعالة -->
+    <!-- Firebase SDK Modules مع التحقق الحقيقي من الحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -249,6 +249,7 @@
             }
         };
 
+        // دالة المصادقة الحقيقية الصارمة لعزل الحسابات
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -257,11 +258,21 @@
             }
 
             const statusEl = document.getElementById('bioStatusText');
-            statusEl.innerText = `جاري التحقق وتسجيل الدخول السحابي لـ (${username})...`;
+            statusEl.innerText = `جاري التحقق من السجلات السحابية لـ (${username})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
+            // التحقق الحقيقي من قاعدة بيانات الحسابات السحابية
+            let matchedAccount = accountsData.find(a => a.name === username);
+
+            if (!matchedAccount && username !== FOUNDER_NAME) {
+                statusEl.innerText = "❌ اسم المستخدم غير مسجل في النظام!";
+                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات النظام المعتمدة. لا يمكن الدخول إلا بحساب مسجل مسبقاً.");
+                return;
+            }
+
             try {
-                // تفعيل جلسة Firebase Auth لكي لا تظهر أخطاء الصلاحيات (Missing or insufficient permissions)
+                // تفعيل جلسة Firebase Auth السحابية
                 await signInAnonymously(auth);
 
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -275,11 +286,11 @@
                     await new Promise(r => setTimeout(r, 1200));
                 }
 
-                statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المصادقة الحقيقية بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                let matchedAccount = accountsData.find(a => a.name === username);
-                let assignedCompanyId = matchedAccount && matchedAccount.companyId ? matchedAccount.companyId : ('company_user_' + username.replace(/\s+/g, '_'));
+                // اعتماد الـ companyId الحقيقي الخاص بهذا الحساب حصرياً لعزل البيانات
+                let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', username);

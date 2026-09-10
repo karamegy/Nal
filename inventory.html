@@ -11,7 +11,7 @@
     
     <!-- سكريبت إجبار المتصفح على مسح الكاش والـ Service Worker القديم فوراً -->
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth')) {
+        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -176,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة والعزل التام companyId -->
+    <!-- Firebase SDK Modules مطابقة تماماً لطريقة index.html المعزولة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -190,9 +190,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -202,37 +200,29 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore والمصادقة
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
 
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        const productsCollection = collection(db, "products");
+        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
         let productsList = [];
-        let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        // الانتظار حتى اكتمال المصادقة بنجاح قبل تفعيل استعلامات وقواعد Firestore لمنع خطأ الصلاحيات
-        signInAnonymously(auth).then(() => {
-            const productsCollection = collection(db, "products");
-            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
-
-            // المزامنة اللحظية الحية من Firebase Firestore بعد اعتماد المصادقة
-            onSnapshot(productsRef, (snapshot) => {
-                productsList = snapshot.docs.map(doc => ({
-                    docId: doc.id,
-                    ...doc.data()
-                }));
-                localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
+        onSnapshot(productsRef, (snapshot) => {
+            productsList = snapshot.docs.map(doc => ({
+                docId: doc.id,
+                ...doc.data()
+            }));
+            localStorage.setItem('eidco_v13_products', JSON.stringify(productsList));
+            window.renderProducts();
+        }, (error) => {
+            console.error("خطأ في جلب أصناف المخزن:", error);
+            try {
+                let localData = localStorage.getItem('eidco_v13_products');
+                if (localData) productsList = JSON.parse(localData);
                 window.renderProducts();
-            }, (error) => {
-                console.error("خطأ في جلب أصناف المخزن:", error);
-                try {
-                    let localData = localStorage.getItem('eidco_v13_products');
-                    if (localData) productsList = JSON.parse(localData);
-                    window.renderProducts();
-                } catch(e) {}
-            });
-        }).catch((error) => {
-            console.error("خطأ في المصادقة التلقائية:", error);
+            } catch(e) {}
         });
 
         window.renderProducts = function() {
@@ -345,7 +335,6 @@
                     return;
                 }
 
-                let productsCollection = collection(db, "products");
                 let productData = { 
                     companyId: currentCompanyId, 
                     code, 

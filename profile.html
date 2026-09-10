@@ -15,8 +15,8 @@
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -125,7 +125,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -137,6 +137,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -149,20 +150,9 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-
-        const accountsCollection = collection(db, "accounts");
-        const invoicesCollection = collection(db, "invoices");
-        const transactionsCollection = collection(db, "transactions");
-        const clientsCollection = collection(db, "clients");
-        const productsCollection = collection(db, "products");
-
-        const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
-        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
 
         let state = {
             accounts: [],
@@ -172,15 +162,79 @@
             products: []
         };
 
-        onSnapshot(accountsRef, (snapshot) => {
-            state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const accountsCollection = collection(db, "accounts");
+            const invoicesCollection = collection(db, "invoices");
+            const transactionsCollection = collection(db, "transactions");
+            const clientsCollection = collection(db, "clients");
+            const productsCollection = collection(db, "products");
+
+            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
+            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
+            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
+
+            onSnapshot(accountsRef, (snapshot) => {
+                state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                localStorage.setItem('eidco_v13_accounts', JSON.stringify(state.accounts));
+                updateProfileUI();
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_accounts');
+                    if(localData) state.accounts = JSON.parse(localData);
+                } catch(e) {}
+                updateProfileUI();
+            });
+
+            onSnapshot(invoicesRef, (snapshot) => { 
+                state.invoices = snapshot.docs.map(d => d.data()); 
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_invoices');
+                    if(localData) state.invoices = JSON.parse(localData);
+                } catch(e) {}
+            });
+
+            onSnapshot(transactionsRef, (snapshot) => { 
+                state.transactions = snapshot.docs.map(d => d.data()); 
+                localStorage.setItem('eidco_v13_transactions', JSON.stringify(state.transactions));
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_transactions');
+                    if(localData) state.transactions = JSON.parse(localData);
+                } catch(e) {}
+            });
+
+            onSnapshot(clientsRef, (snapshot) => { 
+                state.clients = snapshot.docs.map(d => d.data()); 
+                localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_clients');
+                    if(localData) state.clients = JSON.parse(localData);
+                } catch(e) {}
+            });
+
+            onSnapshot(productsRef, (snapshot) => { 
+                state.products = snapshot.docs.map(d => d.data()); 
+                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_products');
+                    if(localData) state.products = JSON.parse(localData);
+                } catch(e) {}
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة في الملف الشخصي:", err);
+            try {
+                let localAcc = localStorage.getItem('eidco_v13_accounts');
+                if(localAcc) state.accounts = JSON.parse(localAcc);
+            } catch(e) {}
             updateProfileUI();
         });
-
-        onSnapshot(invoicesRef, (snapshot) => { state.invoices = snapshot.docs.map(d => d.data()); });
-        onSnapshot(transactionsRef, (snapshot) => { state.transactions = snapshot.docs.map(d => d.data()); });
-        onSnapshot(clientsRef, (snapshot) => { state.clients = snapshot.docs.map(d => d.data()); });
-        onSnapshot(productsRef, (snapshot) => { state.products = snapshot.docs.map(d => d.data()); });
 
         function updateProfileUI() {
             let accountDoc = state.accounts[0] || {};
@@ -215,6 +269,10 @@
             localStorage.setItem('eidco_v13_admin', val);
             document.getElementById('profileNameDisplay').innerText = val;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 let targetDocId = state.accounts.length > 0 ? state.accounts[0].docId : (currentCompanyId + "_main_admin");
                 let userDocRef = doc(db, "accounts", targetDocId);
@@ -242,6 +300,10 @@
                 img.src = base64String;
                 img.classList.remove('hidden');
                 document.getElementById('profileAvatarText').classList.add('hidden');
+
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) {}
+                }
 
                 try {
                     let targetDocId = state.accounts.length > 0 ? state.accounts[0].docId : (currentCompanyId + "_main_admin");

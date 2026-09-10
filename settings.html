@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // إعدادات النظام</title>
+    <title>EIDCO // إعدادات النظام المعزولة</title>
     
     <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
@@ -60,20 +60,20 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <h1 class="font-black text-slate-900 text-sm">إدارة قواعد البيانات والنظام (Firebase)</h1>
+                <h1 class="font-black text-slate-900 text-sm">إدارة قواعد البيانات والنظام (Firebase المعزول)</h1>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
                 <div class="corporate-card p-6 space-y-4">
-                    <h2 class="font-bold text-sm text-slate-900">خيارات النسخ الاحتياطي والضبط السحابي</h2>
-                    <p class="text-xs text-slate-500">يمكنك تصدير كافة بيانات النظام من السحابة في ملف JSON أو إعادة ضبط المصنع.</p>
+                    <h2 class="font-bold text-sm text-slate-900">خيارات النسخ الاحتياطي والضبط السحابي المعزول</h2>
+                    <p class="text-xs text-slate-500">يمكنك تصدير كافة بيانات الحساب الحالي من السحابة في ملف JSON أو إعادة ضبط بيانات المنظومة الخاصة بك.</p>
                     <div id="statusMessage" class="hidden text-xs font-bold p-3 rounded-xl"></div>
                     <div class="flex flex-wrap gap-4 pt-2">
                         <button onclick="window.exportDatabase()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية (Firebase JSON)
+                            <i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية (Firebase JSON المعزولة)
                         </button>
                         <button onclick="window.resetSystemData()" class="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition">
-                            <i class="fa-solid fa-rotate-left ml-1"></i> إعادة ضبط المصنع ومسح البيانات
+                            <i class="fa-solid fa-rotate-left ml-1"></i> إعادة ضبط المصنع ومسح بيانات الحساب
                         </button>
                     </div>
                 </div>
@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -89,7 +89,9 @@
             collection, 
             getDocs, 
             doc, 
-            deleteDoc 
+            deleteDoc,
+            query,
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات Firebase الخاصة بمشروعك
@@ -105,6 +107,9 @@
         // تهيئة Firebase و Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         const collectionsList = [
             "accounts", 
@@ -129,9 +134,10 @@
         }
 
         window.exportDatabase = async function() {
-            showStatus('⏳ جاري سحب وتجميع البيانات من Firebase...');
+            showStatus('⏳ جاري سحب وتجميع البيانات المعزولة من Firebase...');
             try {
                 let backupData = {
+                    companyId: currentCompanyId,
                     exportDate: new Date().toISOString(),
                     adminName: localStorage.getItem('eidco_v13_admin') || 'كرم حمدي عبدالعظيم',
                     collections: {}
@@ -139,7 +145,8 @@
 
                 for (let colName of collectionsList) {
                     try {
-                        let snapshot = await getDocs(collection(db, colName));
+                        let q = query(collection(db, colName), where("companyId", "==", currentCompanyId));
+                        let snapshot = await getDocs(q);
                         backupData.collections[colName] = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                     } catch (e) {
                         backupData.collections[colName] = [];
@@ -158,25 +165,26 @@
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
                 const dl = document.createElement('a'); 
                 dl.setAttribute("href", dataStr); 
-                dl.setAttribute("download", `EIDCO_Firebase_Backup_${new Date().toISOString().split('T')[0]}.json`);
+                dl.setAttribute("download", `EIDCO_Firebase_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`);
                 document.body.appendChild(dl); 
                 dl.click(); 
                 dl.remove();
 
-                showStatus('✓ تم تصدير النسخة الاحتياطية السحابية بنجاح!');
+                showStatus('✓ تم تصدير النسخة الاحتياطية السحابية المعزولة بنجاح!');
             } catch (err) {
                 showStatus('حدث خطأ أثناء تصدير البيانات: ' + err.message, true);
             }
         };
 
         window.resetSystemData = async function() {
-            if(!confirm('⚠️ تحذير شديد: هل أنت متأكد من مسح كافة البيانات من السحابة والنظام وتصفير المنظومة؟')) return;
+            if(!confirm('⚠️ تحذير شديد: هل أنت متأكد من مسح كافة بيانات هذا الحساب المعزول من السحابة وتصفير المنظومة؟')) return;
             
-            showStatus('⏳ جاري تفريغ قاعدة البيانات السحابية...');
+            showStatus('⏳ جاري تفريغ بيانات الحساب من قاعدة البيانات السحابية...');
             try {
                 for (let colName of collectionsList) {
                     try {
-                        let snapshot = await getDocs(collection(db, colName));
+                        let q = query(collection(db, colName), where("companyId", "==", currentCompanyId));
+                        let snapshot = await getDocs(q);
                         for (let docSnap of snapshot.docs) {
                             await deleteDoc(doc(db, colName, docSnap.id));
                         }
@@ -185,7 +193,7 @@
 
                 localStorage.clear();
                 sessionStorage.clear();
-                showStatus('✓ تم إعادة ضبط المصنع وتصفير النظام بنجاح!');
+                showStatus('✓ تم إعادة ضبط المصنع وتصفير بيانات الحساب بنجاح!');
                 setTimeout(() => {
                     window.location.href = 'auth.html';
                 }, 1500);
@@ -196,49 +204,49 @@
             }
         };
     </script>
-    <!-- الزر العائم المتحرك لبث EIDCO TV (يُوضع قبل إغلاق وسم </body> في أي صفحة) -->
-<div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-    <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-        <span class="tracking-wide">بث EIDCO TV 4K</span>
-        <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-    </a>
-</div>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
+        </a>
+    </div>
 
-<script>
-    (function setupDraggableFloatingBtn() {
-        const dragEl = document.getElementById('floatingTvTrigger');
-        if (!dragEl) return;
-        let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-        dragEl.addEventListener('touchstart', dragStart, {passive: false});
-        dragEl.addEventListener('touchend', dragEnd, {passive: false});
-        dragEl.addEventListener('touchmove', drag, {passive: false});
-        dragEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
 
-        function dragStart(e) {
-            initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-            initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-            if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-        }
-        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                xOffset = currentX; yOffset = currentY;
-                dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-        }
-    })();
-</script>
-
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات</title>
+    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات المعزولة</title>
     
     <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
@@ -121,10 +121,10 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - Firebase)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - Firebase المعزول)</h1>
                     <div class="flex items-center gap-3">
                         <span id="connectionBadge" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200">
-                            <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة (لحظي)
+                            <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة المعزولة (لحظي)
                         </span>
                     </div>
                 </div>
@@ -207,7 +207,7 @@
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً (Firebase Shipments)</h3>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً (Firebase Shipments المعزولة)</h3>
                             <p class="text-xs text-slate-500">سجل الشحنات الحالية ومواقع تسليمها لتظهر مباشرة على خريطة الملاحة.</p>
                         </div>
                         <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
@@ -237,7 +237,7 @@
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase Fleet)</h3>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase Fleet المعزولة)</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
                         <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
@@ -350,7 +350,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
-    <!-- Firebase SDK Modules & Bulletproof Script Initialization -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -360,7 +360,9 @@
             doc, 
             setDoc,
             deleteDoc,
-            addDoc
+            addDoc,
+            query,
+            where
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -375,11 +377,19 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const clientsRef = collection(db, "clients");
-        const fleetRef = collection(db, "fleet_locations");
-        const shipmentsRef = collection(db, "shipments");
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        // 1. إسناد دوال الحذف والحفظ فوراً لمنع حدوث Undefined Error عند الضغط
+        const clientsCollection = collection(db, "clients");
+        const fleetCollection = collection(db, "fleet_locations");
+        const shipmentsCollection = collection(db, "shipments");
+
+        // استعلامات الاستماع مع شروط العزل (Query References)
+        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
+        const fleetRef = query(fleetCollection, where("companyId", "==", currentCompanyId));
+        const shipmentsRef = query(shipmentsCollection, where("companyId", "==", currentCompanyId));
+
+        // 1. إسناد دوال الحذف والحفظ فوراً لمنع حدوث Undefined Error عند الضغط مع تضمين companyId
         window.saveVehicle = async function(e) {
             if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
@@ -389,6 +399,7 @@
             let lng = parseFloat(document.getElementById('vehicleLng').value) || 31.2357;
 
             let vehicleData = {
+                companyId: currentCompanyId, // تضمين العزل التام
                 name: name,
                 plate: plate,
                 lat: lat,
@@ -401,7 +412,7 @@
                 if (id) {
                     await setDoc(doc(db, "fleet_locations", id), vehicleData, { merge: true });
                 } else {
-                    await addDoc(fleetRef, vehicleData);
+                    await addDoc(fleetCollection, vehicleData);
                 }
                 window.closeVehicleModal();
                 alert("✓ تم حفظ بيانات المركبة بنجاح سحابياً.");
@@ -440,7 +451,8 @@
             let lng = parseFloat(document.getElementById('shipmentLng').value) || 31.2400;
 
             try {
-                await addDoc(shipmentsRef, {
+                await addDoc(shipmentsCollection, {
+                    companyId: currentCompanyId, // تضمين العزل التام
                     code: code,
                     receiver: receiver,
                     status: status,
@@ -488,7 +500,7 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        // 3. المزامنة اللحظية للأسطول (Real-Time Fleet)
+        // 3. المزامنة اللحظية للأسطول المعزول
         let fleetMarkers = {};
         onSnapshot(fleetRef, (snapshot) => {
             if (map) {
@@ -498,7 +510,7 @@
 
             if (snapshot.empty) {
                 document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة حالياً. اضغط "إضافة مركبة جديدة".</td></tr>`;
+                document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة لهذا الحساب. اضغط "إضافة مركبة جديدة".</td></tr>`;
                 return;
             }
 
@@ -547,7 +559,7 @@
             document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-600 font-bold">خطأ في الاتصال بالسحابة: ${err.message}</td></tr>`;
         });
 
-        // 4. المزامنة اللحظية للشحنات (Real-Time Shipments)
+        // 4. المزامنة اللحظية للشحنات المعزولة
         let shipmentMarkers = {};
         onSnapshot(shipmentsRef, (snapshot) => {
             if (map) {
@@ -557,7 +569,7 @@
 
             if (snapshot.empty) {
                 document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
-                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة حالياً. اضغط "إضافة شحنة جديدة".</td></tr>`;
+                document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة لهذا الحساب. اضغط "إضافة شحنة جديدة".</td></tr>`;
                 return;
             }
 
@@ -610,7 +622,7 @@
             document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-600 font-bold">خطأ في جلب الشحنات: ${err.message}</td></tr>`;
         });
 
-        // 5. المزامنة اللحظية للعملاء
+        // 5. المزامنة اللحظية للعملاء المعزولين
         let clientMarkers = [];
         onSnapshot(clientsRef, (snapshot) => {
             let clients = [];

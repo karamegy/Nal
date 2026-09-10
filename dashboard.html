@@ -65,7 +65,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة (Firebase)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة (Firebase المعزول)</h1>
                     <div class="flex items-center gap-3">
                         <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg" title="إصلاح وتصفير الأرقام الوهمية والمضخمة">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> إصلاح الأرقام الوهمية
@@ -84,7 +84,7 @@
                         <p class="text-xs text-slate-300">مراقبة حية لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
                     </div>
                     <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold">
-                        <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر سحابياً
+                        <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر سحابياً (معزول)
                     </div>
                 </div>
 
@@ -147,7 +147,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -157,7 +157,9 @@
             doc, 
             updateDoc, 
             deleteDoc, 
-            addDoc 
+            addDoc,
+            query,
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات Firebase الخاصة بمشروعك
@@ -174,10 +176,20 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const invoicesRef = collection(db, "invoices");
-        const transactionsRef = collection(db, "transactions");
-        const productsRef = collection(db, "products");
-        const accountsRef = collection(db, "accounts");
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        // المراجع الأساسية للمجموعات (Collection References)
+        const invoicesCollection = collection(db, "invoices");
+        const transactionsCollection = collection(db, "transactions");
+        const productsCollection = collection(db, "products");
+        const accountsCollection = collection(db, "accounts");
+
+        // استعلامات الاستماع مع شروط العزل (Query References)
+        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
+        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
+        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
+        const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
         let state = {
             invoices: [],
@@ -189,7 +201,7 @@
         let salesChartInstance = null;
         let vaultChartInstance = null;
 
-        // المزامنة اللحظية للبيانات السحابية
+        // المزامنة اللحظية للبيانات السحابية المعزولة
         onSnapshot(accountsRef, (snapshot) => {
             state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
             if (state.accounts.length > 0) {
@@ -230,7 +242,7 @@
             let logsTable = document.getElementById('dashLogsTable');
             let recentTxs = [...state.transactions].reverse().slice(0, 8);
             if(!recentTxs.length) {
-                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات مسجلة بعد.</td></tr>`;
+                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات مسجلة لهذا الحساب.</td></tr>`;
             } else {
                 logsTable.innerHTML = recentTxs.map(t => `
                     <tr class="hover:bg-slate-50">
@@ -284,7 +296,7 @@
             });
         }
 
-        // دالة إصلاح البيانات المضخمة وتصحيح الفواتير والمعاملات سحابياً
+        // دالة إصلاح البيانات المضخمة وتصحيح الفواتير والمعاملات سحابياً ضمن النطاق المعزول
         window.fixCorruptedData = async function() {
             if(!confirm('هل تريد إصلاح وتصحيح جميع الأرقام الوهمية والمضخمة وإعادة ضبط الحسابات في Firebase؟')) return;
 
@@ -306,49 +318,49 @@
             }
         };
     </script>
-    <!-- الزر العائم المتحرك لبث EIDCO TV (يُوضع قبل إغلاق وسم </body> في أي صفحة) -->
-<div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-    <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-        <span class="tracking-wide">بث EIDCO TV 4K</span>
-        <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-    </a>
-</div>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
+        </a>
+    </div>
 
-<script>
-    (function setupDraggableFloatingBtn() {
-        const dragEl = document.getElementById('floatingTvTrigger');
-        if (!dragEl) return;
-        let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-        dragEl.addEventListener('touchstart', dragStart, {passive: false});
-        dragEl.addEventListener('touchend', dragEnd, {passive: false});
-        dragEl.addEventListener('touchmove', drag, {passive: false});
-        dragEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
 
-        function dragStart(e) {
-            initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-            initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-            if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-        }
-        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                xOffset = currentX; yOffset = currentY;
-                dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
             }
-        }
-    })();
-</script>
-
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

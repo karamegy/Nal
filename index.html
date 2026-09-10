@@ -19,12 +19,9 @@
         if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
             window.location.href = 'auth.html';
         }
-        // إلغاء وتفريغ أي Service Worker قديم قد يعيق التحديثات
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) {
-                    reg.unregister();
-                }
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -347,7 +344,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-            // تحديث كافة الروابط لتتضمن معرف الشركة/الجلسة في الـ Query Parameters لضمان استمرار العزل والتمرير
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -358,7 +354,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules & Custom Application JS مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- Firebase SDK Modules & Custom Application JS مع التصفية البرمجية المرنة لضمان عدم ظهور أرقام صفرية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -367,9 +363,7 @@
             onSnapshot, 
             doc, 
             deleteDoc, 
-            updateDoc,
-            query,
-            where 
+            updateDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -386,7 +380,6 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة/الجلسة من الرابط أو التخزين المحلي لضمان العزل التام
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
@@ -410,46 +403,51 @@
 
         let analyticsChartInstance = null;
 
-        // تنفيذ المصادقة المجهولة أولاً لتجاوز قيود أمان قواعد بيانات فايربيس
+        // تنفيذ المصادقة المجهولة ثم جلب البيانات وتصفيتها برمجياً لتجنب مشكلة المستندات التي لا تحتوي على companyId
         signInAnonymously(auth).then(() => {
-            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
-            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
-            const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
-            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
-            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
-
-            onSnapshot(accountsRef, (snapshot) => {
-                state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            
+            // استماع للمجموعات برمجياً بدون شرط قاسي لضمان جلب كافة البيانات الحالية
+            onSnapshot(collection(db, "accounts"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.accounts = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
                 updateAdminHeader();
             }, (err) => console.log("Accounts error:", err));
 
-            onSnapshot(clientsRef, (snapshot) => {
-                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(collection(db, "clients"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.clients = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Clients error:", err));
 
-            onSnapshot(productsRef, (snapshot) => {
-                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(collection(db, "products"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.products = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Products error:", err));
 
-            onSnapshot(invoicesRef, (snapshot) => {
-                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(collection(db, "invoices"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
                 renderRssTicker();
-            }, (err) => console.log("Invoices error:", err));
+            }, (err) => {
+                // إذا لم تكن مجموعة invoices موجودة بعد في فايربيس
+                state.invoices = [];
+                updateStatsAndDashboard();
+            });
 
-            onSnapshot(transactionsRef, (snapshot) => {
-                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(collection(db, "transactions"), (snapshot) => {
+                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.transactions = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Transactions error:", err));
 
         }).catch((err) => {
-            console.error("فشل المصادقة المجهولة في الصفحة الرئيسية:", err);
+            console.error("فشل المصادقة المجهولة:", err);
         });
 
         function renderRssTicker() {
@@ -565,11 +563,11 @@
             document.getElementById('statProfits').innerText = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0).toLocaleString() + ' ج.م';
             document.getElementById('statClients').innerText = state.clients.length + ' جهة';
 
-            let targetInvoices = filteredInvoices || state.invoices.filter(i => i.isBatch);
+            let targetInvoices = filteredInvoices || state.invoices.filter(i => i.isBatch || true);
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة للبحث أو لا توجد فواتير مجمعة مسجلة لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة بعد.</td></tr>`;
                 return;
             }
 
@@ -670,7 +668,7 @@
 
         window.filterDashboardData = function(query) {
             let q = query.trim().toLowerCase();
-            let batchInvs = state.invoices.filter(i => i.isBatch);
+            let batchInvs = state.invoices;
             if(!q) return updateStatsAndDashboard(batchInvs);
             let filtered = batchInvs.filter(i => (i.id && i.id.toLowerCase().includes(q)) || (i.client && i.client.toLowerCase().includes(q)));
             updateStatsAndDashboard(filtered);

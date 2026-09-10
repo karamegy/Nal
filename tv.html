@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO</title>
+    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO المعزولة</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -145,7 +145,7 @@
                         </div>
                         <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-4 font-bold">
                             <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-8 text-xs">
-                                <span>📊 دفق البيانات السحابية متصل ومستقر 100%</span>
+                                <span>📊 دفق البيانات السحابية المعزولة متصل ومستقر 100%</span>
                                 <span>✦</span>
                                 <span>🧾 أحدث الفواتير تحدّث لحظياً على شاشات الفروع</span>
                                 <span>✦</span>
@@ -180,22 +180,22 @@
                 <span class="text-xs font-bold text-slate-300 flex items-center gap-2 ml-2">
                     <i class="fa-solid fa-gamepad text-indigo-400 text-sm"></i> الريموت كنترول:
                 </span>
-                <button onclick="window.switchTvChannel('invoices')" id="remoteCh1" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5">
+                <button onclick="window.switchTvChannel('invoices')" id="remoteCh1" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer">
                     <span class="font-mono text-[10px] bg-indigo-800 px-1.5 py-0.5 rounded">CH 1</span> المبيعات
                 </button>
-                <button onclick="window.switchTvChannel('summary')" id="remoteCh2" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                <button onclick="window.switchTvChannel('summary')" id="remoteCh2" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer">
                     <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded">CH 2</span> الموجز المالي
                 </button>
-                <button onclick="window.switchTvChannel('news')" id="remoteCh3" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+                <button onclick="window.switchTvChannel('news')" id="remoteCh3" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer">
                     <span class="font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded">CH 3</span> الأنباء
                 </button>
             </div>
 
             <div class="flex items-center gap-2">
-                <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
                     <i class="fa-solid fa-rotate ml-1"></i> العرض التلقائي (6s)
                 </button>
-                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition border border-slate-700" title="إخفاء لوحة التحكم للتعليق الجداري">
+                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition border border-slate-700 cursor-pointer" title="إخفاء لوحة التحكم للتعليق الجداري">
                     <i class="fa-solid fa-tv ml-1"></i> الوضع الجداري Pure OLED
                 </button>
                 <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition text-decoration-none flex items-center gap-1.5 border border-slate-700">
@@ -205,10 +205,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules & Custom Application JS -->
+    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -221,6 +221,14 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        // استعلامات الاستماع المعزولة مع شرط companyId
+        const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+        const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
+        const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
         let state = { invoices: [], transactions: [], clients: [], products: [] };
         let currentTvChannel = 'invoices';
@@ -264,8 +272,8 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // المزامنة اللحظية مع بيانات Firebase
-        onSnapshot(collection(db, "invoices"), (snapshot) => {
+        // المزامنة اللحظية المعزولة مع بيانات Firebase
+        onSnapshot(invoicesRef, (snapshot) => {
             let previousCount = state.invoices.length;
             state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             
@@ -278,12 +286,12 @@
             renderTvScreen();
         });
 
-        onSnapshot(collection(db, "transactions"), (snapshot) => {
+        onSnapshot(transactionsRef, (snapshot) => {
             state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             renderTvScreen();
         });
 
-        onSnapshot(collection(db, "clients"), (snapshot) => {
+        onSnapshot(clientsRef, (snapshot) => {
             state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             renderTvScreen();
         });
@@ -298,10 +306,10 @@
                 let btn = document.getElementById(`remoteCh${idx+1}`);
                 if(btn) {
                     if(ch === channel) {
-                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5";
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer";
                         btn.querySelector('span').className = "font-mono text-[10px] bg-indigo-800 px-1.5 py-0.5 rounded";
                     } else {
-                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5";
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer";
                         btn.querySelector('span').className = "font-mono text-[10px] bg-slate-700 px-1.5 py-0.5 rounded";
                     }
                 }
@@ -318,7 +326,7 @@
             if(!banner) return;
 
             if(channel === 'invoices') {
-                osdNum.innerText = "CH 01"; osdTitle.innerText = "قناة تفريغ ملخص الفواتير والمبيعات";
+                osdNum.innerText = "CH 01"; osdTitle.innerText = "قناة تفريغ ملخص الفواتير والمبيعات المعزولة";
             } else if(channel === 'summary') {
                 osdNum.innerText = "CH 02"; osdTitle.innerText = "قناة الموجز الإداري والمؤشرات المباشرة";
             } else if(channel === 'news') {
@@ -429,7 +437,7 @@
                 screen.innerHTML = `
                     <div class="space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2.5">
-                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> تفريغ ملخص الفواتير المجمعة الحية</span>
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> تفريغ ملخص الفواتير المجمعة الحية (الحساب المعزول)</span>
                             <span class="text-xs text-slate-400 font-mono">إجمالي الفواتير الصادرة: ${state.invoices.length}</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -445,7 +453,7 @@
                                         <span class="text-xs text-emerald-400 font-bold">+${Number(i.profit||0).toLocaleString()} ربح</span>
                                     </div>
                                 </div>
-                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-8 font-bold text-sm">لا توجد فواتير مسجلة حالياً</div>'}
+                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-8 font-bold text-sm">لا توجد فواتير مسجلة لهذا الحساب حالياً</div>'}
                         </div>
                     </div>
                 `;
@@ -459,8 +467,8 @@
                 screen.innerHTML = `
                     <div class="space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-emerald-400 border-b border-slate-800 pb-2.5">
-                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-chart-line"></i> الموجز المالي والمؤشرات الإدارية الحية</span>
-                            <span class="text-xs text-slate-400 font-mono">مزامنة سحابية حية</span>
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-chart-line"></i> الموجز المالي والمؤشرات الإدارية الحية (الحساب المعزول)</span>
+                            <span class="text-xs text-slate-400 font-mono">مزامنة سحابية معزولة</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                             <div class="bg-indigo-950/80 border border-indigo-800/80 p-4 rounded-2xl shadow-lg">
@@ -493,15 +501,15 @@
                             <div class="flex items-start gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
                                 <i class="fa-solid fa-shield-halved text-emerald-400 text-2xl mt-1"></i>
                                 <div>
-                                    <h4 class="font-black text-sm text-slate-100">حماية بيومترية متكاملة</h4>
-                                    <p class="text-xs text-slate-400 mt-1">النظام مؤمن بنظام الجلسات السحابية وقفل الأمان بالبصمة.</p>
+                                    <h4 class="font-black text-sm text-slate-100">حماية بيومترية متكاملة وعزل تام</h4>
+                                    <p class="text-xs text-slate-400 mt-1">النظام مؤمن بنظام الجلسات السحابية وقفل الأمان بالبصمة مع فصل بيانات الشركات.</p>
                                 </div>
                             </div>
                             <div class="flex items-start gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
                                 <i class="fa-solid fa-cloud-arrow-up text-indigo-400 text-2xl mt-1"></i>
                                 <div>
                                     <h4 class="font-black text-sm text-slate-100">المزامنة السحابية اللحظية (Firebase)</h4>
-                                    <p class="text-xs text-slate-400 mt-1">تحديثات فورية للمبيعات والمخزن بين كافة الأجهزة بالفروع.</p>
+                                    <p class="text-xs text-slate-400 mt-1">تحديثات فورية للمبيعات والمخزن بين كافة الأجهزة بالفروع بشكل آمن.</p>
                                 </div>
                             </div>
                         </div>

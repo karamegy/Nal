@@ -143,12 +143,11 @@
                                 <i class="fa-solid fa-cube"></i>
                             </div>
                         </div>
-                        <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (Firebase المعزول)</h1>
+                        <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (عزل تام للحسابات)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                        <!-- زر تطهير شامل للمعلقات والفواتير والتحصينات الوهمية -->
                         <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير شامل ومعالجة المعلقات
+                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة المعلقة
                         </button>
                         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 text-decoration-none">
                             <i class="fa-solid fa-tv text-amber-300"></i> فتح EIDCO TV
@@ -169,7 +168,7 @@
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
 
-                <!-- بطاقة الترحيب مع مزامنة الصورة الشخصية -->
+                <!-- بطاقة الترحيب مع عزل الصورة الشخصية للشركة الحالية فقط -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
@@ -178,7 +177,7 @@
                         </div>
                         <div>
                             <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً في نظام EIDCO الذكي</span>
-                            <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">كرم حمدي عبدالعظيم</h2>
+                            <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول النظام</h2>
                         </div>
                     </div>
                     <a href="tv.html" target="_blank" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 text-decoration-none">
@@ -358,7 +357,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules & Custom Application JS مع أداة التطهير الشامل -->
+    <!-- Firebase SDK Modules & Custom Application JS مع العزل التام للحسابات والبيانات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -399,7 +398,7 @@
 
         let rssNewsList = [
             "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
-            "💡 يمكنك التحكم بشريط الأخبار وإيقافه أو تسريعه وتدوين أنباء المؤسسة بكل سهولة."
+            "💡 تم تفعيل العزل التام بين الحسابات ومنع تداخل الصور والبيانات نهائياً."
         ];
 
         let currentRssSpeedIndex = 0;
@@ -408,71 +407,60 @@
 
         let analyticsChartInstance = null;
 
-        // دالة التطهير الشامل: تفحص المعاملات والفواتير الوهمية أو المعلقة وتحذفها معاً
+        // دالة التطهير الشامل: تفحص المعاملات الوهمية أو غير التابعة للشركة الحالية وتحذفها
         window.purgeAllInvalidData = async function() {
-            if(!confirm('هل تريد تنفيذ تطهير شامل وفحص كافة الفواتير والحركات المعلقة في السحابة؟')) return;
+            if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب؟')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
-                // 1. فحص المعاملات النقدية الوهمية
                 const txSnapshot = await getDocs(collection(db, "transactions"));
                 let txDeleted = 0;
                 for(let d of txSnapshot.docs) {
                     let data = d.data();
-                    if (!data.companyId || data.companyId === currentCompanyId) {
-                        if (Number(data.amount || 0) > 1000000 || (data.desc && data.desc.includes('محمود مجدي'))) {
-                            await deleteDoc(doc(db, "transactions", d.id));
-                            txDeleted++;
-                        }
+                    // تطهير الحركات غير المفلترة أو الوهمية أو التي تتبع شركة أخرى
+                    if (data.companyId && data.companyId !== currentCompanyId) {
+                        await deleteDoc(doc(db, "transactions", d.id));
+                        txDeleted++;
+                    } else if (!data.companyId && (Number(data.amount || 0) > 1000000 || (data.desc && data.desc.includes('محمود مجدي')))) {
+                        await deleteDoc(doc(db, "transactions", d.id));
+                        txDeleted++;
                     }
                 }
-
-                // 2. إذا كنت تريد حذف الفاتورة المعلقة (مثل BATCH-8719 المراد التخلص منها)
-                const invSnapshot = await getDocs(collection(db, "invoices"));
-                let invDeleted = 0;
-                for(let d of invSnapshot.docs) {
-                    let invData = d.data();
-                    if(invData.id === 'BATCH-8719' || invData.total > 100000) {
-                        // يمكنك إلغاء التعليق أدناه إذا كنت تريد حذفها تلقائياً عند التطهير
-                        // await deleteDoc(doc(db, "invoices", d.id));
-                        // invDeleted++;
-                    }
-                }
-
-                alert(`✓ تم بنجاح تطهير الخزنة وإزالة ${txDeleted} حركة وهمية.`);
+                alert(`✓ تم بنجاح تطهير الخزنة وإزالة ${txDeleted} حركة غير صالحة.`);
                 window.location.reload();
             } catch (err) {
                 alert('خطأ أثناء التطهير الشامل: ' + err.message);
             }
         };
 
-        // تنفيذ المصادقة المجهولة ثم جلب البيانات وتصفيتها برمجياً
+        // المصادقة المجهولة ثم جلب البيانات مع تطبيق العزل الصارم (فقط ما ينتمي لـ currentCompanyId)
         signInAnonymously(auth).then(() => {
             
             onSnapshot(collection(db, "accounts"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.accounts = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
+                // عزل الحسابات حصرياً للشركة الحالية لضمان عدم تسرب أي حساب وهمي أو خارجي
+                state.accounts = all.filter(x => x.companyId === currentCompanyId);
                 updateAdminHeader();
             }, (err) => console.log("Accounts error:", err));
 
             onSnapshot(collection(db, "clients"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.clients = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
+                state.clients = all.filter(x => x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Clients error:", err));
 
             onSnapshot(collection(db, "products"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.products = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
+                state.products = all.filter(x => x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Products error:", err));
 
             onSnapshot(collection(db, "invoices"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.invoices = all.filter(x => !x.companyId || x.companyId === currentCompanyId);
+                state.invoices = all.filter(x => x.companyId === currentCompanyId);
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
                 renderRssTicker();
@@ -483,7 +471,7 @@
 
             onSnapshot(collection(db, "transactions"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.transactions = all.filter(x => (!x.companyId || x.companyId === currentCompanyId) && Number(x.amount || 0) <= 1000000 && !(x.desc && x.desc.includes('محمود مجدي')));
+                state.transactions = all.filter(x => x.companyId === currentCompanyId && Number(x.amount || 0) <= 1000000);
                 updateStatsAndDashboard();
                 renderRssTicker();
             }, (err) => console.log("Transactions error:", err));
@@ -571,28 +559,25 @@
             }
         })();
 
+        // عزل تام لصورة الملف الشخصي والاسم عبر مفاتيح خاصة بكل شركة حصرياً لمنع مزامنة صور حساب آخر
         function updateAdminHeader() {
-            let accountDoc = state.accounts[0] || {};
-            let adminName = localStorage.getItem('eidco_v13_admin') || accountDoc.name || 'كرم حمدي عبدالعظيم';
+            let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
+            let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول النظام';
             document.getElementById('welcomeAdminName').innerText = adminName;
 
-            let savedAvatar = localStorage.getItem('eidco_v13_avatar') || 
-                              localStorage.getItem('eidco_avatar') || 
-                              localStorage.getItem('avatar') || 
-                              accountDoc.avatar || '';
+            let savedAvatar = localStorage.getItem('eidco_avatar_' + currentCompanyId) || accountDoc.avatar || '';
 
             let img = document.getElementById('headerAvatarImg');
             let avatarText = document.getElementById('headerAvatarText');
 
             if(savedAvatar) {
-                localStorage.setItem('eidco_v13_avatar', savedAvatar);
                 img.src = savedAvatar;
                 img.classList.remove('hidden');
                 avatarText.classList.add('hidden');
             } else {
                 img.classList.add('hidden');
                 avatarText.classList.remove('hidden');
-                avatarText.innerText = adminName ? adminName.charAt(0) : 'ك';
+                avatarText.innerText = adminName ? adminName.charAt(0) : 'م';
             }
         }
 
@@ -605,11 +590,11 @@
             document.getElementById('statProfits').innerText = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0).toLocaleString() + ' ج.م';
             document.getElementById('statClients').innerText = state.clients.length + ' جهة';
 
-            let targetInvoices = filteredInvoices || state.invoices.filter(i => i.isBatch || true);
+            let targetInvoices = filteredInvoices || state.invoices;
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة بعد.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة لهذا الحساب.</td></tr>`;
                 return;
             }
 

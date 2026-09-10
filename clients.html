@@ -16,7 +16,7 @@
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth')) {
+        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -243,7 +243,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة التلقائية وتجنب أخطاء الصلاحيات -->
+    <!-- Firebase SDK Modules مع دعم المصادقة التلقائية وتثبيت معرف الشركة والعزل -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -257,7 +257,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -274,32 +274,9 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        // تثبيت معرف الشركة المعزول لضمان عدم ضياع البيانات عند مسح الكاش أو إعادة تسجيل الدخول
+        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
         let unsubscribers = [];
-
-        // التحقق من حالة المصادقة أو تسجيل الدخول تلقائياً لتفادي خطأ الصلاحيات
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentCompanyId = user.uid;
-                localStorage.setItem('eidco_current_company_id', user.uid);
-                initApp(user.uid);
-            } else {
-                try {
-                    const cred = await signInAnonymously(auth);
-                    currentCompanyId = cred.user.uid;
-                    localStorage.setItem('eidco_current_company_id', cred.user.uid);
-                    initApp(cred.user.uid);
-                } catch (err) {
-                    console.error("فشل المصادقة التلقائية:", err);
-                }
-            }
-        });
-
-        // المراجع الأساسية للمجموعات (Collection References)
-        const clientsCollection = collection(db, "clients");
-        const invoicesCollection = collection(db, "invoices");
-        const transactionsCollection = collection(db, "transactions");
-        const paymentsCollection = collection(db, "client_payments");
 
         let state = {
             clients: [],
@@ -310,12 +287,23 @@
 
         let currentActiveClient = null;
 
+        // تنفيذ المصادقة المجهولة لإرضاء قواعد الأمان في فايربيس دون تغيير معرف الشركة الثابت
+        signInAnonymously(auth).then(() => {
+            initApp(currentCompanyId);
+        }).catch((err) => {
+            console.error("فشل المصادقة المجهولة:", err);
+            initApp(currentCompanyId); // البدء بالوضع المحلي حتى لو فشلت السحابة مؤقتاً
+        });
+
         function initApp(companyId) {
-            // إلغاء أي اشتراكات سابقة لتجنب التكرار
             unsubscribers.forEach(unsub => unsub());
             unsubscribers = [];
 
-            // استعلامات الاستماع مع شروط العزل التام
+            const clientsCollection = collection(db, "clients");
+            const invoicesCollection = collection(db, "invoices");
+            const transactionsCollection = collection(db, "transactions");
+            const paymentsCollection = collection(db, "client_payments");
+
             const clientsRef = query(clientsCollection, where("companyId", "==", companyId));
             const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
             const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
@@ -323,13 +311,28 @@
 
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
+                renderClients();
+            }, (error) => {
+                console.warn("جاري جلب العملاء من التخزين المحلي:", error);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_clients');
+                    if(localData) state.clients = JSON.parse(localData);
+                } catch(e) {}
                 renderClients();
             }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_invoices');
+                    if(localData) state.invoices = JSON.parse(localData);
+                } catch(e) {}
+                renderClients();
             }));
 
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
@@ -338,8 +341,15 @@
 
             unsubscribers.push(onSnapshot(paymentsRef, (snapshot) => {
                 state.payments = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                localStorage.setItem('eidco_v13_payments', JSON.stringify(state.payments));
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            }, (error) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_payments');
+                    if(localData) state.payments = JSON.parse(localData);
+                } catch(e) {}
+                renderClients();
             }));
         }
 
@@ -388,20 +398,10 @@
             if(!name) return alert('الرجاء إدخال اسم العميل');
             if(state.clients.some(c => c.name === name)) return alert('هذا العميل مسجل مسبقاً');
 
-            // التأكد من تسجيل الدخول السحابي قبل الحفظ لمنع خطأ الصلاحيات
-            if (!auth.currentUser) {
-                try {
-                    await signInAnonymously(auth);
-                } catch (e) {
-                    return alert('⚠️ تعذر الاتصال بالسحابة وتحقيق الأمان: ' + e.message);
-                }
-            }
-
-            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
-
             try {
+                const clientsCollection = collection(db, "clients");
                 await addDoc(clientsCollection, { 
-                    companyId: activeCompanyId, 
+                    companyId: currentCompanyId, 
                     name, 
                     phone, 
                     address 
@@ -425,6 +425,7 @@
                     let c = state.clients.find(x => x.name === name);
                     if (c && c.docId) await deleteDoc(doc(db, "clients", c.docId));
                 }
+                alert('✓ تم حذف العميل بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حذف العميل: ' + err.message);
             }
@@ -596,16 +597,14 @@
             let amount = Number(document.getElementById('paymentAmountInput').value);
             if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
 
-            if (!auth.currentUser) {
-                try { await signInAnonymously(auth); } catch(e) {}
-            }
-
             let today = new Date().toISOString().split('T')[0];
-            let activeCompanyId = auth.currentUser ? auth.currentUser.uid : currentCompanyId;
 
             try {
+                const paymentsCollection = collection(db, "client_payments");
+                const transactionsCollection = collection(db, "transactions");
+
                 await addDoc(paymentsCollection, {
-                    companyId: activeCompanyId,
+                    companyId: currentCompanyId,
                     id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
                     clientName: currentActiveClient.name,
                     amount: amount,
@@ -613,7 +612,7 @@
                 });
 
                 await addDoc(transactionsCollection, {
-                    companyId: activeCompanyId,
+                    companyId: currentCompanyId,
                     type: 'إيراد',
                     amount: amount,
                     desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,

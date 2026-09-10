@@ -176,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة والعزل التام companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -190,6 +190,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -201,9 +202,15 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore والمصادقة لمنع مشاكل الصلاحيات
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // تسجيل الدخول بشكل مجهول تلقائياً لتجاوز قيود الصلاحيات (Missing or insufficient permissions)
+        signInAnonymously(auth).catch((error) => {
+            console.error("خطأ في المصادقة التلقائية:", error);
+        });
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -222,7 +229,6 @@
             window.renderProducts();
         }, (error) => {
             console.error("خطأ في جلب أصناف المخزن:", error);
-            // استخدام التخزين المحلي كخيار احتياطي عند انقطاع الشبكة
             try {
                 let localData = localStorage.getItem('eidco_v13_products');
                 if (localData) productsList = JSON.parse(localData);
@@ -341,7 +347,7 @@
                 }
 
                 let productData = { 
-                    companyId: currentCompanyId, // تضمين معرف العزل التام
+                    companyId: currentCompanyId, 
                     code, 
                     barcode, 
                     name, 
@@ -352,7 +358,6 @@
                 };
 
                 if(docId) {
-                    // تحديث صنف موجود في Firestore
                     await updateDoc(doc(db, "products", docId), productData);
                 } else if(originalCode !== "") {
                     let existing = productsList.find(x => x.code === originalCode);
@@ -366,7 +371,6 @@
                         code = generateNewCode();
                         productData.code = code;
                     }
-                    // إضافة صنف جديد إلى Firestore
                     await addDoc(productsCollection, productData);
                 }
 

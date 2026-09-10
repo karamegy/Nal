@@ -15,8 +15,8 @@
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
@@ -145,7 +145,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -159,6 +159,7 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
@@ -170,38 +171,57 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
+        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
-        const transactionsCollection = collection(db, "transactions");
-        const invoicesCollection = collection(db, "invoices");
-
-        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-
         let transactionsList = [];
         let invoicesList = [];
 
-        // المزامنة اللحظية مع Firebase
-        onSnapshot(transactionsRef, (snapshot) => {
-            transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactionsList));
-            window.renderVault();
-        }, (err) => {
-            console.error("خطأ المزامنة:", err);
-            try {
-                let localData = localStorage.getItem('eidco_v13_transactions');
-                if (localData) transactionsList = JSON.parse(localData);
-                window.renderVault();
-            } catch(e) {}
-        });
+        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
+        signInAnonymously(auth).then(() => {
+            const transactionsCollection = collection(db, "transactions");
+            const invoicesCollection = collection(db, "invoices");
 
-        onSnapshot(invoicesRef, (snapshot) => {
-            invoicesList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
+
+            // المزامنة اللحظية مع Firebase
+            onSnapshot(transactionsRef, (snapshot) => {
+                transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactionsList));
+                window.renderVault();
+            }, (err) => {
+                console.error("خطأ المزامنة:", err);
+                try {
+                    let localData = localStorage.getItem('eidco_v13_transactions');
+                    if (localData) transactionsList = JSON.parse(localData);
+                    window.renderVault();
+                } catch(e) {}
+            });
+
+            onSnapshot(invoicesRef, (snapshot) => {
+                invoicesList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoicesList));
+            }, (err) => {
+                try {
+                    let localData = localStorage.getItem('eidco_v13_invoices');
+                    if (localData) invoicesList = JSON.parse(localData);
+                } catch(e) {}
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة في الخزنة:", err);
+            try {
+                let localTx = localStorage.getItem('eidco_v13_transactions');
+                if (localTx) transactionsList = JSON.parse(localTx);
+                let localInv = localStorage.getItem('eidco_v13_invoices');
+                if (localInv) invoicesList = JSON.parse(localInv);
+            } catch(e) {}
+            window.renderVault();
         });
 
         window.renderVault = function() {
@@ -278,7 +298,12 @@
 
             let today = new Date().toISOString().split('T')[0];
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
+                const transactionsCollection = collection(db, "transactions");
                 if(editDocId) {
                     await updateDoc(doc(db, "transactions", editDocId), {
                         type,
@@ -308,6 +333,10 @@
         window.deleteTx = async function(id, docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الحركة نهائياً؟')) return;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 let targetDocId = docId;
                 if(!targetDocId) {
@@ -328,6 +357,10 @@
 
         window.purgeDeletedInvoicesTransactions = async function() {
             if(!confirm('هل تريد حقاً تطهير الخزنة وحذف أي معاملات مرتبطة بفواتير محذوفة سحابياً؟')) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
 
             let activeInvoiceIds = invoicesList.map(i => i.id);
 

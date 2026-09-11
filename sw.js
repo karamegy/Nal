@@ -20,7 +20,7 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
-        assetsToCache.map(url => cache.add(url).catch(err => console.log('Failed to cache:', url, err)))
+        assetsToCache.map(url => cache.add(url).catch(err => console.log('Failed:', url)))
       );
     })
   );

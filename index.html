@@ -168,7 +168,7 @@
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
 
-                <!-- بطاقة الترحيب مع عزل الصورة الشخصية للشركة الحالية فقط -->
+                <!-- بطاقة الترحيب مع عرض معرف الشركة النشط بوضوح -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
@@ -178,6 +178,8 @@
                         <div>
                             <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً في نظام EIDCO الذكي</span>
                             <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول النظام</h2>
+                            <!-- عنصر جديد لعرض معرف الشركة النشط -->
+                            <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
                     <a href="tv.html" target="_blank" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 text-decoration-none">
@@ -418,7 +420,6 @@
                 let txDeleted = 0;
                 for(let d of txSnapshot.docs) {
                     let data = d.data();
-                    // تطهير الحركات غير المفلترة أو الوهمية أو التي تتبع شركة أخرى
                     if (data.companyId && data.companyId !== currentCompanyId) {
                         await deleteDoc(doc(db, "transactions", d.id));
                         txDeleted++;
@@ -434,12 +435,11 @@
             }
         };
 
-        // المصادقة المجهولة ثم جلب البيانات مع تطبيق العزل الصارم (فقط ما ينتمي لـ currentCompanyId)
+        // المصادقة المجهولة ثم جلب البيانات مع تطبيق العزل الصارم
         signInAnonymously(auth).then(() => {
             
             onSnapshot(collection(db, "accounts"), (snapshot) => {
                 let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                // عزل الحسابات حصرياً للشركة الحالية لضمان عدم تسرب أي حساب وهمي أو خارجي
                 state.accounts = all.filter(x => x.companyId === currentCompanyId);
                 updateAdminHeader();
             }, (err) => console.log("Accounts error:", err));
@@ -559,11 +559,17 @@
             }
         })();
 
-        // عزل تام لصورة الملف الشخصي والاسم عبر مفاتيح خاصة بكل شركة حصرياً لمنع مزامنة صور حساب آخر
+        // تحديث معلومات الملف الشخصي ومعرف الشركة على الشاشة
         function updateAdminHeader() {
             let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
             let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول النظام';
             document.getElementById('welcomeAdminName').innerText = adminName;
+
+            // عرض معرف الشركة الحالي في البادج المخصص
+            const companyBadge = document.getElementById('companyIdDisplayBadge');
+            if(companyBadge) {
+                companyBadge.innerText = `معرف الشركة (ID): ${currentCompanyId}`;
+            }
 
             let savedAvatar = localStorage.getItem('eidco_avatar_' + currentCompanyId) || accountDoc.avatar || '';
 

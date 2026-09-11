@@ -3,26 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // لوحة التحكم الرئيسية</title>
+    <title>EIDCO // لوحة التحكم الرئيسية السحابية</title>
     
-    <!-- منع التخزين المؤقت تماماً لضمان تحديث الصور والبيانات -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
         }
     </script>
 
@@ -75,7 +64,7 @@
         </div>
         <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
             <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
-                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري تحميل أحدث الأخبار والتحديثات من النظام...</span>
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة أحدث الأخبار والتحديثات من السحابة...</span>
             </div>
         </div>
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
@@ -129,9 +118,7 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
-                <!-- زر إدارة الحسابات والشركات الخاص بالمدير المؤسس -->
                 <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة الحسابات والشركات</a>
-                <!-- قفل الأمان والبيومترية -->
                 <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -146,11 +133,11 @@
                                 <i class="fa-solid fa-cube"></i>
                             </div>
                         </div>
-                        <h1 class="font-black text-slate-900 text-sm">لوحة التحكم الرئيسية (عزل تام للحسابات)</h1>
+                        <h1 class="font-black text-slate-900 text-sm">لوحة المؤشرات الرئيسية (سحابياً بالكامل)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                         <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة المعلقة
+                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة سحابياً
                         </button>
                         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 text-decoration-none">
                             <i class="fa-solid fa-tv text-amber-300"></i> فتح EIDCO TV
@@ -161,7 +148,6 @@
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <!-- تم وضع معرف لإخفاء زر القفل العلوي لغير المدير -->
                         <a href="auth.html" id="headerAuthLockBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="قفل الجلسة والعودة للبصمة">
                             <i class="fa-solid fa-lock text-indigo-600"></i> قفل
                         </a>
@@ -172,7 +158,6 @@
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
 
-                <!-- بطاقة الترحيب مع عرض معرف الشركة النشط بوضوح -->
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
@@ -180,9 +165,8 @@
                             <img id="headerAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
                         </div>
                         <div>
-                            <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً في نظام EIDCO الذكي</span>
+                            <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً في نظام EIDCO الذكي سحابياً</span>
                             <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول النظام</h2>
-                            <!-- عنصر جديد لعرض معرف الشركة النشط -->
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
@@ -191,40 +175,37 @@
                     </a>
                 </div>
 
-                <!-- شريط البحث السريع -->
                 <div class="corporate-card p-4 flex items-center gap-3">
                     <i class="fa-solid fa-magnifying-glass text-indigo-600 mr-2"></i>
                     <input type="text" id="globalSearchInput" oninput="window.filterDashboardData(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث سريع في الفواتير أو العملاء برقم أو اسم...">
                 </div>
 
-                <!-- إحصائيات سريعة -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div onclick="window.showSummaryModal('vault')" class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600 cursor-pointer">
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">رصيد الخزنة الصافي</span><i class="fa-solid fa-vault text-indigo-600 text-sm"></i></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">رصيد الخزنة الصافي سحابياً</span><i class="fa-solid fa-vault text-indigo-600 text-sm"></i></div>
                         <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
                         <span class="text-[10px] text-indigo-600 font-bold block">انقر لعرض الحركات والتفاصيل ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('sales')" class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500 cursor-pointer">
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">إجمالي المبيعات</span><i class="fa-solid fa-cart-shopping text-cyan-500 text-sm"></i></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">إجمالي المبيعات السحابية</span><i class="fa-solid fa-cart-shopping text-cyan-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
                         <span class="text-[10px] text-cyan-600 font-bold block">انقر لعرض تفاصيل المبيعات ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('profits')" class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500 cursor-pointer">
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">صافي الأرباح</span><i class="fa-solid fa-chart-line text-emerald-500 text-sm"></i></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">صافي الأرباح المحققة</span><i class="fa-solid fa-chart-line text-emerald-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits">0 ج.م</div>
                         <span class="text-[10px] text-emerald-600 font-bold block">انقر لعرض تفاصيل الأرباح ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('clients')" class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500 cursor-pointer">
-                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">العملاء والشركات</span><i class="fa-solid fa-building-user text-purple-500 text-sm"></i></div>
+                        <div class="flex justify-between items-center"><span class="text-xs text-slate-500">العملاء والشركات السحابية</span><i class="fa-solid fa-building-user text-purple-500 text-sm"></i></div>
                         <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
                         <span class="text-[10px] text-purple-600 font-bold block">انقر لعرض قائمة العملاء ←</span>
                     </div>
                 </div>
 
-                <!-- قسم عرض وإدارة الفواتير المجمعة -->
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة (وتحديث الخزنة)</h3>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة سحابياً</h3>
                         <a href="batch-invoices.html" class="text-xs text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-plus ml-1"></i> إضافة فاتورة جديدة</a>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -241,15 +222,14 @@
                                 </tr>
                             </thead>
                             <tbody id="dashboardBatchTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- القائمة الرئيسية -->
                 <div class="space-y-3">
-                    <h3 class="font-bold text-sm text-slate-900 px-1"><i class="fa-solid fa-compass ml-2 text-indigo-600"></i> القائمة الرئيسية وأقسام المنظومة</h3>
+                    <h3 class="font-bold text-sm text-slate-900 px-1"><i class="fa-solid fa-compass ml-2 text-indigo-600"></i> القائمة الرئيسية وأقسام المنظومة السحابية</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <a href="dashboard.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-gauge-high"></i></div>
@@ -287,7 +267,6 @@
                             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition"><i class="fa-solid fa-map-location-dot"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4><span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span></div>
                         </a>
-                        <!-- تم وضع معرف فريد للإطار الشبكي للبصمة لإخفائه لغير المدير -->
                         <a href="auth.html" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية</h4><span class="text-[11px] text-slate-500">بوابة الأمان والبصمة</span></div>
@@ -336,7 +315,7 @@
         </div>
     </div>
 
-    <!-- نافذة عرض الملخص والتفاصيل (Modal) -->
+    <!-- نافذة عرض الملخص والتفاصيل -->
     <div id="summaryModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
@@ -350,14 +329,12 @@
         </div>
     </div>
 
-    <!-- سكريبت لتمرير معرف الجلسة والشركة عبر الروابط والأزرار تلقائياً والتحقق من حساب المدير -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
-            const currentAdminName = localStorage.getItem('eidco_v13_admin') || '';
+            const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-            // إخفاء أقسام البصمة والأمان وأزرار الإدارة عن أي مستخدم ما عدا كرم حمدي عبدالعظيم
             if (currentAdminName !== FOUNDER_NAME) {
                 const sidebarAuth = document.getElementById('sidebarAuthNavLink');
                 if (sidebarAuth) sidebarAuth.style.display = 'none';
@@ -382,7 +359,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules & Custom Application JS مع العزل التام للحسابات والبيانات -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -392,7 +369,9 @@
             doc, 
             deleteDoc, 
             updateDoc,
-            getDocs 
+            getDocs,
+            query,
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -423,7 +402,7 @@
 
         let rssNewsList = [
             "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
-            "💡 تم تفعيل العزل التام بين الحسابات ومنع تداخل الصور والبيانات نهائياً."
+            "💡 تم تفعيل العزل التام سحابياً بين الحسابات ومنع تداخل الصور والبيانات نهائياً."
         ];
 
         let currentRssSpeedIndex = 0;
@@ -433,55 +412,54 @@
         let analyticsChartInstance = null;
 
         window.purgeAllInvalidData = async function() {
-            if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب؟')) return;
+            if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب في السحابة؟')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
-                const txSnapshot = await getDocs(collection(db, "transactions"));
+                const txCollection = collection(db, "transactions");
+                const q = query(txCollection, where("companyId", "==", currentCompanyId));
+                const txSnapshot = await getDocs(q);
                 let txDeleted = 0;
                 for(let d of txSnapshot.docs) {
                     let data = d.data();
-                    if (data.companyId && data.companyId !== currentCompanyId) {
-                        await deleteDoc(doc(db, "transactions", d.id));
-                        txDeleted++;
-                    } else if (!data.companyId && (Number(data.amount || 0) > 1000000 || (data.desc && data.desc.includes('محمود مجدي')))) {
+                    if (Number(data.amount || 0) > 1000000) {
                         await deleteDoc(doc(db, "transactions", d.id));
                         txDeleted++;
                     }
                 }
-                alert(`✓ تم بنجاح تطهير الخزنة وإزالة ${txDeleted} حركة غير صالحة.`);
-                window.location.reload();
+                alert(`✓ تم بنجاح تطهير الخزنة سحابياً وإزالة ${txDeleted} حركة غير صالحة.`);
             } catch (err) {
-                alert('خطأ أثناء التطهير الشامل: ' + err.message);
+                alert('خطأ أثناء التطهير السحابي الشامل: ' + err.message);
             }
         };
 
         signInAnonymously(auth).then(() => {
-            
-            onSnapshot(collection(db, "accounts"), (snapshot) => {
-                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.accounts = all.filter(x => x.companyId === currentCompanyId);
+            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
+
+            onSnapshot(accountsRef, (snapshot) => {
+                state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateAdminHeader();
-            }, (err) => console.log("Accounts error:", err));
+            }, (err) => console.error("Accounts error:", err));
 
-            onSnapshot(collection(db, "clients"), (snapshot) => {
-                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.clients = all.filter(x => x.companyId === currentCompanyId);
+            onSnapshot(clientsRef, (snapshot) => {
+                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.log("Clients error:", err));
+            }, (err) => console.error("Clients error:", err));
 
-            onSnapshot(collection(db, "products"), (snapshot) => {
-                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.products = all.filter(x => x.companyId === currentCompanyId);
+            onSnapshot(productsRef, (snapshot) => {
+                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.log("Products error:", err));
+            }, (err) => console.error("Products error:", err));
 
-            onSnapshot(collection(db, "invoices"), (snapshot) => {
-                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.invoices = all.filter(x => x.companyId === currentCompanyId);
+            onSnapshot(invoicesRef, (snapshot) => {
+                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
                 renderRssTicker();
@@ -490,15 +468,14 @@
                 updateStatsAndDashboard();
             });
 
-            onSnapshot(collection(db, "transactions"), (snapshot) => {
-                let all = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.transactions = all.filter(x => x.companyId === currentCompanyId && Number(x.amount || 0) <= 1000000);
+            onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.log("Transactions error:", err));
+            }, (err) => console.error("Transactions error:", err));
 
         }).catch((err) => {
-            console.error("فشل المصادقة المجهولة:", err);
+            console.error("فشل المصادقة سحابياً:", err);
         });
 
         function renderRssTicker() {
@@ -508,10 +485,10 @@
             let dynamicNews = [...rssNewsList];
             if(state.invoices.length > 0) {
                 let lastInv = state.invoices[state.invoices.length - 1];
-                dynamicNews.unshift(`🧾 أحدث فاتورة صادرة: رقم ${lastInv.id || 'INV'} بقيمة ${(Number(lastInv.total)||0).toLocaleString()} ج.م للعميل (${lastInv.client || 'عام'})`);
+                dynamicNews.unshift(`🧾 أحدث فاتورة صادرة سحابياً: رقم ${lastInv.id || 'INV'} بقيمة ${(Number(lastInv.total)||0).toLocaleString()} ج.م للعميل (${lastInv.client || 'عام'})`);
             }
             let totalVault = state.transactions.filter(t=>t.type==='إيراد').reduce((s,t)=>s+Number(t.amount||0),0) - state.transactions.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount||0),0);
-            dynamicNews.push(`💰 رصيد الخزنة النقدية الحالي: ${totalVault.toLocaleString()} ج.م`);
+            dynamicNews.push(`💰 رصيد الخزنة النقدية الحالي سحابياً: ${totalVault.toLocaleString()} ج.م`);
 
             container.innerHTML = dynamicNews.map(n => `<span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle text-[6px] text-amber-400"></i> ${n}</span>`).join('&nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp;');
         }
@@ -590,8 +567,7 @@
                 companyBadge.innerText = `معرف الشركة (ID): ${currentCompanyId}`;
             }
 
-            let savedAvatar = localStorage.getItem('eidco_avatar_' + currentCompanyId) || accountDoc.avatar || '';
-
+            let savedAvatar = accountDoc.avatar || '';
             let img = document.getElementById('headerAvatarImg');
             let avatarText = document.getElementById('headerAvatarText');
 
@@ -615,11 +591,12 @@
             document.getElementById('statProfits').innerText = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0).toLocaleString() + ' ج.م';
             document.getElementById('statClients').innerText = state.clients.length + ' جهة';
 
-            let targetInvoices = filteredInvoices || state.invoices;
+            let batchInvs = state.invoices.filter(i => i.isBatch);
+            let targetInvoices = filteredInvoices || batchInvs;
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -632,10 +609,7 @@
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <a href="batch-invoices.html?companyId=${currentCompanyId}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block">
-                            <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
-                        </a>
-                        <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1" title="حذف الفاتورة">
+                        <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i> حذف
                         </button>
                     </td>
@@ -650,65 +624,65 @@
             if (type === 'vault') {
                 let inc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
                 let exp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
-                modalTitle.innerText = 'ملخص الخزنة النقدية المعزولة';
+                modalTitle.innerText = 'ملخص الخزنة النقدية السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-xl mb-3">
                         <div><span class="text-[10px] text-slate-500 block">إيرادات</span><span class="font-bold text-cyan-600 mono-font">${inc.toLocaleString()} ج.م</span></div>
                         <div><span class="text-[10px] text-slate-500 block">مصروفات</span><span class="font-bold text-purple-600 mono-font">${exp.toLocaleString()} ج.م</span></div>
                         <div><span class="text-[10px] text-slate-500 block">الصافي</span><span class="font-bold text-emerald-600 mono-font">${(inc-exp).toLocaleString()} ج.م</span></div>
                     </div>
-                    <h4 class="font-bold text-slate-700 mb-2">آخر الحركات النقدية المسجلة:</h4>
+                    <h4 class="font-bold text-slate-700 mb-2">آخر الحركات النقدية السحابية المسجلة:</h4>
                     <div class="space-y-2">
                         ${state.transactions.slice(-5).reverse().map(t => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
                                 <div><span class="font-bold text-slate-900 block">${t.desc || 'معاملة'}</span><span class="text-[10px] text-slate-400 font-mono">${t.date || '---'}</span></div>
                                 <span class="font-bold mono-font ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type === 'إيراد' ? '+' : '-'}${Number(t.amount || 0).toLocaleString()} ج.م</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد حركات مسجلة</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد حركات سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'sales') {
                 let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
-                modalTitle.innerText = 'ملخص إجمالي المبيعات';
+                modalTitle.innerText = 'ملخص إجمالي المبيعات السحابية';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي مبيعات الفواتير</span>
+                        <span class="text-xs text-slate-500 block">إجمالي مبيعات الفواتير السحابية</span>
                         <span class="text-xl font-black text-cyan-600 mono-font">${totalSales.toLocaleString()} ج.م</span>
                     </div>
-                    <h4 class="font-bold text-slate-700 mb-2">أحدث الفواتير المسجلة:</h4>
+                    <h4 class="font-bold text-slate-700 mb-2">أحدث الفواتير المسجلة سحابياً:</h4>
                     <div class="space-y-2">
                         ${state.invoices.slice(-5).reverse().map(i => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
                                 <div><span class="font-bold text-indigo-600 mono-font">${i.id || 'INV'}</span> <span class="text-slate-600">(${i.client || 'عميل'})</span></div>
                                 <span class="font-bold mono-font text-slate-900">${Number(i.total || 0).toLocaleString()} ج.م</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد فواتير مسجلة</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد فواتير سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'profits') {
                 let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
-                modalTitle.innerText = 'ملخص صافي الأرباح';
+                modalTitle.innerText = 'ملخص صافي الأرباح السحابية';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي صافي الأرباح</span>
+                        <span class="text-xs text-slate-500 block">إجمالي صافي الأرباح السحابية</span>
                         <span class="text-xl font-black text-emerald-600 mono-font">${totalProfits.toLocaleString()} ج.م</span>
                     </div>
-                    <p class="text-slate-600 text-center">الأرباح تُحسب تلقائياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف داخل الفواتير الصادرة.</p>
+                    <p class="text-slate-600 text-center">الأرباح تُحسب سحابياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف.</p>
                 `;
             } else if (type === 'clients') {
-                modalTitle.innerText = 'ملخص العملاء والشركات';
+                modalTitle.innerText = 'ملخص العملاء والشركات السحابية';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-purple-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي الجهات المسجلة</span>
+                        <span class="text-xs text-slate-500 block">إجمالي الجهات المسجلة سحابياً</span>
                         <span class="text-xl font-black text-purple-600 mono-font">${state.clients.length} جهة</span>
                     </div>
                     <div class="space-y-2">
                         ${state.clients.map(c => `
                             <div class="p-2.5 bg-slate-50 rounded-xl border flex justify-between items-center">
                                 <span class="font-bold text-slate-900">${c.name}</span>
-                                <span class="text-slate-500 mono-font text-[11px]">${c.phone || 'جهة مسجلة'}</span>
+                                <span class="text-slate-500 mono-font text-[11px]">${c.phone || 'جهة مسجلة سحابياً'}</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد جهات مسجلة</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center">لا توجد جهات مسجلة سحابياً</p>'}
                     </div>
                 `;
             }
@@ -720,14 +694,14 @@
 
         window.filterDashboardData = function(query) {
             let q = query.trim().toLowerCase();
-            let batchInvs = state.invoices;
+            let batchInvs = state.invoices.filter(i => i.isBatch);
             if(!q) return updateStatsAndDashboard(batchInvs);
             let filtered = batchInvs.filter(i => (i.id && i.id.toLowerCase().includes(q)) || (i.client && i.client.toLowerCase().includes(q)));
             updateStatsAndDashboard(filtered);
         };
 
         window.deleteDashboardBatchInvoice = async function(id, docId) {
-            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة السحابية.')) return;
+            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة في سحابة Firebase.')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
@@ -747,7 +721,7 @@
                 if(tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
                 alert('✓ تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
             } catch (err) {
-                alert('حدث خطأ أثناء الحذف: ' + err.message);
+                alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 
@@ -757,13 +731,15 @@
             let ctx = canvas.getContext('2d');
             if (analyticsChartInstance) analyticsChartInstance.destroy();
 
+            let batchInvs = state.invoices.filter(i => i.isBatch);
+
             analyticsChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: state.invoices.length ? state.invoices.map(i => i.id || 'INV') : ['بداية التشغيل', 'اليوم'],
+                    labels: batchInvs.length ? batchInvs.map(i => i.id || 'INV') : ['بداية التشغيل سحابياً', 'اليوم'],
                     datasets: [{ 
-                        label: 'المبيعات', 
-                        data: state.invoices.length ? state.invoices.map(i => i.total || 0) : [0, 15000], 
+                        label: 'المبيعات السحابية', 
+                        data: batchInvs.length ? batchInvs.map(i => i.total || 0) : [0, 0], 
                         borderColor: '#4f46e5', 
                         tension: 0.4, 
                         fill: true, 

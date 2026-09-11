@@ -51,7 +51,7 @@
                     <i class="fa-solid fa-cube text-xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
+                    <h1 class="text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
                     <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات</p>
                 </div>
             </div>
@@ -206,7 +206,7 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            const savedAdmin = localStorage.getItem('eidco_v13_admin') || '';
+            const savedAdmin = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_v13_admin') || '';
             const inputEl = document.getElementById('usernameInput');
             if (savedAdmin) {
                 inputEl.value = savedAdmin;
@@ -306,10 +306,8 @@
                     }
                 }
 
-                // إلزام البصمة لجميع الحسابات الجديدة والمحدثة عبر جوجل
                 await mandateBiometricLinking(finalUserName);
 
-                // حفظ بيانات الحساب والصورة بدقة
                 localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
                 if (userPhotoUrl) {
                     localStorage.setItem('eidco_avatar_' + assignedCompanyId, userPhotoUrl);
@@ -329,8 +327,8 @@
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', finalUserName);
-                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_v14_admin', finalUserName);
+                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
                 alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة البيانات والصورة الشخصية والدخول بنجاح!`);
@@ -340,7 +338,6 @@
             }
         };
 
-        // فتح نافذة الهاتف
         window.openPhoneAuthModal = function() {
             document.getElementById('phoneAuthModal').classList.add('active');
         };
@@ -350,7 +347,6 @@
 
         let windowConfirmationResult = null;
 
-        // إرسال رمز التحقق لرقم الهاتف (Phone OTP)
         window.sendPhoneVerificationCode = async function() {
             let phoneNumber = document.getElementById('userPhoneNumber').value.trim();
             if(!phoneNumber) {
@@ -374,7 +370,6 @@
             }
         };
 
-        // تأكيد رمز الـ OTP وإلزام البصمة للمزامنة
         window.verifyPhoneOtpCode = async function() {
             let code = document.getElementById('phoneOtpCode').value.trim();
             if(!code) return alert('يرجى إدخال رمز التحقق.');
@@ -387,7 +382,6 @@
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
-                // إلزام البصمة لحساب الهاتف
                 await mandateBiometricLinking(finalUserName);
 
                 localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
@@ -405,8 +399,8 @@
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', finalUserName);
-                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_v14_admin', finalUserName);
+                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
                 alert('✓ تمت المصادقة ومزامنة الحساب بالبصمة ورقم الهاتف بنجاح!');
@@ -424,7 +418,6 @@
             document.getElementById('addAccountModal').classList.remove('active');
         };
 
-        // إضافة حساب يدوي مع إجبار وبصمة الحساب الجديد
         window.saveNewAccount = async function() {
             let nameInput = document.getElementById('newAccountName').value.trim();
             let roleInput = document.getElementById('newAccountRole').value;
@@ -440,7 +433,6 @@
             }
 
             try {
-                // إجبار البصمة عند حفظ أي حساب جديد
                 await mandateBiometricLinking(nameInput);
 
                 let generatedCompanyId = 'company_' + Date.now();
@@ -480,7 +472,6 @@
             }
         };
 
-        // المصادقة بالبصمة
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -521,9 +512,9 @@
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', username);
+                localStorage.setItem('eidco_v14_admin', username);
                 localStorage.setItem('eidco_admin_' + assignedCompanyId, username);
-                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
                 setTimeout(() => {

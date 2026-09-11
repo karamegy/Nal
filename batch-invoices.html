@@ -75,6 +75,7 @@
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
                 <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير المجمعة والتحليلات المتقدمة (Firebase المعزول)</h1>
                 <div class="flex items-center gap-3">
+                    <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                     <span id="syncStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
                         <i class="fa-solid fa-cloud-arrow-up"></i> متزامن سحابياً
                     </span>
@@ -261,7 +262,24 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId الصارم -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -294,8 +312,16 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        // جلب معرف الشركة / الحساب النشط من الرابط أو الذاكرة المحلية وتثبيته
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        // عرض معرف الشركة في الـ Badge العلوي للتحقق السريع
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let state = {
             clients: [],
@@ -308,7 +334,7 @@
         let analyticsChartInstance = null;
         let html5QrCode = null;
 
-        // تنفيذ المصادقة المجهولة أولاً ثم ربط الاستماع السحابي مع البدائل المحلية
+        // تنفيذ المصادقة المجهولة أولاً ثم ربط الاستماع السحابي مع البدائل المحلية المعزولة
         signInAnonymously(auth).then(() => {
             const clientsCollection = collection(db, "clients");
             const productsCollection = collection(db, "products");
@@ -322,12 +348,12 @@
 
             onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_clients', JSON.stringify(state.clients));
+                localStorage.setItem('eidco_v13_clients_' + currentCompanyId, JSON.stringify(state.clients));
                 populateClientsDropdown();
             }, (error) => {
                 console.warn("جاري جلب العملاء من التخزين المحلي:", error);
                 try {
-                    let localData = localStorage.getItem('eidco_v13_clients');
+                    let localData = localStorage.getItem('eidco_v13_clients_' + currentCompanyId);
                     if(localData) state.clients = JSON.parse(localData);
                 } catch(e) {}
                 populateClientsDropdown();
@@ -335,23 +361,23 @@
 
             onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_products', JSON.stringify(state.products));
+                localStorage.setItem('eidco_v13_products_' + currentCompanyId, JSON.stringify(state.products));
             }, (error) => {
                 try {
-                    let localData = localStorage.getItem('eidco_v13_products');
+                    let localData = localStorage.getItem('eidco_v13_products_' + currentCompanyId);
                     if(localData) state.products = JSON.parse(localData);
                 } catch(e) {}
             });
 
             onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_invoices', JSON.stringify(state.invoices));
+                localStorage.setItem('eidco_v13_invoices_' + currentCompanyId, JSON.stringify(state.invoices));
                 renderBatchInvoicesList();
                 renderAnalyticsChart();
                 updateClientLedgerInfo();
             }, (error) => {
                 try {
-                    let localData = localStorage.getItem('eidco_v13_invoices');
+                    let localData = localStorage.getItem('eidco_v13_invoices_' + currentCompanyId);
                     if(localData) state.invoices = JSON.parse(localData);
                 } catch(e) {}
                 renderBatchInvoicesList();
@@ -365,11 +391,11 @@
         }).catch((error) => {
             console.error("فشل المصادقة في الفواتير المجمعة:", error);
             try {
-                let localClients = localStorage.getItem('eidco_v13_clients');
+                let localClients = localStorage.getItem('eidco_v13_clients_' + currentCompanyId);
                 if(localClients) state.clients = JSON.parse(localClients);
-                let localInv = localStorage.getItem('eidco_v13_invoices');
+                let localInv = localStorage.getItem('eidco_v13_invoices_' + currentCompanyId);
                 if(localInv) state.invoices = JSON.parse(localInv);
-                let localProd = localStorage.getItem('eidco_v13_products');
+                let localProd = localStorage.getItem('eidco_v13_products_' + currentCompanyId);
                 if(localProd) state.products = JSON.parse(localProd);
             } catch(e) {}
             populateClientsDropdown();

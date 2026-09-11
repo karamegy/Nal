@@ -1,43 +1,21 @@
-const CACHE_NAME = 'eidco-v14-cache';
-const assetsToCache = [
-  './index.html',
-  './auth.html',
-  './dashboard.html',
-  './invoices.html',
-  './inventory.html',
-  './clients.html',
-  './chat.html',
-  './profile.html',
-  './vault.html',
-  './map.html',
-  './settings.html',
-  './manifest.json',
-  './icon-new-192.png',
-  './icon-new-512.png'
-];
-
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(assetsToCache);
+    caches.open('eidco-v13-cache').then((cache) => {
+      return cache.addAll([
+        './index.html',
+        './auth.html',
+        './dashboard.html',
+        './invoices.html',
+        './inventory.html',
+        './clients.html',
+        './chat.html',
+        './profile.html',
+        './vault.html',
+        './map.html',
+        './settings.html'
+      ]);
     })
   );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {

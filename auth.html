@@ -52,7 +52,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول (Google, الهاتف, البصمة)</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة الحسابات (Google, الهاتف, البصمة)</p>
                 </div>
             </div>
             
@@ -61,7 +61,7 @@
             </button>
         </div>
 
-        <!-- خيارات تسجيل الدخول السريع (Google & Phone) -->
+        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع المزامنة التلقائية -->
         <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
@@ -152,7 +152,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم Google, Phone, والمصادقة المجهولة وعزل الحسابات -->
+    <!-- Firebase SDK Modules مع دعم المزامنة التلقائية للمعلومات في السحابة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -233,26 +233,60 @@
             if (inputVal) {
                 document.getElementById('selectedAccountDisplay').innerText = `الحساب المستهدف: ${inputVal}`;
             } else {
-                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة الاسم ثم النقر على البصمة للدخول`;
+                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة اسم مسجل ثم النقر على البصمة للدخول`;
             }
         };
 
-        // تسجيل الدخول عبر Google
+        // تسجيل الدخول عبر Google مع المزامنة التلقائية لمعلومات الحساب في قاعدة البيانات
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
                 
-                let userName = user.displayName || user.email.split('@')[0];
-                let assignedCompanyId = 'company_google_' + user.uid.substring(0, 8);
+                let userEmail = user.email || '';
+                let userDisplayName = user.displayName || userEmail.split('@')[0];
+
+                let assignedCompanyId;
+                let finalUserName;
+                let userRole = 'محاسب أول';
+
+                if (userEmail === 'haretg@gmail.com' || userDisplayName.includes('كرم') || userDisplayName.includes('Karm')) {
+                    finalUserName = FOUNDER_NAME;
+                    assignedCompanyId = 'company_founder_karm';
+                    userRole = 'مدير نظام رئيسي';
+                } else {
+                    let existingAccount = accountsData.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()) || a.name === userDisplayName);
+                    
+                    if (existingAccount) {
+                        finalUserName = existingAccount.name;
+                        assignedCompanyId = existingAccount.companyId;
+                        userRole = existingAccount.role || 'محاسب أول';
+                    } else {
+                        finalUserName = userDisplayName;
+                        let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                        assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
+                    }
+                }
+
+                // التحقق من وجود الحساب في مجموعة accounts بالسحابة ومزامنته تلقائياً
+                const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
+                if (!existingDoc) {
+                    await addDoc(accountsRef, {
+                        name: finalUserName,
+                        role: userRole,
+                        companyId: assignedCompanyId,
+                        email: userEmail,
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', userName);
+                localStorage.setItem('eidco_v13_admin', finalUserName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${userName}, تم تسجيل الدخول بنجاح عبر Google!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تم تسجيل الدخول والمزامنة بنجاح عبر Google!`);
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -293,7 +327,7 @@
             }
         };
 
-        // تأكيد رمز الـ OTP للدخول
+        // تأكيد رمز الـ OTP للدخول ومزامنة بيانات الحساب
         window.verifyPhoneOtpCode = async function() {
             let code = document.getElementById('phoneOtpCode').value.trim();
             if(!code) return alert('يرجى إدخال رمز التحقق.');
@@ -301,14 +335,28 @@
             try {
                 let result = await confirmationResult.confirm(code);
                 let user = result.user;
+                let phoneNum = user.phoneNumber || 'رقم الهاتف';
                 let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
+                let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
+                let userRole = 'مشرف أسطول';
+
+                const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
+                if (!existingDoc) {
+                    await addDoc(accountsRef, {
+                        name: finalUserName,
+                        role: userRole,
+                        companyId: assignedCompanyId,
+                        phone: phoneNum,
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v13_admin', 'مستخدم الهاتف');
+                localStorage.setItem('eidco_v13_admin', finalUserName);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert('✓ تمت المصادقة برقم الهاتف بنجاح!');
+                alert('✓ تمت المصادقة ومزامنة الحساب برقم الهاتف بنجاح!');
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
@@ -426,18 +474,5 @@
             }
         };
     </script>
-
-    <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="hidden fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-            <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-            </span>
-            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-            <span class="tracking-wide">بث EIDCO TV 4K</span>
-            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-        </a>
-    </div>
 </body>
 </html>

@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // إدارة الحسابات والمصادقة المتقدمة المعزولة</title>
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error: ', err));
+          navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error: ', err));
         });
       }
     </script>
@@ -61,7 +61,6 @@
             </button>
         </div>
 
-        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع إلزام البصمة -->
         <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
@@ -77,13 +76,11 @@
             <div class="flex-grow border-t border-slate-700"></div>
         </div>
 
-        <!-- حقل إدخال اسم الحساب -->
         <div class="space-y-2 relative z-10">
             <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب / الشركة:</label>
             <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
         </div>
 
-        <!-- منطقة البصمة البيومترية -->
         <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
             <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء البصمة">
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
@@ -100,7 +97,6 @@
         </div>
     </div>
 
-    <!-- نافذة تسجيل الهاتف (Phone Auth) -->
     <div id="phoneAuthModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -123,7 +119,6 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة حساب جديد -->
     <div id="addAccountModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -152,7 +147,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules للمزامنة اللحظية السحابية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -189,7 +183,6 @@
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
 
-        // مزامنة لحظية مع السحابة
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
@@ -458,7 +451,7 @@
         };
 
         window.performBiometricAuth = async function() {
-            const username = document.getElementById('usernameInput').value.trim();
+            const username = document.getElementById('usernameInput').value.httpValue || document.getElementById('usernameInput').value.trim();
             if (!username) {
                 alert('يرجى إدخال اسم المستخدم أولاً لعمل المصادقة.');
                 return;
@@ -506,7 +499,7 @@
 
             } catch (error) {
                 statusEl.innerText = "⚠️ خطأ في الاتصال بالسحابة: " + error.message;
-                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                statusEl.className = "text-xs text-rose-400 font-mono folder block font-bold";
             }
         };
     </script>

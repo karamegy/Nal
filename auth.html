@@ -52,7 +52,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات السحابية</p>
                 </div>
             </div>
             
@@ -73,7 +73,7 @@
 
         <div class="relative flex py-1 items-center z-10">
             <div class="flex-grow border-t border-slate-700"></div>
-            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والبصمة البيومترية</span>
+            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والبصمة البيومترية السحابية</span>
             <div class="flex-grow border-t border-slate-700"></div>
         </div>
 
@@ -89,7 +89,7 @@
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
             <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة الحقيقية بالبصمة</span>
+                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لإجراء المصادقة السحابية بالبصمة</span>
                 <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة اسم مسجل ثم النقر على البصمة للدخول</span>
             </div>
         </div>
@@ -146,13 +146,13 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ الحساب</button>
+                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ بالسحابة</button>
                 <button onclick="closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع إجبار ومطالبة البصمة ومزامنة كامل البيانات والصورة -->
+    <!-- Firebase SDK Modules للمزامنة اللحظية السحابية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -189,6 +189,7 @@
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
 
+        // مزامنة لحظية مع السحابة
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
@@ -206,7 +207,7 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            const savedAdmin = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_v13_admin') || '';
+            const savedAdmin = localStorage.getItem('eidco_v14_admin') || '';
             const inputEl = document.getElementById('usernameInput');
             if (savedAdmin) {
                 inputEl.value = savedAdmin;
@@ -218,16 +219,13 @@
             const inputVal = document.getElementById('usernameInput').value.trim();
             const addBtn = document.getElementById('addAccountBtn');
             const resetBtn = document.getElementById('resetBtn');
-            const floatingTv = document.getElementById('floatingTvTrigger');
 
             if (inputVal === FOUNDER_NAME) {
                 addBtn.classList.remove('hidden');
                 resetBtn.classList.remove('hidden');
-                if (floatingTv) floatingTv.classList.remove('hidden');
             } else {
                 addBtn.classList.add('hidden');
                 resetBtn.classList.add('hidden');
-                if (floatingTv) floatingTv.classList.add('hidden');
             }
 
             if (inputVal) {
@@ -237,9 +235,8 @@
             }
         };
 
-        // دالة إلزامية لمطالبة المستخدم بالبصمة لمزامنة الحساب
         async function mandateBiometricLinking(userName) {
-            alert(`🔒 نظام الأمان EIDCO: يتطلب إتمام وتأكيد بصمة الإصبع (Biometric) لربط ومزامنة حسابك (${userName}) نهائياً.`);
+            alert(`🔒 نظام الأمان EIDCO: يتطلب تأكيد بصمة الإصبع (Biometric) لربط حسابك (${userName}) سحابياً.`);
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
                     const challenge = new Uint8Array(32);
@@ -263,17 +260,16 @@
                     alert("✓ تم التحقق وربط البصمة بنجاح!");
                     return true;
                 } else {
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 800));
                     alert("✓ تمت محاكاة وتوثيق البصمة بنجاح.");
                     return true;
                 }
             } catch (e) {
-                alert("⚠️ تنبيه: تم تخطي أو إلغاء مسح البصمة، ولكن سيتم المتابعة.");
+                alert("⚠️ تنبيه: تم تخطي أو إلغاء مسح البصمة سحابياً.");
                 return false;
             }
         }
 
-        // تسجيل الدخول عبر Google مع جلب الاسم والصورة وإلزام البصمة
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
@@ -308,11 +304,6 @@
 
                 await mandateBiometricLinking(finalUserName);
 
-                localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
-                if (userPhotoUrl) {
-                    localStorage.setItem('eidco_avatar_' + assignedCompanyId, userPhotoUrl);
-                }
-
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
                     await addDoc(accountsRef, {
@@ -328,10 +319,9 @@
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة البيانات والصورة الشخصية والدخول بنجاح!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة السحابة والدخول بنجاح!`);
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -345,7 +335,7 @@
             document.getElementById('phoneAuthModal').classList.remove('active');
         };
 
-        let windowConfirmationResult = null;
+        let confirmationResult = null;
 
         window.sendPhoneVerificationCode = async function() {
             let phoneNumber = document.getElementById('userPhoneNumber').value.trim();
@@ -360,8 +350,7 @@
                         'size': 'invisible'
                     });
                 }
-                let appVerifier = window.recaptchaVerifier;
-                confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+                confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
                 document.getElementById('phoneStep1').classList.add('hidden');
                 document.getElementById('phoneStep2').classList.remove('hidden');
                 alert('✓ تم إرسال رمز التحقق إلى هاتفك بنجاح.');
@@ -384,8 +373,6 @@
 
                 await mandateBiometricLinking(finalUserName);
 
-                localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
-
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
                     await addDoc(accountsRef, {
@@ -400,10 +387,9 @@
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert('✓ تمت المصادقة ومزامنة الحساب بالبصمة ورقم الهاتف بنجاح!');
+                alert('✓ تمت المصادقة ومزامنة الحساب بالسحابة بنجاح!');
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
@@ -428,7 +414,7 @@
             }
 
             if (accountsData.some(a => a.name === nameInput)) {
-                alert('هذا الاسم مسجل مسبقاً.');
+                alert('هذا الاسم مسجل مسبقاً في السحابة.');
                 return;
             }
 
@@ -436,7 +422,6 @@
                 await mandateBiometricLinking(nameInput);
 
                 let generatedCompanyId = 'company_' + Date.now();
-                localStorage.setItem('eidco_admin_' + generatedCompanyId, nameInput);
 
                 await addDoc(accountsRef, {
                     name: nameInput,
@@ -445,10 +430,10 @@
                     biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert('✓ تمت إضافة الحساب ومزامنة البصمة وتخصيص بيئة معزولة له بنجاح!');
+                alert('✓ تمت إضافة الحساب بالسحابة وتخصيص بيئة معزولة له بنجاح!');
                 window.closeAddAccountModal();
             } catch (err) {
-                alert('حدث خطأ أثناء حفظ الحساب في Firebase: ' + err.message);
+                alert('حدث خطأ أثناء الحفظ في سحابة Firebase: ' + err.message);
             }
         };
 
@@ -466,7 +451,7 @@
                     biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert('تمت إعادة ضبط الحسابات بنجاح.');
+                alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
             } catch (err) {
                 alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
@@ -486,9 +471,9 @@
             let matchedAccount = accountsData.find(a => a.name === username);
 
             if (!matchedAccount && username !== FOUNDER_NAME) {
-                statusEl.innerText = "❌ اسم المستخدم غير مسجل في النظام!";
+                statusEl.innerText = "❌ اسم المستخدم غير مسجل في السحابة!";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات النظام المعتمدة.");
+                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات سحابة النظام المعتمدة.");
                 return;
             }
 
@@ -503,18 +488,16 @@
                     };
                     await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions }).catch(() => {});
                 } else {
-                    await new Promise(r => setTimeout(r, 1200));
+                    await new Promise(r => setTimeout(r, 1000));
                 }
 
-                statusEl.innerText = "✓ تمت المصادقة بالبصمة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المصادقة السحابية بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', username);
-                localStorage.setItem('eidco_admin_' + assignedCompanyId, username);
-                localStorage.setItem('eidco_v14_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
                 setTimeout(() => {

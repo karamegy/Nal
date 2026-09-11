@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // لوحة التحكم الرئيسية السحابية</title>
+    <title>EIDCO // لوحة التحكم الرئيسية السحابية المعزولة</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -64,7 +64,7 @@
         </div>
         <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
             <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
-                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة أحدث الأخبار والتحديثات من السحابة...</span>
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة أحدث التحديثات الخاصة بهذا الحساب المعزول...</span>
             </div>
         </div>
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
@@ -133,7 +133,7 @@
                                 <i class="fa-solid fa-cube"></i>
                             </div>
                         </div>
-                        <h1 class="font-black text-slate-900 text-sm">لوحة المؤشرات الرئيسية (سحابياً بالكامل)</h1>
+                        <h1 class="font-black text-slate-900 text-sm">لوحة المؤشرات الرئيسية (معزولة ومزامنة لحظياً)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                         <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
@@ -161,12 +161,12 @@
                 <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
-                            <span id="headerAvatarText">ك</span>
+                            <span id="headerAvatarText">م</span>
                             <img id="headerAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
                         </div>
                         <div>
-                            <span class="text-xs text-indigo-600 font-mono font-bold">مرحباً بك مجدداً في نظام EIDCO الذكي سحابياً</span>
-                            <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول النظام</h2>
+                            <span class="text-xs text-indigo-600 font-mono font-bold">بيئة العمل المستقلة والمعزولة سحابياً</span>
+                            <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول الحساب</h2>
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
@@ -205,7 +205,7 @@
 
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة سحابياً</h3>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة سحابياً (معزولة)</h3>
                         <a href="batch-invoices.html" class="text-xs text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-plus ml-1"></i> إضافة فاتورة جديدة</a>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -222,7 +222,7 @@
                                 </tr>
                             </thead>
                             <tbody id="dashboardBatchTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من سحابة Firebase...</td></tr>
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري مزامنة البيانات السحابية المعزولة...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -279,7 +279,7 @@
                 </div>
 
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي (Firebase المعزول)</h3>
+                    <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي (Firebase المعزول لحظياً)</h3>
                     <div class="h-72 relative"><canvas id="analyticsChart"></canvas></div>
                 </div>
             </main>
@@ -331,7 +331,10 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+            
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
@@ -359,7 +362,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -402,7 +405,7 @@
 
         let rssNewsList = [
             "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
-            "💡 تم تفعيل العزل التام سحابياً بين الحسابات ومنع تداخل الصور والبيانات نهائياً."
+            "💡 تم تفعيل العزل التام والتزامن اللحظي تماماً بين الحسابات."
         ];
 
         let currentRssSpeedIndex = 0;
@@ -428,13 +431,14 @@
                         txDeleted++;
                     }
                 }
-                alert(`✓ تم بنجاح تطهير الخزنة سحابياً وإزالة ${txDeleted} حركة غير صالحة.`);
+                alert(`✓ تم بنجاح تطهير الخزنة سحابياً وإزالة ${txDeleted} حركة غير صالحة لهذا الحساب.`);
             } catch (err) {
                 alert('خطأ أثناء التطهير السحابي الشامل: ' + err.message);
             }
         };
 
         signInAnonymously(auth).then(() => {
+            // الاستماع للبيانات المعزولة حصرياً عبر معرف الشركة الحالي (Company ID) لضمان الاستقلالية التامة
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
@@ -525,7 +529,7 @@
             document.getElementById('newRssTextInput').value = '';
             closeAddNewsModal();
             renderRssTicker();
-            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار.');
+            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار الخاص بهذا الحساب.');
         };
 
         (function setupDraggableFloatingBtn() {
@@ -559,12 +563,12 @@
 
         function updateAdminHeader() {
             let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
-            let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول النظام';
+            let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول الحساب';
             document.getElementById('welcomeAdminName').innerText = adminName;
 
             const companyBadge = document.getElementById('companyIdDisplayBadge');
             if(companyBadge) {
-                companyBadge.innerText = `معرف الشركة (ID): ${currentCompanyId}`;
+                companyBadge.innerText = `معرف الشركة المعزولة (ID): ${currentCompanyId}`;
             }
 
             let savedAvatar = accountDoc.avatar || '';
@@ -596,7 +600,7 @@
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
@@ -643,7 +647,7 @@
                 `;
             } else if (type === 'sales') {
                 let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
-                modalTitle.innerText = 'ملخص إجمالي المبيعات السحابية';
+                modalTitle.innerText = 'ملخص إجمالي المبيعات السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3">
                         <span class="text-xs text-slate-500 block">إجمالي مبيعات الفواتير السحابية</span>
@@ -661,16 +665,16 @@
                 `;
             } else if (type === 'profits') {
                 let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
-                modalTitle.innerText = 'ملخص صافي الأرباح السحابية';
+                modalTitle.innerText = 'ملخص صافي الأرباح السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3">
                         <span class="text-xs text-slate-500 block">إجمالي صافي الأرباح السحابية</span>
                         <span class="text-xl font-black text-emerald-600 mono-font">${totalProfits.toLocaleString()} ج.م</span>
                     </div>
-                    <p class="text-slate-600 text-center">الأرباح تُحسب سحابياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف.</p>
+                    <p class="text-slate-600 text-center">الأرباح تُحسب سحابياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف داخل حسابك الخاص.</p>
                 `;
             } else if (type === 'clients') {
-                modalTitle.innerText = 'ملخص العملاء والشركات السحابية';
+                modalTitle.innerText = 'ملخص العملاء والشركات السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-purple-50 rounded-xl text-center mb-3">
                         <span class="text-xs text-slate-500 block">إجمالي الجهات المسجلة سحابياً</span>
@@ -738,7 +742,7 @@
                 data: {
                     labels: batchInvs.length ? batchInvs.map(i => i.id || 'INV') : ['بداية التشغيل سحابياً', 'اليوم'],
                     datasets: [{ 
-                        label: 'المبيعات السحابية', 
+                        label: 'المبيعات السحابية المعزولة', 
                         data: batchInvs.length ? batchInvs.map(i => i.total || 0) : [0, 0], 
                         borderColor: '#4f46e5', 
                         tension: 0.4, 

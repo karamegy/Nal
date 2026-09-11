@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO المعزولة</title>
+    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO السحابية المعزولة</title>
     
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -109,9 +115,7 @@
                             <span>EIDCO NEWS 4K</span>
                         </div>
                         <span class="bg-slate-800/80 text-slate-300 text-[11px] font-mono font-bold px-3 py-1 rounded-lg border border-slate-700">LIVE BROADCAST</span>
-                        <span id="tvNetStatus" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/50 font-mono">
-                            <i class="fa-solid fa-wifi"></i> PING 24ms
-                        </span>
+                        <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                     </div>
 
                     <!-- أزرار التحكم بالشاشة -->
@@ -147,7 +151,7 @@
                             <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-8 text-xs">
                                 <span>📊 دفق البيانات السحابية المعزولة متصل ومستقر 100%</span>
                                 <span>✦</span>
-                                <span>🧾 أحدث الفواتير تحدّث لحظياً على شاشات الفروع</span>
+                                <span>🧾 أحدث الفواتير تحدّث لحظياً على سحابة Firebase</span>
                                 <span>✦</span>
                                 <span>💰 الخزنة تسجل زيادة ملحوظة في التدفق اليومي</span>
                             </div>
@@ -170,7 +174,7 @@
                 <div class="font-black tracking-[0.25em] text-slate-300 text-xs uppercase font-mono">
                     EIDCO <span class="text-indigo-500">OLED</span> 4K PRO
                 </div>
-                <div class="text-[10px] font-mono text-slate-500">STANDALONE BROADCAST OS v4.5</div>
+                <div class="text-[10px] font-mono text-slate-500">STANDALONE BROADCAST OS v14.0</div>
             </div>
         </div>
 
@@ -205,7 +209,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة والبدائل المحلية لمنع أي أخطاء مفقودة في المجموعات -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية ועزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -224,7 +228,14 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let state = { invoices: [], transactions: [], clients: [], products: [] };
         let currentTvChannel = 'invoices';
@@ -235,7 +246,6 @@
         let isWallMode = false;
         let initialLoadDone = false;
 
-        // توليد الأصوات برمجياً (Audio Synthesizer)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeepSound(freq = 440, type = 'sine', duration = 0.1) {
             if (isTvMuted || !isTvPoweredOn) return;
@@ -268,7 +278,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // المصادقة التلقائية المجهولة ثم بدء الاستماع مع توفير بدائل محلية في حال عدم توفر المجموعات سحابياً بعد
         signInAnonymously(auth).then(() => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
@@ -286,11 +295,7 @@
                 initialLoadDone = true;
                 renderTvScreen();
             }, (error) => {
-                console.warn("مجموعة الفواتير غير متوفرة بعد سحابياً، يتم الاعتماد على التخزين المحلي:", error);
-                try {
-                    let localInv = localStorage.getItem('eidco_v13_invoices') || localStorage.getItem('eidco_invoices');
-                    if(localInv) state.invoices = JSON.parse(localInv);
-                } catch(e) {}
+                console.error("خطأ في جلب الفواتير سحابياً:", error);
                 renderTvScreen();
             });
 
@@ -298,10 +303,7 @@
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTvScreen();
             }, (error) => {
-                try {
-                    let localTx = localStorage.getItem('eidco_v13_transactions');
-                    if(localTx) state.transactions = JSON.parse(localTx);
-                } catch(e) {}
+                console.error("خطأ في جلب المعاملات سحابياً:", error);
                 renderTvScreen();
             });
 
@@ -309,23 +311,11 @@
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTvScreen();
             }, (error) => {
-                try {
-                    let localClients = localStorage.getItem('eidco_v13_clients');
-                    if(localClients) state.clients = JSON.parse(localClients);
-                } catch(e) {}
+                console.error("خطأ في جلب العملاء سحابياً:", error);
                 renderTvScreen();
             });
         }).catch((error) => {
-            console.error("فشل المصادقة في شاشة TV:", error);
-            // تحميل البيانات محلياً في حال تعذر الاتصال بـ Firebase
-            try {
-                let localInv = localStorage.getItem('eidco_v13_invoices');
-                if(localInv) state.invoices = JSON.parse(localInv);
-                let localTx = localStorage.getItem('eidco_v13_transactions');
-                if(localTx) state.transactions = JSON.parse(localTx);
-                let localClients = localStorage.getItem('eidco_v13_clients');
-                if(localClients) state.clients = JSON.parse(localClients);
-            } catch(e) {}
+            console.error("فشل المصادقة سحابياً:", error);
             renderTvScreen();
         });
 
@@ -359,7 +349,7 @@
             if(!banner) return;
 
             if(channel === 'invoices') {
-                osdNum.innerText = "CH 01"; osdTitle.innerText = "قناة تفريغ ملخص الفواتير والمبيعات المعزولة";
+                osdNum.innerText = "CH 01"; osdTitle.innerText = "قناة تفريغ ملخص الفواتير والمبيعات السحابية";
             } else if(channel === 'summary') {
                 osdNum.innerText = "CH 02"; osdTitle.innerText = "قناة الموجز الإداري والمؤشرات المباشرة";
             } else if(channel === 'news') {
@@ -470,7 +460,7 @@
                 screen.innerHTML = `
                     <div class="space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2.5">
-                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> تفريغ ملخص الفواتير المجمعة الحية (الحساب المعزول)</span>
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> تفريغ ملخص الفواتير والمبيعات السحابية الحية</span>
                             <span class="text-xs text-slate-400 font-mono">إجمالي الفواتير الصادرة: ${state.invoices.length}</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -486,7 +476,7 @@
                                         <span class="text-xs text-emerald-400 font-bold">+${Number(i.profit||0).toLocaleString()} ربح</span>
                                     </div>
                                 </div>
-                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-8 font-bold text-sm">لا توجد فواتير مسجلة لهذا الحساب حالياً</div>'}
+                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-8 font-bold text-sm">لا توجد فواتير مسجلة سحابياً لهذا الحساب حالياً</div>'}
                         </div>
                     </div>
                 `;
@@ -500,7 +490,7 @@
                 screen.innerHTML = `
                     <div class="space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-emerald-400 border-b border-slate-800 pb-2.5">
-                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-chart-line"></i> الموجز المالي والمؤشرات الإدارية الحية (الحساب المعزول)</span>
+                            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-chart-line"></i> الموجز المالي والمؤشرات الإدارية الحية سحابياً</span>
                             <span class="text-xs text-slate-400 font-mono">مزامنة سحابية معزولة</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">

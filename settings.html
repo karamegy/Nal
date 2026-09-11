@@ -29,7 +29,8 @@
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; outline: none; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
@@ -59,27 +60,91 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
                 <h1 class="font-black text-slate-900 text-sm">إدارة قواعد البيانات والنظام (Firebase المعزول)</h1>
+                <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
-                <div class="corporate-card p-6 space-y-4">
-                    <h2 class="font-bold text-sm text-slate-900">خيارات النسخ الاحتياطي والضبط السحابي المعزول</h2>
-                    <p class="text-xs text-slate-500">يمكنك تصدير كافة بيانات الحساب الحالي من السحابة في ملف JSON أو إعادة ضبط بيانات المنظومة الخاصة بك.</p>
+                <!-- قسم النسخ الاحتياطي والتصدير -->
+                <div class="corporate-card p-6 space-y-4 bg-white">
+                    <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-cloud-arrow-down text-indigo-600 ml-2"></i> خيارات النسخ الاحتياطي والتصدير السحابي المعزول</h2>
+                    <p class="text-xs text-slate-500">قم بتصدير كافة بيانات الحساب الحالي من السحابة في ملف JSON أو ربطها بحساب Gmail الخاص بالشركة.</p>
                     <div id="statusMessage" class="hidden text-xs font-bold p-3 rounded-xl"></div>
-                    <div class="flex flex-wrap gap-4 pt-2">
+                    
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني (Gmail) لاستلام النسخ الاحتياطية:</label>
+                            <div class="flex gap-2">
+                                <input type="email" id="companyGmailInput" placeholder="company.email@gmail.com" class="corporate-input">
+                                <button onclick="window.saveCompanyGmail()" class="btn-primary text-xs py-2 px-4 whitespace-nowrap cursor-pointer">حفظ البريد</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 pt-4 border-t border-slate-100">
                         <button onclick="window.exportDatabase()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية (Firebase JSON المعزولة)
+                            <i class="fa-solid fa-download"></i> تصدير وتحميل ملف JSON للهاتف
                         </button>
-                        <button onclick="window.resetSystemData()" class="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition">
-                            <i class="fa-solid fa-rotate-left ml-1"></i> إعادة ضبط المصنع ومسح بيانات الحساب
+                        <button onclick="window.sendBackupToGmail()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 transition cursor-pointer">
+                            <i class="fa-brands fa-google text-sm"></i> إرسال النسخة والتقارير إلى Gmail
                         </button>
                     </div>
+                </div>
+
+                <!-- قسم استيراد ورفع ملف النسخة الاحتياطية من الهاتف -->
+                <div class="corporate-card p-6 space-y-4 bg-white">
+                    <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-cloud-arrow-up text-indigo-600 ml-2"></i> استيراد ورفع النسخة الاحتياطية (Restore JSON)</h2>
+                    <p class="text-xs text-slate-500">قم برفع واختيار ملف النسخة الاحتياطية (JSON) من هاتفك لاستعادة جميع البيانات والمستندات إلى الحساب الحالي.</p>
+                    
+                    <div class="p-6 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 bg-slate-50/50 hover:bg-indigo-50/20 transition cursor-pointer" onclick="document.getElementById('importJsonFile').click()">
+                        <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg"><i class="fa-solid fa-file-arrow-up"></i></div>
+                        <div>
+                            <h3 class="font-bold text-sm text-slate-800">اضغط لرفع ملف النسخة الاحتياطية (.json)</h3>
+                            <span class="text-[11px] text-slate-400">يدعم ملفات JSON المصدرة مسبقاً من المنظومة</span>
+                        </div>
+                        <input type="file" id="importJsonFile" class="hidden" accept=".json" onchange="window.handleJsonImport(event)">
+                    </div>
+                </div>
+
+                <!-- قسم إعادة ضبط المصنع -->
+                <div class="corporate-card p-6 space-y-4 bg-white border-rose-100">
+                    <h2 class="font-bold text-sm text-rose-900"><i class="fa-solid fa-triangle-exclamation text-rose-600 ml-2"></i> منطقة الخطر (إعادة ضبط المصنع)</h2>
+                    <p class="text-xs text-slate-500">تصفير ومسح كافة بيانات هذا الحساب المعزول نهائياً من السحابة والذاكرة المحلية.</p>
+                    <button onclick="window.resetSystemData()" class="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition">
+                        <i class="fa-solid fa-rotate-left ml-1"></i> إعادة ضبط المصنع ومسح بيانات الحساب
+                    </button>
                 </div>
             </main>
         </div>
     </div>
+
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            const badgeEl = document.getElementById('companyBadgeDisplay');
+            if(badgeEl) {
+                badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+            }
+
+            let savedGmail = localStorage.getItem(`eidco_gmail_${currentCompanyId}`) || '';
+            if(document.getElementById('companyGmailInput')) {
+                document.getElementById('companyGmailInput').value = savedGmail;
+            }
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
 
     <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
@@ -89,13 +154,13 @@
             collection, 
             getDocs, 
             doc, 
+            setDoc,
             deleteDoc,
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -105,12 +170,10 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
         const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         const collectionsList = [
@@ -130,13 +193,20 @@
 
         function showStatus(text, isError = false) {
             const el = document.getElementById('statusMessage');
+            if(!el) return;
             el.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'bg-rose-50', 'text-rose-700');
             el.classList.add(isError ? 'bg-rose-50' : 'bg-emerald-50', isError ? 'text-rose-700' : 'text-emerald-700');
             el.innerText = text;
         }
 
-        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
         signInAnonymously(auth).catch(err => console.log("Auth error:", err));
+
+        window.saveCompanyGmail = function() {
+            let gmail = document.getElementById('companyGmailInput').value.trim();
+            if(!gmail) return alert('الرجاء إدخال بريد Gmail صحيح');
+            localStorage.setItem(`eidco_gmail_${currentCompanyId}`, gmail);
+            alert('✓ تم حفظ بريد Gmail الخاص بالشركة بنجاح');
+        };
 
         window.exportDatabase = async function() {
             if (!auth.currentUser) {
@@ -162,15 +232,6 @@
                     }
                 }
 
-                // إضافة التخزين المحلي كنسخة احتياطية سريعة
-                backupData.localFallback = {
-                    adminName: localStorage.getItem('eidco_v13_admin'),
-                    clients: JSON.parse(localStorage.getItem('eidco_v13_clients') || '[]'),
-                    products: JSON.parse(localStorage.getItem('eidco_v13_products') || '[]'),
-                    invoices: JSON.parse(localStorage.getItem('eidco_v13_invoices') || '[]'),
-                    transactions: JSON.parse(localStorage.getItem('eidco_v13_transactions') || '[]')
-                };
-
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
                 const dl = document.createElement('a'); 
                 dl.setAttribute("href", dataStr); 
@@ -183,6 +244,89 @@
             } catch (err) {
                 showStatus('حدث خطأ أثناء تصدير البيانات: ' + err.message, true);
             }
+        };
+
+        window.sendBackupToGmail = async function() {
+            let gmail = localStorage.getItem(`eidco_gmail_${currentCompanyId}`) || document.getElementById('companyGmailInput').value.trim();
+            if(!gmail) {
+                alert('⚠️ يرجى إدخال وحفظ بريد Gmail الخاص بالشركة أولاً');
+                return;
+            }
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
+            showStatus('⏳ جاري إعداد بيانات النسخة الاحتياطية للإرسال عبر Gmail...');
+            try {
+                let summaryText = `نسخة احتياطية وتقارير منصة EIDCO Business OS\nمعرف الشركة: ${currentCompanyId}\nالتاريخ: ${new Date().toLocaleString('ar-EG')}\n\n`;
+                
+                let totalRecords = 0;
+                for (let colName of collectionsList) {
+                    try {
+                        let q = query(collection(db, colName), where("companyId", "==", currentCompanyId));
+                        let snapshot = await getDocs(q);
+                        summaryText += `- ${colName}: ${snapshot.size} سجل\n`;
+                        totalRecords += snapshot.size;
+                    } catch (e) {}
+                }
+
+                summaryText += `\nإجمالي السجلات السحابية: ${totalRecords}\nيرجى الاحتفاظ بهذا البريد للتوثيق والمراجعة.`;
+
+                let mailtoUrl = `mailto:${encodeURIComponent(gmail)}?subject=${encodeURIComponent('EIDCO Backup - ' + currentCompanyId)}&body=${encodeURIComponent(summaryText)}`;
+                window.location.href = mailtoUrl;
+
+                showStatus('✓ تم فتح تطبيق البريد الإلكتروني (Gmail) مع تقرير البيانات الجاهز للإرسال!');
+            } catch (err) {
+                showStatus('حدث خطأ أثناء تجهيز البريد: ' + err.message, true);
+            }
+        };
+
+        window.handleJsonImport = async function(event) {
+            let file = event.target.files[0];
+            if(!file) return;
+
+            let reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    let importedData = JSON.parse(e.target.result);
+                    if(!importedData.collections) {
+                        alert('⚠️ ملف النسخة الاحتياطية غير صالح أو تالف');
+                        return;
+                    }
+
+                    if(!confirm(`هل تريد استيراد بيانات الشركة (${importedData.companyId || currentCompanyId}) ورفعها إلى السحابة الحالية؟`)) return;
+
+                    showStatus('⏳ جاري رفع واستعادة البيانات إلى Firebase السحابي...');
+
+                    if (!auth.currentUser) {
+                        try { await signInAnonymously(auth); } catch(e) {}
+                    }
+
+                    for (let colName of Object.keys(importedData.collections)) {
+                        let items = importedData.collections[colName];
+                        if(Array.isArray(items)) {
+                            for (let item of items) {
+                                let docId = item.docId;
+                                delete item.docId;
+                                item.companyId = currentCompanyId; // ضمان التبعية للحساب الحالي
+
+                                if(docId) {
+                                    await setDoc(doc(db, colName, docId), item, { merge: true });
+                                } else {
+                                    await setDoc(doc(collection(db, colName)), item);
+                                }
+                            }
+                        }
+                    }
+
+                    showStatus('✓ تم استيراد ورفع النسخة الاحتياطية بنجاح وتحديث السحابة!');
+                    alert('✓ تمت استعادة البيانات ورفعها بنجاح إلى المنظومة!');
+                } catch(err) {
+                    alert('خطأ أثناء قراءة أو استيراد الملف: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
         };
 
         window.resetSystemData = async function() {

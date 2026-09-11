@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الفواتير والمبيعات المعزولة</title>
+    <title>EIDCO // الفواتير الفردية السحابية المعزولة</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
+    
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -65,8 +65,11 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير والمبيعات (Firebase المعزول)</h1>
-                    <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة</button>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير والمبيعات (سحابياً بالكامل)</h1>
+                    <div class="flex items-center gap-3">
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
+                        <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة</button>
+                    </div>
                 </div>
             </header>
 
@@ -80,7 +83,7 @@
                                 </tr>
                             </thead>
                             <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من السحابة...</td></tr>
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -91,7 +94,7 @@
 
     <div id="invoiceModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة</h3>
+            <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة سحابياً</h3>
             <div class="space-y-3 text-xs">
                 <div><label class="block mb-1 text-slate-600">اختر العميل</label><select id="invClient" class="corporate-input w-full"></select></div>
                 <div><label class="block mb-1 text-slate-600">اختر الصنف</label><select id="invProduct" class="corporate-input w-full" onchange="window.updateInvPrice()"></select></div>
@@ -103,11 +106,28 @@
                     <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono">0.00 ج.م</span>
                 </div>
             </div>
-            <div class="flex gap-2 pt-2"><button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ وتحديث المخزن</button><button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+            <div class="flex gap-2 pt-2"><button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ وتحديث المخزن سحابياً</button><button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام companyId -->
+    <!-- سكريبت تمرير معرف الشركة تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules مع دعم العزل التام ومزامنة حية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -121,8 +141,8 @@
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -132,24 +152,18 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        // المراجع الأساسية للمجموعات (Collection References)
-        const clientsCollection = collection(db, "clients");
-        const productsCollection = collection(db, "products");
-        const invoicesCollection = collection(db, "invoices");
-        const transactionsCollection = collection(db, "transactions");
-
-        // استعلامات الاستماع مع شروط العزل (Query References)
-        const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-        const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
-        const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-        const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let state = {
             clients: [],
@@ -158,22 +172,30 @@
             transactions: []
         };
 
-        // المزامنة اللحظية مع Firebase Firestore مع العزل
-        onSnapshot(clientsRef, (snapshot) => {
-            state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-        });
+        signInAnonymously(auth).then(() => {
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
-        onSnapshot(productsRef, (snapshot) => {
-            state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-        });
+            onSnapshot(clientsRef, (snapshot) => {
+                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            });
 
-        onSnapshot(invoicesRef, (snapshot) => {
-            state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            window.renderInvoices();
-        });
+            onSnapshot(productsRef, (snapshot) => {
+                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            });
 
-        onSnapshot(transactionsRef, (snapshot) => {
-            state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            onSnapshot(invoicesRef, (snapshot) => {
+                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderInvoices();
+            });
+
+            onSnapshot(transactionsRef, (snapshot) => {
+                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            });
+        }).catch((err) => {
+            console.error("فشل المصادقة سحابياً:", err);
         });
 
         window.renderInvoices = function() {
@@ -181,7 +203,7 @@
             let tbody = document.getElementById('invoicesTableBody');
             
             if(!singleInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -194,7 +216,7 @@
                     <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 text-center">
-                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer" title="حذف الفاتورة">
+                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -203,7 +225,7 @@
         };
 
         window.openNewInvoiceModal = function() {
-            if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام أولاً.');
+            if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام سحابياً أولاً.');
             
             document.getElementById('invClient').innerHTML = state.clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
             document.getElementById('invProduct').innerHTML = state.products.map(p => `<option value="${p.code}" data-price="${p.sellPrice}" data-buy="${p.buyPrice}">${p.name} (المتاح: ${p.qty})</option>`).join('');
@@ -237,21 +259,23 @@
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
             
             if(!prod) return alert('⚠️ يرجى اختيار الصنف بشكل صحيح');
-            if(prod.qty < qty) return alert('⚠️ الكمية المحددة غير متوفرة حالياً بالكامل في المخزن');
+            if(prod.qty < qty) return alert('⚠️ الكمية المحددة غير متوفرة حالياً بالكامل في المخزن السحابي');
             
             let total = qty * price;
             let profit = (price - Number(prod.buyPrice || 0)) * qty;
             let id = 'INV-' + Math.floor(1000 + Math.random() * 9000);
             let today = new Date().toISOString().split('T')[0];
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
-                // 1. خصم الكمية المباعة من الأصناف في Firestore
                 if (prod.docId) {
                     await updateDoc(doc(db, "products", prod.docId), { qty: prod.qty - qty });
                 }
 
-                // 2. إضافة الفاتورة الفردية السحابية مع معرف العزل التام
-                await addDoc(invoicesCollection, { 
+                await addDoc(collection(db, "invoices"), { 
                     companyId: currentCompanyId,
                     id, 
                     client: document.getElementById('invClient').value, 
@@ -265,8 +289,7 @@
                     isBatch: false
                 });
 
-                // 3. إضافة الحركة المالية لإيرادات الخزنة السحابية مع معرف العزل التام
-                await addDoc(transactionsCollection, { 
+                await addDoc(collection(db, "transactions"), { 
                     companyId: currentCompanyId,
                     id: 'TX-' + Math.floor(100 + Math.random() * 900), 
                     type: 'إيراد', 
@@ -283,12 +306,15 @@
         };
 
         window.deleteInvoice = async function(id, docId) {
-            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة.')) return;
+            if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة سحابياً.')) return;
             
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 let inv = state.invoices.find(i => i.id === id);
                 
-                // 1. إرجاع الكميات المباعة إلى المخزن السحابي
                 if(inv) { 
                     let p = state.products.find(x => x.code === inv.productCode); 
                     if(p && p.docId) {
@@ -296,13 +322,11 @@
                     }
                 }
                 
-                // 2. حذف مستند الفاتورة
                 let targetDocId = docId || (inv ? inv.docId : null);
                 if(targetDocId) {
                     await deleteDoc(doc(db, "invoices", targetDocId));
                 }
                 
-                // 3. حذف حركة الخزنة المرتبطة بالفاتورة
                 let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
                 if(tx && tx.docId) {
                     await deleteDoc(doc(db, "transactions", tx.docId));
@@ -310,7 +334,7 @@
                 
                 alert('✓ تم حذف الفاتورة وتحديث النظام سحابياً بنجاح');
             } catch (err) {
-                alert('حدث خطأ أثناء حذف الفاتورة: ' + err.message);
+                alert('حدث خطأ أثناء حذف الفاتورة بالسحابة: ' + err.message);
             }
         };
     </script>

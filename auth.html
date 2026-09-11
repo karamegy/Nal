@@ -52,7 +52,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة (Google, الهاتف, البصمة)</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة الحسابات (Google, الهاتف, البصمة)</p>
                 </div>
             </div>
             
@@ -61,7 +61,7 @@
             </button>
         </div>
 
-        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع مزامنة البصمة -->
+        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع مزامنة الحساب -->
         <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
@@ -152,7 +152,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم ربط البصمة ومزامنة الحسابات -->
+    <!-- Firebase SDK Modules مع مزامنة الاسم والصورة الشخصية وتوثيق البصمة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -237,7 +237,6 @@
             }
         };
 
-        // دالة مساعدة لطلب وبصمة التحقق البيومتري عند التسجيل أو المزامنة
         async function promptBiometricLinking(userName) {
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -263,11 +262,11 @@
                     await new Promise(r => setTimeout(r, 1200));
                 }
             } catch (e) {
-                console.log("Biometric sync notice:", e);
+                console.log("Biometric notice:", e);
             }
         }
 
-        // تسجيل الدخول عبر Google مع مطالبة البصمة لمزامنة الحساب
+        // تسجيل الدخول عبر Google مع المزامنة الفورية للاسم والصورة الشخصية
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
@@ -276,6 +275,7 @@
                 
                 let userEmail = user.email || '';
                 let userDisplayName = user.displayName || userEmail.split('@')[0];
+                let userPhotoUrl = user.photoURL || '';
 
                 let assignedCompanyId;
                 let finalUserName;
@@ -299,9 +299,15 @@
                     }
                 }
 
-                // مطالبة المستخدم بالبصمة لمزامنة حساب جوجل الجديد
-                alert(`✓ تم التحقق عبر Google بنجاح. يرجى تأكيد بصمة الإصبع لمزامنة وتأمين الحساب.`);
+                // ربط ومزامنة البصمة الحيوية
+                alert(`✓ تم تسجيل الدخول عبر Google بنجاح (${finalUserName}). يرجى تأكيد البصمة لربطها بالحساب.`);
                 await promptBiometricLinking(finalUserName);
+
+                // حفظ وتحديث بيانات الحساب والصورة بالمعرف المخصص في التخزين المحلي والسحابي
+                localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
+                if (userPhotoUrl) {
+                    localStorage.setItem('eidco_avatar_' + assignedCompanyId, userPhotoUrl);
+                }
 
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
@@ -310,6 +316,7 @@
                         role: userRole,
                         companyId: assignedCompanyId,
                         email: userEmail,
+                        avatar: userPhotoUrl,
                         biometricLinked: true,
                         date: new Date().toISOString().split('T')[0]
                     });
@@ -320,7 +327,7 @@
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة الحساب والدخول بنجاح!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة البيانات والصورة الشخصية بنجاح!`);
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -361,7 +368,7 @@
             }
         };
 
-        // تأكيد رمز الـ OTP ومطالبة البصمة للمزامنة
+        // تأكيد رمز الـ OTP ومزامنة الحساب
         window.verifyPhoneOtpCode = async function() {
             let code = document.getElementById('phoneOtpCode').value.trim();
             if(!code) return alert('يرجى إدخال رمز التحقق.');
@@ -374,9 +381,10 @@
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
-                // مطالبة المستخدم بالبصمة لمزامنة حساب الهاتف
-                alert(`✓ تم التحقق من رقم الهاتف بنجاح. يرجى تأكيد بصمة الإصبع لمزامنة وتأمين الحساب.`);
+                alert(`✓ تم التحقق من رقم الهاتف. يرجى تأكيد البصمة لربطها بالحساب.`);
                 await promptBiometricLinking(finalUserName);
+
+                localStorage.setItem('eidco_admin_' + assignedCompanyId, finalUserName);
 
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
@@ -427,6 +435,8 @@
             try {
                 await promptBiometricLinking(nameInput);
                 let generatedCompanyId = 'company_' + Date.now();
+                localStorage.setItem('eidco_admin_' + generatedCompanyId, nameInput);
+
                 await addDoc(accountsRef, {
                     name: nameInput,
                     role: roleInput,
@@ -496,13 +506,14 @@
                     await new Promise(r => setTimeout(r, 1200));
                 }
 
-                statusEl.innerText = "✓ تمت المصادقة الحقيقية بالبصمة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المصادقة بالبصمة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v13_admin', username);
+                localStorage.setItem('eidco_admin_' + assignedCompanyId, username);
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 

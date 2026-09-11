@@ -129,7 +129,8 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
+                <!-- تم وضع معرف فريد لإخفاء رابط البصمة من القائمة الجانبية لغير المدير -->
+                <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -158,7 +159,8 @@
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <a href="auth.html" onclick="sessionStorage.removeItem('eidco_session_auth');" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="قفل الجلسة والعودة للبصمة">
+                        <!-- تم وضع معرف لإخفاء زر القفل العلوي لغير المدير -->
+                        <a href="auth.html" id="headerAuthLockBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="قفل الجلسة والعودة للبصمة">
                             <i class="fa-solid fa-lock text-indigo-600"></i> قفل
                         </a>
                         <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
@@ -283,7 +285,8 @@
                             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition"><i class="fa-solid fa-map-location-dot"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4><span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span></div>
                         </a>
-                        <a href="auth.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
+                        <!-- تم وضع معرف فريد للإطار الشبكي للبصمة لإخفائه لغير المدير -->
+                        <a href="auth.html" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية</h4><span class="text-[11px] text-slate-500">بوابة الأمان والبصمة</span></div>
                         </a>
@@ -345,10 +348,24 @@
         </div>
     </div>
 
-    <!-- سكريبت لتمرير معرف الجلسة والشركة عبر الروابط والأزرار تلقائياً -->
+    <!-- سكريبت لتمرير معرف الجلسة والشركة عبر الروابط والأزرار تلقائياً والتحقق من حساب المدير -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+            const currentAdminName = localStorage.getItem('eidco_v13_admin') || '';
+
+            // إخفاء أقسام البصمة والأمان عن أي مستخدم ما عدا كرم حمدي عبدالعظيم
+            if (currentAdminName !== "كرم حمدي عبدالعظيم") {
+                const sidebarAuth = document.getElementById('sidebarAuthNavLink');
+                if (sidebarAuth) sidebarAuth.style.display = 'none';
+
+                const headerLock = document.getElementById('headerAuthLockBtn');
+                if (headerLock) headerLock.style.display = 'none';
+
+                const gridAuth = document.getElementById('gridAuthCard');
+                if (gridAuth) gridAuth.style.display = 'none';
+            }
+
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -409,7 +426,6 @@
 
         let analyticsChartInstance = null;
 
-        // دالة التطهير الشامل: تفحص المعاملات الوهمية أو غير التابعة للشركة الحالية وتحذفها
         window.purgeAllInvalidData = async function() {
             if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب؟')) return;
             if (!auth.currentUser) {
@@ -435,7 +451,6 @@
             }
         };
 
-        // المصادقة المجهولة ثم جلب البيانات مع تطبيق العزل الصارم
         signInAnonymously(auth).then(() => {
             
             onSnapshot(collection(db, "accounts"), (snapshot) => {
@@ -559,13 +574,11 @@
             }
         })();
 
-        // تحديث معلومات الملف الشخصي ومعرف الشركة على الشاشة
         function updateAdminHeader() {
             let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
             let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول النظام';
             document.getElementById('welcomeAdminName').innerText = adminName;
 
-            // عرض معرف الشركة الحالي في البادج المخصص
             const companyBadge = document.getElementById('companyIdDisplayBadge');
             if(companyBadge) {
                 companyBadge.innerText = `معرف الشركة (ID): ${currentCompanyId}`;

@@ -60,6 +60,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
                 <h1 class="font-black text-slate-900 text-sm">مركز الذكاء الاصطناعي، التعلم الموجه، والترحيل (Firebase المعزول)</h1>
+                <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
@@ -153,6 +154,23 @@
         </div>
     </div>
 
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
     <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -181,8 +199,16 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        // جلب معرف الشركة / الحساب الحالي من الرابط أو التخزين المحلي وتثبيته
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        // عرض معرف الشركة في الـ Badge العلوي
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
         signInAnonymously(auth).then(() => {
@@ -216,7 +242,7 @@
                 updatedAt: new Date().toISOString()
             };
             
-            localStorage.setItem('eidco_v13_intelligence_settings', JSON.stringify(settings));
+            localStorage.setItem('eidco_v13_intelligence_settings_' + currentCompanyId, JSON.stringify(settings));
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}

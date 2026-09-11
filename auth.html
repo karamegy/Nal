@@ -306,24 +306,27 @@
                 let finalUserName;
                 let userRole = 'محاسب أول';
 
-                if (userEmail === 'haretg@gmail.com' || userDisplayName.includes('كرم') || userDisplayName.includes('Karm')) {
-                    finalUserName = FOUNDER_NAME;
-                    assignedCompanyId = 'company_founder_karm';
-                    userRole = 'مدير نظام رئيسي';
+                // البحث عما إذا كان هذا البريد مسجلاً مسبقاً للحفاظ على استقلاليته وبيئته المعزولة الخاصة به
+                let existingAccount = accountsData.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+                
+                if (existingAccount) {
+                    finalUserName = existingAccount.name;
+                    assignedCompanyId = existingAccount.companyId;
+                    userRole = existingAccount.role || 'محاسب أول';
                 } else {
-                    let existingAccount = accountsData.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()) || a.name === userDisplayName);
+                    // إنشاء معرف شركة مستقل ومعزول تماماً لكل بريد جوجل جديد
+                    finalUserName = userDisplayName;
+                    let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                    assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
                     
-                    if (existingAccount) {
-                        finalUserName = existingAccount.name;
-                        assignedCompanyId = existingAccount.companyId;
-                        userRole = existingAccount.role || 'محاسب أول';
-                    } else {
-                        finalUserName = userDisplayName;
-                        let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                        assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
+                    if (userEmail === 'haretg@gmail.com') {
+                        assignedCompanyId = 'company_founder_karm';
+                        finalUserName = FOUNDER_NAME;
+                        userRole = 'مدير نظام رئيسي';
                     }
                 }
 
+                // تفعيل البصمة الإجبارية لتوثيق الحساب المعزول
                 await mandateBiometricLinking(finalUserName);
 
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
@@ -393,6 +396,7 @@
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
+                // تفعيل البصمة الإجبارية لمستخدم الهاتف
                 await mandateBiometricLinking(finalUserName);
 
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);

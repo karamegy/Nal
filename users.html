@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // إدارة الحسابات والصلاحيات المعزولة</title>
+    <title>EIDCO // إدارة الحسابات والصلاحيات السحابية المعزولة</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -29,7 +29,7 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
@@ -41,7 +41,7 @@
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية -->
+        <!-- القائمة الجانبية الموحدة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -68,10 +68,13 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة الحسابات وصلاحيات النظام (Firebase المعزول)</h1>
-                    <button onclick="window.openUserModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-user-plus"></i> إضافة مسؤول جديد
-                    </button>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة الحسابات وصلاحيات النظام (سحابياً بالكامل)</h1>
+                    <div class="flex items-center gap-3">
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
+                        <button onclick="window.openUserModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-user-plus"></i> إضافة مسؤول جديد
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -79,7 +82,7 @@
                 <!-- جدول الحسابات والمستخدمين -->
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة الحسابات والمسؤولين المعتمدين</h3>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة الحسابات والمسؤولين المعتمدين سحابياً</h3>
                         <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية من Firebase (معزولة)</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -94,7 +97,7 @@
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">جاري تحميل بيانات الحسابات من السحابة...</td></tr>
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">جاري تحميل بيانات الحسابات من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -106,17 +109,17 @@
     <!-- نافذة إضافة / تعديل مستخدم -->
     <div id="userModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد للنظام</h3>
+            <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد للنظام سحابياً</h3>
             <input type="hidden" id="editUserId">
             <input type="hidden" id="editDocId">
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">اسم المسؤول الكامل</label>
-                    <input type="text" id="userName" class="corporate-input w-full" placeholder="أدخل اسم المسؤول">
+                    <input type="text" id="userName" class="corporate-input" placeholder="أدخل اسم المسؤول">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">الدور والصلاحية</label>
-                    <select id="userRole" class="corporate-input w-full">
+                    <select id="userRole" class="corporate-input">
                         <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
                         <option value="محاسب أول">محاسب أول</option>
                         <option value="مسؤول مخزن">مسؤول مخزن</option>
@@ -125,13 +128,30 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveUser()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحساب</button>
+                <button onclick="window.saveUser()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحساب سحابياً</button>
                 <button onclick="window.closeUserModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -147,7 +167,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
           apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
           authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -157,48 +176,40 @@
           appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let accountsList = [];
 
-        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
         signInAnonymously(auth).then(() => {
             const accountsCollection = collection(db, "accounts");
             const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
-            // المزامنة اللحظية الحية للحسابات والمسؤولين مع العزل
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_accounts', JSON.stringify(accountsList));
                 window.renderUsersTable();
             }, (error) => {
-                console.error("خطأ في جلب بيانات الحسابات:", error);
-                try {
-                    let localData = localStorage.getItem('eidco_v13_accounts');
-                    if (localData) accountsList = JSON.parse(localData);
-                    window.renderUsersTable();
-                } catch(e) {}
+                console.error("خطأ في جلب حسابات المسؤولين سحابياً:", error);
             });
         }).catch((error) => {
-            console.error("فشل المصادقة في إدارة المستخدمين:", error);
-            try {
-                let localData = localStorage.getItem('eidco_v13_accounts');
-                if (localData) accountsList = JSON.parse(localData);
-                window.renderUsersTable();
-            } catch(e) {}
+            console.error("فشل المصادقة سحابياً في إدارة المستخدمين:", error);
         });
 
         window.renderUsersTable = function() {
             let tbody = document.getElementById('usersTableBody');
             
             if(!accountsList.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -209,15 +220,15 @@
                     <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
                     <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                        ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                        ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>` : ''}
                     </td>
                 </tr>
             `).join('');
         };
 
         window.openUserModal = function() {
-            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد للنظام';
+            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد للنظام سحابياً';
             document.getElementById('editUserId').value = '';
             document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
@@ -250,7 +261,7 @@
             if(!name) return alert('الرجاء إدخال اسم المسؤول.');
 
             let accountData = {
-                companyId: currentCompanyId, // تضمين معرف العزل التام
+                companyId: currentCompanyId,
                 id: editId ? Number(editId) : Date.now(),
                 name: name,
                 role: role,
@@ -277,9 +288,9 @@
                 }
 
                 window.closeUserModal();
-                alert('✓ تم حفظ بيانات الحساب وسحب التحديثات سحابياً بنجاح.');
+                alert('✓ تم حفظ بيانات الحساب في السحابة بنجاح.');
             } catch(err) {
-                alert('حدث خطأ أثناء حفظ بيانات المستخدم في Firebase: ' + err.message);
+                alert('حدث خطأ أثناء حفظ بيانات المستخدم في السحابة: ' + err.message);
             }
         };
 
@@ -302,7 +313,7 @@
                     alert('تعذر تحديد المستند السحابي المطلوب حذفه.');
                 }
             } catch(err) {
-                alert('حدث خطأ أثناء حذف الحساب: ' + err.message);
+                alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);
             }
         };
     </script>

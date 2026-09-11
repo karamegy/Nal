@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الخزنة النقدية المعزولة</title>
+    <title>EIDCO // الخزنة النقدية السحابية المعزولة</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
         if ('serviceWorker' in navigator) {
@@ -30,7 +29,7 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
@@ -42,7 +41,7 @@
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية -->
+        <!-- القائمة الجانبية الموحدة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -69,9 +68,10 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية (Firebase المعزول)</h1>
-                    <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                        <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة فوراً">
+                    <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية (سحابياً بالكامل)</h1>
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
+                        <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة سحابياً فوراً">
                             <i class="fa-solid fa-trash-can"></i> تطهير الفواتير المحذوفة
                         </button>
                         <button onclick="window.openTxModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
@@ -106,7 +106,7 @@
                                 </tr>
                             </thead>
                             <tbody id="vaultTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري تحميل حركات الخزنة من السحابة...</td></tr>
+                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري تحميل حركات الخزنة من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -118,34 +118,51 @@
     <!-- نافذة إضافة / تعديل حركة نقدية -->
     <div id="txModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 id="modalTitle" class="font-bold text-sm text-slate-900">تسجيل حركة نقدية جديدة</h3>
+            <h3 id="modalTitle" class="font-bold text-sm text-slate-900">تسجيل حركة نقدية جديدة سحابياً</h3>
             <input type="hidden" id="editTxId">
             <input type="hidden" id="editDocId">
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block mb-1 text-slate-600">النوع</label>
-                    <select id="txType" class="corporate-input w-full">
+                    <label class="block mb-1 text-slate-600 font-bold">النوع</label>
+                    <select id="txType" class="corporate-input">
                         <option value="إيراد">إيراد</option>
                         <option value="مصروف">مصروف</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block mb-1 text-slate-600">المبلغ</label>
-                    <input type="number" id="txAmount" class="corporate-input w-full mono-font" placeholder="0.00">
+                    <label class="block mb-1 text-slate-600 font-bold">المبلغ</label>
+                    <input type="number" id="txAmount" class="corporate-input mono-font" placeholder="0.00">
                 </div>
                 <div>
-                    <label class="block mb-1 text-slate-600">البيان</label>
-                    <input type="text" id="txDesc" class="corporate-input w-full" placeholder="سبب الحركة النقدية أو البيان">
+                    <label class="block mb-1 text-slate-600 font-bold">البيان</label>
+                    <input type="text" id="txDesc" class="corporate-input" placeholder="سبب الحركة النقدية أو البيان">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveTx()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحركة</button>
+                <button onclick="window.saveTx()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحركة سحابياً</button>
                 <button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -161,7 +178,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -171,18 +187,22 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let transactionsList = [];
         let invoicesList = [];
 
-        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
         signInAnonymously(auth).then(() => {
             const transactionsCollection = collection(db, "transactions");
             const invoicesCollection = collection(db, "invoices");
@@ -190,38 +210,20 @@
             const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
             const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
 
-            // المزامنة اللحظية مع Firebase
             onSnapshot(transactionsRef, (snapshot) => {
                 transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_transactions', JSON.stringify(transactionsList));
                 window.renderVault();
             }, (err) => {
-                console.error("خطأ المزامنة:", err);
-                try {
-                    let localData = localStorage.getItem('eidco_v13_transactions');
-                    if (localData) transactionsList = JSON.parse(localData);
-                    window.renderVault();
-                } catch(e) {}
+                console.error("خطأ في جلب المعاملات سحابياً:", err);
             });
 
             onSnapshot(invoicesRef, (snapshot) => {
                 invoicesList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                localStorage.setItem('eidco_v13_invoices', JSON.stringify(invoicesList));
             }, (err) => {
-                try {
-                    let localData = localStorage.getItem('eidco_v13_invoices');
-                    if (localData) invoicesList = JSON.parse(localData);
-                } catch(e) {}
+                console.error("خطأ في جلب الفواتير سحابياً:", err);
             });
         }).catch((err) => {
-            console.error("فشل المصادقة في الخزنة:", err);
-            try {
-                let localTx = localStorage.getItem('eidco_v13_transactions');
-                if (localTx) transactionsList = JSON.parse(localTx);
-                let localInv = localStorage.getItem('eidco_v13_invoices');
-                if (localInv) invoicesList = JSON.parse(localInv);
-            } catch(e) {}
-            window.renderVault();
+            console.error("فشل المصادقة سحابياً في الخزنة:", err);
         });
 
         window.renderVault = function() {
@@ -234,7 +236,7 @@
 
             let tbody = document.getElementById('vaultTableBody');
             if(!transactionsList.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حركات نقدية مسجلة لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حركات نقدية مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -261,7 +263,7 @@
         };
 
         window.openTxModal = function() {
-            document.getElementById('modalTitle').innerText = 'تسجيل حركة نقدية جديدة';
+            document.getElementById('modalTitle').innerText = 'تسجيل حركة نقدية جديدة سحابياً';
             document.getElementById('editTxId').value = '';
             document.getElementById('editDocId').value = '';
             document.getElementById('txType').value = 'إيراد';
@@ -314,7 +316,7 @@
                 } else {
                     let newId = 'TX-' + Math.floor(100 + Math.random() * 900);
                     await addDoc(transactionsCollection, {
-                        companyId: currentCompanyId, // عزل البيانات
+                        companyId: currentCompanyId,
                         id: newId,
                         type,
                         amount,
@@ -324,14 +326,14 @@
                 }
 
                 window.closeModal();
-                alert('✓ تم الحفظ وتحديث المعاملات النقدية سحابياً بنجاح.');
+                alert('✓ تم حفظ وتحديث المعاملات النقدية في السحابة بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
             }
         };
 
         window.deleteTx = async function(id, docId) {
-            if(!confirm('هل أنت متأكد من حذف هذه الحركة نهائياً؟')) return;
+            if(!confirm('هل أنت متأكد من حذف هذه الحركة نهائياً من السحابة؟')) return;
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -356,7 +358,7 @@
         };
 
         window.purgeDeletedInvoicesTransactions = async function() {
-            if(!confirm('هل تريد حقاً تطهير الخزنة وحذف أي معاملات مرتبطة بفواتير محذوفة سحابياً؟')) return;
+            if(!confirm('هل تريد حقاً تطهير الخزنة وحذف أي معاملات مرتبطة بفواتير محذوفة من السحابة؟')) return;
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -374,9 +376,9 @@
                         }
                     }
                 }
-                alert('✓ تم تطهير المعاملات وإزالة الحركات المرتبطة بالفواتير المحذوفة بنجاح!');
+                alert('✓ تم تطهير المعاملات وإزالة الحركات المرتبطة بالفواتير المحذوفة سحابياً بنجاح!');
             } catch(err) {
-                alert('حدث خطأ أثناء تطهير المعاملات: ' + err.message);
+                alert('حدث خطأ أثناء تطهير المعاملات سحابياً: ' + err.message);
             }
         };
     </script>

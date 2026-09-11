@@ -129,7 +129,9 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
-                <!-- تم وضع معرف فريد لإخفاء رابط البصمة من القائمة الجانبية لغير المدير -->
+                <!-- زر إدارة الحسابات والشركات الخاص بالمدير المؤسس -->
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة الحسابات والشركات</a>
+                <!-- قفل الأمان والبيومترية -->
                 <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -353,9 +355,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
             const currentAdminName = localStorage.getItem('eidco_v13_admin') || '';
+            const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-            // إخفاء أقسام البصمة والأمان عن أي مستخدم ما عدا كرم حمدي عبدالعظيم
-            if (currentAdminName !== "كرم حمدي عبدالعظيم") {
+            // إخفاء أقسام البصمة والأمان وأزرار الإدارة عن أي مستخدم ما عدا كرم حمدي عبدالعظيم
+            if (currentAdminName !== FOUNDER_NAME) {
                 const sidebarAuth = document.getElementById('sidebarAuthNavLink');
                 if (sidebarAuth) sidebarAuth.style.display = 'none';
 
@@ -364,6 +367,9 @@
 
                 const gridAuth = document.getElementById('gridAuthCard');
                 if (gridAuth) gridAuth.style.display = 'none';
+
+                const adminAccountsLink = document.getElementById('sidebarAdminAccountsLink');
+                if (adminAccountsLink) adminAccountsLink.style.display = 'none';
             }
 
             document.querySelectorAll('a[href]').forEach(link => {

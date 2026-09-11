@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الفواتير المجمعة والمتقدمة</title>
+    <title>EIDCO // الفواتير المجمعة والمتقدمة المعزولة</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -67,7 +67,7 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
-                <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير المجمعة والتحليلات السحابية (Firebase المعزول)</h1>
+                <h1 class="font-black text-slate-900 text-sm">إدارة الفواتير المجمعة والتحليلات (معزولة ومزامنة لحظياً)</h1>
                 <div class="flex items-center gap-3">
                     <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                     <span id="syncStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
@@ -83,7 +83,7 @@
                 <!-- قسم الرسم البياني التفاعلي للمبيعات والأرباح -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-chart-line ml-2 text-indigo-600"></i> مؤشرات الأداء وحركة المبيعات والأرباح سحابياً</h3>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-chart-line ml-2 text-indigo-600"></i> مؤشرات الأداء وحركة المبيعات والأرباح (لهذا الحساب)</h3>
                         <span class="text-xs text-slate-500 mono-font">آخر 5 فواتير مجمعة</span>
                     </div>
                     <div class="h-64 relative">
@@ -165,7 +165,7 @@
 
                 <!-- سجل الفواتير المجمعة السابقة -->
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل الفواتير المجمعة السابقة (سحابي بالكامل)</h3>
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل الفواتير المجمعة السابقة (معزول سحابياً)</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
@@ -273,7 +273,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون أي اعتمادات محلية -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -324,7 +324,7 @@
         let analyticsChartInstance = null;
         let html5QrCode = null;
 
-        // الاتصال اللحظي المباشر بالسحابة بالكامل
+        // الاتصال اللحظي المباشر بالسحابة مع عزل التخزين لكل شركة على حدة
         signInAnonymously(auth).then(() => {
             const clientsCollection = collection(db, "clients");
             const productsCollection = collection(db, "products");
@@ -369,7 +369,7 @@
             let clientSel = document.getElementById('batchClient');
             if(clientSel) {
                 if(state.clients.length === 0) {
-                    clientSel.innerHTML = `<option value="">-- لا يوجد عملاء مسجلون سحابياً لهذا الحساب --</option>`;
+                    clientSel.innerHTML = `<option value="">-- لا يوجد عملاء مسجلون سحابياً لهذا الحساب المعزول --</option>`;
                 } else {
                     clientSel.innerHTML = state.clients.map(c => `<option value="${c.name}" data-phone="${c.phone || ''}">${c.name}</option>`).join('');
                 }
@@ -616,7 +616,7 @@
             let batchInvs = state.invoices.filter(i => i.isBatch);
 
             if(!batchInvs.length) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 

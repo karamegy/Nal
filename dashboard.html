@@ -58,7 +58,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة (سحابياً بالكامل)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">مركز القيادة والتحكم الشامل للمنصة (معزول ومزامن سحابياً)</h1>
                     <div class="flex items-center gap-3">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                         <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg" title="إصلاح وتصفير الأرقام الوهمية بالسحابة">
@@ -73,7 +73,7 @@
                 <!-- بطاقة الترحيب والملخص العام -->
                 <div class="corporate-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-indigo-900 to-slate-900 text-white">
                     <div class="space-y-1">
-                        <span class="text-xs text-indigo-300 font-mono font-bold">إدارة النظام المركزية السحابية</span>
+                        <span class="text-xs text-indigo-300 font-mono font-bold">إدارة النظام المركزية السحابية المعزولة</span>
                         <h2 class="text-xl font-black" id="dashAdminName">كرم حمدي عبدالعظيم</h2>
                         <p class="text-xs text-slate-300">مراقبة حية سحابياً لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
                     </div>
@@ -86,19 +86,19 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
                         <span class="text-xs text-slate-500 font-medium">إجمالي رصيد الخزنة الصافي سحابياً</span>
-                        <div class="text-2xl font-black text-slate-900 mono-font" id="dashVault">0 ج.م</div>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="dashVault" dir="ltr">0 ج.م</div>
                     </div>
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
                         <span class="text-xs text-slate-500 font-medium">إجمالي المبيعات السحابية</span>
-                        <div class="text-2xl font-black text-cyan-600 mono-font" id="dashSales">0 ج.م</div>
+                        <div class="text-2xl font-black text-cyan-600 mono-font" id="dashSales" dir="ltr">0 ج.م</div>
                     </div>
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
                         <span class="text-xs text-slate-500 font-medium">صافي الأرباح المحققة سحابياً</span>
-                        <div class="text-2xl font-black text-emerald-600 mono-font" id="dashProfits">0 ج.م</div>
+                        <div class="text-2xl font-black text-emerald-600 mono-font" id="dashProfits" dir="ltr">0 ج.م</div>
                     </div>
                     <div class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500">
                         <span class="text-xs text-slate-500 font-medium">إجمالي الأصناف بالمخزن السحابي</span>
-                        <div class="text-2xl font-black text-purple-600 mono-font" id="dashProductsCount">0 صنف</div>
+                        <div class="text-2xl font-black text-purple-600 mono-font" id="dashProductsCount" dir="ltr">0 صنف</div>
                     </div>
                 </div>
 
@@ -132,7 +132,7 @@
                                 </tr>
                             </thead>
                             <tbody id="dashLogsTable" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل البيانات من سحابة Firebase...</td></tr>
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل البيانات من سحابة Firebase المعزولة...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -158,7 +158,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -265,15 +265,15 @@
             let logsTable = document.getElementById('dashLogsTable');
             let recentTxs = [...state.transactions].reverse().slice(0, 8);
             if(!recentTxs.length) {
-                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات سحابية مسجلة لهذا الحساب.</td></tr>`;
+                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات سحابية مسجلة لهذا الحساب المعزول.</td></tr>`;
             } else {
                 logsTable.innerHTML = recentTxs.map(t => `
                     <tr class="hover:bg-slate-50">
-                        <td class="p-3 mono-font text-indigo-600 font-bold">${t.id || 'TX'}</td>
+                        <td class="p-3 mono-font text-indigo-600 font-bold" dir="ltr">${t.id || 'TX'}</td>
                         <td class="p-3 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type || 'إيراد'}</td>
-                        <td class="p-3 mono-font font-bold">${Number(t.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-3 mono-font font-bold" dir="ltr">${Number(t.amount || 0).toLocaleString()} ج.م</td>
                         <td class="p-3 text-slate-600">${t.desc || '---'}</td>
-                        <td class="p-3 mono-font text-slate-500">${t.date || 'اليوم'}</td>
+                        <td class="p-3 mono-font text-slate-500" dir="ltr">${t.date || 'اليوم'}</td>
                     </tr>
                 `).join('');
             }
@@ -318,7 +318,7 @@
         }
 
         window.fixCorruptedData = async function() {
-            if(!confirm('هل تريد إصلاح وتصحيح الأرقام المضخمة وإعادة ضبط الحسابات في سحابة Firebase؟')) return;
+            if(!confirm('هل تريد إصلاح وتصحيح الأرقام المضخمة وإعادة ضبط الحسابات في سحابة Firebase المعزولة؟')) return;
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}

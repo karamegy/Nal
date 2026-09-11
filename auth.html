@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // إدارة الحسابات والمصادقة البيومترية المعزولة</title>
+    <title>EIDCO // إدارة الحسابات والمصادقة المتقدمة المعزولة</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -52,14 +52,29 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول والمصادقة البيومترية الحقيقية</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول (Google, الهاتف, البصمة)</p>
                 </div>
             </div>
             
-            <!-- زر إضافة حساب: مخفي افتراضياً ويظهر فقط للمؤسس -->
             <button id="addAccountBtn" onclick="openAddAccountModal()" class="hidden bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-user-plus"></i> إضافة حساب
             </button>
+        </div>
+
+        <!-- خيارات تسجيل الدخول السريع (Google & Phone) -->
+        <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
+            <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
+                <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
+            </button>
+            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700">
+                <i class="fa-solid fa-phone text-emerald-400 text-sm"></i> تسجيل برقم الهاتف
+            </button>
+        </div>
+
+        <div class="relative flex py-1 items-center z-10">
+            <div class="flex-grow border-t border-slate-700"></div>
+            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والبصمة البيومترية</span>
+            <div class="flex-grow border-t border-slate-700"></div>
         </div>
 
         <!-- حقل إدخال اسم الحساب -->
@@ -82,6 +97,29 @@
         <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between items-center">
             <span>EIDCO Business OS &copy; 2026</span>
             <button id="resetBtn" onclick="resetDefaultAccounts()" class="hidden text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل الهاتف (Phone Auth) -->
+    <div id="phoneAuthModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-phone ml-2 text-emerald-400"></i> تسجيل الدخول برقم الهاتف</h3>
+                <button onclick="closePhoneAuthModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div id="phoneStep1">
+                    <label class="block mb-1 text-slate-300 font-bold">رقم الهاتف (مع رمز الدولة)</label>
+                    <input type="tel" id="userPhoneNumber" class="corporate-input w-full text-xs mono-font" placeholder="+2010xxxxxxxx">
+                    <button onclick="sendPhoneVerificationCode()" class="btn-primary w-full mt-3 py-2.5 text-xs">إرسال رمز التحقق</button>
+                </div>
+                <div id="phoneStep2" class="hidden space-y-2">
+                    <label class="block mb-1 text-slate-300 font-bold">أدخل رمز التحقق (OTP)</label>
+                    <input type="text" id="phoneOtpCode" class="corporate-input w-full text-xs mono-font text-center tracking-widest text-lg" placeholder="123456">
+                    <button onclick="verifyPhoneOtpCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full mt-2 py-2.5 rounded-xl text-xs transition cursor-pointer">تأكيد الرمز ودخول المنظومة</button>
+                </div>
+                <div id="recaptcha-container"></div>
+            </div>
         </div>
     </div>
 
@@ -114,7 +152,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع التحقق الحقيقي من الحسابات وتمرير الجلسة بصرامة -->
+    <!-- Firebase SDK Modules مع دعم Google, Phone, والمصادقة المجهولة وعزل الحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -125,7 +163,14 @@
             doc, 
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            RecaptchaVerifier, 
+            signInWithPhoneNumber 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -192,11 +237,88 @@
             }
         };
 
+        // تسجيل الدخول عبر Google
+        window.signInWithGoogle = async function() {
+            try {
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                
+                let userName = user.displayName || user.email.split('@')[0];
+                let assignedCompanyId = 'company_google_' + user.uid.substring(0, 8);
+
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_v13_admin', userName);
+                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+                alert(`✓ أهلاً بك يا ${userName}, تم تسجيل الدخول بنجاح عبر Google!`);
+                window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
+            } catch (error) {
+                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
+            }
+        };
+
+        // فتح نافذة الهاتف
+        window.openPhoneAuthModal = function() {
+            document.getElementById('phoneAuthModal').classList.add('active');
+        };
+        window.closePhoneAuthModal = function() {
+            document.getElementById('phoneAuthModal').classList.remove('active');
+        };
+
+        let windowConfirmationResult = null;
+
+        // إرسال رمز التحقق لرقم الهاتف (Phone OTP)
+        window.sendPhoneVerificationCode = async function() {
+            let phoneNumber = document.getElementById('userPhoneNumber').value.trim();
+            if(!phoneNumber) {
+                alert('يرجى إدخال رقم الهاتف بصيغة صحيحة.');
+                return;
+            }
+
+            try {
+                if (!window.recaptchaVerifier) {
+                    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                        'size': 'invisible'
+                    });
+                }
+                let appVerifier = window.recaptchaVerifier;
+                confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+                document.getElementById('phoneStep1').classList.add('hidden');
+                document.getElementById('phoneStep2').classList.remove('hidden');
+                alert('✓ تم إرسال رمز التحقق إلى هاتفك بنجاح.');
+            } catch (error) {
+                alert('فشل إرسال رمز التحقق: ' + error.message);
+            }
+        };
+
+        // تأكيد رمز الـ OTP للدخول
+        window.verifyPhoneOtpCode = async function() {
+            let code = document.getElementById('phoneOtpCode').value.trim();
+            if(!code) return alert('يرجى إدخال رمز التحقق.');
+
+            try {
+                let result = await confirmationResult.confirm(code);
+                let user = result.user;
+                let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
+
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_v13_admin', 'مستخدم الهاتف');
+                localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+                alert('✓ تمت المصادقة برقم الهاتف بنجاح!');
+                window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
+            } catch (error) {
+                alert('رمز التحقق غير صحيح: ' + error.message);
+            }
+        };
+
         window.openAddAccountModal = function() {
             document.getElementById('newAccountName').value = '';
             document.getElementById('addAccountModal').classList.add('active');
         };
-
         window.closeAddAccountModal = function() {
             document.getElementById('addAccountModal').classList.remove('active');
         };
@@ -249,7 +371,7 @@
             }
         };
 
-        // دالة المصادقة الحقيقية الصارمة لعزل الحسابات وتمرير معرف الشركة فوراً
+        // المصادقة بالبصمة
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -261,18 +383,16 @@
             statusEl.innerText = `جاري التحقق من السجلات السحابية لـ (${username})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
-            // التحقق الحقيقي من قاعدة بيانات الحسابات السحابية
             let matchedAccount = accountsData.find(a => a.name === username);
 
             if (!matchedAccount && username !== FOUNDER_NAME) {
                 statusEl.innerText = "❌ اسم المستخدم غير مسجل في النظام!";
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات النظام المعتمدة. لا يمكن الدخول إلا بحساب مسجل مسبقاً.");
+                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات النظام المعتمدة.");
                 return;
             }
 
             try {
-                // تفعيل جلسة Firebase Auth السحابية
                 await signInAnonymously(auth);
 
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -289,7 +409,6 @@
                 statusEl.innerText = "✓ تمت المصادقة الحقيقية بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // اعتماد وتثبيت الـ companyId الحقيقي الخاص بهذا الحساب حصرياً
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
@@ -297,7 +416,6 @@
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                // تمرير الجلسة ومعرف الشركة فوراً وصارماً عبر عنوان الرابط (Query Param) لمنع أي تداخل
                 setTimeout(() => {
                     window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
                 }, 800);
@@ -321,36 +439,5 @@
             <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
         </a>
     </div>
-
-    <script>
-        (function setupDraggableFloatingBtn() {
-            const dragEl = document.getElementById('floatingTvTrigger');
-            if (!dragEl) return;
-            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
-
-            dragEl.addEventListener('touchstart', dragStart, {passive: false});
-            dragEl.addEventListener('touchend', dragEnd, {passive: false});
-            dragEl.addEventListener('touchmove', drag, {passive: false});
-            dragEl.addEventListener('mousedown', dragStart);
-            document.addEventListener('mouseup', dragEnd);
-            document.addEventListener('mousemove', drag);
-
-            function dragStart(e) {
-                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-            }
-            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-            function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                    xOffset = currentX; yOffset = currentY;
-                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
-                }
-            }
-        })();
-    </script>
 </body>
 </html>

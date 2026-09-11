@@ -3,21 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات المعزولة</title>
+    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات السحابية</title>
     
-    <!-- إعدادات الـ PWA وربط المانيست وعامل الخدمة وحماية الجلسة -->
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
         }
     </script>
 
@@ -56,7 +49,7 @@
 
     <script>
         window.openAddVehicleModal = function() {
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
             document.getElementById('vehiclePlate').value = '';
@@ -70,7 +63,7 @@
         };
 
         window.openAddShipmentModal = function() {
-            document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة';
+            document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
             document.getElementById('shipmentReceiver').value = '';
@@ -113,7 +106,7 @@
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -121,7 +114,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - Firebase المعزول)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - سحابياً بالكامل)</h1>
                     <div class="flex items-center gap-3">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                         <span id="connectionBadge" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200">
@@ -135,12 +128,11 @@
                 <div id="geofenceAlertBanner">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-triangle-exclamation text-red-600 text-base"></i>
-                        <span>تنبيه أمني: خرجت إحدى مركبات الأسطول عن النطاق الجغرافي الآمن للمحافظات!</span>
+                        <span>تنبيه أمني: خرجت إحدى مركبات الأسطول عن النطاق الجغرافي الآمن!</span>
                     </div>
                     <span id="geofenceDistance" class="mono-font font-bold"></span>
                 </div>
 
-                <!-- شريط مؤشرات الأسطول الشامل -->
                 <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
                     <div class="corporate-card p-3 sm:p-4 flex items-center justify-between border-l-4 border-l-indigo-600">
                         <div><span class="text-slate-500">إجمالي الأسطول</span><h4 class="text-base sm:text-lg font-black text-slate-900 mono-font" id="mapFleetCount">0 مركبة</h4></div>
@@ -168,7 +160,6 @@
                     </div>
                 </div>
 
-                <!-- شريط الأدوات والبحث والطبقات -->
                 <div class="corporate-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
                     <div class="flex items-center gap-2 flex-1 min-w-[260px]">
                         <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
@@ -183,7 +174,6 @@
                     </div>
                 </div>
 
-                <!-- حاوية الخريطة -->
                 <div class="corporate-card p-4 relative">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
@@ -193,10 +183,6 @@
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
                             <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
                             <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
-                            <button onclick="window.toggleRouting()" class="touch-btn"><i class="fa-solid fa-route text-purple-600"></i> إظهار/إخفاء الملاحة</button>
-                            <button onclick="window.playRouteHistory()" class="touch-btn"><i class="fa-solid fa-play text-amber-600"></i> محاكاة السجل التاريخي</button>
-                            <button onclick="window.generateClientTrackingLink()" class="touch-btn"><i class="fa-solid fa-link text-blue-600"></i> توليد رابط تتبع للعميل</button>
-                            <button onclick="window.shareRouteWhatsApp()" class="touch-btn"><i class="fa-brands fa-whatsapp text-emerald-600"></i> مشاركة عبر واتساب</button>
                             <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
                         </div>
                     </div>
@@ -204,7 +190,6 @@
                     <div id="leafletMap"></div>
                 </div>
 
-                <!-- قسم إدارة الشحنات النشطة سحابياً -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
@@ -234,7 +219,6 @@
                     </div>
                 </div>
 
-                <!-- لوحة إدارة مركبات الأسطول -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
@@ -272,7 +256,7 @@
     <div id="vehicleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 id="modalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول</h3>
+                <h3 id="modalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً</h3>
                 <button type="button" onclick="window.closeVehicleModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="vehicleForm" onsubmit="window.saveVehicle(event)" class="space-y-3 text-xs">
@@ -307,7 +291,7 @@
     <div id="shipmentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 id="shipmentModalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة</h3>
+                <h3 id="shipmentModalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً</h3>
                 <button type="button" onclick="window.closeShipmentModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="shipmentForm" onsubmit="window.saveShipment(event)" class="space-y-3 text-xs">
@@ -351,7 +335,6 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
-    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -368,7 +351,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -397,18 +380,15 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي من الرابط أو التخزين المحلي وتثبيته
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        // عرض معرف الشركة في الـ Badge العلوي
         const badgeEl = document.getElementById('companyBadgeDisplay');
         if(badgeEl) {
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
         }
 
-        // 1. إسناد دوال الحذف والحفظ فوراً لمنع حدوث Undefined Error عند الضغط مع تضمين companyId
         window.saveVehicle = async function(e) {
             if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
@@ -418,7 +398,7 @@
             let lng = parseFloat(document.getElementById('vehicleLng').value) || 31.2357;
 
             let vehicleData = {
-                companyId: currentCompanyId, // تضمين العزل التام
+                companyId: currentCompanyId,
                 name: name,
                 plate: plate,
                 lat: lat,
@@ -439,14 +419,14 @@
                     await addDoc(fleetCollection, vehicleData);
                 }
                 window.closeVehicleModal();
-                alert("✓ تم حفظ بيانات المركبة بنجاح سحابياً.");
+                alert("✓ تم حفظ بيانات المركبة سحابياً بنجاح.");
             } catch (err) {
-                alert("حدث خطأ أثناء حفظ المركبة: " + err.message);
+                alert("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
             }
         };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة سحابياً';
             document.getElementById('vehicleId').value = id;
             document.getElementById('vehicleName').value = name;
             document.getElementById('vehiclePlate').value = plate;
@@ -456,15 +436,15 @@
         };
 
         window.deleteVehicle = async function(id) {
-            if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول؟")) {
+            if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول السحابي؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
-                    alert("✓ تم حذف المركبة بنجاح.");
+                    alert("✓ تم حذف المركبة سحابياً بنجاح.");
                 } catch (err) {
-                    alert("خطأ أثناء حذف المركبة: " + err.message);
+                    alert("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
                 }
             }
         };
@@ -484,7 +464,7 @@
             try {
                 const shipmentsCollection = collection(db, "shipments");
                 await addDoc(shipmentsCollection, {
-                    companyId: currentCompanyId, // تضمين العزل التام
+                    companyId: currentCompanyId,
                     code: code,
                     receiver: receiver,
                     status: status,
@@ -495,25 +475,24 @@
                 window.closeShipmentModal();
                 alert("✓ تم إضافة الشحنة سحابياً بنجاح.");
             } catch (err) {
-                alert("حدث خطأ أثناء حفظ الشحنة: " + err.message);
+                alert("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
             }
         };
 
         window.deleteShipment = async function(id) {
-            if(confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
+            if(confirm("هل أنت متأكد من حذف هذه الشحنة سحابياً؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "shipments", id));
-                    alert("✓ تم حذف الشحنة بنجاح.");
+                    alert("✓ تم حذف الشحنة سحابياً بنجاح.");
                 } catch (err) {
-                    alert("خطأ أثناء حذف الشحنة: " + err.message);
+                    alert("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
                 }
             }
         };
 
-        // 2. تهيئة الخريطة بأمان
         let map;
         try {
             map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
@@ -535,17 +514,11 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        // تنفيذ المصادقة المجهولة أولاً ثم تفعيل الاستماع اللحظي للبيانات المعزولة
         signInAnonymously(auth).then(() => {
-            const clientsCollection = collection(db, "clients");
-            const fleetCollection = collection(db, "fleet_locations");
-            const shipmentsCollection = collection(db, "shipments");
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
+            const shipmentsRef = query(collection(db, "shipments"), where("companyId", "==", currentCompanyId));
 
-            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
-            const fleetRef = query(fleetCollection, where("companyId", "==", currentCompanyId));
-            const shipmentsRef = query(shipmentsCollection, where("companyId", "==", currentCompanyId));
-
-            // 3. المزامنة اللحظية للأسطول المعزول
             let fleetMarkers = {};
             onSnapshot(fleetRef, (snapshot) => {
                 if (map) {
@@ -555,7 +528,7 @@
 
                 if (snapshot.empty) {
                     document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة لهذا الحساب. اضغط "إضافة مركبة جديدة".</td></tr>`;
+                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
@@ -603,7 +576,6 @@
                 console.error("Fleet Snapshot Error: ", err);
             });
 
-            // 4. المزامنة اللحظية للشحنات المعزولة
             let shipmentMarkers = {};
             onSnapshot(shipmentsRef, (snapshot) => {
                 if (map) {
@@ -613,7 +585,7 @@
 
                 if (snapshot.empty) {
                     document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
-                    document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة لهذا الحساب. اضغط "إضافة شحنة جديدة".</td></tr>`;
+                    document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
@@ -653,7 +625,7 @@
                             <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
                             <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة"><i class="fa-solid fa-trash"></i></button>
+                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
@@ -665,7 +637,6 @@
                 console.error("Shipments Snapshot Error: ", err);
             });
 
-            // 5. المزامنة اللحظية للعملاء المعزولين
             let clientMarkers = [];
             onSnapshot(clientsRef, (snapshot) => {
                 let clients = [];
@@ -694,10 +665,9 @@
                 }
             });
         }).catch((err) => {
-            console.error("فشل المصادقة في خريطة الأسطول:", err);
+            console.error("فشل المصادقة سحابياً في خريطة الأسطول:", err);
         });
 
-        // 6. أدوات التحكم الإضافية بأسلوب آمن
         window.panToFleet = function() { if(map) map.setView([30.0444, 31.2357], 14); };
         window.panToUser = function() { 
             if("geolocation" in navigator && map) {
@@ -708,7 +678,7 @@
         };
         window.resetMapView = function() { if(map) map.setView([30.0444, 31.2357], 13); };
     </script>
-
+    
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">

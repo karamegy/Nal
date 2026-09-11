@@ -63,8 +63,9 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
                 <h1 class="font-black text-slate-900 text-sm">الشات والاتصالات المباشرة (Firebase المعزول)</h1>
+                <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6">
@@ -106,6 +107,23 @@
         </div>
     </div>
 
+    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
     <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -135,8 +153,16 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي لضمان العزل التام للبيانات
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        // جلب معرف الشركة / الحساب الحالي من الرابط أو التخزين المحلي وتثبيته
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        // عرض معرف الشركة في الـ Badge العلوي
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if(badgeEl) {
+            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+        }
 
         let clientsList = [];
         let messagesList = [];
@@ -154,12 +180,12 @@
                     id: doc.id,
                     ...doc.data()
                 }));
-                localStorage.setItem('eidco_v13_chat_clients', JSON.stringify(clientsList));
+                localStorage.setItem('eidco_v13_chat_clients_' + currentCompanyId, JSON.stringify(clientsList));
                 renderContacts();
             }, (error) => {
                 console.warn("جاري جلب جهات الاتصال من التخزين المحلي:", error);
                 try {
-                    let localData = localStorage.getItem('eidco_v13_chat_clients') || localStorage.getItem('eidco_v13_clients');
+                    let localData = localStorage.getItem('eidco_v13_chat_clients_' + currentCompanyId);
                     if(localData) clientsList = JSON.parse(localData);
                 } catch(e) {}
                 renderContacts();
@@ -167,7 +193,7 @@
         }).catch((error) => {
             console.error("فشل المصادقة في الشات:", error);
             try {
-                let localData = localStorage.getItem('eidco_v13_chat_clients') || localStorage.getItem('eidco_v13_clients');
+                let localData = localStorage.getItem('eidco_v13_chat_clients_' + currentCompanyId);
                 if(localData) clientsList = JSON.parse(localData);
             } catch(e) {}
             renderContacts();

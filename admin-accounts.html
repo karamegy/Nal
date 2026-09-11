@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EIDCO // إدارة الحسابات والشركات المعزولة (المدير الرئيسي)</title>
     
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     
     <script>
         // التحقق الأمني: السماح بالدخول للمدير المؤسس كرم حمدي عبدالعظيم فقط
-        const currentAdmin = localStorage.getItem('eidco_v13_admin') || '';
+        const currentAdmin = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_v13_admin') || '';
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
         if (!sessionStorage.getItem('eidco_session_auth') || currentAdmin !== FOUNDER_NAME) {
@@ -49,7 +48,7 @@
                 </div>
                 <div>
                     <h1 class="text-base font-black text-white">لوحة تحكم المدير المؤسس // إدارة الحسابات والشركات</h1>
-                    <p class="text-[10px] text-indigo-300 font-mono">التحكم المركزي في صلاحيات ومفاتيح عزل الشركات والبصمات السحابية</p>
+                    <p class="text-[10px] text-indigo-300 font-mono">التحكم المركزي السحابي في صلاحيات ومفاتيح عزل الشركات والبصمات</p>
                 </div>
             </div>
             
@@ -82,8 +81,8 @@
         <!-- جدول الحسابات السحابية -->
         <div class="corporate-card p-6 space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة الحسابات والشركات المرتبطة بالسحابة (Firebase)</h3>
-                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري مزامنة السجلات...</span>
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة الحسابات والشركات المرتبطة بالسحابة (Firebase Firestore)</h3>
+                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري مزامنة السجلات لحظياً...</span>
             </div>
 
             <div class="overflow-x-auto rounded-xl border border-slate-800">
@@ -137,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules لإدارة الحسابات سحابياً -->
+    <!-- Firebase SDK Modules لإدارة الحسابات سحابياً بالكامل -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -170,9 +169,9 @@
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderAccountsTable(accountsList);
-                document.getElementById('syncStatusText').innerText = "✓ متصل ومزامن سحابياً";
+                document.getElementById('syncStatusText').innerText = "✓ متصل ومزامن سحابياً لحظياً";
             }, (err) => {
-                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في الاتصال";
+                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة";
             });
         });
 
@@ -241,7 +240,7 @@
                     biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyId}) بنجاح!`);
+                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyId}) بالسحابة بنجاح!`);
                 window.closeAddAccountModal();
             } catch(err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
@@ -252,7 +251,7 @@
             if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
             try {
                 await deleteDoc(doc(db, "accounts", docId));
-                alert('✓ تم حذف الحساب بنجاح.');
+                alert('✓ تم حذف الحساب من السحابة بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء الحذف: ' + err.message);
             }
@@ -260,8 +259,8 @@
 
         window.switchAndLoginAsCompany = function(companyId, name) {
             sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_v13_admin', name);
-            localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+            localStorage.setItem('eidco_v14_admin', name);
+            localStorage.setItem('eidco_v14_auth_status', 'authenticated');
             localStorage.setItem('eidco_current_company_id', companyId);
             window.location.href = `index.html?companyId=${encodeURIComponent(companyId)}`;
         };

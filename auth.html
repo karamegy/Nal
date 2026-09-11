@@ -45,6 +45,13 @@
     <div class="corporate-card p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
+        <!-- زر التثبيت البرمجي الظاهر عند جهوزية المتصفح -->
+        <div id="installContainer" class="hidden text-center relative z-10">
+            <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-5 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
+                <i class="fa-solid fa-download text-amber-300 text-sm"></i> تثبيت تطبيق EIDCO الرسمي على الهاتف
+            </button>
+        </div>
+
         <div class="flex justify-between items-center relative z-10">
             <div class="flex items-center gap-3">
                 <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -182,6 +189,29 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
+
+        // تفعيل زر التثبيت البرمجي عند جاهزية المتصفح
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const container = document.getElementById('installContainer');
+            if (container) {
+                container.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('installAppBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('تم تثبيت التطبيق بنجاح');
+                }
+                deferredPrompt = null;
+                document.getElementById('installContainer').classList.add('hidden');
+            }
+        });
 
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
@@ -451,7 +481,7 @@
         };
 
         window.performBiometricAuth = async function() {
-            const username = document.getElementById('usernameInput').value.httpValue || document.getElementById('usernameInput').value.trim();
+            const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
                 alert('يرجى إدخال اسم المستخدم أولاً لعمل المصادقة.');
                 return;
@@ -499,7 +529,7 @@
 
             } catch (error) {
                 statusEl.innerText = "⚠️ خطأ في الاتصال بالسحابة: " + error.message;
-                statusEl.className = "text-xs text-rose-400 font-mono folder block font-bold";
+                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
             }
         };
     </script>

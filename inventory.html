@@ -3,23 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // المخزن والأصناف المعزولة</title>
+    <title>EIDCO // المخزن والأصناف السحابية المعزولة</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     
-    <!-- سكريبت إجبار المتصفح على مسح الكاش والـ Service Worker القديم فوراً -->
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-            });
         }
     </script>
 
@@ -69,7 +61,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
                 <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود (Firebase المعزول)</h1>
+                    <h1 class="font-black text-slate-900 text-sm">إدارة المخزن والأصناف والباركود (سحابياً بالكامل)</h1>
                     <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
                 </div>
             </header>
@@ -80,7 +72,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-triangle-exclamation"></i></div>
                         <div>
-                            <h4 class="font-bold text-rose-900 text-xs">تنبيه: أصناف وصلت للحد الأدنى أو نفدت!</h4>
+                            <h4 class="font-bold text-rose-900 text-xs">تنبيه: أصناف وصلت للحد الأدنى أو نفدت في المخزن السحابي!</h4>
                             <p class="text-[11px] text-rose-700">يرجى مراجعة الجدول أدناه للأصناف التي تحتاج إعادة طلب.</p>
                         </div>
                     </div>
@@ -90,7 +82,7 @@
                 <!-- نموذج إضافة / تعديل صنف -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <div class="flex justify-between items-center border-b pb-3">
-                        <h3 id="formTitleText" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن</h3>
+                        <h3 id="formTitleText" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن السحابي</h3>
                         <button type="button" onclick="window.resetProductForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إلغاء التعديل</button>
                     </div>
 
@@ -137,7 +129,7 @@
 
                         <div class="pt-2">
                             <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5">
-                                <i class="fa-solid fa-floppy-disk text-base"></i> حفظ الصنف وتحديث المخزن فوراً
+                                <i class="fa-solid fa-floppy-disk text-base"></i> حفظ الصنف وتحديث المخزن سحابياً
                             </button>
                         </div>
                     </div>
@@ -153,7 +145,7 @@
 
                 <!-- جدول الأصناف -->
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن الحالية (مزامنة حية معزولة)</h3>
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن السحابي الحالية</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
@@ -162,13 +154,13 @@
                                     <th class="p-4">اسم الصنف</th>
                                     <th class="p-4">سعر الشراء</th>
                                     <th class="p-4">سعر البيع</th>
-                                    <th class="p-4">الكمية المتاحة</th>
+                                    <th class="p-4">الكمية المتاحة سحابياً</th>
                                     <th class="p-4">الحد الأدنى للتنبيه</th>
                                     <th class="p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="productsTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">جاري تحميل أصناف المخزن من السحابة...</td></tr>
+                                <tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">جاري تحميل أصناف المخزن من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -194,7 +186,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع تضمين المصادقة لتجاوز خطأ الصلاحيات -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -223,12 +215,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة الحالي من الرابط أو التخزين المحلي وتثبيته
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        // عرض معرف الشركة في الـ Badge العلوي
         const badgeEl = document.getElementById('companyBadgeDisplay');
         if(badgeEl) {
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
@@ -236,7 +226,6 @@
 
         let productsList = [];
 
-        // الانتظار حتى تسجيل الدخول بنجاح لتمرير شرط isAuthenticated() في قواعد فايربيس
         signInAnonymously(auth).then(() => {
             const productsCollection = collection(db, "products");
             const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
@@ -246,18 +235,12 @@
                     docId: doc.id,
                     ...doc.data()
                 }));
-                localStorage.setItem('eidco_v13_products_' + currentCompanyId, JSON.stringify(productsList));
                 window.renderProducts();
             }, (error) => {
-                console.error("خطأ في جلب أصناف المخزن:", error);
-                try {
-                    let localData = localStorage.getItem('eidco_v13_products_' + currentCompanyId);
-                    if (localData) productsList = JSON.parse(localData);
-                    window.renderProducts();
-                } catch(e) {}
+                console.error("خطأ في جلب أصناف المخزن سحابياً:", error);
             });
         }).catch((error) => {
-            console.error("فشل المصادقة:", error);
+            console.error("فشل المصادقة سحابياً:", error);
         });
 
         window.renderProducts = function() {
@@ -283,7 +266,7 @@
             }
 
             if(!filtered.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد أصناف مطابقة للبحث أو المخزن فارغ لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد أصناف مطابقة للبحث أو المخزن سحابياً فارغ لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -329,7 +312,7 @@
             document.getElementById('prodQty').value = '10';
             document.getElementById('prodMinQty').value = '3';
             document.getElementById('prodCode').readOnly = false;
-            document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن`;
+            document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن السحابي`;
             document.getElementById('cancelEditBtn').classList.add('hidden');
         };
 
@@ -400,9 +383,9 @@
                 }
 
                 window.resetProductForm();
-                alert('✓ تم حفظ الصنف وتحديث المخزن السحابي المعزول بنجاح!');
+                alert('✓ تم حفظ الصنف وتحديث المخزن السحابي بنجاح!');
             } catch (err) {
-                alert('خطأ أثناء الحفظ في Firebase: ' + err.message);
+                alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
@@ -422,7 +405,7 @@
                     alert('تعذر تحديد المستند المطلوب حذفه');
                 }
             } catch(err) {
-                alert('خطأ أثناء الحذف من Firebase: ' + err.message);
+                alert('خطأ أثناء الحذف من السحابة: ' + err.message);
             }
         };
 

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // إدارة الحسابات والشركات المعزولة (المدير الرئيسي)</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    
+    <script>
+        // التحقق الأمني: السماح بالدخول للمدير المؤسس كرم حمدي عبدالعظيم فقط
+        const currentAdmin = localStorage.getItem('eidco_v13_admin') || '';
+        const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+
+        if (!sessionStorage.getItem('eidco_session_auth') || currentAdmin !== FOUNDER_NAME) {
+            alert('⚠️ تنبيه أمني: هذه الصفحة مخصصة للمدير المؤسس الرئيسي فقط!');
+            window.location.href = 'auth.html';
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding: 2rem 1rem; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+        .corporate-input { background: #0f172a; border: 1px solid var(--border-color); color: #fff; border-radius: 12px; padding: 10px 14px; transition: all 0.2s; }
+        .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        table th, table td { white-space: nowrap; }
+    </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- رأس الصفحة -->
+        <div class="corporate-card p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/30">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-shield-halved text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-black text-white">لوحة تحكم المدير المؤسس // إدارة الحسابات والشركات</h1>
+                    <p class="text-[10px] text-indigo-300 font-mono">التحكم المركزي في صلاحيات ومفاتيح عزل الشركات والبصمات السحابية</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right"></i> العودة للوحة الرئيسية
+                </a>
+                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-4 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
+                </button>
+            </div>
+        </div>
+
+        <!-- عدادات وإحصائيات سريعة -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="corporate-card p-5 border-l-4 border-l-indigo-500">
+                <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات المعزولة</span>
+                <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
+            </div>
+            <div class="corporate-card p-5 border-l-4 border-l-emerald-500">
+                <span class="text-xs text-slate-400 block mb-1">حسابات موثقة بالبصمة البيومترية</span>
+                <span class="text-2xl font-black text-emerald-400 mono-font" id="biometricCount">0</span>
+            </div>
+            <div class="corporate-card p-5 border-l-4 border-l-cyan-500">
+                <span class="text-xs text-slate-400 block mb-1">المدير الحالي الجلسة</span>
+                <span class="text-base font-black text-cyan-400" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
+            </div>
+        </div>
+
+        <!-- جدول الحسابات السحابية -->
+        <div class="corporate-card p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة الحسابات والشركات المرتبطة بالسحابة (Firebase)</h3>
+                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري مزامنة السجلات...</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-right text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-300 font-mono border-b border-slate-800">
+                            <th class="p-4">اسم المستخدم / الجهة</th>
+                            <th class="p-4">الصلاحية / الدور</th>
+                            <th class="p-4">معرف الشركة (Company ID)</th>
+                            <th class="p-4">البريد / الهاتف</th>
+                            <th class="p-4 text-center">البصمة</th>
+                            <th class="p-4">تاريخ الإنشاء</th>
+                            <th class="p-4 text-center">إجراءات الإدارة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
+                        <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- نافذة إضافة حساب جديد من لوحة المدير -->
+    <div id="adminAddModal" class="custom-modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-user-plus ml-2 text-indigo-400"></i> إضافة حساب ومعرف شركة جديد</h3>
+                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">اسم المسؤول / المستخدم</label>
+                    <input type="text" id="modalAccountName" class="corporate-input w-full text-xs" placeholder="أدخل الاسم الكامل">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
+                    <select id="modalAccountRole" class="corporate-input w-full text-xs bg-slate-900">
+                        <option value="محاسب أول">محاسب أول</option>
+                        <option value="مسؤول مخزن">مسؤول مخزن</option>
+                        <option value="مشرف أسطول">مشرف أسطول</option>
+                        <option value="مدير فرع">مدير فرع</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs">حفظ الحساب بالسحابة</button>
+                <button onclick="window.closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Modules لإدارة الحسابات سحابياً -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const accountsRef = collection(db, "accounts");
+
+        let accountsList = [];
+
+        signInAnonymously(auth).then(() => {
+            onSnapshot(accountsRef, (snapshot) => {
+                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderAccountsTable(accountsList);
+                document.getElementById('syncStatusText').innerText = "✓ متصل ومزامن سحابياً";
+            }, (err) => {
+                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في الاتصال";
+            });
+        });
+
+        function renderAccountsTable(data) {
+            document.getElementById('totalAccountsCount').innerText = data.length;
+            document.getElementById('biometricCount').innerText = data.filter(a => a.biometricLinked).length;
+
+            let tbody = document.getElementById('adminAccountsTableBody');
+            if(!data.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة في السحابة حالياً.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(acc => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30">
+                            ${acc.name ? acc.name.charAt(0) : 'م'}
+                        </div>
+                        ${acc.name || 'بدون اسم'}
+                    </td>
+                    <td class="p-4 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
+                    <td class="p-4 mono-font text-indigo-400 font-bold">${acc.companyId || '---'}</td>
+                    <td class="p-4 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي / بصمة'}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${acc.biometricLinked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                            ${acc.biometricLinked ? 'مفعلة ✓' : 'غير مرتبطة'}
+                        </span>
+                    </td>
+                    <td class="p-4 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
+                    <td class="p-4 text-center space-x-2 space-x-reverse">
+                        <button onclick="window.switchAndLoginAsCompany('${acc.companyId}', '${acc.name}')" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
+                            <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول كـ
+                        </button>
+                        <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف الحساب نهائياً">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.openAddAccountModal = function() {
+            document.getElementById('modalAccountName').value = '';
+            document.getElementById('adminAddModal').classList.add('flex');
+            document.getElementById('adminAddModal').classList.remove('hidden');
+        };
+
+        window.closeAddAccountModal = function() {
+            document.getElementById('adminAddModal').classList.add('hidden');
+            document.getElementById('adminAddModal').classList.remove('flex');
+        };
+
+        window.saveAdminAccount = async function() {
+            let name = document.getElementById('modalAccountName').value.trim();
+            let role = document.getElementById('modalAccountRole').value;
+
+            if(!name) return alert('الرجاء إدخال اسم المسؤول.');
+
+            try {
+                let companyId = 'company_' + Date.now();
+                await addDoc(accountsRef, {
+                    name: name,
+                    role: role,
+                    companyId: companyId,
+                    biometricLinked: true,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyId}) بنجاح!`);
+                window.closeAddAccountModal();
+            } catch(err) {
+                alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+            }
+        };
+
+        window.deleteCloudAccount = async function(docId, name) {
+            if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
+            try {
+                await deleteDoc(doc(db, "accounts", docId));
+                alert('✓ تم حذف الحساب بنجاح.');
+            } catch(err) {
+                alert('خطأ أثناء الحذف: ' + err.message);
+            }
+        };
+
+        window.switchAndLoginAsCompany = function(companyId, name) {
+            sessionStorage.setItem('eidco_session_auth', 'true');
+            localStorage.setItem('eidco_v13_admin', name);
+            localStorage.setItem('eidco_v13_auth_status', 'authenticated');
+            localStorage.setItem('eidco_current_company_id', companyId);
+            window.location.href = `index.html?companyId=${encodeURIComponent(companyId)}`;
+        };
+    </script>
+</body>
+</html>

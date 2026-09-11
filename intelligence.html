@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // مركز الذكاء والتعلم المتقدم المعزول</title>
+    <title>EIDCO // مركز الذكاء والتعلم المتقدم السحابي</title>
     
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && localStorage.getItem('eidco_v13_auth_status') !== 'authenticated') {
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
     </script>
@@ -59,13 +58,13 @@
 
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex justify-between items-center">
-                <h1 class="font-black text-slate-900 text-sm">مركز الذكاء الاصطناعي، التعلم الموجه، والترحيل (Firebase المعزول)</h1>
+                <h1 class="font-black text-slate-900 text-sm">مركز الذكاء الاصطناعي، التعلم الموجه، والترحيل (سحابياً بالكامل)</h1>
                 <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
                 
-                <!-- القسم الأول: الذكاء الشخصي وسياق النظام (Personal Intelligence Hub) -->
+                <!-- القسم الأول: الذكاء الشخصي وسياق النظام -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex items-center gap-3 border-b pb-3">
                         <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-network-wired"></i></div>
@@ -95,7 +94,7 @@
                     </div>
                 </div>
 
-                <!-- القسم الثاني: التعلم الموجه وتحضير الاختبارات (Guided Learning & Quiz Prep) -->
+                <!-- القسم الثاني: التعلم الموجه وتحضير الاختبارات -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex items-center gap-3 border-b pb-3">
                         <div class="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-graduation-cap"></i></div>
@@ -119,12 +118,12 @@
                             </select>
                         </div>
                         <div class="flex items-end">
-                            <button type="button" onclick="window.generateLearningContent()" class="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-2 cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد المحتوى الذكي</button>
+                            <button type="button" onclick="window.generateLearningContent()" class="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-2 cursor-pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد المحتوى الذكي سحابياً</button>
                         </div>
                     </div>
 
                     <div id="learningOutputArea" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
-                        <h4 class="font-bold text-indigo-600"><i class="fa-solid fa-circle-check ml-1"></i> النتيجة المولدة:</h4>
+                        <h4 class="font-bold text-indigo-600"><i class="fa-solid fa-circle-check ml-1"></i> النتيجة المولدة سحابياً:</h4>
                         <div id="learningResultText" class="text-slate-700 leading-relaxed font-mono"></div>
                     </div>
                 </div>
@@ -171,7 +170,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم المصادقة المجهولة وعزل companyId -->
+    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -184,7 +183,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // إعدادات Firebase الخاصة بمشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -194,27 +192,22 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // تهيئة Firebase و Firestore و Auth
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // جلب معرف الشركة / الحساب الحالي من الرابط أو التخزين المحلي وتثبيته
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        // عرض معرف الشركة في الـ Badge العلوي
         const badgeEl = document.getElementById('companyBadgeDisplay');
         if(badgeEl) {
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
         }
 
-        // تنفيذ المصادقة المجهولة أولاً لإرضاء قواعد الأمان في فايربيس
         signInAnonymously(auth).then(() => {
             const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
 
-            // الاستماع المباشر لإعدادات الذكاء المعزولة من السحابة
             onSnapshot(settingsDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const saved = docSnap.data();
@@ -226,23 +219,21 @@
                     }
                 }
             }, (error) => {
-                console.log("استخدام الإعدادات المحلية عند تعذر الاتصال:", error);
+                console.error("خطأ في جلب إعدادات الذكاء سحابياً:", error);
             });
         }).catch((err) => {
-            console.error("فشل المصادقة في مركز الذكاء:", err);
+            console.error("فشل المصادقة سحابياً:", err);
         });
 
         window.saveIntelligenceSettings = async function() {
             let settings = {
-                companyId: currentCompanyId, // تضمين العزل التام
+                companyId: currentCompanyId,
                 gmail: document.getElementById('srcGmail').checked,
                 calendar: document.getElementById('srcCalendar').checked,
                 drive: document.getElementById('srcDrive').checked,
                 photos: document.getElementById('srcPhotos').checked,
                 updatedAt: new Date().toISOString()
             };
-            
-            localStorage.setItem('eidco_v13_intelligence_settings_' + currentCompanyId, JSON.stringify(settings));
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -252,7 +243,7 @@
                 const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
                 await setDoc(settingsDocRef, settings, { merge: true });
             } catch (err) {
-                console.error("خطأ أثناء حفظ الإعدادات في Firebase:", err);
+                alert('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
             }
         };
 
@@ -288,17 +279,16 @@
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
-            // حفظ سجل المحتوى التعليمي المولّد سحابياً ضمن النطاق المعزول
             try {
                 const learningLogsRef = collection(db, "learning_logs");
                 await addDoc(learningLogsRef, {
-                    companyId: currentCompanyId, // تضمين العزل التام
+                    companyId: currentCompanyId,
                     topic: topic,
                     toolType: toolType,
                     timestamp: new Date().toISOString()
                 });
             } catch(e) {
-                console.log("حفظ السجل التعليمي محلياً فقط");
+                console.error("خطأ في حفظ السجل التعليمي بالسحابة:", e);
             }
         };
 
@@ -315,7 +305,7 @@
             try {
                 const migrationsRef = collection(db, "migrations");
                 await addDoc(migrationsRef, {
-                    companyId: currentCompanyId, // تضمين العزل التام
+                    companyId: currentCompanyId,
                     fileName: file.name,
                     fileSize: file.size,
                     uploadedAt: new Date().toISOString(),
@@ -326,9 +316,7 @@
                     status.innerHTML = `✓ تم استيراد وترحيل السجل والذاكرة بنجاح من أرشيف (${file.name}) وتم ربطها سحابياً بـ Firebase المعزول!`;
                 }, 1200);
             } catch(err) {
-                setTimeout(() => {
-                    status.innerHTML = `✓ تم استيراد وترحيل السجل والذاكرة بنجاح من أرشيف (${file.name})!`;
-                }, 1200);
+                status.innerHTML = `⚠️ حدث خطأ أثناء الترحيل السحابي: ${err.message}`;
             }
         };
     </script>

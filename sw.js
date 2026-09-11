@@ -15,8 +15,8 @@ const assetsToCache = [
   './settings.html',
   './tv.html',
   './manifest.json',
-  './icon-new-192.png',
-  './icon-new-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -45,7 +45,6 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// استراتيجية جلب ذكية: الشبكة أولاً لصفحات HTML لضمان تحديثات السحابة الفورية، والتخزين المؤقت للملفات الثابتة
 self.addEventListener('fetch', (e) => {
   let requestURL = new URL(e.request.url);
 
@@ -59,7 +58,7 @@ self.addEventListener('fetch', (e) => {
           });
         })
         .catch(() => {
-          return caches.match(e.request);
+          return caches.match(e.request) || caches.match('./index.html');
         })
     );
   } else {

@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع التحقق الحقيقي من الحسابات -->
+    <!-- Firebase SDK Modules مع التحقق الحقيقي من الحسابات وتمرير الجلسة بصرامة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -249,7 +249,7 @@
             }
         };
 
-        // دالة المصادقة الحقيقية الصارمة لعزل الحسابات
+        // دالة المصادقة الحقيقية الصارمة لعزل الحسابات وتمرير معرف الشركة فوراً
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -289,7 +289,7 @@
                 statusEl.innerText = "✓ تمت المصادقة الحقيقية بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // اعتماد الـ companyId الحقيقي الخاص بهذا الحساب حصرياً لعزل البيانات
+                // اعتماد وتثبيت الـ companyId الحقيقي الخاص بهذا الحساب حصرياً
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
@@ -297,8 +297,9 @@
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
+                // تمرير الجلسة ومعرف الشركة فوراً وصارماً عبر عنوان الرابط (Query Param) لمنع أي تداخل
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
                 }, 800);
 
             } catch (error) {

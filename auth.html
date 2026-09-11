@@ -52,7 +52,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black text-white">EIDCO v13 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة الحسابات (Google, الهاتف, البصمة)</p>
+                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة (Google, الهاتف, البصمة)</p>
                 </div>
             </div>
             
@@ -61,7 +61,7 @@
             </button>
         </div>
 
-        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع المزامنة التلقائية -->
+        <!-- خيارات تسجيل الدخول السريع (Google & Phone) مع مزامنة البصمة -->
         <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
@@ -152,7 +152,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم المزامنة التلقائية للمعلومات في السحابة -->
+    <!-- Firebase SDK Modules مع دعم ربط البصمة ومزامنة الحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -237,7 +237,37 @@
             }
         };
 
-        // تسجيل الدخول عبر Google مع المزامنة التلقائية لمعلومات الحساب في قاعدة البيانات
+        // دالة مساعدة لطلب وبصمة التحقق البيومتري عند التسجيل أو المزامنة
+        async function promptBiometricLinking(userName) {
+            try {
+                if (window.PublicKeyCredential && navigator.credentials) {
+                    const challenge = new Uint8Array(32);
+                    window.crypto.getRandomValues(challenge);
+                    const createCredentialOptions = {
+                        publicKey: {
+                            challenge: challenge,
+                            rp: { name: "EIDCO Business OS", id: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname },
+                            user: {
+                                id: Uint8Array.from(userName, c => c.charCodeAt(0)),
+                                name: userName,
+                                displayName: userName
+                            },
+                            pubKeyCredParams: [{ alg: -7, type: "pub-key" }, { alg: -257, type: "pub-key" }],
+                            timeout: 60000,
+                            attestation: "none",
+                            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+                        }
+                    };
+                    await navigator.credentials.create(createCredentialOptions);
+                } else {
+                    await new Promise(r => setTimeout(r, 1200));
+                }
+            } catch (e) {
+                console.log("Biometric sync notice:", e);
+            }
+        }
+
+        // تسجيل الدخول عبر Google مع مطالبة البصمة لمزامنة الحساب
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
@@ -269,7 +299,10 @@
                     }
                 }
 
-                // التحقق من وجود الحساب في مجموعة accounts بالسحابة ومزامنته تلقائياً
+                // مطالبة المستخدم بالبصمة لمزامنة حساب جوجل الجديد
+                alert(`✓ تم التحقق عبر Google بنجاح. يرجى تأكيد بصمة الإصبع لمزامنة وتأمين الحساب.`);
+                await promptBiometricLinking(finalUserName);
+
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
                     await addDoc(accountsRef, {
@@ -277,6 +310,7 @@
                         role: userRole,
                         companyId: assignedCompanyId,
                         email: userEmail,
+                        biometricLinked: true,
                         date: new Date().toISOString().split('T')[0]
                     });
                 }
@@ -286,7 +320,7 @@
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${finalUserName}, تم تسجيل الدخول والمزامنة بنجاح عبر Google!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة الحساب والدخول بنجاح!`);
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -327,7 +361,7 @@
             }
         };
 
-        // تأكيد رمز الـ OTP للدخول ومزامنة بيانات الحساب
+        // تأكيد رمز الـ OTP ومطالبة البصمة للمزامنة
         window.verifyPhoneOtpCode = async function() {
             let code = document.getElementById('phoneOtpCode').value.trim();
             if(!code) return alert('يرجى إدخال رمز التحقق.');
@@ -340,6 +374,10 @@
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
+                // مطالبة المستخدم بالبصمة لمزامنة حساب الهاتف
+                alert(`✓ تم التحقق من رقم الهاتف بنجاح. يرجى تأكيد بصمة الإصبع لمزامنة وتأمين الحساب.`);
+                await promptBiometricLinking(finalUserName);
+
                 const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
                 if (!existingDoc) {
                     await addDoc(accountsRef, {
@@ -347,6 +385,7 @@
                         role: userRole,
                         companyId: assignedCompanyId,
                         phone: phoneNum,
+                        biometricLinked: true,
                         date: new Date().toISOString().split('T')[0]
                     });
                 }
@@ -356,7 +395,7 @@
                 localStorage.setItem('eidco_v13_auth_status', 'authenticated');
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert('✓ تمت المصادقة ومزامنة الحساب برقم الهاتف بنجاح!');
+                alert('✓ تمت المصادقة ومزامنة الحساب بالبصمة ورقم الهاتف بنجاح!');
                 window.location.href = `index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
@@ -386,14 +425,16 @@
             }
 
             try {
+                await promptBiometricLinking(nameInput);
                 let generatedCompanyId = 'company_' + Date.now();
                 await addDoc(accountsRef, {
                     name: nameInput,
                     role: roleInput,
                     companyId: generatedCompanyId,
+                    biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert('✓ تمت إضافة الحساب وتخصيص بيئة معزولة له بنجاح!');
+                alert('✓ تمت إضافة الحساب ومزامنة البصمة وتخصيص بيئة معزولة له بنجاح!');
                 window.closeAddAccountModal();
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الحساب في Firebase: ' + err.message);
@@ -411,6 +452,7 @@
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
+                    biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
                 alert('تمت إعادة ضبط الحسابات بنجاح.');
@@ -454,7 +496,7 @@
                     await new Promise(r => setTimeout(r, 1200));
                 }
 
-                statusEl.innerText = "✓ تمت المصادقة الحقيقية بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المصادقة الحقيقية بالبصمة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';

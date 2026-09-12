@@ -169,13 +169,14 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getFirestore, 
             collection, 
             addDoc, 
+            getDocs,
             onSnapshot, 
             query, 
             where 
@@ -210,9 +211,20 @@
         let unsubscribeMessages = null;
         let ringtoneCtx = null, ringtoneTimer = null;
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const clientsCollection = collection(db, "clients");
             const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
+
+            try {
+                const snapshot = await getDocs(clientsRef);
+                clientsList = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                renderContacts();
+            } catch(e) {
+                console.error("خطأ في جلب العملاء أولياً:", e);
+            }
 
             onSnapshot(clientsRef, (snapshot) => {
                 clientsList = snapshot.docs.map(doc => ({
@@ -245,7 +257,7 @@
             `).join('');
         }
 
-        window.selectClient = function(clientId) {
+        window.selectClient = async function(clientId) {
             currentActiveClientId = clientId;
             let client = clientsList.find(x => x.id === clientId || x.docId === clientId);
             if (!client) return;
@@ -254,14 +266,26 @@
             document.getElementById('activeChatAvatar').innerText = client.name ? client.name.charAt(0) : 'ع';
 
             renderContacts();
-            listenToMessages(clientId);
+            await listenToMessages(clientId);
         };
 
-        function listenToMessages(clientId) {
+        async function listenToMessages(clientId) {
             if (unsubscribeMessages) unsubscribeMessages();
 
             const messagesCollection = collection(db, "messages");
             const q = query(messagesCollection, where("clientId", "==", clientId), where("companyId", "==", currentCompanyId));
+
+            try {
+                const querySnapshot = await getDocs(q);
+                messagesList = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                messagesList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                renderMessages();
+            } catch(e) {
+                console.error("خطأ في جلب الرسائل أولياً:", e);
+            }
 
             unsubscribeMessages = onSnapshot(q, (snapshot) => {
                 messagesList = snapshot.docs.map(doc => ({

@@ -252,10 +252,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل companyId -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -327,7 +327,7 @@
 
         function speakArabicText(text) {
             if (!('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel(); // إيقاف أي كلام سابق لمنع التداخل
+            window.speechSynthesis.cancel();
             let utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ar-SA';
             utterance.rate = 0.95;
@@ -362,11 +362,29 @@
             speakArabicText(textToSpeak);
         };
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
+            // جلب أولي فوري باستخدام getDocs
+            try {
+                const [invoicesSnap, transactionsSnap, clientsSnap] = await Promise.all([
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef),
+                    getDocs(clientsRef)
+                ]);
+
+                state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                initialLoadDone = true;
+                renderTvScreen();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(invoicesRef, (snapshot) => {
                 let previousCount = state.invoices.length;
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
@@ -376,11 +394,9 @@
                     playInvoiceBellSound();
                     announceNewInvoice(newest);
                 }
-                initialLoadDone = true;
                 renderTvScreen();
             }, (error) => {
                 console.error("خطأ في جلب الفواتير سحابياً:", error);
-                renderTvScreen();
             });
 
             onSnapshot(transactionsRef, (snapshot) => {
@@ -388,7 +404,6 @@
                 renderTvScreen();
             }, (error) => {
                 console.error("خطأ في جلب المعاملات سحابياً:", error);
-                renderTvScreen();
             });
 
             onSnapshot(clientsRef, (snapshot) => {
@@ -396,11 +411,9 @@
                 renderTvScreen();
             }, (error) => {
                 console.error("خطأ في جلب العملاء سحابياً:", error);
-                renderTvScreen();
             });
         }).catch((error) => {
             console.error("فشل المصادقة سحابياً:", error);
-            renderTvScreen();
         });
 
         window.switchTvChannel = function(channel) {
@@ -425,7 +438,6 @@
             showTvOsdBanner(channel);
             renderTvScreen();
 
-            // نطق معلومات القناة تلقائياً عند التبديل إذا كان الناطق مفعلًا
             if (isSpeechEnabled) {
                 setTimeout(() => window.speakCurrentScreenInfo(), 600);
             }

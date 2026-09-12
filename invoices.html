@@ -178,7 +178,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام ومزامنة حية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -189,6 +189,7 @@
             doc, 
             updateDoc, 
             onSnapshot,
+            getDocs,
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -223,12 +224,31 @@
             transactions: []
         };
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
+            // جلب أولي فوري باستخدام getDocs
+            try {
+                const [clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
+                    getDocs(clientsRef),
+                    getDocs(productsRef),
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef)
+                ]);
+
+                state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderInvoices();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             });

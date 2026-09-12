@@ -198,7 +198,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام ومزامنة حية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -208,6 +208,7 @@
             doc, 
             setDoc,
             updateDoc,
+            getDocs,
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -243,13 +244,34 @@
             products: []
         };
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
 
+            // جلب أولي فوري باستخدام getDocs
+            try {
+                const [accountsSnap, invoicesSnap, transactionsSnap, clientsSnap, productsSnap] = await Promise.all([
+                    getDocs(accountsRef),
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef),
+                    getDocs(clientsRef),
+                    getDocs(productsRef)
+                ]);
+
+                state.accounts = accountsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = invoicesSnap.docs.map(d => d.data());
+                state.transactions = transactionsSnap.docs.map(d => d.data());
+                state.clients = clientsSnap.docs.map(d => d.data());
+                state.products = productsSnap.docs.map(d => d.data());
+                updateProfileUI();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateProfileUI();

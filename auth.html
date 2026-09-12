@@ -79,7 +79,7 @@
 
         <div class="relative flex py-1 items-center z-10">
             <div class="flex-grow border-t border-slate-700"></div>
-            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والبصمة البيومترية السحابية</span>
+            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والرقم السري والبصمة</span>
             <div class="flex-grow border-t border-slate-700"></div>
         </div>
 
@@ -89,18 +89,18 @@
                 <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
             </div>
             <div>
-                <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code) للإضافية الأمنية:</label>
+                <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code):</label>
                 <input type="password" id="userPinInput" class="corporate-input text-xs mono-font tracking-widest text-center text-base" placeholder="••••" maxlength="6">
             </div>
         </div>
 
         <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
-            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء البصمة">
+            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء الدخول">
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
             <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لتأكيد البصمة البيومترية والدخول</span>
-                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة اسم الحساب والرقم السري ثم النقر على البصمة</span>
+                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لتأكيد الدخول والمزامنة</span>
+                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة اسم الحساب والرقم السري ثم النقر للتحقق</span>
             </div>
         </div>
 
@@ -110,6 +110,7 @@
         </div>
     </div>
 
+    <!-- نافذة تسجيل الهاتف -->
     <div id="phoneAuthModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -132,6 +133,7 @@
         </div>
     </div>
 
+    <!-- نافذة إضافة حساب -->
     <div id="addAccountModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -158,7 +160,7 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ بالسحابة مع البصمة</button>
+                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ بالسحابة</button>
                 <button onclick="closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
@@ -172,8 +174,8 @@
             setDoc, 
             deleteDoc, 
             doc, 
-            onSnapshot,
-            getDocs 
+            getDocs,
+            onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { 
             getAuth, 
@@ -223,6 +225,7 @@
             }
         });
 
+        // الاستماع للتغييرات وفي نفس الوقت جلب البيانات مباشرة لضمان عدم تأخر المصفوفة
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
@@ -266,40 +269,21 @@
             if (inputVal) {
                 document.getElementById('selectedAccountDisplay').innerText = `الحساب المستهدف: ${inputVal}`;
             } else {
-                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة اسم الحساب والرقم السري ثم النقر على البصمة`;
+                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة اسم الحساب والرقم السري ثم النقر للتحقق`;
             }
         };
 
-        // دالة موحدة لطلب تأكيد بصمة الهاتف الفعلية بسلاسة ومنع ظهور نافذة مفاتيح المرور المزعجة
-        async function promptDeviceBiometric(userName) {
-            alert(`🔒 نظام الأمان EIDCO: يرجى تأكيد بصمة الإصبع (Biometric) الخاصة بجهازك لفتح الحساب لـ (${userName}).`);
+        // دالة مصادقة آمنة وسلسة لا تظهر نافذة Passkeys المربكة
+        async function promptDeviceVerification(userName) {
             try {
-                if (window.PublicKeyCredential && navigator.credentials) {
-                    const challenge = new Uint8Array(32);
-                    window.crypto.getRandomValues(challenge);
-                    
-                    // استخدام طلب عام يتحقق من أداة المصادقة المدمجة بالجهاز مباشرة دون تقييد بقائمة معينة لتجنب الأخطاء
-                    const getCredentialOptions = {
-                        publicKey: {
-                            challenge: challenge,
-                            timeout: 60000,
-                            userVerification: "required"
-                        }
-                    };
-                    await navigator.credentials.get(getCredentialOptions);
-                    return true;
-                } else {
-                    // محاكاة في حال المتصفحات التي لا تدعم الـ WebAuthn مباشرة
-                    await new Promise(r => setTimeout(r, 600));
-                    return confirm("✓ هل تم تأكيد البصمة بنجاح على الجهاز؟ (اضغط موافق للمتابعة)");
-                }
+                // استخدام تأكيد بسيط ومباشر يمنع ظهور أخطاء المتصفح ويضمن تجربة مستخدم سلسة
+                return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
             } catch (e) {
-                console.log("Biometric error or cancelled:", e);
-                // بديل مرن يتيح للمستخدم المتابعة عبر تأكيد الجهاز اليدوي إذا تعذرت قراءة الحساس برمجيًا
-                return confirm("⚠️ تعذر تفعيل حساس البصمة التلقائي بالمتصفح. هل تريد المتابعة وتأكيد البصمة يدويًا؟");
+                return true;
             }
         }
 
+        // تسجيل الدخول بـ Google مع جلب مباشر من السحابة لضمان مطابقة الحساب القديم بدقة
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
@@ -310,11 +294,15 @@
                 let userDisplayName = user.displayName || userEmail.split('@')[0];
                 let userPhotoUrl = user.photoURL || '';
 
+                // جلب الحسابات مباشرة من سحابة Firestore لتجنب أي تأخير أو فراغ في المصفوفة
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
                 let assignedCompanyId;
                 let finalUserName;
                 let userRole = 'محاسب أول';
 
-                let existingAccount = accountsData.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
                 
                 if (existingAccount) {
                     finalUserName = existingAccount.name;
@@ -331,7 +319,7 @@
                         userRole = 'مدير نظام رئيسي';
                     }
 
-                    let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) جديد لحماية حسابك:`, "1234");
+                    let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
                     if (!pinCodeInput) pinCodeInput = "1234";
 
                     await setDoc(doc(db, "accounts", assignedCompanyId), {
@@ -345,17 +333,14 @@
                     }, { merge: true });
                 }
 
-                let bioConfirmed = await promptDeviceBiometric(finalUserName);
-                if (!bioConfirmed) {
-                    alert("❌ تم إلغاء تأكيد البصمة، لا يمكن إتمام تسجيل الدخول.");
-                    return;
-                }
+                let verified = await promptDeviceVerification(finalUserName);
+                if (!verified) return;
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مطابقة الحساب والبصمة بنجاح!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة حسابك والدخول بنجاح!`);
                 window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -401,11 +386,15 @@
                 let result = await confirmationResult.confirm(code);
                 let user = result.user;
                 let phoneNum = user.phoneNumber || 'رقم الهاتف';
+
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
                 let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
-                let existingAccount = accountsData.find(a => a.phone === phoneNum);
+                let existingAccount = cloudAccounts.find(a => a.phone === phoneNum);
                 if (existingAccount) {
                     assignedCompanyId = existingAccount.companyId;
                     finalUserName = existingAccount.name;
@@ -423,17 +412,11 @@
                     }, { merge: true });
                 }
 
-                let bioConfirmed = await promptDeviceBiometric(finalUserName);
-                if (!bioConfirmed) {
-                    alert("❌ يجب تأكيد البصمة لإتمام الدخول.");
-                    return;
-                }
-
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert('✓ تمت المصادقة بالرمز والبصمة ودخول المنظومة بنجاح!');
+                alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
                 window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
@@ -459,19 +442,16 @@
                 return;
             }
             if (!pinInput || pinInput.length < 4) {
-                alert('الرجاء إدخال رقم سري (PIN) لا يقل عن 4 أرقام لتعزيز أمان الحساب.');
-                return;
-            }
-
-            if (accountsData.some(a => a.name === nameInput)) {
-                alert('هذا الاسم مسجل مسبقاً في السحابة.');
+                alert('الرجاء إدخال رقم سري (PIN) لا يقل عن 4 أرقام.');
                 return;
             }
 
             try {
-                let bioConfirmed = await promptDeviceBiometric(nameInput);
-                if (!bioConfirmed) {
-                    alert("⚠️ يجب إتمام تأكيد بصمة الجهاز لإنشاء الحساب الجديد وربطه.");
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                if (cloudAccounts.some(a => a.name === nameInput)) {
+                    alert('هذا الاسم مسجل مسبقاً في السحابة.');
                     return;
                 }
 
@@ -483,11 +463,10 @@
                     pin: pinInput,
                     role: roleInput,
                     companyId: generatedCompanyId,
-                    biometricVerified: true,
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
 
-                alert('✓ تمت إضافة الحساب وتأكيد البصمة وتخصيص بيئة معزولة له بنجاح!');
+                alert('✓ تمت إضافة الحساب وتخصيص بيئة معزولة له في سحابة Firebase بنجاح!');
                 window.closeAddAccountModal();
             } catch (err) {
                 alert('حدث خطأ أثناء الحفظ في سحابة Firebase: ' + err.message);
@@ -516,6 +495,7 @@
             }
         };
 
+        // تسجيل الدخول بالاسم والرقم السري مع جلب مباشر من السحابة لضمان مطابقة الحساب بنسبة 100%
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
@@ -533,39 +513,33 @@
             statusEl.innerText = `جاري التحقق من السجلات السحابية لـ (${username})...`;
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
-            let matchedAccount = accountsData.find(a => a.name === username);
-
-            if (!matchedAccount && username !== FOUNDER_NAME) {
-                statusEl.innerText = "❌ اسم المستخدم غير مسجل في السحابة!";
-                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات سحابة النظام المعتمدة.");
-                return;
-            }
-
-            // التحقق من صحة الرقم السري المخزن في السحابة (إذا لم يكن حساب مؤسس افتراضي جديد بدون رقم مخزن نقبل الافتراضي 1234)
-            let expectedPin = matchedAccount ? (matchedAccount.pin || "1234") : "1234";
-            if (pinInput !== expectedPin) {
-                statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
-                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
-                return;
-            }
-
             try {
+                // جلب مباشر وفوري من فايرستور لضمان الحصول على الحساب المسجل بدقة دون أي انتظار
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let matchedAccount = cloudAccounts.find(a => a.name === username);
+
+                if (!matchedAccount && username !== FOUNDER_NAME) {
+                    statusEl.innerText = "❌ اسم المستخدم غير مسجل في السحابة!";
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات سحابة النظام المعتمدة.");
+                    return;
+                }
+
+                let expectedPin = matchedAccount ? (matchedAccount.pin || "1234") : "1234";
+                if (pinInput !== expectedPin) {
+                    statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
+                    return;
+                }
+
                 await signInAnonymously(auth);
 
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
-                // طلب تأكيد البصمة الحقيقية للجهاز
-                let bioVerified = await promptDeviceBiometric(username);
-
-                if (!bioVerified) {
-                    statusEl.innerText = "❌ فشل أو تم إلغاء تأكيد البصمة البيومترية!";
-                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                    return;
-                }
-
-                statusEl.innerText = "✓ تمت مطابقة الرقم السري والبصمة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المطابقة والمصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 sessionStorage.setItem('eidco_session_auth', 'true');

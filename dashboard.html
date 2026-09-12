@@ -208,7 +208,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -217,6 +217,7 @@
             onSnapshot, 
             doc, 
             updateDoc, 
+            getDocs,
             query, 
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -253,50 +254,82 @@
 
         let salesChartInstance = null;
         let vaultChartInstance = null;
+        let unsubscribers = [];
 
         signInAnonymously(auth).then(() => {
+            initApp(currentCompanyId);
+        }).catch((err) => {
+            console.error("فشل المصادقة سحابياً لـ Dashboard:", err);
+            initApp(currentCompanyId);
+        });
+
+        async function initApp(companyId) {
+            unsubscribers.forEach(unsub => unsub());
+            unsubscribers = [];
+
             const invoicesCollection = collection(db, "invoices");
             const transactionsCollection = collection(db, "transactions");
             const productsCollection = collection(db, "products");
             const accountsCollection = collection(db, "accounts");
 
-            const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
-            const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
-            const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
-            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
+            const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
+            const productsRef = query(productsCollection, where("companyId", "==", companyId));
+            const accountsRef = query(accountsCollection, where("companyId", "==", companyId));
 
-            onSnapshot(accountsRef, (snapshot) => {
+            // جلب أولي فوري باستخدام getDocs لضمان توفر البيانات مباشرة دون انتظار الـ snapshot
+            try {
+                const [accountsSnap, invoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
+                    getDocs(accountsRef),
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef),
+                    getDocs(productsRef)
+                ]);
+
+                state.accounts = accountsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.invoices = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.products = productsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+
+                if (state.accounts.length > 0) {
+                    document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
+                }
+                updateDashboard();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
+            unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 if (state.accounts.length > 0) {
                     document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
                 }
             }, (error) => {
                 console.error("خطأ في جلب الحسابات سحابياً:", error);
-            });
+            }));
 
-            onSnapshot(invoicesRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
             }, (error) => {
                 console.error("خطأ في جلب الفواتير سحابياً:", error);
-            });
+            }));
 
-            onSnapshot(transactionsRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
             }, (error) => {
                 console.error("خطأ في جلب المعاملات سحابياً:", error);
-            });
+            }));
 
-            onSnapshot(productsRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
             }, (error) => {
                 console.error("خطأ في جلب المنتجات سحابياً:", error);
-            });
-        }).catch((err) => {
-            console.error("فشل المصادقة سحابياً لـ Dashboard:", err);
-        });
+            }));
+        }
 
         function updateDashboard() {
             let adminName = localStorage.getItem('eidco_v14_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');

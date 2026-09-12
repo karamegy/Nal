@@ -197,7 +197,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم العزل التام ومزامنة حية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -251,7 +251,15 @@
             el.innerText = text;
         }
 
-        signInAnonymously(auth).catch(err => console.log("Auth error:", err));
+        signInAnonymously(auth).then(async () => {
+            // جلب أولي فوري باستخدام getDocs للتأكد من الاتصال وجاهزية البيانات
+            try {
+                const testQuery = query(collection(db, "settings"), where("companyId", "==", currentCompanyId));
+                await getDocs(testQuery);
+            } catch (e) {
+                console.error("خطأ في الاتصال الأولي باستخدام getDocs:", e);
+            }
+        }).catch(err => console.log("Auth error:", err));
 
         window.saveCompanyGmail = function() {
             let gmail = document.getElementById('companyGmailInput').value.trim();
@@ -265,7 +273,7 @@
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
-            showStatus('⏳ جاري سحب وتجميع البيانات المعزولة من Firebase...');
+            showStatus('⏳ جاري سحب وتجميع البيانات المعزولة من Firebase باستخدام getDocs...');
             try {
                 let backupData = {
                     companyId: currentCompanyId,
@@ -309,7 +317,7 @@
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
-            showStatus('⏳ جاري إعداد بيانات النسخة الاحتياطية للإرسال عبر Gmail...');
+            showStatus('⏳ جاري إعداد بيانات النسخة الاحتياطية عبر getDocs للإرسال عبر Gmail...');
             try {
                 let summaryText = `نسخة احتياطية وتقارير منصة EIDCO Business OS\nمعرف الشركة: ${currentCompanyId}\nالتاريخ: ${new Date().toLocaleString('ar-EG')}\n\n`;
                 

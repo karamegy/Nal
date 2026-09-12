@@ -159,11 +159,11 @@
         import { 
             getFirestore, 
             collection, 
-            addDoc, 
+            setDoc, 
             deleteDoc, 
             doc, 
             onSnapshot,
-            updateDoc 
+            getDocs 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { 
             getAuth, 
@@ -220,13 +220,14 @@
             }));
 
             if (accountsData.length === 0) {
-                addDoc(accountsRef, {
+                // إنشاء حساب المؤسس بمعرف وثيقة ثابت في فايرستور
+                setDoc(doc(db, "accounts", "company_founder_karm"), {
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
                     biometricCredentialId: 'default_founder_bio',
                     date: new Date().toISOString().split('T')[0]
-                });
+                }, { merge: true });
             }
         });
 
@@ -259,8 +260,8 @@
             }
         };
 
-        // دمج وتسجيل البصمة البيومترية سحابياً مع معرف الحساب والتحقق من التطابق عند الدخول
-        async function mandateBiometricLinking(userName, accountDocId = null) {
+        // دمج وتسجيل البصمة البيومترية سحابياً مع معرف الحساب الثابت
+        async function mandateBiometricLinking(userName, companyId) {
             alert(`🔒 نظام الأمان EIDCO: يرجى تأكيد بصمة الإصبع (Biometric) لربطها وتخزينها لحساب (${userName}).`);
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -283,13 +284,12 @@
                     };
                     const credential = await navigator.credentials.create(createCredentialOptions);
                     
-                    // تحويل معرف البصمة لنص لتخزينه في سحابة الحساب
                     let credIdBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
                     
-                    if (accountDocId) {
-                        await updateDoc(doc(db, "accounts", accountDocId), {
+                    if (companyId) {
+                        await setDoc(doc(db, "accounts", companyId), {
                             biometricCredentialId: credIdBase64
-                        });
+                        }, { merge: true });
                     }
                     alert("✓ تم مسح البصمة وتطابقها وربطها بالحساب سحابياً بنجاح!");
                     return credIdBase64;
@@ -304,7 +304,6 @@
             }
         }
 
-        // مطابقة البصمة عند الدخول
         async function verifyBiometricMatch(accountDoc) {
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
@@ -363,7 +362,6 @@
                     assignedCompanyId = existingAccount.companyId;
                     userRole = existingAccount.role || 'محاسب أول';
                     
-                    // مطابقة وتأكيد البصمة للحساب الموجود
                     let bioSuccess = await verifyBiometricMatch(existingAccount);
                     if (!bioSuccess) return;
                 } else {
@@ -377,17 +375,17 @@
                         userRole = 'مدير نظام رئيسي';
                     }
 
-                    let newDocRef = await addDoc(accountsRef, {
+                    // حفظ أو تحديث الوثيقة بمعرف ثابت مطابق لمعرف الشركة
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
                         name: finalUserName,
                         role: userRole,
                         companyId: assignedCompanyId,
                         email: userEmail,
                         avatar: userPhotoUrl,
                         date: new Date().toISOString().split('T')[0]
-                    });
+                    }, { merge: true });
 
-                    // تسجيل البصمة لأول مرة وربطها بالمعرف الجديد
-                    await mandateBiometricLinking(finalUserName, newDocRef.id);
+                    await mandateBiometricLinking(finalUserName, assignedCompanyId);
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
@@ -451,14 +449,14 @@
                     let bioMatch = await verifyBiometricMatch(existingAccount);
                     if (!bioMatch) return;
                 } else {
-                    let newDocRef = await addDoc(accountsRef, {
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
                         name: finalUserName,
                         role: userRole,
                         companyId: assignedCompanyId,
                         phone: phoneNum,
                         date: new Date().toISOString().split('T')[0]
-                    });
-                    await mandateBiometricLinking(finalUserName, newDocRef.id);
+                    }, { merge: true });
+                    await mandateBiometricLinking(finalUserName, assignedCompanyId);
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
@@ -495,17 +493,18 @@
             }
 
             try {
-                let generatedCompanyId = 'company_' + Date.now();
+                // إنشاء معرف شركة ثابت ونظيف مبني على اسم المستخدم
+                let cleanNameKey = nameInput.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let generatedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
 
-                let newDocRef = await addDoc(accountsRef, {
+                await setDoc(doc(db, "accounts", generatedCompanyId), {
                     name: nameInput,
                     role: roleInput,
                     companyId: generatedCompanyId,
                     date: new Date().toISOString().split('T')[0]
-                });
+                }, { merge: true });
 
-                // تسجيل وربط البصمة الحصرية لهذا الحساب الجديد
-                await mandateBiometricLinking(nameInput, newDocRef.id);
+                await mandateBiometricLinking(nameInput, generatedCompanyId);
 
                 alert('✓ تمت إضافة الحساب وربط البصمة وتخصيص بيئة معزولة له بنجاح!');
                 window.closeAddAccountModal();
@@ -518,23 +517,23 @@
             if (!confirm('هل تريد إعادة تعيين الحسابات للافتراضي وحذف كل الحسابات الأخرى من السحابة؟')) return;
 
             try {
-                for (let acc of accountsData) {
-                    await deleteDoc(doc(db, "accounts", acc.id));
+                const querySnapshot = await getDocs(accountsRef);
+                for (let d of querySnapshot.docs) {
+                    await deleteDoc(doc(db, "accounts", d.id));
                 }
-                await addDoc(accountsRef, {
+                await setDoc(doc(db, "accounts", "company_founder_karm"), {
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
                     biometricCredentialId: 'default_founder_bio',
                     date: new Date().toISOString().split('T')[0]
-                });
+                }, { merge: true });
                 alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
             } catch (err) {
                 alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
         };
 
-        // تنفيذ مصادقة البصمة والتحقق من تطابقها مع المعرف المخزن بالسحابة عند الدخول
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -558,12 +557,13 @@
             try {
                 await signInAnonymously(auth);
 
-                // فحص المطابقة والتحقق البيومتري الفعلي المرتبط بالحساب
                 let bioVerified = true;
+                let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
+
                 if (matchedAccount) {
                     bioVerified = await verifyBiometricMatch(matchedAccount);
                 } else {
-                    bioVerified = await mandateBiometricLinking(username);
+                    bioVerified = await mandateBiometricLinking(username, assignedCompanyId);
                 }
 
                 if (!bioVerified) {
@@ -574,8 +574,6 @@
 
                 statusEl.innerText = "✓ تمت المطابقة والمصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
-
-                let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', username);

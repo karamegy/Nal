@@ -374,7 +374,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -425,6 +425,7 @@
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
         let analyticsChartInstance = null;
+        let unsubscribers = [];
 
         window.purgeAllInvalidData = async function() {
             if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب في السحابة؟')) return;
@@ -450,30 +451,65 @@
         };
 
         signInAnonymously(auth).then(() => {
-            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
-            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
-            const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
-            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
-            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
+            initApp(currentCompanyId);
+        }).catch((err) => {
+            console.error("فشل المصادقة سحابياً:", err);
+            initApp(currentCompanyId);
+        });
 
-            onSnapshot(accountsRef, (snapshot) => {
+        async function initApp(companyId) {
+            unsubscribers.forEach(unsub => unsub());
+            unsubscribers = [];
+
+            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", companyId));
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
+            const productsRef = query(collection(db, "products"), where("companyId", "==", companyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
+
+            // جلب أولي فوري باستخدام getDocs لضمان توفر البيانات مباشرة دون انتظار الـ snapshot
+            try {
+                const [accountsSnap, clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
+                    getDocs(accountsRef),
+                    getDocs(clientsRef),
+                    getDocs(productsRef),
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef)
+                ]);
+
+                state.accounts = accountsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+
+                updateAdminHeader();
+                updateStatsAndDashboard();
+                renderAnalyticsChart();
+                renderRssTicker();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
+            unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateAdminHeader();
-            }, (err) => console.error("Accounts error:", err));
+            }, (err) => console.error("Accounts error:", err)));
 
-            onSnapshot(clientsRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Clients error:", err));
+            }, (err) => console.error("Clients error:", err)));
 
-            onSnapshot(productsRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Products error:", err));
+            }, (err) => console.error("Products error:", err)));
 
-            onSnapshot(invoicesRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
@@ -481,17 +517,14 @@
             }, (err) => {
                 state.invoices = [];
                 updateStatsAndDashboard();
-            });
+            }));
 
-            onSnapshot(transactionsRef, (snapshot) => {
+            unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Transactions error:", err));
-
-        }).catch((err) => {
-            console.error("فشل المصادقة سحابياً:", err);
-        });
+            }, (err) => console.error("Transactions error:", err)));
+        }
 
         function renderRssTicker() {
             let container = document.getElementById('rssTickerContent');

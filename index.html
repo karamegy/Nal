@@ -22,15 +22,15 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; overflow-x: hidden; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; overflow-x: hidden; box-sizing: border-box; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
         .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); border-color: var(--primary); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
 
@@ -115,6 +115,8 @@
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <!-- زر إدارة المستخدمين والصلاحيات (يظهر حصرياً للمؤسس كرم حمدي عبدالعظيم) -->
+                <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
@@ -125,7 +127,7 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
                         <div class="logo-3d-container lg:hidden">
@@ -133,7 +135,7 @@
                                 <i class="fa-solid fa-cube"></i>
                             </div>
                         </div>
-                        <h1 class="font-black text-slate-900 text-sm">لوحة المؤشرات الرئيسية (معزولة ومزامنة لحظياً)</h1>
+                        <h1 class="font-black text-slate-900 text-xs sm:text-sm">لوحة المؤشرات الرئيسية (معزولة ومزامنة لحظياً)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                         <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
@@ -156,18 +158,18 @@
                 </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
 
-                <div class="corporate-card p-6 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                <div class="corporate-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-indigo-50 to-white">
                     <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black overflow-hidden shadow-lg border border-indigo-300 shrink-0">
                             <span id="headerAvatarText">م</span>
                             <img id="headerAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
                         </div>
                         <div>
                             <span class="text-xs text-indigo-600 font-mono font-bold">بيئة العمل المستقلة والمعزولة سحابياً</span>
                             <h2 class="text-xl font-black text-slate-900" id="welcomeAdminName">مسؤول الحساب</h2>
-                            <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
+                            <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1 truncate max-w-[220px] sm:max-w-none" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
                     <a href="tv.html" target="_blank" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 text-decoration-none">
@@ -259,6 +261,11 @@
                             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-id-badge"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">الملف الشخصي</h4><span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span></div>
                         </a>
+                        <!-- بطاقة إدارة المستخدمين والصلاحيات (تظهر حصرياً للمؤسس كرم حمدي عبدالعظيم) -->
+                        <a href="users.html" id="gridUsersCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
+                            <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-users-gear"></i></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">إدارة المستخدمين والصلاحيات</h4><span class="text-[11px] text-slate-500">عرض الحسابات والصلاحيات المسجلة</span></div>
+                        </a>
                         <a href="vault.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500">
                             <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-rose-600 group-hover:text-white transition"><i class="fa-solid fa-vault"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">الخزنة النقدية</h4><span class="text-[11px] text-slate-500">متابعة الإيرادات والمصروفات</span></div>
@@ -338,20 +345,25 @@
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
+            // قصر إعدادات الأمان والبصمة وإدارة المستخدمين على المؤسس كرم حمدي عبدالعظيم فقط
             if (currentAdminName !== FOUNDER_NAME) {
                 const sidebarAuth = document.getElementById('sidebarAuthNavLink');
                 if (sidebarAuth) sidebarAuth.style.display = 'none';
-
-                const headerLock = document.getElementById('headerAuthLockBtn');
-                if (headerLock) headerLock.style.display = 'none';
 
                 const gridAuth = document.getElementById('gridAuthCard');
                 if (gridAuth) gridAuth.style.display = 'none';
 
                 const adminAccountsLink = document.getElementById('sidebarAdminAccountsLink');
                 if (adminAccountsLink) adminAccountsLink.style.display = 'none';
+
+                const sidebarUsers = document.getElementById('sidebarUsersLink');
+                if (sidebarUsers) sidebarUsers.style.display = 'none';
+
+                const gridUsers = document.getElementById('gridUsersCard');
+                if (gridUsers) gridUsers.style.display = 'none';
             }
 
+            // تمرير معرف الجلسة والشركة (companyId) تلقائياً لكافة الروابط الداخلية للحفاظ على الاتصال
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -438,7 +450,6 @@
         };
 
         signInAnonymously(auth).then(() => {
-            // الاستماع للبيانات المعزولة حصرياً عبر معرف الشركة الحالي (Company ID) لضمان الاستقلالية التامة
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));

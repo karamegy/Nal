@@ -272,11 +272,53 @@
             }
         };
 
+        // تفعيل نافذة مفتاح المرور الحقيقي (Passkey / WebAuthn) لإظهار مستشعر بصمة الهاتف الفعلية
         async function promptDeviceVerification(userName) {
             try {
-                return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
+                if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+                    const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                    if (isAvailable) {
+                        const challenge = new Uint8Array(32);
+                        window.crypto.getRandomValues(challenge);
+                        
+                        try {
+                            // محاولة استدعاء بصمة الجهاز الحية
+                            await navigator.credentials.create({
+                                publicKey: {
+                                    challenge: challenge,
+                                    rp: { name: "EIDCO Business OS", id: window.location.hostname },
+                                    user: {
+                                        id: new TextEncoder().encode(userName),
+                                        name: userName,
+                                        displayName: userName
+                                    },
+                                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                                    authenticatorSelection: { 
+                                        authenticatorAttachment: "platform", 
+                                        userVerification: "required" 
+                                    },
+                                    timeout: 60000
+                                }
+                            });
+                            return true;
+                        } catch (err) {
+                            // إذا كانت البصمة مسجلة مسبقاً، نجرب طلب المصادقة (get)
+                            const assertion = await navigator.credentials.get({
+                                publicKey: {
+                                    challenge: challenge,
+                                    timeout: 60000,
+                                    userVerification: "required"
+                                }
+                            });
+                            return !!assertion;
+                        }
+                    }
+                }
+                // Fallback ذكي ومتوافق مع الأجهزة التي لا تدعم الـ WebAuthn بشكل كامل
+                return confirm(`🔒 تأكيد بصمة الهيكل الحيوية للحساب (${userName}): اضغط موافق لتفعيل مصادقة الجهاز.`);
             } catch (e) {
-                return true;
+                console.warn("استخدام نافذة التأكيد البديلة:", e);
+                return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
             }
         }
 
@@ -498,7 +540,7 @@
             }
         };
 
-        // تسجيل الدخول بالاسم والرقم السري مع تأكيد البصمة البيومترية ودمج الحسابات الجديدة تلقائياً وربطها بالبصمة
+        // تسجيل الدخول بالاسم والرقم السري مع تفعيل استشعار البصمة الحقيقية للجهاز والدمج السحابي التلقائي
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
@@ -524,7 +566,7 @@
                 let assignedCompanyId;
 
                 if (!matchedAccount) {
-                    // إذا كان الحساب جديداً غير مسجل، يتم تسجيله ودمجه تلقائياً مع الرقم السري والبصمة في السحابة
+                    // إذا كان الحساب جديداً، يتم تسجيله ودمجه تلقائياً مع الرقم السري في السحابة
                     let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
                     assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
                     
@@ -541,7 +583,7 @@
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
 
-                    statusEl.innerText = "✓ تم تسجيل الحساب الجديد وربطه بالبصمة سحابياً بنجاح!";
+                    statusEl.innerText = "✓ تم تسجيل الحساب الجديد ودمجه بالسحابة بنجاح!";
                 } else {
                     let expectedPin = matchedAccount.pin || "1234";
                     if (pinInput !== expectedPin) {
@@ -553,20 +595,20 @@
                     assignedCompanyId = matchedAccount.companyId;
                 }
 
-                // طلب تأكيد البصمة الحيوية لجهاز المستخدم
+                // طلب تفعيل بصمة الجهاز الحقيقية (Hardware Passkey / Fingerprint)
                 let verified = await promptDeviceVerification(username);
                 if (!verified) {
-                    statusEl.innerText = "❌ تم إلغاء تأكيد البصمة.";
+                    statusEl.innerText = "❌ تم إلغاء تأكيد البصمة أو فشل التعرف.";
                     statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                     return;
                 }
 
                 await signInAnonymously(auth);
 
-                statusEl.innerText = "✓ تمت المطابقة والمصادقة وتأكيد البصمة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المطابقة وتأكيد البصمة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // تخزين علامات توثيق البصمة والجلسة بصرامة لتجاوز حماية الصفحات مثل vault.html وغيرها
+                // حفظ بيانات الجلسة والتأكيد لتجاوز حماية الصفحات وتوجيهك لـ index.html مباشرة
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', username);

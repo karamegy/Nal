@@ -72,7 +72,6 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -81,7 +80,6 @@
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
-                        <!-- معرف الشركة مع وضع truncate وعرض محدد على الهواتف -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
                         <div class="flex items-center gap-2">
@@ -146,7 +144,7 @@
                             <button type="button" onclick="openBarcodeScannerModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
                                 <i class="fa-solid fa-barcode"></i> مسح باركود بالكاميرا
                             </button>
-                            <button type="button" onclick="resetBatchForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إلغاء التعديل</button>
+                            <button type="button" onclick="resetBatchForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إغلاق التعديل</button>
                         </div>
                     </div>
                     
@@ -327,7 +325,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للحسابات -->
+    <!-- Firebase SDK Modules مع دمج getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -524,6 +522,7 @@
             }
         };
 
+        // حفظ الفاتورة المجمعة مع استخدام getDocs لجلب أحدث حالة للمنتجات والمخزن مباشرة من السحابة قبل الحفظ
         window.saveBatchInvoice = async function() {
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار العميل');
@@ -534,53 +533,65 @@
             let rows = document.querySelectorAll('#batchItemsTableBody tr');
             if(!rows.length) return alert('الرجاء إضافة صنف واحد على الأقل');
 
-            let items = [];
-            let itemsSubtotal = 0;
-            let totalProfit = 0;
-
-            for(let row of rows) {
-                let sel = row.querySelector('.item-product');
-                if(!sel || !sel.options[sel.selectedIndex]) continue;
-
-                let code = sel.value;
-                let prodName = sel.options[sel.selectedIndex].text.split(' (')[0];
-                let qty = Number(row.querySelector('.item-qty').value) || 1;
-                let unitPrice = Number(row.querySelector('.item-price').value) || 0;
-                let buyPrice = Number(sel.options[sel.selectedIndex].getAttribute('data-buy')) || 0;
-
-                let subtotal = qty * unitPrice;
-                itemsSubtotal += subtotal;
-                totalProfit += (unitPrice - buyPrice) * qty;
-
-                items.push({ code, prodName, qty, unitPrice, subtotal });
-            }
-
-            let grandTotal = Math.max(0, itemsSubtotal - discount);
-            let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
-            let today = new Date().toISOString().split('T')[0];
-
             try {
+                // جلب المنتجات مباشرة من سحابة Firestore باستخدام getDocs لضمان الموثوقية التامة
+                const productsSnap = await getDocs(query(collection(db, "products"), where("companyId", "==", currentCompanyId)));
+                let cloudProducts = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+
+                let items = [];
+                let itemsSubtotal = 0;
+                let totalProfit = 0;
+
+                for(let row of rows) {
+                    let sel = row.querySelector('.item-product');
+                    if(!sel || !sel.options[sel.selectedIndex]) continue;
+
+                    let code = sel.value;
+                    let prodName = sel.options[sel.selectedIndex].text.split(' (')[0];
+                    let qty = Number(row.querySelector('.item-qty').value) || 1;
+                    let unitPrice = Number(row.querySelector('.item-price').value) || 0;
+                    
+                    let targetProduct = cloudProducts.find(x => x.code === code);
+                    let buyPrice = targetProduct ? Number(targetProduct.buyPrice || 0) : 0;
+
+                    let subtotal = qty * unitPrice;
+                    itemsSubtotal += subtotal;
+                    totalProfit += (unitPrice - buyPrice) * qty;
+
+                    items.push({ code, prodName, qty, unitPrice, subtotal });
+                }
+
+                let grandTotal = Math.max(0, itemsSubtotal - discount);
+                let batchId = editingBatchId || ('BATCH-' + Math.floor(1000 + Math.random() * 9000));
+                let today = new Date().toISOString().split('T')[0];
+
                 if(editingBatchId) {
-                    let oldInv = state.invoices.find(i => i.id === editingBatchId);
-                    if(oldInv && oldInv.items) {
-                        for(let it of oldInv.items) {
-                            let p = state.products.find(x => x.code === it.code);
-                            if(p && p.docId) {
-                                await updateDoc(doc(db, "products", p.docId), { qty: p.qty + it.qty });
+                    const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId), where("id", "==", editingBatchId)));
+                    if(!invoicesSnap.empty) {
+                        let oldInv = invoicesSnap.docs[0].data();
+                        if(oldInv && oldInv.items) {
+                            for(let it of oldInv.items) {
+                                let p = cloudProducts.find(x => x.code === it.code);
+                                if(p && p.docId) {
+                                    await updateDoc(doc(db, "products", p.docId), { qty: p.qty + it.qty });
+                                    p.qty += it.qty; // تحديث محلي مؤقت
+                                }
                             }
                         }
                     }
                 }
 
+                // التحقق من الكميات المتاحة في سحابة المخزن عبر البيانات المحدثة
                 for(let item of items) {
-                    let p = state.products.find(x => x.code === item.code);
+                    let p = cloudProducts.find(x => x.code === item.code);
                     if(!p || p.qty < item.qty) {
                         return alert(`⚠️ الكمية المطلوبة للصنف (${item.prodName}) أكبر من المتاح في المخزن السحابي (${p ? p.qty : 0})`);
                     }
                 }
 
+                // خصم الكميات من المخزن السحابي
                 for(let item of items) {
-                    let p = state.products.find(x => x.code === item.code);
+                    let p = cloudProducts.find(x => x.code === item.code);
                     if(p && p.docId) {
                         await updateDoc(doc(db, "products", p.docId), { qty: p.qty - item.qty });
                     }
@@ -601,17 +612,19 @@
                 };
 
                 const invoicesCollection = collection(db, "invoices");
-                let existingInvDoc = state.invoices.find(i => i.id === batchId);
-                if(existingInvDoc && existingInvDoc.docId) {
-                    await setDoc(doc(db, "invoices", existingInvDoc.docId), newInvoiceData);
+                const existingInvSnap = await getDocs(query(invoicesCollection, where("companyId", "==", currentCompanyId), where("id", "==", batchId)));
+                
+                if(!existingInvSnap.empty) {
+                    await setDoc(doc(db, "invoices", existingInvSnap.docs[0].id), newInvoiceData);
                 } else {
                     await addDoc(invoicesCollection, newInvoiceData);
                 }
 
                 const transactionsCollection = collection(db, "transactions");
-                let oldTxDoc = state.transactions.find(t => t.desc && t.desc.includes(batchId));
-                if(oldTxDoc && oldTxDoc.docId) {
-                    await deleteDoc(doc(db, "transactions", oldTxDoc.docId));
+                const txSnap = await getDocs(query(transactionsCollection, where("companyId", "==", currentCompanyId)));
+                let existingTx = txSnap.docs.find(t => t.data().desc && t.data().desc.includes(batchId));
+                if(existingTx) {
+                    await deleteDoc(doc(db, "transactions", existingTx.id));
                 }
 
                 if(paymentType === 'نقدي') {
@@ -693,14 +706,19 @@
             `).join('');
         }
 
+        // حذف الفاتورة مع استخدام getDocs لجلب المنتجات والتحقق السحابي الفوري
         window.deleteBatchInvoice = async function(id) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إعادة الأصناف للمخزن في السحابة.')) return;
-            let inv = state.invoices.find(i => i.id === id);
-
+            
             try {
+                const productsSnap = await getDocs(query(collection(db, "products"), where("companyId", "==", currentCompanyId)));
+                let cloudProducts = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+
+                let inv = state.invoices.find(i => i.id === id);
+
                 if(inv && inv.items) {
                     for(let it of inv.items) {
-                        let p = state.products.find(x => x.code === it.code);
+                        let p = cloudProducts.find(x => x.code === it.code);
                         if(p && p.docId) {
                             await updateDoc(doc(db, "products", p.docId), { qty: p.qty + it.qty });
                         }
@@ -711,9 +729,10 @@
                     await deleteDoc(doc(db, "invoices", inv.docId));
                 }
 
-                let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
-                if(tx && tx.docId) {
-                    await deleteDoc(doc(db, "transactions", tx.docId));
+                const txSnap = await getDocs(query(collection(db, "transactions"), where("companyId", "==", currentCompanyId)));
+                let tx = txSnap.docs.find(t => t.data().desc && t.data().desc.includes(id));
+                if(tx) {
+                    await deleteDoc(doc(db, "transactions", tx.id));
                 }
 
                 alert('✓ تم حذف الفاتورة وتحديث البيانات السحابية بنجاح');

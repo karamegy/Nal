@@ -75,7 +75,6 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <!-- معرف الشركة مع ضبط العرض والتجاوب -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
@@ -208,6 +207,7 @@
             onSnapshot, 
             doc, 
             setDoc,
+            updateDoc,
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -311,13 +311,20 @@
             }
 
             try {
-                let targetDocId = currentCompanyId + "_main_admin";
-                let userDocRef = doc(db, "accounts", targetDocId);
-                await setDoc(userDocRef, {
-                    companyId: currentCompanyId,
-                    name: val,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                if (state.accounts.length > 0 && state.accounts[0].docId) {
+                    let userDocRef = doc(db, "accounts", state.accounts[0].docId);
+                    await updateDoc(userDocRef, {
+                        name: val,
+                        updatedAt: new Date().toISOString()
+                    });
+                } else {
+                    let userDocRef = doc(db, "accounts", currentCompanyId + "_main_admin");
+                    await setDoc(userDocRef, {
+                        companyId: currentCompanyId,
+                        name: val,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                }
 
                 alert('✓ تم حفظ الاسم في السحابة بنجاح');
             } catch (err) {
@@ -328,32 +335,61 @@
         window.handleImageUpload = function(event) {
             let file = event.target.files[0];
             if(!file) return;
+
             let reader = new FileReader();
-            reader.onload = async function(e) {
-                let base64String = e.target.result;
+            reader.onload = function(e) {
+                let imgObj = new Image();
+                imgObj.src = e.target.result;
+                imgObj.onload = async function() {
+                    let canvas = document.createElement('canvas');
+                    let maxDim = 300;
+                    let width = imgObj.width;
+                    let height = imgObj.height;
+                    
+                    if (width > height) {
+                        if (width > maxDim) { height *= maxDim / width; width = maxDim; }
+                    } else {
+                        if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    let ctx = canvas.getContext('2d');
+                    ctx.drawImage(imgObj, 0, 0, width, height);
+                    
+                    let base64String = canvas.toDataURL('image/jpeg', 0.7);
 
-                let img = document.getElementById('profileAvatarImg');
-                img.src = base64String;
-                img.classList.remove('hidden');
-                document.getElementById('profileAvatarText').classList.add('hidden');
+                    let img = document.getElementById('profileAvatarImg');
+                    img.src = base64String;
+                    img.classList.remove('hidden');
+                    document.getElementById('profileAvatarText').classList.add('hidden');
 
-                if (!auth.currentUser) {
-                    try { await signInAnonymously(auth); } catch(e) {}
-                }
+                    if (!auth.currentUser) {
+                        try { await signInAnonymously(auth); } catch(e) {}
+                    }
 
-                try {
-                    let targetDocId = currentCompanyId + "_main_admin";
-                    let userDocRef = doc(db, "accounts", targetDocId);
-                    await setDoc(userDocRef, {
-                        companyId: currentCompanyId,
-                        avatar: base64String,
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true });
+                    try {
+                        let userDocRef;
+                        if (state.accounts.length > 0 && state.accounts[0].docId) {
+                            userDocRef = doc(db, "accounts", state.accounts[0].docId);
+                            await updateDoc(userDocRef, {
+                                avatar: base64String,
+                                updatedAt: new Date().toISOString()
+                            });
+                        } else {
+                            userDocRef = doc(db, "accounts", currentCompanyId + "_main_admin");
+                            await setDoc(userDocRef, {
+                                companyId: currentCompanyId,
+                                avatar: base64String,
+                                updatedAt: new Date().toISOString()
+                            }, { merge: true });
+                        }
 
-                    alert('✓ تم رفع الصورة للسحابة بنجاح');
-                } catch(err) {
-                    alert('خطأ أثناء رفع الصورة للسحابة: ' + err.message);
-                }
+                        alert('✓ تم رفع الصورة للسحابة بنجاح');
+                    } catch(err) {
+                        alert('خطأ أثناء رفع الصورة للسحابة: ' + err.message);
+                    }
+                };
             };
             reader.readAsDataURL(file);
         };

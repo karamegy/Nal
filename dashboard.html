@@ -117,7 +117,7 @@
                 <div class="corporate-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-indigo-900 to-slate-900 text-white">
                     <div class="space-y-1">
                         <span class="text-xs text-indigo-300 font-mono font-bold">إدارة النظام المركزية السحابية المعزولة</span>
-                        <h2 class="text-xl font-black" id="dashAdminName">كرم حمدي عبدالعظيم</h2>
+                        <h2 class="text-xl font-black" id="dashAdminName">جاري التحميل...</h2>
                         <p class="text-xs text-slate-300">مراقبة حية سحابياً لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
                     </div>
                     <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold">
@@ -198,6 +198,11 @@
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
+            const badgeEl = document.getElementById('companyBadgeDisplay');
+            if(badgeEl) {
+                badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+            }
+
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -239,11 +244,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
-        const badgeEl = document.getElementById('companyBadgeDisplay');
-        if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
-        }
 
         let state = {
             invoices: [],
@@ -291,9 +291,10 @@
                 state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 state.products = productsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
 
-                if (state.accounts.length > 0) {
-                    document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
-                }
+                let accountDoc = state.accounts.find(acc => acc.companyId === companyId) || state.accounts[0] || {};
+                let adminName = localStorage.getItem('eidco_admin_' + companyId) || accountDoc.name || companyId;
+                document.getElementById('dashAdminName').innerText = adminName;
+
                 updateDashboard();
             } catch (e) {
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
@@ -302,9 +303,9 @@
             // الاستماع للتغييرات اللحظية سحابياً
             unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                if (state.accounts.length > 0) {
-                    document.getElementById('dashAdminName').innerText = state.accounts[0].name || 'كرم حمدي عبدالعظيم';
-                }
+                let accountDoc = state.accounts.find(acc => acc.companyId === companyId) || state.accounts[0] || {};
+                let adminName = localStorage.getItem('eidco_admin_' + companyId) || accountDoc.name || companyId;
+                document.getElementById('dashAdminName').innerText = adminName;
             }, (error) => {
                 console.error("خطأ في جلب الحسابات سحابياً:", error);
             }));
@@ -332,7 +333,8 @@
         }
 
         function updateDashboard() {
-            let adminName = localStorage.getItem('eidco_v14_admin') || (state.accounts[0] ? state.accounts[0].name : 'كرم حمدي عبدالعظيم');
+            let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || state.accounts[0] || {};
+            let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || currentCompanyId;
             document.getElementById('dashAdminName').innerText = adminName;
 
             let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);

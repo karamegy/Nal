@@ -10,7 +10,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        // التحقق الصحيح والآمن من الجلسة والبصمة
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -42,7 +41,6 @@
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -65,9 +63,7 @@
             </nav>
         </aside>
 
-        <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- الهيدر المتجاوب مع الموبايل -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
@@ -91,7 +87,6 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -122,14 +117,12 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- بطاقات الملخص المالي -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="corporate-card p-4 text-center border-t-4 border-t-cyan-500"><span class="text-xs text-slate-500">الإيرادات</span><div class="text-lg font-black text-cyan-600 mono-font mt-1" id="totalIncome">0 ج.م</div></div>
                     <div class="corporate-card p-4 text-center border-t-4 border-t-purple-500"><span class="text-xs text-slate-500">المصروفات</span><div class="text-lg font-black text-purple-600 mono-font mt-1" id="totalExpense">0 ج.م</div></div>
                     <div class="corporate-card p-4 text-center border-t-4 border-t-emerald-500"><span class="text-xs text-slate-500">الصافي</span><div class="text-lg font-black text-emerald-600 mono-font mt-1" id="netVault">0 ج.م</div></div>
                 </div>
 
-                <!-- جدول حركات الخزنة -->
                 <div class="corporate-card p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية (مزامنة معزولة سحابياً)</h3>
@@ -157,7 +150,6 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة / تعديل حركة نقدية -->
     <div id="txModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
             <h3 id="modalTitle" class="font-bold text-sm text-slate-900">تسجيل حركة نقدية جديدة سحابياً</h3>
@@ -187,7 +179,6 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
@@ -211,7 +202,6 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -305,18 +295,20 @@
 
             tbody.innerHTML = transactionsList.map(t => {
                 let safeDate = (t.date && t.date !== 'undefined') ? t.date : new Date().toISOString().split('T')[0];
+                // معالجة رقم الحركة لضمان عدم ظهور undefined نهائياً واستخراج معرف بديل إن وجد
+                let displayId = t.id || t.invoiceId || (t.docId ? 'TX-' + t.docId.substring(0, 5) : 'TX-000');
                 return `
                     <tr class="hover:bg-slate-50">
-                        <td class="p-4 mono-font text-indigo-600 font-bold">${t.id}</td>
+                        <td class="p-4 mono-font text-indigo-600 font-bold">${displayId}</td>
                         <td class="p-4 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
                         <td class="p-4 mono-font font-bold">${Number(t.amount || 0).toLocaleString()} ج.م</td>
                         <td class="p-4 text-slate-600">${t.desc || ''}</td>
                         <td class="p-4 mono-font text-slate-500">${safeDate}</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="window.editTx('${t.id}', '${t.docId || ''}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="تعديل">
+                            <button onclick="window.editTx('${displayId}', '${t.docId || ''}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="تعديل">
                                 <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
                             </button>
-                            <button onclick="window.deleteTx('${t.id}', '${t.docId || ''}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="حذف">
+                            <button onclick="window.deleteTx('${displayId}', '${t.docId || ''}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="حذف">
                                 <i class="fa-solid fa-trash ml-1"></i> حذف
                             </button>
                         </td>
@@ -343,8 +335,10 @@
             let t = transactionsList.find(x => (docId && x.docId === docId) || x.id === id);
             if(!t) return;
 
-            document.getElementById('modalTitle').innerText = `تعديل الحركة (${t.id})`;
-            document.getElementById('editTxId').value = t.id;
+            let displayId = t.id || t.invoiceId || (t.docId ? 'TX-' + t.docId.substring(0, 5) : 'TX-000');
+
+            document.getElementById('modalTitle').innerText = `تعديل الحركة (${displayId})`;
+            document.getElementById('editTxId').value = t.id || displayId;
             document.getElementById('editDocId').value = t.docId || '';
             document.getElementById('txType').value = t.type;
             document.getElementById('txAmount').value = t.amount;
@@ -405,7 +399,7 @@
             try {
                 let targetDocId = docId;
                 if(!targetDocId) {
-                    let t = transactionsList.find(x => x.id === id);
+                    let t = transactionsList.find(x => x.id === id || (x.docId && x.docId.includes(id)));
                     if(t) targetDocId = t.docId;
                 }
 
@@ -446,7 +440,6 @@
         };
     </script>
 
-    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
             <span class="relative flex h-3 w-3">

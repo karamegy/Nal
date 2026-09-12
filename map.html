@@ -27,20 +27,20 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         #leafletMap { height: 68vh; min-height: 520px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
         
         .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 250px; transition: all 0.3s ease; }
         .touch-control-panel.collapsed { width: 44px; height: 44px; overflow: hidden; padding: 8px; }
         .touch-control-panel.collapsed .panel-content { display: none; }
-        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; }
+        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; box-sizing: border-box; }
         .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
         
         #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
@@ -48,6 +48,13 @@
     </style>
 
     <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+
         window.openAddVehicleModal = function() {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
@@ -90,6 +97,7 @@
 </head>
 <body>
     <div class="flex min-h-screen">
+        <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -112,17 +120,57 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <div class="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 class="font-black text-slate-900 text-sm">نظام الملاحة وتتبع الأسطول والشحنات الحية (GPS - سحابياً بالكامل)</h1>
-                    <div class="flex items-center gap-3">
-                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
-                        <span id="connectionBadge" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold font-mono border border-emerald-200">
-                            <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة المعزولة (لحظي)
+            <!-- الهيدر المحدث والمتجاوب مع الشاشات الصغيرة -->
+            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div class="flex items-center justify-between w-full lg:w-auto gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <!-- زر القائمة الجانبية للموبايل -->
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                                <i class="fa-solid fa-bars text-lg"></i>
+                            </button>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">نظام الملاحة وتتبع الأسطول والشحنات الحية <span class="hidden sm:inline text-slate-500 font-normal">(GPS - سحابياً بالكامل)</span></h1>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
+                        <!-- معرف الشركة مع وضع truncate وعرض محدد على الهواتف -->
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <span id="connectionBadge" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 text-[10px] sm:text-[11px] font-bold font-mono border border-emerald-200 truncate">
+                            <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة
                         </span>
                     </div>
                 </div>
             </header>
+
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
+            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+                <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                            <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <nav class="space-y-1.5 flex-1">
+                        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                        <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                        <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                        <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                        <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                        <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                        <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                        <a href="map.html" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                        <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+                    </nav>
+                </div>
+            </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
                 <div id="geofenceAlertBanner">

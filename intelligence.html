@@ -222,7 +222,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -231,7 +231,10 @@
             setDoc, 
             onSnapshot,
             collection,
-            addDoc 
+            addDoc,
+            getDocs,
+            query,
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -257,8 +260,18 @@
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
         }
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
+
+            // جلب أولي فوري باستخدام getDocs / استعلامات عند الحاجة لضمان توفر البيانات مباشرة
+            try {
+                const logsRef = collection(db, "learning_logs");
+                const q = query(logsRef, where("companyId", "==", currentCompanyId));
+                const querySnapshot = await getDocs(q);
+                // البيانات متاحة إن احتجت لمعالجتها أولياً
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
 
             onSnapshot(settingsDocRef, (docSnap) => {
                 if (docSnap.exists()) {

@@ -298,7 +298,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل تام للبيانات -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -308,6 +308,7 @@
             deleteDoc, 
             doc, 
             updateDoc, 
+            getDocs,
             onSnapshot,
             query,
             where 
@@ -353,7 +354,7 @@
             initApp(currentCompanyId);
         });
 
-        function initApp(companyId) {
+        async function initApp(companyId) {
             unsubscribers.forEach(unsub => unsub());
             unsubscribers = [];
 
@@ -367,6 +368,26 @@
             const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
             const paymentsRef = query(paymentsCollection, where("companyId", "==", companyId));
 
+            // جلب أولي فوري باستخدام getDocs لضمان توفر البيانات مباشرة دون انتظار الـ snapshot
+            try {
+                const [clientsSnap, invoicesSnap, transactionsSnap, paymentsSnap] = await Promise.all([
+                    getDocs(clientsRef),
+                    getDocs(invoicesRef),
+                    getDocs(transactionsRef),
+                    getDocs(paymentsRef)
+                ]);
+
+                state.clients = clientsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.invoices = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.payments = paymentsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+
+                renderClients();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();

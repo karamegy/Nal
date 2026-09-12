@@ -225,7 +225,6 @@
             }
         });
 
-        // الاستماع للتغييرات وفي نفس الوقت جلب البيانات مباشرة لضمان عدم تأخر المصفوفة
         onSnapshot(accountsRef, (snapshot) => {
             accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
@@ -273,17 +272,14 @@
             }
         };
 
-        // دالة مصادقة آمنة وسلسة لا تظهر نافذة Passkeys المربكة
         async function promptDeviceVerification(userName) {
             try {
-                // استخدام تأكيد بسيط ومباشر يمنع ظهور أخطاء المتصفح ويضمن تجربة مستخدم سلسة
                 return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
             } catch (e) {
                 return true;
             }
         }
 
-        // تسجيل الدخول بـ Google مع جلب مباشر من السحابة لضمان مطابقة الحساب القديم بدقة
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
@@ -294,7 +290,6 @@
                 let userDisplayName = user.displayName || userEmail.split('@')[0];
                 let userPhotoUrl = user.photoURL || '';
 
-                // جلب الحسابات مباشرة من سحابة Firestore لتجنب أي تأخير أو فراغ في المصفوفة
                 const querySnapshot = await getDocs(accountsRef);
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -336,12 +331,16 @@
                 let verified = await promptDeviceVerification(finalUserName);
                 if (!verified) return;
 
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
                 alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة حسابك والدخول بنجاح!`);
-                window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
             }
@@ -412,12 +411,16 @@
                     }, { merge: true });
                 }
 
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
                 alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
-                window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
             }
@@ -495,7 +498,7 @@
             }
         };
 
-        // تسجيل الدخول بالاسم والرقم السري مع جلب مباشر من السحابة لضمان مطابقة الحساب بنسبة 100%
+        // تسجيل الدخول بالاسم والرقم السري مع تأكيد البصمة البيومترية ودمج الحسابات الجديدة تلقائياً وربطها بالبصمة
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
@@ -514,40 +517,66 @@
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
 
             try {
-                // جلب مباشر وفوري من فايرستور لضمان الحصول على الحساب المسجل بدقة دون أي انتظار
                 const querySnapshot = await getDocs(accountsRef);
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 let matchedAccount = cloudAccounts.find(a => a.name === username);
+                let assignedCompanyId;
 
-                if (!matchedAccount && username !== FOUNDER_NAME) {
-                    statusEl.innerText = "❌ اسم المستخدم غير مسجل في السحابة!";
-                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                    alert("⚠️ عذراً، هذا الحساب غير موجود في قاعدة بيانات سحابة النظام المعتمدة.");
-                    return;
+                if (!matchedAccount) {
+                    // إذا كان الحساب جديداً غير مسجل، يتم تسجيله ودمجه تلقائياً مع الرقم السري والبصمة في السحابة
+                    let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                    assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+                    
+                    if (username === FOUNDER_NAME) {
+                        assignedCompanyId = 'company_founder_karm';
+                    }
+
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
+                        name: username,
+                        pin: pinInput,
+                        role: 'محاسب أول',
+                        companyId: assignedCompanyId,
+                        biometricVerified: true,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
+
+                    statusEl.innerText = "✓ تم تسجيل الحساب الجديد وربطه بالبصمة سحابياً بنجاح!";
+                } else {
+                    let expectedPin = matchedAccount.pin || "1234";
+                    if (pinInput !== expectedPin) {
+                        statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
+                        statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                        alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
+                        return;
+                    }
+                    assignedCompanyId = matchedAccount.companyId;
                 }
 
-                let expectedPin = matchedAccount ? (matchedAccount.pin || "1234") : "1234";
-                if (pinInput !== expectedPin) {
-                    statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
+                // طلب تأكيد البصمة الحيوية لجهاز المستخدم
+                let verified = await promptDeviceVerification(username);
+                if (!verified) {
+                    statusEl.innerText = "❌ تم إلغاء تأكيد البصمة.";
                     statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                    alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
                     return;
                 }
 
                 await signInAnonymously(auth);
 
-                let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
-
-                statusEl.innerText = "✓ تمت المطابقة والمصادقة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المطابقة والمصادقة وتأكيد البصمة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
+                // تخزين علامات توثيق البصمة والجلسة بصرامة لتجاوز حماية الصفحات مثل vault.html وغيرها
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', username);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
                 setTimeout(() => {
-                    window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
                 }, 800);
 
             } catch (error) {

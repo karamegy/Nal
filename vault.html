@@ -211,7 +211,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وعزل companyId -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -222,6 +222,7 @@
             doc, 
             updateDoc, 
             onSnapshot,
+            getDocs,
             query,
             where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -252,13 +253,28 @@
         let transactionsList = [];
         let invoicesList = [];
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const transactionsCollection = collection(db, "transactions");
             const invoicesCollection = collection(db, "invoices");
 
             const transactionsRef = query(transactionsCollection, where("companyId", "==", currentCompanyId));
             const invoicesRef = query(invoicesCollection, where("companyId", "==", currentCompanyId));
 
+            // جلب أولي فوري باستخدام getDocs
+            try {
+                const [transactionsSnap, invoicesSnap] = await Promise.all([
+                    getDocs(transactionsRef),
+                    getDocs(invoicesRef)
+                ]);
+
+                transactionsList = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                invoicesList = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderVault();
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
+
+            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(transactionsRef, (snapshot) => {
                 transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 window.renderVault();

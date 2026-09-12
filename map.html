@@ -399,7 +399,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع مزامنة سحابية لحظية وبدون اعتمادات محلية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -410,6 +410,7 @@
             setDoc,
             deleteDoc,
             addDoc,
+            getDocs,
             query,
             where
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -562,10 +563,22 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        signInAnonymously(auth).then(() => {
+        signInAnonymously(auth).then(async () => {
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
             const shipmentsRef = query(collection(db, "shipments"), where("companyId", "==", currentCompanyId));
+
+            // جلب أولي فوري باستخدام getDocs
+            try {
+                const [clientsSnap, fleetSnap, shipmentsSnap] = await Promise.all([
+                    getDocs(clientsRef),
+                    getDocs(fleetRef),
+                    getDocs(shipmentsRef)
+                ]);
+                // البيانات جاهزة للاستخدام الأولي الفوري
+            } catch (e) {
+                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+            }
 
             let fleetMarkers = {};
             onSnapshot(fleetRef, (snapshot) => {

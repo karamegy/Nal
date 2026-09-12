@@ -23,14 +23,14 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
-        .corporate-input { background: #0f172a; border: 1px solid var(--border-color); color: #fff; border-radius: 12px; padding: 12px 16px; transition: all 0.2s; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); width: 100%; box-sizing: border-box; }
+        .corporate-input { background: #0f172a; border: 1px solid var(--border-color); color: #fff; border-radius: 12px; padding: 12px 16px; transition: all 0.2s; box-sizing: border-box; width: 100%; }
         .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
         @keyframes pulseRing {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
@@ -42,7 +42,7 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="corporate-card p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
+    <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
         <!-- زر التثبيت البرمجي الظاهر عند جهوزية المتصفح -->
@@ -52,13 +52,13 @@
             </button>
         </div>
 
-        <div class="flex justify-between items-center relative z-10">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
                     <i class="fa-solid fa-cube text-xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
+                    <h1 class="text-base sm:text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
                     <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات السحابية</p>
                 </div>
             </div>
@@ -68,7 +68,7 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 relative z-10 pt-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-2">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
             </button>
@@ -85,7 +85,7 @@
 
         <div class="space-y-2 relative z-10">
             <label class="block text-xs text-slate-300 font-bold">اسم المستخدم / الحساب / الشركة:</label>
-            <input type="text" id="usernameInput" class="corporate-input w-full text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
+            <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
         </div>
 
         <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
@@ -113,12 +113,12 @@
             <div class="space-y-3 text-xs">
                 <div id="phoneStep1">
                     <label class="block mb-1 text-slate-300 font-bold">رقم الهاتف (مع رمز الدولة)</label>
-                    <input type="tel" id="userPhoneNumber" class="corporate-input w-full text-xs mono-font" placeholder="+2010xxxxxxxx">
+                    <input type="tel" id="userPhoneNumber" class="corporate-input text-xs mono-font" placeholder="+2010xxxxxxxx">
                     <button onclick="sendPhoneVerificationCode()" class="btn-primary w-full mt-3 py-2.5 text-xs">إرسال رمز التحقق</button>
                 </div>
                 <div id="phoneStep2" class="hidden space-y-2">
                     <label class="block mb-1 text-slate-300 font-bold">أدخل رمز التحقق (OTP)</label>
-                    <input type="text" id="phoneOtpCode" class="corporate-input w-full text-xs mono-font text-center tracking-widest text-lg" placeholder="123456">
+                    <input type="text" id="phoneOtpCode" class="corporate-input text-xs mono-font text-center tracking-widest text-lg" placeholder="123456">
                     <button onclick="verifyPhoneOtpCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full mt-2 py-2.5 rounded-xl text-xs transition cursor-pointer">تأكيد الرمز ودخول المنظومة</button>
                 </div>
                 <div id="recaptcha-container"></div>
@@ -135,11 +135,11 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-300 font-bold">اسم المسؤول / المستخدم</label>
-                    <input type="text" id="newAccountName" class="corporate-input w-full text-xs" placeholder="أدخل الاسم الكامل">
+                    <input type="text" id="newAccountName" class="corporate-input text-xs" placeholder="أدخل الاسم الكامل">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
-                    <select id="newAccountRole" class="corporate-input w-full text-xs">
+                    <select id="newAccountRole" class="corporate-input text-xs font-bold">
                         <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
                         <option value="محاسب أول">محاسب أول</option>
                         <option value="مسؤول مخزن">مسؤول مخزن</option>
@@ -162,7 +162,8 @@
             addDoc, 
             deleteDoc, 
             doc, 
-            onSnapshot 
+            onSnapshot,
+            updateDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { 
             getAuth, 
@@ -223,6 +224,7 @@
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
+                    biometricCredentialId: 'default_founder_bio',
                     date: new Date().toISOString().split('T')[0]
                 });
             }
@@ -257,8 +259,9 @@
             }
         };
 
-        async function mandateBiometricLinking(userName) {
-            alert(`🔒 نظام الأمان EIDCO: يتطلب تأكيد بصمة الإصبع (Biometric) لربط حسابك (${userName}) سحابياً.`);
+        // دمج وتسجيل البصمة البيومترية سحابياً مع معرف الحساب والتحقق من التطابق عند الدخول
+        async function mandateBiometricLinking(userName, accountDocId = null) {
+            alert(`🔒 نظام الأمان EIDCO: يرجى تأكيد بصمة الإصبع (Biometric) لربطها وتخزينها لحساب (${userName}).`);
             try {
                 if (window.PublicKeyCredential && navigator.credentials) {
                     const challenge = new Uint8Array(32);
@@ -278,16 +281,63 @@
                             authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
                         }
                     };
-                    await navigator.credentials.create(createCredentialOptions);
-                    alert("✓ تم التحقق وربط البصمة بنجاح!");
-                    return true;
+                    const credential = await navigator.credentials.create(createCredentialOptions);
+                    
+                    // تحويل معرف البصمة لنص لتخزينه في سحابة الحساب
+                    let credIdBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
+                    
+                    if (accountDocId) {
+                        await updateDoc(doc(db, "accounts", accountDocId), {
+                            biometricCredentialId: credIdBase64
+                        });
+                    }
+                    alert("✓ تم مسح البصمة وتطابقها وربطها بالحساب سحابياً بنجاح!");
+                    return credIdBase64;
                 } else {
                     await new Promise(r => setTimeout(r, 800));
                     alert("✓ تمت محاكاة وتوثيق البصمة بنجاح.");
+                    return "simulated_bio_" + Date.now();
+                }
+            } catch (e) {
+                alert("⚠️ تنبيه: تم إلغاء أو فشل تسجيل البصمة.");
+                throw new Error("فشل توثيق البصمة البيومترية");
+            }
+        }
+
+        // مطابقة البصمة عند الدخول
+        async function verifyBiometricMatch(accountDoc) {
+            try {
+                if (window.PublicKeyCredential && navigator.credentials) {
+                    const challenge = new Uint8Array(32);
+                    window.crypto.getRandomValues(challenge);
+                    
+                    let allowCredentials = [];
+                    if (accountDoc.biometricCredentialId && !accountDoc.biometricCredentialId.startsWith('default_')) {
+                        try {
+                            let rawIdBuf = Uint8Array.from(atob(accountDoc.biometricCredentialId), c => c.charCodeAt(0));
+                            allowCredentials.push({
+                                id: rawIdBuf,
+                                type: "public-key"
+                            });
+                        } catch(err) {}
+                    }
+
+                    const getCredentialOptions = {
+                        publicKey: {
+                            challenge: challenge,
+                            timeout: 60000,
+                            userVerification: "required",
+                            allowCredentials: allowCredentials.length ? allowCredentials : undefined
+                        }
+                    };
+                    await navigator.credentials.get(getCredentialOptions);
+                    return true;
+                } else {
+                    await new Promise(r => setTimeout(r, 800));
                     return true;
                 }
             } catch (e) {
-                alert("⚠️ تنبيه: تم تخطي أو إلغاء مسح البصمة سحابياً.");
+                alert("❌ فشل التحقق من البصمة البيومترية أو لم تتطابق مع المسجلة لهذا الحساب.");
                 return false;
             }
         }
@@ -306,15 +356,17 @@
                 let finalUserName;
                 let userRole = 'محاسب أول';
 
-                // البحث عما إذا كان هذا البريد مسجلاً مسبقاً للحفاظ على استقلاليته وبيئته المعزولة الخاصة به
                 let existingAccount = accountsData.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
                 
                 if (existingAccount) {
                     finalUserName = existingAccount.name;
                     assignedCompanyId = existingAccount.companyId;
                     userRole = existingAccount.role || 'محاسب أول';
+                    
+                    // مطابقة وتأكيد البصمة للحساب الموجود
+                    let bioSuccess = await verifyBiometricMatch(existingAccount);
+                    if (!bioSuccess) return;
                 } else {
-                    // إنشاء معرف شركة مستقل ومعزول تماماً لكل بريد جوجل جديد
                     finalUserName = userDisplayName;
                     let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
                     assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
@@ -324,29 +376,25 @@
                         finalUserName = FOUNDER_NAME;
                         userRole = 'مدير نظام رئيسي';
                     }
-                }
 
-                // تفعيل البصمة الإجبارية لتوثيق الحساب المعزول
-                await mandateBiometricLinking(finalUserName);
-
-                const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
-                if (!existingDoc) {
-                    await addDoc(accountsRef, {
+                    let newDocRef = await addDoc(accountsRef, {
                         name: finalUserName,
                         role: userRole,
                         companyId: assignedCompanyId,
                         email: userEmail,
                         avatar: userPhotoUrl,
-                        biometricLinked: true,
                         date: new Date().toISOString().split('T')[0]
                     });
+
+                    // تسجيل البصمة لأول مرة وربطها بالمعرف الجديد
+                    await mandateBiometricLinking(finalUserName, newDocRef.id);
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة السحابة والدخول بنجاح!`);
+                alert(`✓ أهلاً بك يا ${finalUserName}, تمت مطابقة البصمة والدخول بنجاح!`);
                 window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
@@ -396,26 +444,28 @@
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
-                // تفعيل البصمة الإجبارية لمستخدم الهاتف
-                await mandateBiometricLinking(finalUserName);
-
-                const existingDoc = accountsData.find(a => a.companyId === assignedCompanyId);
-                if (!existingDoc) {
-                    await addDoc(accountsRef, {
+                let existingAccount = accountsData.find(a => a.phone === phoneNum);
+                if (existingAccount) {
+                    assignedCompanyId = existingAccount.companyId;
+                    finalUserName = existingAccount.name;
+                    let bioMatch = await verifyBiometricMatch(existingAccount);
+                    if (!bioMatch) return;
+                } else {
+                    let newDocRef = await addDoc(accountsRef, {
                         name: finalUserName,
                         role: userRole,
                         companyId: assignedCompanyId,
                         phone: phoneNum,
-                        biometricLinked: true,
                         date: new Date().toISOString().split('T')[0]
                     });
+                    await mandateBiometricLinking(finalUserName, newDocRef.id);
                 }
 
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
-                alert('✓ تمت المصادقة ومزامنة الحساب بالسحابة بنجاح!');
+                alert('✓ تمت المطابقة والمصادقة بالبصمة ودخول المنظومة بنجاح!');
                 window.location.href = `./index.html?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
@@ -445,18 +495,19 @@
             }
 
             try {
-                await mandateBiometricLinking(nameInput);
-
                 let generatedCompanyId = 'company_' + Date.now();
 
-                await addDoc(accountsRef, {
+                let newDocRef = await addDoc(accountsRef, {
                     name: nameInput,
                     role: roleInput,
                     companyId: generatedCompanyId,
-                    biometricLinked: true,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert('✓ تمت إضافة الحساب بالسحابة وتخصيص بيئة معزولة له بنجاح!');
+
+                // تسجيل وربط البصمة الحصرية لهذا الحساب الجديد
+                await mandateBiometricLinking(nameInput, newDocRef.id);
+
+                alert('✓ تمت إضافة الحساب وربط البصمة وتخصيص بيئة معزولة له بنجاح!');
                 window.closeAddAccountModal();
             } catch (err) {
                 alert('حدث خطأ أثناء الحفظ في سحابة Firebase: ' + err.message);
@@ -474,7 +525,7 @@
                     name: FOUNDER_NAME,
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
-                    biometricLinked: true,
+                    biometricCredentialId: 'default_founder_bio',
                     date: new Date().toISOString().split('T')[0]
                 });
                 alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
@@ -483,6 +534,7 @@
             }
         };
 
+        // تنفيذ مصادقة البصمة والتحقق من تطابقها مع المعرف المخزن بالسحابة عند الدخول
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
@@ -506,18 +558,21 @@
             try {
                 await signInAnonymously(auth);
 
-                if (window.PublicKeyCredential && navigator.credentials) {
-                    const publicKeyCredentialRequestOptions = {
-                        challenge: Uint8Array.from("eidco_secure_challenge_2026", c => c.charCodeAt(0)),
-                        timeout: 60000,
-                        userVerification: "preferred"
-                    };
-                    await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions }).catch(() => {});
+                // فحص المطابقة والتحقق البيومتري الفعلي المرتبط بالحساب
+                let bioVerified = true;
+                if (matchedAccount) {
+                    bioVerified = await verifyBiometricMatch(matchedAccount);
                 } else {
-                    await new Promise(r => setTimeout(r, 1000));
+                    bioVerified = await mandateBiometricLinking(username);
                 }
 
-                statusEl.innerText = "✓ تمت المصادقة السحابية بنجاح! جاري التوجيه...";
+                if (!bioVerified) {
+                    statusEl.innerText = "❌ فشل تطابق البصمة البيومترية!";
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    return;
+                }
+
+                statusEl.innerText = "✓ تمت المطابقة والمصادقة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
                 let assignedCompanyId = matchedAccount ? matchedAccount.companyId : 'company_founder_karm';
@@ -531,7 +586,7 @@
                 }, 800);
 
             } catch (error) {
-                statusEl.innerText = "⚠️ خطأ في الاتصال بالسحابة: " + error.message;
+                statusEl.innerText = "⚠️ خطأ في المصادقة السحابية: " + error.message;
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
             }
         };

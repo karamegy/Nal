@@ -26,13 +26,13 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
@@ -41,7 +41,7 @@
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية الموحدة -->
+        <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
@@ -66,20 +66,62 @@
 
         <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
-                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h1 class="font-black text-slate-900 text-sm">الصندوق والخزنة النقدية (سحابياً بالكامل)</h1>
-                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-mono font-bold">معرف الشركة: جاري التحميل...</span>
-                        <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة سحابياً فوراً">
-                            <i class="fa-solid fa-trash-can"></i> تطهير الفواتير المحذوفة
-                        </button>
-                        <button onclick="window.openTxModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer"><i class="fa-solid fa-wallet"></i> حركة نقدية جديدة</button>
+            <!-- الهيدر المتجاوب مع الموبايل -->
+            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div class="flex items-center justify-between w-full lg:w-auto gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <!-- زر القائمة الجانبية للموبايل -->
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                                <i class="fa-solid fa-bars text-lg"></i>
+                            </button>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الصندوق والخزنة النقدية <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة سحابياً فوراً">
+                                <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">تطهير</span>
+                            </button>
+                            <button onclick="window.openTxModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer py-2 px-3 sm:px-4"><i class="fa-solid fa-wallet"></i> حركة جديدة</button>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <main class="max-w-7xl w-full mx-auto p-6 space-y-6">
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
+            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+                <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                            <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <nav class="space-y-1.5 flex-1">
+                        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                        <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                        <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                        <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                        <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                        <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                        <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين</a>
+                        <a href="vault.html" class="nav-link active"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                        <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
+                        <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 <!-- بطاقات الملخص المالي -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="corporate-card p-4 text-center border-t-4 border-t-cyan-500"><span class="text-xs text-slate-500">الإيرادات</span><div class="text-lg font-black text-cyan-600 mono-font mt-1" id="totalIncome">0 ج.م</div></div>
@@ -88,8 +130,8 @@
                 </div>
 
                 <!-- جدول حركات الخزنة -->
-                <div class="corporate-card p-6 space-y-4">
-                    <div class="flex justify-between items-center">
+                <div class="corporate-card p-4 sm:p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل المعاملات النقدية (مزامنة معزولة سحابياً)</h3>
                         <span class="text-xs text-slate-500 font-mono">مزامنة حية من Firebase</span>
                     </div>
@@ -124,14 +166,14 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">النوع</label>
-                    <select id="txType" class="corporate-input">
+                    <select id="txType" class="corporate-input font-bold">
                         <option value="إيراد">إيراد</option>
                         <option value="مصروف">مصروف</option>
                     </select>
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">المبلغ</label>
-                    <input type="number" id="txAmount" class="corporate-input mono-font" placeholder="0.00">
+                    <input type="number" id="txAmount" class="corporate-input mono-font font-bold" placeholder="0.00">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">البيان</label>
@@ -140,13 +182,20 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button onclick="window.saveTx()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحركة سحابياً</button>
-                <button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-300 transition">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- سكريبت لتمرير وتثبيت معرف الشركة عبر الروابط تلقائياً -->
+    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v17-cache'; // تم تحديث الإصدار لضمان مسح الكاش القديم
+const CACHE_NAME = 'eidco-v18-cache'; // تم تحديث الإصدار لضمان تحديث الكاش وملف الشكاوى الجديد
 const assetsToCache = [
   './index.html',
   './auth.html',
@@ -10,6 +10,8 @@ const assetsToCache = [
   './chat.html',
   './profile.html',
   './users.html',
+  './admin-reports.html', // تمت الإضافه بنجاح
+  './admin-accounts.html',
   './vault.html',
   './map.html',
   './settings.html',

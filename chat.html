@@ -28,8 +28,6 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
-        @keyframes pulseRing { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(79, 70, 229, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
-        .ring-pulse { animation: pulseRing 1.5s infinite; }
     </style>
 </head>
 <body>
@@ -66,7 +64,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات والاتصالات المباشرة <span class="hidden sm:inline text-slate-500 font-normal">(معزولة ومزامنة لحظياً)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">المراسلات والشات المباشر <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن لحظياً)</span></h1>
                         </div>
                     </div>
                     
@@ -120,10 +118,6 @@
                                 <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm" id="activeChatAvatar">ش</div>
                                 <div><h4 class="font-bold text-sm text-slate-900" id="activeChatName">اختر عميل لبدء المحادثة</h4><span class="text-[10px] text-emerald-600 font-mono">متصل سحابياً معزولاً</span></div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="startAudioCall()" class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center cursor-pointer" title="اتصال صوتي"><i class="fa-solid fa-phone"></i></button>
-                                <button onclick="startVideoCall()" class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center cursor-pointer" title="اتصال فيديو"><i class="fa-solid fa-video"></i></button>
-                            </div>
                         </div>
                         <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30" id="chatMessagesArea"><div class="text-center text-xs text-slate-400 py-20">اختر محادثة من القائمة الجانبية.</div></div>
                         <div class="p-4 border-t border-slate-200 bg-white flex gap-2">
@@ -133,15 +127,6 @@
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <!-- مودال الاتصال الصوتي -->
-    <div id="audioCallModal" class="custom-modal">
-        <div class="corporate-card p-8 max-w-sm w-full space-y-6 text-center bg-slate-900 text-white shadow-2xl">
-            <div class="w-24 h-24 mx-auto bg-indigo-600 rounded-full flex items-center justify-center text-3xl ring-pulse"><i class="fa-solid fa-phone-volume animate-bounce"></i></div>
-            <h3 class="font-bold text-lg" id="audioCallTargetName">جاري الاتصال...</h3>
-            <button onclick="endActiveCall()" class="w-14 h-14 bg-rose-600 rounded-full mx-auto flex items-center justify-center text-white text-xl cursor-pointer"><i class="fa-solid fa-phone-slash"></i></button>
         </div>
     </div>
 
@@ -209,7 +194,6 @@
         let messagesList = [];
         let currentActiveClientId = null;
         let unsubscribeMessages = null;
-        let ringtoneCtx = null, ringtoneTimer = null;
 
         signInAnonymously(auth).then(async () => {
             const clientsCollection = collection(db, "clients");
@@ -347,36 +331,6 @@
             } catch (err) {
                 alert('حدث خطأ أثناء إرسال الرسالة سحابياً: ' + err.message);
             }
-        };
-
-        window.startAudioCall = function() {
-            if (!currentActiveClientId) return alert('اختر عميل أولاً');
-            let client = clientsList.find(x => x.id === currentActiveClientId || x.docId === currentActiveClientId);
-            document.getElementById('audioCallTargetName').innerText = client ? client.name : 'جاري الاتصال...';
-            document.getElementById('audioCallModal').classList.add('active');
-
-            try {
-                ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
-                ringtoneTimer = setInterval(() => {
-                    let osc = ringtoneCtx.createOscillator();
-                    let g = ringtoneCtx.createGain();
-                    osc.frequency.setValueAtTime(440, ringtoneCtx.currentTime);
-                    g.gain.setValueAtTime(0.1, ringtoneCtx.currentTime);
-                    osc.connect(g); 
-                    g.connect(ringtoneCtx.destination);
-                    osc.start(); 
-                    osc.stop(ringtoneCtx.currentTime + 0.4);
-                }, 1200);
-            } catch(e) {}
-        };
-
-        window.startVideoCall = function() { 
-            alert('جاري بدء مكالمة فيديو آمنة عبر السحابة المعزولة...'); 
-        };
-
-        window.endActiveCall = function() {
-            if (ringtoneTimer) clearInterval(ringtoneTimer);
-            document.getElementById('audioCallModal').classList.remove('active');
         };
     </script>
     

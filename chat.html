@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الشات العام والستوري المعزول</title>
+    <title>EIDCO // الشات العام والاتصالات المعزولة</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -73,7 +73,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والستوري المباشر <span class="hidden sm:inline text-slate-500 font-normal">(عالي الدقة ومحسّن)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والاتصالات المباشرة <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن)</span></h1>
                         </div>
                     </div>
                     
@@ -114,23 +114,29 @@
 
             <!-- المحتوى الرئيسي -->
             <main class="max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- شريط الستوري العام -->
+                <!-- شريط الحسابات والستوري والعملاء -->
                 <div class="corporate-card p-4 bg-white space-y-3">
                     <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-clock-rotate-left ml-1 text-indigo-600"></i> الستوري العام (حالات النشاط - مدة العرض دقيقة واحدة)</h3>
+                        <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users ml-1 text-indigo-600"></i> حسابات الشركة والستوري (انقر لبدء المحادثة أو عرض الحالة)</h3>
                         <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
                             <i class="fa-solid fa-plus text-[10px]"></i> إضافة ستوري جديد
                         </button>
                     </div>
                     <div id="storiesBarContainer" class="flex items-center gap-4 overflow-x-auto no-scrollbar py-2">
-                        <div onclick="window.selectGlobalChat()" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                        <!-- زر الشات العام -->
+                        <div onclick="window.selectChatMode('global', 'الشات العام (البث المباشر للشركة)', 'ع')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
                             <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-amber-400">
                                 <i class="fa-solid fa-globe"></i>
                             </div>
                             <span class="text-[11px] font-bold text-slate-800">الشات العام</span>
                         </div>
-                        <div id="dynamicStoriesList" class="flex items-center gap-4">
-                            <div class="text-xs text-slate-400">جاري تحميل الستوري سحابياً...</div>
+                        
+                        <!-- الحساب الشخصي (المزامن من الـ Profile) -->
+                        <div id="adminProfileBubbleContainer" class="hidden"></div>
+
+                        <!-- قائمة عملاء وحسابات الشركة السحابية -->
+                        <div id="dynamicCompanyClientsList" class="flex items-center gap-4">
+                            <div class="text-xs text-slate-400">جاري تحميل حسابات الشركة...</div>
                         </div>
                     </div>
                 </div>
@@ -139,11 +145,14 @@
                 <div class="corporate-card flex flex-col h-[620px] overflow-hidden bg-white shadow-lg mx-auto w-full max-w-4xl relative">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md" id="activeChatAvatar">ع</div>
+                            <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md overflow-hidden" id="activeChatAvatarBox">
+                                <span id="activeChatAvatarText">ع</span>
+                                <img id="activeChatAvatarImg" src="" class="w-full h-full object-cover hidden">
+                            </div>
                             <div>
                                 <h4 class="font-bold text-xs sm:text-sm text-slate-900" id="activeChatName">الشات العام (البث المباشر للشركة)</h4>
                                 <span class="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1 mt-0.5">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متزامن سحابياً وعالي الدقة
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متزامن سحابياً ومعزولاً
                                 </span>
                             </div>
                         </div>
@@ -153,7 +162,7 @@
                         <div class="text-center text-slate-400 py-24">جاري مزامنة الرسائل...</div>
                     </div>
 
-                    <!-- صندوق الإدخال مع زر إيموجي الضحك والتعبير -->
+                    <!-- صندوق الإدخال مع زر إيموجي التعبير -->
                     <div class="p-3 border-t border-slate-200 bg-white flex gap-2 items-center relative">
                         <button onclick="toggleEmojiPicker()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0" title="إدراج إيموجي">
                             <i class="fa-regular fa-face-laugh-squint text-lg text-amber-500"></i>
@@ -246,7 +255,6 @@
             document.getElementById('emojiPickerPopup').classList.remove('active');
         }
 
-        // إغلاق نافذة الإيموجي عند النقر خارجها
         window.addEventListener('click', (e) => {
             if (!e.target.closest('#emojiPickerPopup') && !e.target.closest('button[onclick="toggleEmojiPicker()"]')) {
                 document.getElementById('emojiPickerPopup').classList.remove('active');
@@ -307,8 +315,7 @@
             getDocs,
             onSnapshot, 
             query, 
-            where,
-            orderBy 
+            where 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -333,66 +340,96 @@
 
         let currentChatMode = 'global'; 
         let messagesList = [];
-        let storiesList = [];
+        let clientsList = [];
+        let adminAccountData = {};
         let unsubscribeMessages = null;
 
-        signInAnonymously(auth).then(() => {
-            loadStories();
+        signInAnonymously(auth).then(async () => {
+            loadAdminAccount();
+            loadClients();
             loadMessages('global');
         }).catch(err => console.error("فشل الاتصال بالمصادقة السحابية:", err));
 
-        window.selectGlobalChat = function() {
-            currentChatMode = 'global';
-            document.getElementById('activeChatName').innerText = 'الشات العام (البث المباشر للشركة)';
-            document.getElementById('activeChatAvatar').innerText = 'ع';
-            loadMessages('global');
-        };
-
-        function loadStories() {
-            const storiesRef = collection(db, "stories");
-            const q = query(storiesRef, where("companyId", "==", currentCompanyId));
-            onSnapshot(q, (snapshot) => {
-                storiesList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderStoriesBar();
-            }, (err) => console.error("خطأ في جلب الستوري:", err));
+        function loadAdminAccount() {
+            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
+            onSnapshot(accountsRef, (snapshot) => {
+                if (!snapshot.empty) {
+                    adminAccountData = snapshot.docs[0].data();
+                    renderAdminProfileBubble(adminAccountData);
+                }
+            }, (err) => console.error("خطأ في جلب الحساب الشخصي:", err));
         }
 
-        function renderStoriesBar() {
-            let container = document.getElementById('dynamicStoriesList');
-            if (storiesList.length === 0) {
-                container.innerHTML = `<span class="text-xs text-slate-400">لا توجد حالات ستوري نشطة حالياً.</span>`;
+        function renderAdminProfileBubble(acc) {
+            let container = document.getElementById('adminProfileBubbleContainer');
+            container.classList.remove('hidden');
+            let name = acc.name || 'إدارة النظام';
+            let avatar = acc.avatar || '';
+
+            container.innerHTML = `
+                <div onclick="window.selectChatMode('admin_${acc.companyId || 'profile'}', '${name}', '${name.charAt(0)}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-indigo-400 overflow-hidden">
+                            ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${name}</span>
+                </div>
+            `;
+        }
+
+        function loadClients() {
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            onSnapshot(clientsRef, (snapshot) => {
+                clientsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderClientsBar();
+            }, (err) => console.error("خطأ في جلب العملاء:", err));
+        }
+
+        function renderClientsBar() {
+            let container = document.getElementById('dynamicCompanyClientsList');
+            if (clientsList.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400">لا توجد حسابات عملاء مسجلة بعد.</span>`;
                 return;
             }
 
-            container.innerHTML = storiesList.map(s => `
-                <div onclick="openStoryViewer('${s.author || 'مستخدم'}', '${s.text || ''}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
-                    <div class="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-indigo-400">
-                        ${s.author ? s.author.charAt(0) : 'ح'}
+            container.innerHTML = clientsList.map(c => `
+                <div onclick="window.selectChatMode('${c.id || c.docId}', '${c.name || 'عميل'}', '${c.name ? c.name.charAt(0) : 'ع'}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-slate-400">
+                            ${c.name ? c.name.charAt(0) : 'ع'}
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                     </div>
-                    <span class="text-[11px] font-bold text-slate-700 truncate max-w-[70px] text-center">${s.author || 'حالة'}</span>
+                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${c.name || 'عميل'}</span>
                 </div>
             `).join('');
         }
 
-        window.submitNewStory = async function() {
-            let txt = document.getElementById('newStoryTextInput').value.trim();
-            if (!txt) return alert('الرجاء كتابة نص الحالة أولاً');
-            let adminName = localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
+        window.selectChatMode = function(mode, name, initial) {
+            currentChatMode = mode;
+            document.getElementById('activeChatName').innerText = name;
+            
+            let avatarBox = document.getElementById('activeChatAvatarBox');
+            let textEl = document.getElementById('activeChatAvatarText');
+            let imgEl = document.getElementById('activeChatAvatarImg');
 
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await addDoc(collection(db, "stories"), {
-                    companyId: currentCompanyId,
-                    author: adminName,
-                    text: txt,
-                    createdAt: Date.now()
-                });
-                document.getElementById('newStoryTextInput').value = '';
-                closeAddStoryModal();
-                alert('✓ تم نشر الستوري بنجاح وعالي الدقة.');
-            } catch (e) {
-                alert('خطأ أثناء النشر: ' + e.message);
+            if (mode === 'global') {
+                imgEl.classList.add('hidden');
+                textEl.classList.remove('hidden');
+                textEl.innerText = 'ع';
+            } else if (mode.startsWith('admin_') && adminAccountData.avatar) {
+                imgEl.src = adminAccountData.avatar;
+                imgEl.classList.remove('hidden');
+                textEl.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                textEl.classList.remove('hidden');
+                textEl.innerText = initial;
             }
+
+            loadMessages(mode);
         };
 
         function loadMessages(mode) {
@@ -412,7 +449,7 @@
         function renderMessages() {
             let area = document.getElementById('chatMessagesArea');
             if (messagesList.length === 0) {
-                area.innerHTML = `<div class="text-center text-slate-400 py-24">لا توجد رسائل في الشات العام بعد. ابدأ المراسلة!</div>`;
+                area.innerHTML = `<div class="text-center text-slate-400 py-24">لا توجد رسائل في هذه المحادثة بعد. ابدأ المراسلة!</div>`;
                 return;
             }
 
@@ -446,6 +483,27 @@
                 inputEl.value = '';
             } catch (err) {
                 alert('خطأ أثناء إرسال الرسالة: ' + err.message);
+            }
+        };
+
+        window.submitNewStory = async function() {
+            let txt = document.getElementById('newStoryTextInput').value.trim();
+            if (!txt) return alert('الرجاء كتابة نص الحالة أولاً');
+            let adminName = adminAccountData.name || localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
+
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                await addDoc(collection(db, "stories"), {
+                    companyId: currentCompanyId,
+                    author: adminName,
+                    text: txt,
+                    createdAt: Date.now()
+                });
+                document.getElementById('newStoryTextInput').value = '';
+                closeAddStoryModal();
+                alert('✓ تم نشر الستوري بنجاح وعالي الدقة.');
+            } catch (e) {
+                alert('خطأ أثناء النشر: ' + e.message);
             }
         };
     </script>

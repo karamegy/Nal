@@ -26,8 +26,13 @@
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
+        .messenger-bubble { transition: all 0.2s ease; cursor: pointer; flex-shrink: 0; }
+        .messenger-bubble:hover { transform: scale(1.05); }
+        /* تخصيص شريط التمرير الأفقي للقصص */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
@@ -64,13 +69,16 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">المراسلات والشات المباشر <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن لحظياً)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الدردشات والمراسلات <span class="hidden sm:inline text-slate-500 font-normal">(نظام ماسنجر)</span></h1>
                         </div>
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <!-- معرف الشركة مع ضبط العرض والتجاوب -->
-                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <!-- زر فتح نافذة الأيقونات المستقلة (شات ماسنجر) -->
+                        <button onclick="openIconsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer">
+                            <i class="fa-brands fa-facebook-messenger text-amber-300"></i> نافذة أيقونات ماسنجر
+                        </button>
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
             </header>
@@ -104,39 +112,124 @@
                 </div>
             </div>
 
-            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6">
-                <div class="corporate-card grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[600px]">
-                    <div class="lg:col-span-4 border-l border-slate-200 flex flex-col bg-slate-50">
-                        <div class="p-4 border-b border-slate-200 bg-white"><h3 class="font-bold text-sm text-slate-900">العملاء والشركات (لهذا الحساب)</h3></div>
-                        <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="chatContactsList">
-                            <div class="p-4 text-center text-xs text-slate-400">جاري تحميل جهات الاتصال سحابياً المعزولة...</div>
-                        </div>
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- شريط العملاء الأفقي (بأسلوب قصص وأشخاص ماسنجر بجوار بعضهم) -->
+                <div class="corporate-card p-4 bg-white space-y-3">
+                    <h3 class="font-bold text-xs text-slate-500"><i class="fa-brands fa-facebook-messenger ml-1 text-indigo-600"></i> الجهات والعملاء النشطون (انقر للبدء الفوري)</h3>
+                    <div id="messengerStoriesList" class="flex items-center gap-4 overflow-x-auto no-scrollbar py-2">
+                        <div class="text-xs text-slate-400">جاري التحميل...</div>
                     </div>
-                    <div class="lg:col-span-8 flex flex-col bg-white">
-                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm" id="activeChatAvatar">ش</div>
-                                <div><h4 class="font-bold text-sm text-slate-900" id="activeChatName">اختر عميل لبدء المحادثة</h4><span class="text-[10px] text-emerald-600 font-mono">متصل سحابياً معزولاً</span></div>
+                </div>
+
+                <!-- صندوق الشات الرئيسي بارتفاع منسق وكبير -->
+                <div class="corporate-card flex flex-col h-[700px] overflow-hidden bg-white shadow-lg">
+                    <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md" id="activeChatAvatar">ش</div>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-900" id="activeChatName">اختر عميل من الشريط العلوي لبدء المراسلة</h4>
+                                <span class="text-[11px] text-emerald-600 font-mono font-bold flex items-center gap-1 mt-0.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متصل سحابياً معزولاً
+                                </span>
                             </div>
                         </div>
-                        <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30" id="chatMessagesArea"><div class="text-center text-xs text-slate-400 py-20">اختر محادثة من القائمة الجانبية.</div></div>
-                        <div class="p-4 border-t border-slate-200 bg-white flex gap-2">
-                            <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك السحابية المعزولة..." class="corporate-input flex-1 text-xs">
-                            <button onclick="sendChatMessage()" class="btn-primary px-5 text-xs"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+                    </div>
+                    
+                    <div class="flex-1 p-5 overflow-y-auto space-y-3.5 bg-slate-50/50" id="chatMessagesArea">
+                        <div class="text-center text-xs text-slate-400 py-28 flex flex-col items-center justify-center gap-2">
+                            <i class="fa-regular fa-comments text-3xl text-slate-300"></i>
+                            <span>الرجاء النقر على أحد أصول العملاء في الشريط العلوي لعرض الرسائل.</span>
                         </div>
+                    </div>
+
+                    <div class="p-4 border-t border-slate-200 bg-white flex gap-3 items-center">
+                        <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك السحابية المعزولة هنا..." class="corporate-input flex-1 text-xs py-3">
+                        <button onclick="sendChatMessage()" class="btn-primary px-6 text-xs py-3 flex items-center gap-2 shadow-md">
+                            <span>إرسال</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
+    <!-- نافذة الأيقونات المستقلة (شات ماسنجر) -->
+    <div id="iconsModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-5 bg-white shadow-2xl relative">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-indigo-600 text-white rounded-xl flex items-center justify-center">
+                        <i class="fa-brands fa-facebook-messenger text-base"></i>
+                    </div>
+                    <h3 class="font-black text-base text-slate-900">مركز أيقونات وقنوات التواصل (ماسنجر)</h3>
+                </div>
+                <button onclick="closeIconsModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold cursor-pointer transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-600">اختر القناة أو التطبيق للانتقال السريع والتواصل المباشر مع العملاء والشركات عبر السحابة:</p>
+
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <a href="https://m.me" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-facebook-messenger"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">ماسنجر</span>
+                </a>
+                <a href="https://whatsapp.com" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">واتساب</span>
+                </a>
+                <a href="https://telegram.org" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">تليجرام</span>
+                </a>
+                <a href="chat.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-comments"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">الشات الداخلي</span>
+                </a>
+                <a href="map.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">مواقع الأسطول</span>
+                </a>
+                <a href="vault.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 transition flex flex-col items-center gap-2 group text-decoration-none">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-vault"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800">الخزنة المالية</span>
+                </a>
+            </div>
+
+            <div class="pt-3 border-t text-center">
+                <button onclick="closeIconsModal()" class="btn-primary w-full py-2.5 text-xs">إغلاق النافذة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- دوال القائمة الجانبية وإدارة نافذة الأيقونات -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
             }
+        }
+
+        function openIconsModal() {
+            document.getElementById('iconsModal').classList.add('active');
+        }
+
+        function closeIconsModal() {
+            document.getElementById('iconsModal').classList.remove('active');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -205,7 +298,7 @@
                     id: doc.id,
                     ...doc.data()
                 }));
-                renderContacts();
+                renderMessengerStories();
             } catch(e) {
                 console.error("خطأ في جلب العملاء أولياً:", e);
             }
@@ -215,7 +308,7 @@
                     id: doc.id,
                     ...doc.data()
                 }));
-                renderContacts();
+                renderMessengerStories();
             }, (error) => {
                 console.error("خطأ في جلب العملاء سحابياً للشات:", error);
             });
@@ -223,22 +316,27 @@
             console.error("فشل المصادقة سحابياً للشات:", error);
         });
 
-        function renderContacts() {
-            let container = document.getElementById('chatContactsList');
+        function renderMessengerStories() {
+            let container = document.getElementById('messengerStoriesList');
             if (clientsList.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">لا يوجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</div>`;
+                container.innerHTML = `<div class="text-xs text-slate-400">لا يوجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</div>`;
                 return;
             }
 
-            container.innerHTML = clientsList.map(c => `
-                <div onclick="window.selectClient('${c.id || c.docId}')" class="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-100 ${(currentActiveClientId === c.id || currentActiveClientId === c.docId) ? 'bg-indigo-50 border-r-4 border-indigo-600' : ''}">
-                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">${c.name ? c.name.charAt(0) : 'ع'}</div>
-                    <div>
-                        <h4 class="font-bold text-xs text-slate-900">${c.name || 'عميل'}</h4>
-                        <p class="text-[11px] text-slate-500">${c.phone || 'بدون هاتف'}</p>
+            container.innerHTML = clientsList.map(c => {
+                let isActive = (currentActiveClientId === c.id || currentActiveClientId === c.docId);
+                return `
+                    <div onclick="window.selectClient('${c.id || c.docId}')" class="messenger-bubble flex flex-col items-center gap-1.5">
+                        <div class="relative">
+                            <div class="w-14 h-14 rounded-full ${isActive ? 'ring-4 ring-indigo-600 bg-indigo-600' : 'bg-slate-200'} text-white flex items-center justify-center font-bold text-base shadow-md">
+                                ${c.name ? c.name.charAt(0) : 'ع'}
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-700 truncate max-w-[70px] text-center">${c.name || 'عميل'}</span>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         window.selectClient = async function(clientId) {
@@ -249,7 +347,7 @@
             document.getElementById('activeChatName').innerText = client.name || 'عميل';
             document.getElementById('activeChatAvatar').innerText = client.name ? client.name.charAt(0) : 'ع';
 
-            renderContacts();
+            renderMessengerStories();
             await listenToMessages(clientId);
         };
 
@@ -287,19 +385,19 @@
         function renderMessages() {
             let area = document.getElementById('chatMessagesArea');
             if (!currentActiveClientId) {
-                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-20">اختر محادثة من القائمة الجانبية.</div>`;
+                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-28">اختر محادثة من الشريط العلوي للبدء.</div>`;
                 return;
             }
 
             if (messagesList.length === 0) {
-                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-20">لا توجد رسائل سحابية بعد. ابدأ المحادثة الآن!</div>`;
+                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-28">لا توجد رسائل سحابية بعد. ابدأ المحادثة الآن!</div>`;
                 return;
             }
 
             area.innerHTML = messagesList.map(m => `
                 <div class="flex flex-col ${m.sender === 'me' ? 'items-end' : 'items-start'}">
-                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-800'}">${m.text}</div>
-                    <span class="text-[9px] text-slate-400 mt-0.5">${m.time || ''}</span>
+                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border text-slate-800 shadow-sm'}">${m.text}</div>
+                    <span class="text-[9px] text-slate-400 mt-1 mono-font">${m.time || ''}</span>
                 </div>
             `).join('');
 
@@ -307,7 +405,7 @@
         }
 
         window.sendChatMessage = async function() {
-            if (!currentActiveClientId) return alert('الرجاء اختيار عميل أولاً');
+            if (!currentActiveClientId) return alert('الرجاء اختيار عميل أولاً من الشريط العلوي');
             let inputEl = document.getElementById('chatMessageInput');
             let txt = inputEl.value.trim();
             if (!txt) return;

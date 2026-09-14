@@ -57,6 +57,7 @@
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="users.html" class="nav-link active"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
+                <a href="admin-reports.html" class="nav-link"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
@@ -71,7 +72,6 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -110,6 +110,7 @@
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="users.html" class="nav-link active"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
+                        <a href="admin-reports.html" class="nav-link"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                         <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
@@ -132,12 +133,13 @@
                                     <th class="p-4">معرف الحساب</th>
                                     <th class="p-4">اسم المسؤول</th>
                                     <th class="p-4">الصلاحية / الدور</th>
+                                    <th class="p-4">حالة الحساب</th>
                                     <th class="p-4">تاريخ الإضافة</th>
-                                    <th class="p-4 text-center">الإجراءات</th>
+                                    <th class="p-4 text-center">الإجراءات والسيطرة</th>
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">جاري تحميل بيانات الحسابات من سحابة Firebase...</td></tr>
+                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري تحميل بيانات الحسابات من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -174,7 +176,6 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
@@ -243,7 +244,6 @@
             const accountsCollection = collection(db, "accounts");
             const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
-            // جلب أولي فوري باستخدام getDocs
             try {
                 const snapshot = await getDocs(accountsRef);
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
@@ -252,7 +252,6 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 window.renderUsersTable();
@@ -267,22 +266,50 @@
             let tbody = document.getElementById('usersTableBody');
             
             if(!accountsList.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = accountsList.map((acc, index) => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">ACC-${acc.id || (index + 101)}</td>
-                    <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
-                    <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
-                    <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
-                    <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-                        ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>` : ''}
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = accountsList.map((acc, index) => {
+                let isBanned = acc.isBanned === true;
+                return `
+                    <tr class="hover:bg-slate-50 ${isBanned ? 'bg-rose-50/40' : ''}">
+                        <td class="p-4 mono-font text-indigo-600 font-bold">ACC-${acc.id || (index + 101)}</td>
+                        <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
+                        <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
+                        <td class="p-4">
+                            ${isBanned ? '<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
+                        </td>
+                        <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
+                        <td class="p-4 text-center space-x-2 space-x-reverse">
+                            <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
+                                <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
+                            </button>
+                            <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold px-2 py-1" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                            ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold px-2 py-1" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        // دالة حظر أو إلغاء حظر المستخدم مباشرة من جدول المستخدمين
+        window.toggleUserBan = async function(docId, currentBannedStatus) {
+            let actionName = currentBannedStatus ? 'إلغاء الحظر عن' : 'حظر';
+            if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
+            try {
+                await updateDoc(doc(db, "accounts", docId), {
+                    isBanned: !currentBannedStatus
+                });
+                alert(`✓ تم تنفيذ إجراء ${actionName} الحساب بنجاح.`);
+            } catch (err) {
+                alert('حدث خطأ أثناء تحديث حالة الحظر: ' + err.message);
+            }
         };
 
         window.openUserModal = function() {
@@ -323,6 +350,7 @@
                 id: editId ? Number(editId) : Date.now(),
                 name: name,
                 role: role,
+                isBanned: false,
                 date: new Date().toISOString().split('T')[0]
             };
 

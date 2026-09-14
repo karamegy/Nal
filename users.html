@@ -75,14 +75,14 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الحسابات وصلاحيات النظام <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة كافة الحسابات والشركات <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
                         </div>
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         <button onclick="window.openUserModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer py-2 px-3 sm:px-4">
-                            <i class="fa-solid fa-user-plus"></i> إضافة مسؤول
+                            <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
                         </button>
                     </div>
                 </div>
@@ -123,16 +123,16 @@
                 <!-- جدول الحسابات والمستخدمين -->
                 <div class="corporate-card p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة الحسابات والمسؤولين المعتمدين سحابياً</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية من Firebase (معزولة)</span>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة كافة الحسابات والشركات المسجلة في السحابة</h3>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية من مجموعة accounts</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                    <th class="p-4">معرف الحساب</th>
-                                    <th class="p-4">اسم المسؤول</th>
-                                    <th class="p-4">الصلاحية / الدور</th>
+                                    <th class="p-4">اسم المسؤول / الجهة</th>
+                                    <th class="p-4">الدور / الصلاحية</th>
+                                    <th class="p-4">معرف الشركة (Company ID)</th>
                                     <th class="p-4">حالة الحساب</th>
                                     <th class="p-4">تاريخ الإضافة</th>
                                     <th class="p-4 text-center">الإجراءات والسيطرة</th>
@@ -148,16 +148,19 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة / تعديل مستخدم -->
+    <!-- نافذة إضافة / تعديل مستخدم وتخصيصه للشركة -->
     <div id="userModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
             <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد للنظام سحابياً</h3>
-            <input type="hidden" id="editUserId">
             <input type="hidden" id="editDocId">
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">اسم المسؤول الكامل</label>
                     <input type="text" id="userName" class="corporate-input" placeholder="أدخل اسم المسؤول">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-600 font-bold">معرف الشركة (Company ID)</label>
+                    <input type="text" id="userCompanyIdInput" class="corporate-input mono-font" placeholder="اتركه فارغاً لإنشاء معرف جديد أو أدخل معرف شركتك">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">الدور والصلاحية</label>
@@ -199,7 +202,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules لجلب كافة الحسابات بدون شروط مسبقة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -210,9 +213,7 @@
             doc, 
             updateDoc, 
             onSnapshot,
-            getDocs,
-            query,
-            where 
+            getDocs 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -235,24 +236,16 @@
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
         if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+            badgeEl.innerText = `معرف الشركة الحالي: ${currentCompanyId}`;
         }
 
         let accountsList = [];
 
         signInAnonymously(auth).then(async () => {
             const accountsCollection = collection(db, "accounts");
-            const accountsRef = query(accountsCollection, where("companyId", "==", currentCompanyId));
 
-            try {
-                const snapshot = await getDocs(accountsRef);
-                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                window.renderUsersTable();
-            } catch (e) {
-                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
-            }
-
-            onSnapshot(accountsRef, (snapshot) => {
+            // جلب كافة المستندات من مجموعة accounts بدون قيود الـ where
+            onSnapshot(accountsCollection, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 window.renderUsersTable();
             }, (error) => {
@@ -266,34 +259,37 @@
             let tbody = document.getElementById('usersTableBody');
             
             if(!accountsList.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً في قاعدة البيانات.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = accountsList.map((acc, index) => {
+            tbody.innerHTML = accountsList.map((acc) => {
                 let isBanned = acc.isBanned === true;
+                let compId = acc.companyId || acc.docId;
                 return `
                     <tr class="hover:bg-slate-50 ${isBanned ? 'bg-rose-50/40' : ''}">
-                        <td class="p-4 mono-font text-indigo-600 font-bold">ACC-${acc.id || (index + 101)}</td>
                         <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
                         <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
+                        <td class="p-4 mono-font text-indigo-600 font-bold">${compId}</td>
                         <td class="p-4">
                             ${isBanned ? '<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
                         </td>
                         <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
-                        <td class="p-4 text-center space-x-2 space-x-reverse">
+                        <td class="p-4 text-center space-x-1 space-x-reverse">
+                            <button onclick="window.switchAndLoginAsCompany('${compId}', '${acc.name || 'مسؤول'}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
+                                <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول
+                            </button>
                             <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
                             </button>
-                            <button onclick="window.editUser('${acc.docId || ''}', ${acc.id || index})" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold px-2 py-1" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-                            ${accountsList.length > 1 ? `<button onclick="window.deleteUser('${acc.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold px-2 py-1" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>` : ''}
+                            <button onclick="window.editUser('${acc.docId}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold px-2 py-1" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="window.deleteUser('${acc.docId}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold px-2 py-1" title="حذف"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
             }).join('');
         };
 
-        // دالة حظر أو إلغاء حظر المستخدم مباشرة من جدول المستخدمين
         window.toggleUserBan = async function(docId, currentBannedStatus) {
             let actionName = currentBannedStatus ? 'إلغاء الحظر عن' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
@@ -313,11 +309,12 @@
         };
 
         window.openUserModal = function() {
-            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد للنظام سحابياً';
-            document.getElementById('editUserId').value = '';
+            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد وحساب سحابي';
             document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
-            document.getElementById('userRole').value = 'مدير نظام رئيسي';
+            // تعيين معرف الشركة الحالي افتراضياً لتسهيل الإضافة لنفس الشركة أو تركه لإنشاء شركة جديدة
+            document.getElementById('userCompanyIdInput').value = currentCompanyId;
+            document.getElementById('userRole').value = 'محاسب أول';
             document.getElementById('userModal').classList.add('active');
         };
 
@@ -325,34 +322,25 @@
             document.getElementById('userModal').classList.remove('active');
         };
 
-        window.editUser = function(docId, id) {
-            let acc = accountsList.find(a => (docId && a.docId === docId) || a.id == id);
+        window.editUser = function(docId) {
+            let acc = accountsList.find(a => a.docId === docId);
             if(!acc) return;
 
             document.getElementById('userModalTitle').innerText = `تعديل بيانات الحساب (${acc.name})`;
-            document.getElementById('editDocId').value = acc.docId || '';
-            document.getElementById('editUserId').value = acc.id || '';
+            document.getElementById('editDocId').value = acc.docId;
             document.getElementById('userName').value = acc.name || '';
+            document.getElementById('userCompanyIdInput').value = acc.companyId || currentCompanyId;
             document.getElementById('userRole').value = acc.role || 'مدير نظام رئيسي';
             document.getElementById('userModal').classList.add('active');
         };
 
         window.saveUser = async function() {
             let editDocId = document.getElementById('editDocId').value;
-            let editId = document.getElementById('editUserId').value;
             let name = document.getElementById('userName').value.trim();
+            let companyIdInput = document.getElementById('userCompanyIdInput').value.trim() || ('company_' + Date.now());
             let role = document.getElementById('userRole').value;
 
             if(!name) return alert('الرجاء إدخال اسم المسؤول.');
-
-            let accountData = {
-                companyId: currentCompanyId,
-                id: editId ? Number(editId) : Date.now(),
-                name: name,
-                role: role,
-                isBanned: false,
-                date: new Date().toISOString().split('T')[0]
-            };
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -363,28 +351,28 @@
                 if(editDocId) {
                     await updateDoc(doc(db, "accounts", editDocId), {
                         name: name,
+                        companyId: companyIdInput,
                         role: role
                     });
                 } else {
-                    if(accountsList.some(a => a.name === name)) {
-                        alert('هذا الاسم مسجل مسبقاً.');
-                        return;
-                    }
-                    await addDoc(accountsCollection, accountData);
+                    await addDoc(accountsCollection, {
+                        name: name,
+                        companyId: companyIdInput,
+                        role: role,
+                        pin: "1234",
+                        isBanned: false,
+                        date: new Date().toISOString().split('T')[0]
+                    });
                 }
 
                 window.closeUserModal();
-                alert('✓ تم حفظ بيانات الحساب في السحابة بنجاح.');
+                alert('✓ تم حفظ وإضافة الحساب والشركة في السحابة بنجاح.');
             } catch(err) {
-                alert('حدث خطأ أثناء حفظ بيانات المستخدم في السحابة: ' + err.message);
+                alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
             }
         };
 
         window.deleteUser = async function(docId) {
-            if(accountsList.length <= 1) {
-                alert('لا يمكن حذف الحساب الأخير في المنظومة.');
-                return;
-            }
             if(!confirm('هل أنت متأكد من حذف هذا الحساب نهائياً من السحابة؟')) return;
 
             if (!auth.currentUser) {
@@ -392,15 +380,18 @@
             }
 
             try {
-                if(docId) {
-                    await deleteDoc(doc(db, "accounts", docId));
-                    alert('✓ تم حذف الحساب سحابياً بنجاح.');
-                } else {
-                    alert('تعذر تحديد المستند السحابي المطلوب حذفه.');
-                }
+                await deleteDoc(doc(db, "accounts", docId));
+                alert('✓ تم حذف الحساب سحابياً بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);
             }
+        };
+
+        window.switchAndLoginAsCompany = function(companyId, name) {
+            sessionStorage.setItem('eidco_session_auth', 'true');
+            localStorage.setItem('eidco_v14_admin', name);
+            localStorage.setItem('eidco_current_company_id', companyId);
+            window.location.href = `index.html?companyId=${encodeURIComponent(companyId)}`;
         };
     </script>
     

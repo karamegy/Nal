@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // الشات والاتصالات المعزولة</title>
+    <title>EIDCO // الشات العام والستوري المعزول</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,13 +26,18 @@
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
-        .messenger-bubble { transition: all 0.2s ease; cursor: pointer; flex-shrink: 0; }
-        .messenger-bubble:hover { transform: scale(1.05); }
-        /* تخصيص شريط التمرير الأفقي للقصص */
+        .story-bubble { transition: all 0.2s ease; cursor: pointer; flex-shrink: 0; }
+        .story-bubble:hover { transform: scale(1.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* لوحة إيموجي احترافية ومدمجة */
+        #emojiPickerPopup { display: none; position: absolute; bottom: 70px; right: 15px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 10px 25px -3px rgba(0,0,0,0.15); padding: 12px; z-index: 50; width: 280px; max-height: 220px; overflow-y: auto; grid-template-columns: repeat(6, 1fr); gap: 8px; text-align: center; }
+        #emojiPickerPopup.active { display: grid; }
+        .emoji-item { font-size: 1.35rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: transform 0.1s, background 0.1s; }
+        .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
     </style>
 </head>
 <body>
@@ -60,25 +65,20 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- الهيدر المحدث والمتجاوب مع الموبايل -->
+            <!-- الهيدر -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الدردشات والمراسلات <span class="hidden sm:inline text-slate-500 font-normal">(نظام ماسنجر)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والستوري المباشر <span class="hidden sm:inline text-slate-500 font-normal">(عالي الدقة ومحسّن)</span></h1>
                         </div>
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <!-- زر فتح نافذة الأيقونات المستقلة (شات ماسنجر) -->
-                        <button onclick="openIconsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer">
-                            <i class="fa-brands fa-facebook-messenger text-amber-300"></i> نافذة أيقونات ماسنجر
-                        </button>
-                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
             </header>
@@ -112,40 +112,78 @@
                 </div>
             </div>
 
-            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- شريط العملاء الأفقي (بأسلوب قصص وأشخاص ماسنجر بجوار بعضهم) -->
+            <!-- المحتوى الرئيسي -->
+            <main class="max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- شريط الستوري العام -->
                 <div class="corporate-card p-4 bg-white space-y-3">
-                    <h3 class="font-bold text-xs text-slate-500"><i class="fa-brands fa-facebook-messenger ml-1 text-indigo-600"></i> الجهات والعملاء النشطون (انقر للبدء الفوري)</h3>
-                    <div id="messengerStoriesList" class="flex items-center gap-4 overflow-x-auto no-scrollbar py-2">
-                        <div class="text-xs text-slate-400">جاري التحميل...</div>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-clock-rotate-left ml-1 text-indigo-600"></i> الستوري العام (حالات النشاط - مدة العرض دقيقة واحدة)</h3>
+                        <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
+                            <i class="fa-solid fa-plus text-[10px]"></i> إضافة ستوري جديد
+                        </button>
+                    </div>
+                    <div id="storiesBarContainer" class="flex items-center gap-4 overflow-x-auto no-scrollbar py-2">
+                        <div onclick="window.selectGlobalChat()" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                            <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-amber-400">
+                                <i class="fa-solid fa-globe"></i>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-800">الشات العام</span>
+                        </div>
+                        <div id="dynamicStoriesList" class="flex items-center gap-4">
+                            <div class="text-xs text-slate-400">جاري تحميل الستوري سحابياً...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- صندوق الشات الرئيسي بارتفاع منسق وكبير -->
-                <div class="corporate-card flex flex-col h-[700px] overflow-hidden bg-white shadow-lg">
+                <!-- صندوق الشات المصغر والمنسق -->
+                <div class="corporate-card flex flex-col h-[620px] overflow-hidden bg-white shadow-lg mx-auto w-full max-w-4xl relative">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md" id="activeChatAvatar">ش</div>
+                            <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md" id="activeChatAvatar">ع</div>
                             <div>
-                                <h4 class="font-bold text-sm text-slate-900" id="activeChatName">اختر عميل من الشريط العلوي لبدء المراسلة</h4>
-                                <span class="text-[11px] text-emerald-600 font-mono font-bold flex items-center gap-1 mt-0.5">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متصل سحابياً معزولاً
+                                <h4 class="font-bold text-xs sm:text-sm text-slate-900" id="activeChatName">الشات العام (البث المباشر للشركة)</h4>
+                                <span class="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1 mt-0.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> متزامن سحابياً وعالي الدقة
                                 </span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="flex-1 p-5 overflow-y-auto space-y-3.5 bg-slate-50/50" id="chatMessagesArea">
-                        <div class="text-center text-xs text-slate-400 py-28 flex flex-col items-center justify-center gap-2">
-                            <i class="fa-regular fa-comments text-3xl text-slate-300"></i>
-                            <span>الرجاء النقر على أحد أصول العملاء في الشريط العلوي لعرض الرسائل.</span>
-                        </div>
+                    <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 text-xs" id="chatMessagesArea">
+                        <div class="text-center text-slate-400 py-24">جاري مزامنة الرسائل...</div>
                     </div>
 
-                    <div class="p-4 border-t border-slate-200 bg-white flex gap-3 items-center">
-                        <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك السحابية المعزولة هنا..." class="corporate-input flex-1 text-xs py-3">
-                        <button onclick="sendChatMessage()" class="btn-primary px-6 text-xs py-3 flex items-center gap-2 shadow-md">
-                            <span>إرسال</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <!-- صندوق الإدخال مع زر إيموجي الضحك والتعبير -->
+                    <div class="p-3 border-t border-slate-200 bg-white flex gap-2 items-center relative">
+                        <button onclick="toggleEmojiPicker()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0" title="إدراج إيموجي">
+                            <i class="fa-regular fa-face-laugh-squint text-lg text-amber-500"></i>
+                        </button>
+                        
+                        <!-- نافذة الإيموجي السريعة -->
+                        <div id="emojiPickerPopup">
+                            <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
+                            <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
+                            <span class="emoji-item" onclick="insertEmoji('😅')">😅</span>
+                            <span class="emoji-item" onclick="insertEmoji('😊')">😊</span>
+                            <span class="emoji-item" onclick="insertEmoji('😍')">😍</span>
+                            <span class="emoji-item" onclick="insertEmoji('🤩')">🤩</span>
+                            <span class="emoji-item" onclick="insertEmoji('❤️')">❤️</span>
+                            <span class="emoji-item" onclick="insertEmoji('💙')">💙</span>
+                            <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
+                            <span class="emoji-item" onclick="insertEmoji('🔥')">🔥</span>
+                            <span class="emoji-item" onclick="insertEmoji('🎉')">🎉</span>
+                            <span class="emoji-item" onclick="insertEmoji('😎')">😎</span>
+                            <span class="emoji-item" onclick="insertEmoji('✨')">✨</span>
+                            <span class="emoji-item" onclick="insertEmoji('👏')">👏</span>
+                            <span class="emoji-item" onclick="insertEmoji('🚀')">🚀</span>
+                            <span class="emoji-item" onclick="insertEmoji('🙏')">🙏</span>
+                            <span class="emoji-item" onclick="insertEmoji('💯')">💯</span>
+                            <span class="emoji-item" onclick="insertEmoji('👑')">👑</span>
+                        </div>
+
+                        <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك المعزولة هنا..." class="corporate-input flex-1 text-xs py-2.5">
+                        <button onclick="sendChatMessage()" class="btn-primary px-5 text-xs py-2.5 flex items-center gap-1.5 shadow-sm cursor-pointer">
+                            <span>إرسال</span> <i class="fa-solid fa-paper-plane text-[10px]"></i>
                         </button>
                     </div>
                 </div>
@@ -153,84 +191,96 @@
         </div>
     </div>
 
-    <!-- نافذة الأيقونات المستقلة (شات ماسنجر) -->
-    <div id="iconsModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-lg w-full space-y-5 bg-white shadow-2xl relative">
+    <!-- نافذة عرض الستوري (لمدة دقيقة) -->
+    <div id="storyViewerModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 bg-slate-900 text-white shadow-2xl relative text-center">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span id="storyAuthorTitle" class="font-bold text-xs text-amber-400">صاحب الستوري</span>
+                <button onclick="closeStoryViewer()" class="text-slate-400 hover:text-white font-bold cursor-pointer"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="py-6 min-h-[120px] flex items-center justify-center">
+                <p id="storyContentText" class="text-sm font-bold text-slate-100 leading-relaxed px-2">جاري تحميل الحالة...</p>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="storyProgressBar" class="bg-amber-400 h-full w-full transition-all duration-[60000ms] linear"></div>
+            </div>
+            <span class="text-[10px] text-slate-400 block font-mono">تنتهي الحالة تلقائياً بعد دقيقة واحدة</span>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة ستوري جديد -->
+    <div id="addStoryModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right">
             <div class="flex justify-between items-center border-b pb-3">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 bg-indigo-600 text-white rounded-xl flex items-center justify-center">
-                        <i class="fa-brands fa-facebook-messenger text-base"></i>
-                    </div>
-                    <h3 class="font-black text-base text-slate-900">مركز أيقونات وقنوات التواصل (ماسنجر)</h3>
+                <h3 class="font-black text-sm text-indigo-600"><i class="fa-solid fa-plus-circle ml-1"></i> نشر ستوري جديد (حالة لمدة دقيقة)</h3>
+                <button onclick="closeAddStoryModal()" class="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">محتوى الحالة (نص عالي الدقة ومحسّن):</label>
+                    <textarea id="newStoryTextInput" rows="3" class="corporate-input w-full text-xs" placeholder="اكتب حالتك هنا..."></textarea>
                 </div>
-                <button onclick="closeIconsModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold cursor-pointer transition">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
             </div>
-            
-            <p class="text-xs text-slate-600">اختر القناة أو التطبيق للانتقال السريع والتواصل المباشر مع العملاء والشركات عبر السحابة:</p>
-
-            <div class="grid grid-cols-3 gap-3 text-center">
-                <a href="https://m.me" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-brands fa-facebook-messenger"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">ماسنجر</span>
-                </a>
-                <a href="https://whatsapp.com" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-brands fa-whatsapp"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">واتساب</span>
-                </a>
-                <a href="https://telegram.org" target="_blank" class="p-4 rounded-2xl bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-brands fa-telegram"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">تليجرام</span>
-                </a>
-                <a href="chat.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-comments"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">الشات الداخلي</span>
-                </a>
-                <a href="map.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">مواقع الأسطول</span>
-                </a>
-                <a href="vault.html" class="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 transition flex flex-col items-center gap-2 group text-decoration-none">
-                    <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-vault"></i>
-                    </div>
-                    <span class="font-bold text-xs text-slate-800">الخزنة المالية</span>
-                </a>
-            </div>
-
-            <div class="pt-3 border-t text-center">
-                <button onclick="closeIconsModal()" class="btn-primary w-full py-2.5 text-xs">إغلاق النافذة</button>
+            <div class="pt-3 border-t flex justify-end gap-2">
+                <button onclick="closeAddStoryModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
+                <button onclick="submitNewStory()" class="btn-primary text-xs py-2 px-5 cursor-pointer">نشر الحالة الآن</button>
             </div>
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية وإدارة نافذة الأيقونات -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emojiPickerPopup');
+            picker.classList.toggle('active');
+        }
+
+        function insertEmoji(emoji) {
+            const input = document.getElementById('chatMessageInput');
+            input.value += emoji;
+            input.focus();
+            document.getElementById('emojiPickerPopup').classList.remove('active');
+        }
+
+        // إغلاق نافذة الإيموجي عند النقر خارجها
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#emojiPickerPopup') && !e.target.closest('button[onclick="toggleEmojiPicker()"]')) {
+                document.getElementById('emojiPickerPopup').classList.remove('active');
             }
+        });
+
+        let storyTimer = null;
+        function openStoryViewer(author, text) {
+            document.getElementById('storyAuthorTitle').innerText = author;
+            document.getElementById('storyContentText').innerText = text;
+            let modal = document.getElementById('storyViewerModal');
+            let bar = document.getElementById('storyProgressBar');
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            modal.classList.add('active');
+
+            setTimeout(() => {
+                bar.style.transition = 'width 60s linear';
+                bar.style.width = '0%';
+            }, 50);
+
+            if (storyTimer) clearTimeout(storyTimer);
+            storyTimer = setTimeout(() => {
+                closeStoryViewer();
+            }, 60000); // 60 ثانية (دقيقة كاملة)
         }
 
-        function openIconsModal() {
-            document.getElementById('iconsModal').classList.add('active');
+        function closeStoryViewer() {
+            if (storyTimer) clearTimeout(storyTimer);
+            document.getElementById('storyViewerModal').classList.remove('active');
         }
 
-        function closeIconsModal() {
-            document.getElementById('iconsModal').classList.remove('active');
-        }
+        function openAddStoryModal() { document.getElementById('addStoryModal').classList.add('active'); }
+        function closeAddStoryModal() { document.getElementById('addStoryModal').classList.remove('active'); }
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -247,7 +297,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules ومزامنة الخوادم -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -257,7 +307,8 @@
             getDocs,
             onSnapshot, 
             query, 
-            where 
+            where,
+            orderBy 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -278,134 +329,103 @@
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        const badgeEl = document.getElementById('companyBadgeDisplay');
-        if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
-        }
+        document.getElementById('companyBadgeDisplay').innerText = `معرف الشركة: ${currentCompanyId}`;
 
-        let clientsList = [];
+        let currentChatMode = 'global'; 
         let messagesList = [];
-        let currentActiveClientId = null;
+        let storiesList = [];
         let unsubscribeMessages = null;
 
-        signInAnonymously(auth).then(async () => {
-            const clientsCollection = collection(db, "clients");
-            const clientsRef = query(clientsCollection, where("companyId", "==", currentCompanyId));
+        signInAnonymously(auth).then(() => {
+            loadStories();
+            loadMessages('global');
+        }).catch(err => console.error("فشل الاتصال بالمصادقة السحابية:", err));
 
-            try {
-                const snapshot = await getDocs(clientsRef);
-                clientsList = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                renderMessengerStories();
-            } catch(e) {
-                console.error("خطأ في جلب العملاء أولياً:", e);
-            }
+        window.selectGlobalChat = function() {
+            currentChatMode = 'global';
+            document.getElementById('activeChatName').innerText = 'الشات العام (البث المباشر للشركة)';
+            document.getElementById('activeChatAvatar').innerText = 'ع';
+            loadMessages('global');
+        };
 
-            onSnapshot(clientsRef, (snapshot) => {
-                clientsList = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                renderMessengerStories();
-            }, (error) => {
-                console.error("خطأ في جلب العملاء سحابياً للشات:", error);
-            });
-        }).catch((error) => {
-            console.error("فشل المصادقة سحابياً للشات:", error);
-        });
+        function loadStories() {
+            const storiesRef = collection(db, "stories");
+            const q = query(storiesRef, where("companyId", "==", currentCompanyId));
+            onSnapshot(q, (snapshot) => {
+                storiesList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderStoriesBar();
+            }, (err) => console.error("خطأ في جلب الستوري:", err));
+        }
 
-        function renderMessengerStories() {
-            let container = document.getElementById('messengerStoriesList');
-            if (clientsList.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-400">لا يوجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</div>`;
+        function renderStoriesBar() {
+            let container = document.getElementById('dynamicStoriesList');
+            if (storiesList.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400">لا توجد حالات ستوري نشطة حالياً.</span>`;
                 return;
             }
 
-            container.innerHTML = clientsList.map(c => {
-                let isActive = (currentActiveClientId === c.id || currentActiveClientId === c.docId);
-                return `
-                    <div onclick="window.selectClient('${c.id || c.docId}')" class="messenger-bubble flex flex-col items-center gap-1.5">
-                        <div class="relative">
-                            <div class="w-14 h-14 rounded-full ${isActive ? 'ring-4 ring-indigo-600 bg-indigo-600' : 'bg-slate-200'} text-white flex items-center justify-center font-bold text-base shadow-md">
-                                ${c.name ? c.name.charAt(0) : 'ع'}
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-                        </div>
-                        <span class="text-[11px] font-bold text-slate-700 truncate max-w-[70px] text-center">${c.name || 'عميل'}</span>
+            container.innerHTML = storiesList.map(s => `
+                <div onclick="openStoryViewer('${s.author || 'مستخدم'}', '${s.text || ''}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                    <div class="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-indigo-400">
+                        ${s.author ? s.author.charAt(0) : 'ح'}
                     </div>
-                `;
-            }).join('');
+                    <span class="text-[11px] font-bold text-slate-700 truncate max-w-[70px] text-center">${s.author || 'حالة'}</span>
+                </div>
+            `).join('');
         }
 
-        window.selectClient = async function(clientId) {
-            currentActiveClientId = clientId;
-            let client = clientsList.find(x => x.id === clientId || x.docId === clientId);
-            if (!client) return;
-
-            document.getElementById('activeChatName').innerText = client.name || 'عميل';
-            document.getElementById('activeChatAvatar').innerText = client.name ? client.name.charAt(0) : 'ع';
-
-            renderMessengerStories();
-            await listenToMessages(clientId);
-        };
-
-        async function listenToMessages(clientId) {
-            if (unsubscribeMessages) unsubscribeMessages();
-
-            const messagesCollection = collection(db, "messages");
-            const q = query(messagesCollection, where("clientId", "==", clientId), where("companyId", "==", currentCompanyId));
+        window.submitNewStory = async function() {
+            let txt = document.getElementById('newStoryTextInput').value.trim();
+            if (!txt) return alert('الرجاء كتابة نص الحالة أولاً');
+            let adminName = localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
 
             try {
-                const querySnapshot = await getDocs(q);
-                messagesList = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                messagesList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                renderMessages();
-            } catch(e) {
-                console.error("خطأ في جلب الرسائل أولياً:", e);
+                if (!auth.currentUser) await signInAnonymously(auth);
+                await addDoc(collection(db, "stories"), {
+                    companyId: currentCompanyId,
+                    author: adminName,
+                    text: txt,
+                    createdAt: Date.now()
+                });
+                document.getElementById('newStoryTextInput').value = '';
+                closeAddStoryModal();
+                alert('✓ تم نشر الستوري بنجاح وعالي الدقة.');
+            } catch (e) {
+                alert('خطأ أثناء النشر: ' + e.message);
             }
+        };
+
+        function loadMessages(mode) {
+            if (unsubscribeMessages) unsubscribeMessages();
+            const messagesRef = collection(db, "messages");
+            const q = query(messagesRef, where("companyId", "==", currentCompanyId), where("chatType", "==", mode));
 
             unsubscribeMessages = onSnapshot(q, (snapshot) => {
-                messagesList = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-
+                messagesList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 messagesList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
                 renderMessages();
             }, (error) => {
-                console.error("خطأ في جلب الرسائل سحابياً:", error);
+                console.error("خطأ في جلب رسائل الشات:", error);
             });
         }
 
         function renderMessages() {
             let area = document.getElementById('chatMessagesArea');
-            if (!currentActiveClientId) {
-                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-28">اختر محادثة من الشريط العلوي للبدء.</div>`;
-                return;
-            }
-
             if (messagesList.length === 0) {
-                area.innerHTML = `<div class="text-center text-xs text-slate-400 py-28">لا توجد رسائل سحابية بعد. ابدأ المحادثة الآن!</div>`;
+                area.innerHTML = `<div class="text-center text-slate-400 py-24">لا توجد رسائل في الشات العام بعد. ابدأ المراسلة!</div>`;
                 return;
             }
 
             area.innerHTML = messagesList.map(m => `
                 <div class="flex flex-col ${m.sender === 'me' ? 'items-end' : 'items-start'}">
-                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border text-slate-800 shadow-sm'}">${m.text}</div>
-                    <span class="text-[9px] text-slate-400 mt-1 mono-font">${m.time || ''}</span>
+                    <div class="max-w-[75%] px-3.5 py-2 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border text-slate-800 shadow-sm'}">${m.text}</div>
+                    <span class="text-[9px] text-slate-400 mt-0.5 mono-font">${m.time || ''}</span>
                 </div>
             `).join('');
-
             area.scrollTop = area.scrollHeight;
         }
 
         window.sendChatMessage = async function() {
-            if (!currentActiveClientId) return alert('الرجاء اختيار عميل أولاً من الشريط العلوي');
             let inputEl = document.getElementById('chatMessageInput');
             let txt = inputEl.value.trim();
             if (!txt) return;
@@ -415,65 +435,19 @@
             }
 
             try {
-                const messagesCollection = collection(db, "messages");
-                await addDoc(messagesCollection, {
+                await addDoc(collection(db, "messages"), {
                     companyId: currentCompanyId,
-                    clientId: currentActiveClientId,
+                    chatType: currentChatMode,
                     sender: 'me',
                     text: txt,
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     createdAt: Date.now()
                 });
-
                 inputEl.value = '';
             } catch (err) {
-                alert('حدث خطأ أثناء إرسال الرسالة سحابياً: ' + err.message);
+                alert('خطأ أثناء إرسال الرسالة: ' + err.message);
             }
         };
-    </script>
-    
-    <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none">
-            <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-            </span>
-            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
-            <span class="tracking-wide">بث EIDCO TV 4K</span>
-            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
-        </a>
-    </div>
-
-    <script>
-        (function setupDraggableFloatingBtn() {
-            const dragEl = document.getElementById('floatingTvTrigger');
-            if (!dragEl) return;
-            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
-
-            dragEl.addEventListener('touchstart', dragStart, {passive: false});
-            dragEl.addEventListener('touchend', dragEnd, {passive: false});
-            dragEl.addEventListener('touchmove', drag, {passive: false});
-            dragEl.addEventListener('mousedown', dragStart);
-            document.addEventListener('mouseup', dragEnd);
-            document.addEventListener('mousemove', drag);
-
-            function dragStart(e) {
-                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
-            }
-            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
-            function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                    xOffset = currentX; yOffset = currentY;
-                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
-                }
-            }
-        })();
     </script>
 </body>
 </html>

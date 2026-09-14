@@ -42,20 +42,12 @@
             border-radius: 20px; 
             border: 1px solid var(--border-color); 
             z-index: 10;
-            transition: all 0.4s ease-in-out;
+            touch-action: pan-x pan-y pinch-zoom;
         }
 
-        /* تنسيق وضع الخريطة الدائرية Radar Circular View */
-        #leafletMap.circular-mode {
-            border-radius: 50% !important;
-            width: 90vw !important;
-            max-width: 580px !important;
-            height: 580px !important;
-            max-height: 80vh !important;
-            margin: 0 auto !important;
-            box-shadow: 0 0 35px rgba(79, 70, 229, 0.35), inset 0 0 15px rgba(0,0,0,0.2) !important;
-            border: 6px solid #4f46e5 !important;
-            overflow: hidden !important;
+        /* سلاسة تدوير طبقة الخريطة */
+        .leaflet-map-pane {
+            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
@@ -69,13 +61,11 @@
         #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        /* تخصيص أيقونات الخريطة لمنع ظهور الخلفيات الإفتراضية البيضاء في Leaflet */
         .custom-map-icon {
             background: transparent !important;
             border: none !important;
         }
 
-        /* تخصيص نصوص النوافذ المنبثقة للـ Popups داخل الخريطة */
         .leaflet-popup-content-wrapper {
             border-radius: 16px !important;
             padding: 4px !important;
@@ -86,7 +76,6 @@
             margin: 12px 14px !important;
             line-height: 1.5 !important;
         }
-        /* إخفاء لوحة التعليمات النصية الافتراضية للـ Routing Machine لجعل الواجهة نظيفة */
         .leaflet-routing-container {
             display: none !important;
         }
@@ -100,13 +89,19 @@
             }
         }
 
-        window.openAddVehicleModal = function(defaultLat = '30.0444', defaultLng = '31.2357') {
+        // فتح نافذة الإضافة بدون إحداثيات افتراضية ثابتة
+        window.openAddVehicleModal = function(defaultLat = '', defaultLng = '') {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
             document.getElementById('vehiclePlate').value = '';
-            document.getElementById('vehicleLat').value = defaultLat;
-            document.getElementById('vehicleLng').value = defaultLng;
+            
+            // جلب مركز الخريطة المباشر حالياً بدلاً من وضع أرقام افتراضية
+            let currentLat = defaultLat || (window.map ? window.map.getCenter().lat.toFixed(6) : '');
+            let currentLng = defaultLng || (window.map ? window.map.getCenter().lng.toFixed(6) : '');
+            
+            document.getElementById('vehicleLat').value = currentLat;
+            document.getElementById('vehicleLng').value = currentLng;
             document.getElementById('vehicleModal').classList.remove('hidden');
         };
 
@@ -114,14 +109,18 @@
             document.getElementById('vehicleModal').classList.add('hidden');
         };
 
-        window.openAddShipmentModal = function(defaultLat = '30.0500', defaultLng = '31.2400') {
+        window.openAddShipmentModal = function(defaultLat = '', defaultLng = '') {
             document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
             document.getElementById('shipmentReceiver').value = '';
             document.getElementById('shipmentStatus').value = 'قيد التوصيل';
-            document.getElementById('shipmentLat').value = defaultLat;
-            document.getElementById('shipmentLng').value = defaultLng;
+            
+            let currentLat = defaultLat || (window.map ? window.map.getCenter().lat.toFixed(6) : '');
+            let currentLng = defaultLng || (window.map ? window.map.getCenter().lng.toFixed(6) : '');
+
+            document.getElementById('shipmentLat').value = currentLat;
+            document.getElementById('shipmentLng').value = currentLng;
             document.getElementById('shipmentModal').classList.remove('hidden');
         };
 
@@ -285,17 +284,21 @@
                 <div class="corporate-card p-4 relative overflow-hidden">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
-                            <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول</span>
+                            <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول والتدوير</span>
                             <i id="panelToggleIcon" class="fa-solid fa-chevron-down text-xs text-slate-500"></i>
                         </div>
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
-                            <button onclick="window.toggleCircularMapMode()" class="touch-btn">
-                                <i id="circleModeIcon" class="fa-solid fa-circle text-indigo-600"></i> 
-                                <span id="circleModeText">عرض خريطة دائرية Radar</span>
-                            </button>
+                            <!-- أدوات تدوير الخريطة 360 درجة -->
+                            <div class="flex items-center gap-1">
+                                <button onclick="window.rotateMap(-30)" class="touch-btn flex-1 justify-center" title="تدوير يساراً"><i class="fa-solid fa-rotate-left text-indigo-600"></i> -30°</button>
+                                <button onclick="window.rotateMap(30)" class="touch-btn flex-1 justify-center" title="تدوير يميناً"><i class="fa-solid fa-rotate-right text-indigo-600"></i> +30°</button>
+                                <button onclick="window.resetMapRotation()" class="touch-btn flex-1 justify-center bg-indigo-50 text-indigo-700" title="إعادة للشمال 0°">
+                                    <i id="compassNeedle" class="fa-solid fa-compass text-indigo-600 transition-transform duration-300"></i> 0°
+                                </button>
+                            </div>
                             <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
                             <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي GPS</button>
-                            <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
+                            <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-arrows-to-eye text-slate-600"></i> احتواء جميع العناصر</button>
                         </div>
                     </div>
 
@@ -398,11 +401,11 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
-                            <input type="number" step="any" id="vehicleLat" required value="30.0444" class="corporate-input mono-font">
+                            <input type="number" step="any" id="vehicleLat" required placeholder="خط العرض" class="corporate-input mono-font">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
-                            <input type="number" step="any" id="vehicleLng" required value="31.2357" class="corporate-input mono-font">
+                            <input type="number" step="any" id="vehicleLng" required placeholder="خط الطول" class="corporate-input mono-font">
                         </div>
                     </div>
                 </div>
@@ -454,11 +457,11 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
-                            <input type="number" step="any" id="shipmentLat" required value="30.0500" class="corporate-input mono-font">
+                            <input type="number" step="any" id="shipmentLat" required placeholder="خط العرض" class="corporate-input mono-font">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
-                            <input type="number" step="any" id="shipmentLng" required value="31.2400" class="corporate-input mono-font">
+                            <input type="number" step="any" id="shipmentLng" required placeholder="خط الطول" class="corporate-input mono-font">
                         </div>
                     </div>
                 </div>
@@ -491,7 +494,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم المزامنة ونظام الملاحة والرسم والتوجيه -->
+    <!-- Firebase SDK Modules ونظام التدوير 360 درجة بدون مواقع افتراضية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -532,11 +535,16 @@
         }
 
         let map;
+        window.map = null;
         let pickingMode = null; // 'vehicle' or 'shipment'
-        let activeRoutingControl = null; // تحكم مسار الملاحة الحالي
+        let activeRoutingControl = null;
+        let mapRotationAngle = 0; // زاوية تدوير الخريطة 360 درجة
 
         try {
-            map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
+            // تهيئة الخريطة بدون موقع افتراضي ثبّتي، بل بالاعتماد على موقع الـ GPS أو العناصر
+            map = L.map('leafletMap', { zoomControl: false }).setView([26.8206, 30.8025], 6);
+            window.map = map;
+
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
@@ -545,6 +553,13 @@
 
             streetLayer.addTo(map);
 
+            // جلب موقع المستخدم الحقيقي مباشرة عند البدء دون فرض أي موقع افتراضي
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+                }, () => {}, { enableHighAccuracy: true });
+            }
+
             window.switchLayer = function(type) {
                 map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
                 if(type === 'street') streetLayer.addTo(map);
@@ -552,7 +567,7 @@
                 if(type === 'satellite') satelliteLayer.addTo(map);
             };
 
-            // النقر المباشر على الخريطة لالتقاط الإحداثيات أو إضافة مركبة/شحنة
+            // النقر المباشر على الخريطة لالتقاط الإحداثيات
             map.on('click', function(e) {
                 const lat = e.latlng.lat.toFixed(6);
                 const lng = e.latlng.lng.toFixed(6);
@@ -574,7 +589,6 @@
                     return;
                 }
 
-                // نافذة التفاعلات السريعة عند الضغط في أي مكان بالخريطة
                 L.popup()
                     .setLatLng(e.latlng)
                     .setContent(`
@@ -602,23 +616,94 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        // دالة التبديل بين وضع الخريطة القياسي ووضع الخريطة الدائرية Radar
-        window.toggleCircularMapMode = function() {
-            const mapEl = document.getElementById('leafletMap');
-            const iconEl = document.getElementById('circleModeIcon');
-            const textEl = document.getElementById('circleModeText');
-            if (mapEl) {
-                mapEl.classList.toggle('circular-mode');
-                const isCircular = mapEl.classList.contains('circular-mode');
-                if (iconEl && textEl) {
-                    iconEl.className = isCircular ? "fa-solid fa-square text-indigo-600" : "fa-solid fa-circle text-indigo-600";
-                    textEl.innerText = isCircular ? "عرض قياسي ممتد" : "عرض خريطة دائرية Radar";
+        // ==========================================
+        // 🔄 محرك تدوير الخريطة 360 درجة (Map Rotation)
+        // ==========================================
+        window.rotateMap = function(degDelta) {
+            mapRotationAngle = (mapRotationAngle + degDelta) % 360;
+            applyMapRotation();
+        };
+
+        window.resetMapRotation = function() {
+            mapRotationAngle = 0;
+            applyMapRotation();
+        };
+
+        function applyMapRotation() {
+            const pane = document.querySelector('.leaflet-map-pane');
+            if (pane) {
+                pane.style.transform = `rotate(${mapRotationAngle}deg)`;
+            }
+            const compass = document.getElementById('compassNeedle');
+            if (compass) {
+                compass.style.transform = `rotate(${-mapRotationAngle}deg)`;
+            }
+        }
+
+        // دعم تدوير الخريطة باللمس بإصبعين على الشاشات الذكية (Multi-touch gesture rotation)
+        (function setupTouchRotation() {
+            const mapContainer = document.getElementById('leafletMap');
+            if (!mapContainer) return;
+
+            let initialAngle = 0;
+            let isRotating = false;
+
+            mapContainer.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    isRotating = true;
+                    initialAngle = getAngleBetweenTouches(e.touches[0], e.touches[1]) - mapRotationAngle;
                 }
-                setTimeout(() => { if (map) map.invalidateSize(); }, 350);
+            }, { passive: true });
+
+            mapContainer.addEventListener('touchmove', (e) => {
+                if (isRotating && e.touches.length === 2) {
+                    const currentAngle = getAngleBetweenTouches(e.touches[0], e.touches[1]);
+                    mapRotationAngle = Math.round((currentAngle - initialAngle) % 360);
+                    applyMapRotation();
+                }
+            }, { passive: true });
+
+            mapContainer.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    isRotating = false;
+                }
+            }, { passive: true });
+
+            function getAngleBetweenTouches(t1, t2) {
+                const dy = t2.clientY - t1.clientY;
+                const dx = t2.clientX - t1.clientX;
+                return Math.atan2(dy, dx) * (180 / Math.PI);
+            }
+        })();
+
+        // دالة احتواء وتكبير جميع المركبات والشحنات الموجودة دون مواقع افتراضية
+        let currentFleetDocs = [];
+        let currentShipmentDocs = [];
+
+        window.resetMapView = function() {
+            if (!map) return;
+            let bounds = [];
+            currentFleetDocs.forEach(v => {
+                if (!isNaN(parseFloat(v.lat)) && !isNaN(parseFloat(v.lng))) {
+                    bounds.push([parseFloat(v.lat), parseFloat(v.lng)]);
+                }
+            });
+            currentShipmentDocs.forEach(s => {
+                if (!isNaN(parseFloat(s.lat)) && !isNaN(parseFloat(s.lng))) {
+                    bounds.push([parseFloat(s.lat), parseFloat(s.lng)]);
+                }
+            });
+
+            if (bounds.length > 0) {
+                map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
+            } else if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+                });
             }
         };
 
-        // دالة حساب ورسم المسار الملاحي مباشرة بين نقطتين
+        // دالة رسم المسار الملاحي
         window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
             if (!map) return;
             if (activeRoutingControl) {
@@ -665,20 +750,18 @@
             });
         };
 
-        // رسم مسار من موقع المستخدم الحالي إلى أي نقطة
         window.navigateRouteTo = function(destLat, destLng, destName) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     window.calculateRoute(pos.coords.latitude, pos.coords.longitude, destLat, destLng, destName);
                 }, () => {
-                    window.calculateRoute(30.0444, 31.2357, destLat, destLng, destName);
+                    window.calculateRoute(map.getCenter().lat, map.getCenter().lng, destLat, destLng, destName);
                 }, { enableHighAccuracy: true });
             } else {
-                window.calculateRoute(30.0444, 31.2357, destLat, destLng, destName);
+                window.calculateRoute(map.getCenter().lat, map.getCenter().lng, destLat, destLng, destName);
             }
         };
 
-        // دالة رسم المسار عبر البحث بالنص بين نقطتي البداية والنهاية
         window.searchAndCalculateRoute = async function() {
             const startQuery = document.getElementById('routeStartInput').value.trim();
             const endQuery = document.getElementById('routeEndInput').value.trim();
@@ -701,13 +784,13 @@
                         return;
                     }
                 } else {
-                    // استخدام موقع الـ GPS الحالي إن لم تُحدد بداية
                     if ("geolocation" in navigator) {
                         const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
                         startLat = pos.coords.latitude;
                         startLng = pos.coords.longitude;
                     } else {
-                        startLat = 30.0444; startLng = 31.2357;
+                        startLat = map.getCenter().lat;
+                        startLng = map.getCenter().lng;
                     }
                 }
 
@@ -726,7 +809,6 @@
             }
         };
 
-        // إلغاء المسار الحسابي الحالي
         window.clearActiveRoute = function() {
             if (activeRoutingControl && map) {
                 map.removeControl(activeRoutingControl);
@@ -739,7 +821,6 @@
             }
         };
 
-        // دالة جلب الموقع الحقيقي عبر الـ GPS
         window.fetchGpsForModal = function(target) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(pos => {
@@ -762,7 +843,6 @@
             }
         };
 
-        // التحديد بالنقر على الخريطة
         window.pickFromMap = function(target) {
             pickingMode = target;
             if (map) {
@@ -771,7 +851,6 @@
             }
         };
 
-        // التركيز المباشر على عنصر في الخريطة من الجدول
         window.focusOnMap = function(lat, lng, label) {
             if (map && !isNaN(lat) && !isNaN(lng)) {
                 map.setView([lat, lng], 16, { animate: true });
@@ -782,7 +861,6 @@
             }
         };
 
-        // دالة البحث عن عنوان عبر OpenStreetMap Nominatim API
         window.searchCustomLocation = async function() {
             const queryText = document.getElementById('customSearchInput').value.trim();
             if(!queryText) return;
@@ -821,8 +899,13 @@
             let id = document.getElementById('vehicleId').value;
             let name = document.getElementById('vehicleName').value;
             let plate = document.getElementById('vehiclePlate').value;
-            let lat = parseFloat(document.getElementById('vehicleLat').value) || 30.0444;
-            let lng = parseFloat(document.getElementById('vehicleLng').value) || 31.2357;
+            let lat = parseFloat(document.getElementById('vehicleLat').value);
+            let lng = parseFloat(document.getElementById('vehicleLng').value);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("يرجى إدخال خط العرض وخط الطول بشكل صحيح.");
+                return;
+            }
 
             let vehicleData = {
                 companyId: currentCompanyId,
@@ -881,8 +964,13 @@
             let code = document.getElementById('shipmentCode').value;
             let receiver = document.getElementById('shipmentReceiver').value;
             let status = document.getElementById('shipmentStatus').value;
-            let lat = parseFloat(document.getElementById('shipmentLat').value) || 30.0500;
-            let lng = parseFloat(document.getElementById('shipmentLng').value) || 31.2400;
+            let lat = parseFloat(document.getElementById('shipmentLat').value);
+            let lng = parseFloat(document.getElementById('shipmentLng').value);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("يرجى إدخال خط العرض وخط الطول لشحنة بشكل صحيح.");
+                return;
+            }
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -920,7 +1008,6 @@
             }
         };
 
-        // دالة تغيير حالة الشحنة مباشرة بنقرة واحدة من الخريطة
         window.toggleShipmentStatusOnMap = async function(id, currentStatus) {
             const nextStatus = currentStatus === 'تم التسليم' ? 'قيد التوصيل' : 'تم التسليم';
             if (!auth.currentUser) {
@@ -939,7 +1026,6 @@
             const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
             const shipmentsRef = query(collection(db, "shipments"), where("companyId", "==", currentCompanyId));
 
-            // جلب أولي فوري باستخدام getDocs
             try {
                 await Promise.all([
                     getDocs(clientsRef),
@@ -950,7 +1036,6 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            // الاستماع اللحظي للسيارات مع الأيقونات الدائرية الفاخرة بدون المربع الأبيض
             let fleetMarkers = {};
             onSnapshot(fleetRef, (snapshot) => {
                 if (map) {
@@ -958,20 +1043,20 @@
                     fleetMarkers = {};
                 }
 
+                currentFleetDocs = [];
                 if (snapshot.empty) {
                     document.getElementById('mapFleetCount').innerText = '0 مركبة';
                     document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
-                let fleetDocs = [];
                 let tableHtml = '';
 
                 snapshot.forEach(docSnap => {
                     let v = docSnap.data();
                     let id = docSnap.id;
                     v.id = id;
-                    fleetDocs.push(v);
+                    currentFleetDocs.push(v);
 
                     let vLat = parseFloat(v.lat);
                     let vLng = parseFloat(v.lng);
@@ -1020,19 +1105,21 @@
                             <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${vLat || 30.0444}, ${vLng || 31.2357}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
-                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat || 30.0444}, ${vLng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
                 });
 
-                document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
+                document.getElementById('mapFleetCount').innerText = currentFleetDocs.length + ' مركبة';
                 document.getElementById('fleetTableBody').innerHTML = tableHtml;
+
+                // التكبير والتأطير التلقائي على الأسطول والشحنات إذا وجدت
+                window.resetMapView();
             });
 
-            // الاستماع اللحظي للشحنات مع الأيقونات الدائرية الخضراء الفاخرة بدون المربع الأبيض
             let shipmentMarkers = {};
             onSnapshot(shipmentsRef, (snapshot) => {
                 if (map) {
@@ -1040,20 +1127,20 @@
                     shipmentMarkers = {};
                 }
 
+                currentShipmentDocs = [];
                 if (snapshot.empty) {
                     document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
                     document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
-                let shipmentDocs = [];
                 let tableHtml = '';
 
                 snapshot.forEach(docSnap => {
                     let s = docSnap.data();
                     let id = docSnap.id;
                     s.id = id;
-                    shipmentDocs.push(s);
+                    currentShipmentDocs.push(s);
 
                     let sLat = parseFloat(s.lat);
                     let sLng = parseFloat(s.lng);
@@ -1104,18 +1191,17 @@
                             <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
                             <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${sLat || 30.0500}, ${sLng || 31.2400}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
                                 <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
                 });
 
-                document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
+                document.getElementById('mapShipmentsCount').innerText = currentShipmentDocs.length + ' شحنة';
                 document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
             });
 
-            // الاستماع اللحظي للعملاء مع أيقونات دائرية برتقالية فاخرة
             let clientMarkers = [];
             onSnapshot(clientsRef, (snapshot) => {
                 let clients = [];
@@ -1127,8 +1213,10 @@
                     clientMarkers = [];
 
                     clients.forEach(c => {
-                        let lat = parseFloat(c.lat) || (30.0333 + (Math.random() - 0.5) * 0.05);
-                        let lng = parseFloat(c.lng) || (31.2333 + (Math.random() - 0.5) * 0.05);
+                        let lat = parseFloat(c.lat);
+                        let lng = parseFloat(c.lng);
+                        if (isNaN(lat) || isNaN(lng)) return;
+
                         let balance = c.balance || 0;
                         let phone = c.phone || 'غير مسجل';
                         
@@ -1161,7 +1249,7 @@
             console.error("فشل المصادقة سحابياً في خريطة الأسطول:", err);
         });
 
-        window.panToFleet = function() { if(map) map.setView([30.0444, 31.2357], 14); };
+        window.panToFleet = function() { window.resetMapView(); };
         window.panToUser = function() { 
             if("geolocation" in navigator && map) {
                 navigator.geolocation.getCurrentPosition(pos => {
@@ -1171,7 +1259,6 @@
                 });
             }
         };
-        window.resetMapView = function() { if(map) map.setView([30.0444, 31.2357], 13); };
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->

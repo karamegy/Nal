@@ -34,10 +34,33 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        #leafletMap { height: 68vh; min-height: 520px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); z-index: 10; }
+        
+        #leafletMap { 
+            height: 68vh; 
+            min-height: 520px; 
+            width: 100%; 
+            border-radius: 20px; 
+            border: 1px solid var(--border-color); 
+            z-index: 10;
+            transition: all 0.4s ease-in-out;
+        }
+
+        /* تنسيق وضع الخريطة الدائرية Radar Circular View */
+        #leafletMap.circular-mode {
+            border-radius: 50% !important;
+            width: 90vw !important;
+            max-width: 580px !important;
+            height: 580px !important;
+            max-height: 80vh !important;
+            margin: 0 auto !important;
+            box-shadow: 0 0 35px rgba(79, 70, 229, 0.35), inset 0 0 15px rgba(0,0,0,0.2) !important;
+            border: 6px solid #4f46e5 !important;
+            overflow: hidden !important;
+        }
+
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
         
-        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 250px; transition: all 0.3s ease; }
+        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 260px; transition: all 0.3s ease; }
         .touch-control-panel.collapsed { width: 44px; height: 44px; overflow: hidden; padding: 8px; }
         .touch-control-panel.collapsed .panel-content { display: none; }
         .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; box-sizing: border-box; }
@@ -62,6 +85,10 @@
         .leaflet-popup-content {
             margin: 12px 14px !important;
             line-height: 1.5 !important;
+        }
+        /* إخفاء لوحة التعليمات النصية الافتراضية للـ Routing Machine لجعل الواجهة نظيفة */
+        .leaflet-routing-container {
+            display: none !important;
         }
     </style>
 
@@ -225,27 +252,47 @@
                     </div>
                 </div>
 
-                <div class="corporate-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
-                    <div class="flex items-center gap-2 flex-1 min-w-[260px]">
-                        <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
-                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو فرع..." class="corporate-input flex-1" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
-                        <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
+                <!-- شريط الملاحة وبحث العناوين ورسم المسارات -->
+                <div class="corporate-card p-4 space-y-3 text-xs">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 flex-1 min-w-[260px]">
+                            <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث الجغرافي:</span>
+                            <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو مدينة..." class="corporate-input flex-1" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
+                            <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                            <span class="font-bold text-slate-700 whitespace-nowrap">طبقات الخريطة:</span>
+                            <button onclick="window.switchLayer('street')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition cursor-pointer">القياسية</button>
+                            <button onclick="window.switchLayer('topo')" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition cursor-pointer">التضاريس</button>
+                            <button onclick="window.switchLayer('satellite')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition cursor-pointer"><i class="fa-solid fa-satellite ml-1"></i> القمر الصناعي</button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                        <span class="font-bold text-slate-700 whitespace-nowrap">طبقات الخريطة:</span>
-                        <button onclick="window.switchLayer('street')" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition cursor-pointer">القياسية</button>
-                        <button onclick="window.switchLayer('topo')" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition cursor-pointer">التضاريس</button>
-                        <button onclick="window.switchLayer('satellite')" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition cursor-pointer"><i class="fa-solid fa-satellite ml-1"></i> القمر الصناعي</button>
+
+                    <!-- شريط التوجيه ورسم المسارات بين النقطتين -->
+                    <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
+                        <span class="font-bold text-indigo-600 whitespace-nowrap"><i class="fa-solid fa-route ml-1"></i> ملاحة المسارات:</span>
+                        <input type="text" id="routeStartInput" placeholder="نقطة البداية (أو اتركها فارغة لموقعك GPS)" class="corporate-input flex-1 min-w-[180px]">
+                        <input type="text" id="routeEndInput" placeholder="نقطة الوصول (مثال: مدينة نصر، القاهرة)" class="corporate-input flex-1 min-w-[180px]">
+                        <button onclick="window.searchAndCalculateRoute()" class="btn-primary py-2 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                            <i class="fa-solid fa-location-arrow ml-1"></i> رسم المسار
+                        </button>
+                        <button id="clearRouteBtn" onclick="window.clearActiveRoute()" class="hidden px-3 py-2 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 border border-red-200 cursor-pointer">
+                            <i class="fa-solid fa-xmark ml-1"></i> إلغاء المسار
+                        </button>
                     </div>
                 </div>
 
-                <div class="corporate-card p-4 relative">
+                <div class="corporate-card p-4 relative overflow-hidden">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
                             <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول</span>
                             <i id="panelToggleIcon" class="fa-solid fa-chevron-down text-xs text-slate-500"></i>
                         </div>
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
+                            <button onclick="window.toggleCircularMapMode()" class="touch-btn">
+                                <i id="circleModeIcon" class="fa-solid fa-circle text-indigo-600"></i> 
+                                <span id="circleModeText">عرض خريطة دائرية Radar</span>
+                            </button>
                             <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
                             <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي GPS</button>
                             <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
@@ -444,7 +491,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم كامل للمزامنة والتحكم بالخريطة -->
+    <!-- Firebase SDK Modules مع دعم المزامنة ونظام الملاحة والرسم والتوجيه -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -486,6 +533,7 @@
 
         let map;
         let pickingMode = null; // 'vehicle' or 'shipment'
+        let activeRoutingControl = null; // تحكم مسار الملاحة الحالي
 
         try {
             map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
@@ -541,6 +589,9 @@
                                 <button onclick="window.openAddShipmentModal('${lat}', '${lng}')" style="background:#10b981; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11px;">
                                     <i class="fa-solid fa-plus"></i> إضافة شحنة هنا
                                 </button>
+                                <button onclick="window.navigateRouteTo(${lat}, ${lng}, 'النقطة المحددة')" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11px;">
+                                    <i class="fa-solid fa-route"></i> رسم مسار إليها
+                                </button>
                             </div>
                         </div>
                     `)
@@ -550,6 +601,143 @@
         } catch (e) {
             console.warn("Leaflet Map setup warning:", e);
         }
+
+        // دالة التبديل بين وضع الخريطة القياسي ووضع الخريطة الدائرية Radar
+        window.toggleCircularMapMode = function() {
+            const mapEl = document.getElementById('leafletMap');
+            const iconEl = document.getElementById('circleModeIcon');
+            const textEl = document.getElementById('circleModeText');
+            if (mapEl) {
+                mapEl.classList.toggle('circular-mode');
+                const isCircular = mapEl.classList.contains('circular-mode');
+                if (iconEl && textEl) {
+                    iconEl.className = isCircular ? "fa-solid fa-square text-indigo-600" : "fa-solid fa-circle text-indigo-600";
+                    textEl.innerText = isCircular ? "عرض قياسي ممتد" : "عرض خريطة دائرية Radar";
+                }
+                setTimeout(() => { if (map) map.invalidateSize(); }, 350);
+            }
+        };
+
+        // دالة حساب ورسم المسار الملاحي مباشرة بين نقطتين
+        window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
+            if (!map) return;
+            if (activeRoutingControl) {
+                map.removeControl(activeRoutingControl);
+                activeRoutingControl = null;
+            }
+
+            activeRoutingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(startLat, startLng),
+                    L.latLng(destLat, destLng)
+                ],
+                lineOptions: {
+                    styles: [{ color: '#4f46e5', opacity: 0.85, weight: 6 }]
+                },
+                createMarker: function(i, wp) {
+                    return L.marker(wp.latLng, {
+                        icon: L.divIcon({
+                            className: 'custom-map-icon',
+                            html: `<div style="background:${i === 0 ? '#10b981' : '#4f46e5'}; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 8px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid ${i === 0 ? 'fa-play' : 'fa-flag-checkered'} text-xs"></i></div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    });
+                },
+                show: false,
+                addWaypoints: false,
+                routeWhileDragging: false
+            }).addTo(map);
+
+            activeRoutingControl.on('routesfound', function(e) {
+                const routes = e.routes;
+                const summary = routes[0].summary;
+                const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                const timeMin = Math.round(summary.totalTime / 60);
+
+                const etaEl = document.getElementById('liveEtaDisplay');
+                if(etaEl) etaEl.innerText = `${timeMin} دقيقة (${distanceKm} كم)`;
+
+                const clearBtn = document.getElementById('clearRouteBtn');
+                if(clearBtn) clearBtn.classList.remove('hidden');
+
+                alert(`🧭 تم رسم مسار الملاحة إلى [ ${destName} ]\n• المسافة: ${distanceKm} كم\n• الوقت المتوقع: ${timeMin} دقيقة`);
+            });
+        };
+
+        // رسم مسار من موقع المستخدم الحالي إلى أي نقطة
+        window.navigateRouteTo = function(destLat, destLng, destName) {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    window.calculateRoute(pos.coords.latitude, pos.coords.longitude, destLat, destLng, destName);
+                }, () => {
+                    window.calculateRoute(30.0444, 31.2357, destLat, destLng, destName);
+                }, { enableHighAccuracy: true });
+            } else {
+                window.calculateRoute(30.0444, 31.2357, destLat, destLng, destName);
+            }
+        };
+
+        // دالة رسم المسار عبر البحث بالنص بين نقطتي البداية والنهاية
+        window.searchAndCalculateRoute = async function() {
+            const startQuery = document.getElementById('routeStartInput').value.trim();
+            const endQuery = document.getElementById('routeEndInput').value.trim();
+
+            if (!endQuery) {
+                alert("يرجى إدخال اسم نقطة الوصول/الوجهة أولاً.");
+                return;
+            }
+
+            try {
+                let startLat, startLng;
+                if (startQuery) {
+                    const startRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startQuery)}`);
+                    const startData = await startRes.json();
+                    if (startData && startData.length > 0) {
+                        startLat = parseFloat(startData[0].lat);
+                        startLng = parseFloat(startData[0].lon);
+                    } else {
+                        alert("تعذر العثور على نقطة البداية المدخلة.");
+                        return;
+                    }
+                } else {
+                    // استخدام موقع الـ GPS الحالي إن لم تُحدد بداية
+                    if ("geolocation" in navigator) {
+                        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+                        startLat = pos.coords.latitude;
+                        startLng = pos.coords.longitude;
+                    } else {
+                        startLat = 30.0444; startLng = 31.2357;
+                    }
+                }
+
+                const endRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endQuery)}`);
+                const endData = await endRes.json();
+                if (endData && endData.length > 0) {
+                    const endLat = parseFloat(endData[0].lat);
+                    const endLng = parseFloat(endData[0].lon);
+                    window.calculateRoute(startLat, startLng, endLat, endLng, endQuery);
+                } else {
+                    alert("تعذر العثور على نقطة الوصول المدخلة.");
+                }
+
+            } catch(e) {
+                alert("حدث خطأ أثناء البحث عن مسار الملاحة: " + e.message);
+            }
+        };
+
+        // إلغاء المسار الحسابي الحالي
+        window.clearActiveRoute = function() {
+            if (activeRoutingControl && map) {
+                map.removeControl(activeRoutingControl);
+                activeRoutingControl = null;
+                const etaEl = document.getElementById('liveEtaDisplay');
+                if(etaEl) etaEl.innerText = '-- دقيقة';
+                const clearBtn = document.getElementById('clearRouteBtn');
+                if(clearBtn) clearBtn.classList.add('hidden');
+                alert("✓ تم إلغاء المسار الحالي.");
+            }
+        };
 
         // دالة جلب الموقع الحقيقي عبر الـ GPS
         window.fetchGpsForModal = function(target) {
@@ -610,7 +798,14 @@
                         map.setView([lat, lon], 14);
                         L.popup()
                             .setLatLng([lat, lon])
-                            .setContent(`<div style="font-family:'Cairo',sans-serif; text-align:right;"><b>🔍 نتيجة البحث:</b><br>${data[0].display_name}</div>`)
+                            .setContent(`
+                                <div style="font-family:'Cairo',sans-serif; text-align:right;">
+                                    <b>🔍 نتيجة البحث:</b><br>${data[0].display_name}<br>
+                                    <button onclick="window.navigateRouteTo(${lat}, ${lon}, '${data[0].display_name.split(',')[0]}')" style="background:#4f46e5; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; margin-top:6px; cursor:pointer;">
+                                        <i class="fa-solid fa-route"></i> رسم مسار لهذا المكان
+                                    </button>
+                                </div>
+                            `)
                             .openOn(map);
                     }
                 } else {
@@ -782,7 +977,6 @@
                     let vLng = parseFloat(v.lng);
 
                     if (map && !isNaN(vLat) && !isNaN(vLng)) {
-                        // أيقونة دائرية أنيقة وشفافة الحواف بدون مربع أبيض
                         let marker = L.marker([vLat, vLng], {
                             icon: L.divIcon({
                                 className: 'custom-map-icon',
@@ -794,14 +988,17 @@
                                 iconAnchor: [20, 20]
                             })
                         }).addTo(map).bindPopup(`
-                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:180px;">
+                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:190px;">
                                 <div style="display:flex; align-items:center; gap:6px; font-weight:bold; color:#0f172a; margin-bottom:4px;">
                                     <i class="fa-solid fa-truck text-indigo-600"></i> ${v.name || 'مركبة أسطول'}
                                 </div>
                                 <div style="font-size:12px; color:#64748b;">لوحة: <b>${v.plate || 'بدون'}</b></div>
                                 <div style="font-size:12px; color:#64748b;">السرعة الحالية: <b style="color:#10b981;">${v.speed || 0} كم/س</b></div>
                                 <hr style="margin:8px 0; border-color:#e2e8f0;">
-                                <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+                                    <button onclick="window.navigateRouteTo(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-route"></i> رسم مسار
+                                    </button>
                                     <button onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" style="background:#e0e7ff; color:#4338ca; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-pen-to-square"></i> تعديل
                                     </button>
@@ -876,14 +1073,17 @@
                                 iconAnchor: [19, 19]
                             })
                         }).addTo(map).bindPopup(`
-                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:190px;">
+                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:200px;">
                                 <div style="display:flex; justify-between; align-items:center;">
                                     <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${s.code || id}</b>
                                 </div>
                                 <hr style="margin:6px 0; border-color:#e2e8f0;">
                                 <div style="font-size:12px; color:#475569;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
                                 <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
-                                <div style="display:flex; gap:4px; margin-top:8px; justify-flex-end;">
+                                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-flex-end;">
+                                    <button onclick="window.navigateRouteTo(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-route"></i> رسم مسار
+                                    </button>
                                     <button onclick="window.toggleShipmentStatusOnMap('${id}', '${s.status}')" style="background:#d1fae5; color:#047857; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-arrows-rotate"></i> تبديل الحالة
                                     </button>
@@ -946,7 +1146,10 @@
                             <div style="font-family:'Cairo',sans-serif; text-align:right;">
                                 <b><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><br>
                                 <span style="font-size:12px; color:#64748b;">هاتف: ${phone}</span><br>
-                                <span style="font-size:12px; color:#10b981; font-weight:bold;">الرصيد: ${balance} ج.م</span>
+                                <span style="font-size:12px; color:#10b981; font-weight:bold;">الرصيد: ${balance} ج.م</span><br>
+                                <button onclick="window.navigateRouteTo(${lat}, ${lng}, '${c.name}')" style="background:#fef3c7; color:#b45309; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; margin-top:6px; cursor:pointer;">
+                                    <i class="fa-solid fa-route"></i> رسم مسار للعميل
+                                </button>
                             </div>
                         `);
 

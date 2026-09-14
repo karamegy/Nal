@@ -272,7 +272,6 @@
             }
         };
 
-        // تفعيل نافذة مفتاح المرور الحقيقي (Passkey / WebAuthn) لإظهار مستشعر بصمة الهاتف الفعلية
         async function promptDeviceVerification(userName) {
             try {
                 if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
@@ -282,7 +281,6 @@
                         window.crypto.getRandomValues(challenge);
                         
                         try {
-                            // محاولة استدعاء بصمة الجهاز الحية
                             await navigator.credentials.create({
                                 publicKey: {
                                     challenge: challenge,
@@ -302,7 +300,6 @@
                             });
                             return true;
                         } catch (err) {
-                            // إذا كانت البصمة مسجلة مسبقاً، نجرب طلب المصادقة (get)
                             const assertion = await navigator.credentials.get({
                                 publicKey: {
                                     challenge: challenge,
@@ -314,10 +311,8 @@
                         }
                     }
                 }
-                // Fallback ذكي ومتوافق مع الأجهزة التي لا تدعم الـ WebAuthn بشكل كامل
                 return confirm(`🔒 تأكيد بصمة الهيكل الحيوية للحساب (${userName}): اضغط موافق لتفعيل مصادقة الجهاز.`);
             } catch (e) {
-                console.warn("استخدام نافذة التأكيد البديلة:", e);
                 return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
             }
         }
@@ -335,12 +330,18 @@
                 const querySnapshot = await getDocs(accountsRef);
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+                
+                // التحقق مما إذا كان الحساب محظوراً
+                if (existingAccount && existingAccount.isBanned) {
+                    alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                    return;
+                }
+
                 let assignedCompanyId;
                 let finalUserName;
                 let userRole = 'محاسب أول';
 
-                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-                
                 if (existingAccount) {
                     finalUserName = existingAccount.name;
                     assignedCompanyId = existingAccount.companyId;
@@ -366,6 +367,7 @@
                         companyId: assignedCompanyId,
                         email: userEmail,
                         avatar: userPhotoUrl,
+                        isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
                 }
@@ -431,11 +433,16 @@
                 const querySnapshot = await getDocs(accountsRef);
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+                let existingAccount = cloudAccounts.find(a => a.phone === phoneNum);
+                if (existingAccount && existingAccount.isBanned) {
+                    alert("⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
+                    return;
+                }
+
                 let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
                 let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
                 let userRole = 'مشرف أسطول';
 
-                let existingAccount = cloudAccounts.find(a => a.phone === phoneNum);
                 if (existingAccount) {
                     assignedCompanyId = existingAccount.companyId;
                     finalUserName = existingAccount.name;
@@ -449,6 +456,7 @@
                         role: userRole,
                         companyId: assignedCompanyId,
                         phone: phoneNum,
+                        isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
                 }
@@ -508,6 +516,7 @@
                     pin: pinInput,
                     role: roleInput,
                     companyId: generatedCompanyId,
+                    isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
 
@@ -532,6 +541,7 @@
                     role: 'مدير نظام رئيسي',
                     companyId: 'company_founder_karm',
                     biometricVerified: true,
+                    isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
                 alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
@@ -540,7 +550,6 @@
             }
         };
 
-        // تسجيل الدخول بالاسم والرقم السري مع تفعيل استشعار البصمة الحقيقية للجهاز والدمج السحابي التلقائي
         window.performBiometricAuth = async function() {
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
@@ -563,10 +572,18 @@
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 let matchedAccount = cloudAccounts.find(a => a.name === username);
+                
+                // التحقق الصارم مما إذا كان الحساب محظوراً
+                if (matchedAccount && matchedAccount.isBanned) {
+                    statusEl.innerText = "❌ عذراً، هذا الحساب محظور من قِبل الإدارة!";
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    alert("⚠️ تنبيه: هذا الحساب تم حظره نهائياً بسبب شكاوى ومخالفات مسجلة ضده.");
+                    return;
+                }
+
                 let assignedCompanyId;
 
                 if (!matchedAccount) {
-                    // إذا كان الحساب جديداً، يتم تسجيله ودمجه تلقائياً مع الرقم السري في السحابة
                     let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
                     assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
                     
@@ -580,6 +597,7 @@
                         role: 'محاسب أول',
                         companyId: assignedCompanyId,
                         biometricVerified: true,
+                        isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
 
@@ -595,7 +613,6 @@
                     assignedCompanyId = matchedAccount.companyId;
                 }
 
-                // طلب تفعيل بصمة الجهاز الحقيقية (Hardware Passkey / Fingerprint)
                 let verified = await promptDeviceVerification(username);
                 if (!verified) {
                     statusEl.innerText = "❌ تم إلغاء تأكيد البصمة أو فشل التعرف.";
@@ -608,7 +625,6 @@
                 statusEl.innerText = "✓ تمت المطابقة وتأكيد البصمة بنجاح! جاري التوجيه...";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                // حفظ بيانات الجلسة والتأكيد لتجاوز حماية الصفحات وتوجيهك لـ index.html مباشرة
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_v14_admin', username);

@@ -120,7 +120,7 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- جدول الحسابات والمستخدمين -->
+                <!-- جدول الحسابات والمستخدمين بدون زر الدخول المباشر -->
                 <div class="corporate-card p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة كافة الحسابات والشركات المسجلة في السحابة</h3>
@@ -281,9 +281,6 @@
                             ${isBanned ? '<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
                         </td>
                         <td class="p-4 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.switchAndLoginAsCompany('${compId}', '${acc.name || 'مسؤول'}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
-                                <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول
-                            </button>
                             <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
                             </button>
@@ -356,7 +353,6 @@
             }
 
             try {
-                // استخدام معرف الشركة واسم المسؤول كمعرف فريد ومستقل للمستند لضمان العزل التام
                 let docIdToUse = editDocId || (companyIdInput + "_" + name.replace(/\s+/g, '_'));
 
                 await setDoc(doc(db, "accounts", docIdToUse), {
@@ -388,13 +384,6 @@
             } catch(err) {
                 alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);
             }
-        };
-
-        window.switchAndLoginAsCompany = function(companyId, name) {
-            sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_v14_admin', name);
-            localStorage.setItem('eidco_current_company_id', companyId);
-            window.location.href = `index.html?companyId=${encodeURIComponent(companyId)}`;
         };
     </script>
     

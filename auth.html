@@ -77,6 +77,13 @@
             </button>
         </div>
 
+        <!-- زر الشكاوي والدعم الفني الجديد -->
+        <div class="relative z-10">
+            <button onclick="openComplaintsModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow">
+                <i class="fa-solid fa-triangle-exclamation"></i> هل تواجه مشكلة؟ إرسال شكوى أو بلاغ للإدارة
+            </button>
+        </div>
+
         <div class="relative flex py-1 items-center z-10">
             <div class="flex-grow border-t border-slate-700"></div>
             <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والرقم السري والبصمة</span>
@@ -107,6 +114,36 @@
         <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between items-center">
             <span>EIDCO Business OS &copy; 2026</span>
             <button id="resetBtn" onclick="resetDefaultAccounts()" class="hidden text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
+        </div>
+    </div>
+
+    <!-- نافذة إرسال شكوى جديدة -->
+    <div id="complaintsModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-headset ml-2 text-amber-400"></i> نظام الشكاوى والدعم الفني</h3>
+                <button onclick="closeComplaintsModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">اسم الحساب / الشركة المُشتكية</label>
+                    <input type="text" id="complaintSenderName" class="corporate-input text-xs" placeholder="أدخل اسمك أو اسم شركتك المسجل">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">رقم الهاتف أو وسيلة التواصل</label>
+                    <input type="text" id="complaintContact" class="corporate-input text-xs mono-font" placeholder="رقم الهاتف أو البريد الإلكتروني">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-300 font-bold">تفاصيل الشكوى أو المشكلة</label>
+                    <textarea id="complaintMessage" rows="4" class="corporate-input text-xs resize-none" placeholder="اكتب تفاصيل المشكلة أو الشكوى بوضوح ليتسنى للإدارة مراجعتها..."></textarea>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="submitUserComplaint()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold flex-1 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-paper-plane"></i> إرسال الشكوى للإدارة
+                </button>
+                <button onclick="closeComplaintsModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+            </div>
         </div>
     </div>
 
@@ -172,6 +209,7 @@
             getFirestore, 
             collection, 
             setDoc, 
+            addDoc,
             deleteDoc, 
             doc, 
             getDocs,
@@ -199,6 +237,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const accountsRef = collection(db, "accounts");
+        const messagesRef = collection(db, "messages"); // استخدام مجموعة messages الموجودة
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         let accountsData = [];
@@ -272,6 +311,47 @@
             }
         };
 
+        // دوال نافذة الشكاوى
+        window.openComplaintsModal = function() {
+            let currentInputName = document.getElementById('usernameInput').value.trim();
+            if(currentInputName) {
+                document.getElementById('complaintSenderName').value = currentInputName;
+            }
+            document.getElementById('complaintsModal').classList.add('active');
+        };
+
+        window.closeComplaintsModal = function() {
+            document.getElementById('complaintsModal').classList.remove('active');
+        };
+
+        window.submitUserComplaint = async function() {
+            let name = document.getElementById('complaintSenderName').value.trim();
+            let contact = document.getElementById('complaintContact').value.trim();
+            let message = document.getElementById('complaintMessage').value.trim();
+
+            if(!name || !message) {
+                alert('الرجاء إدخال اسم الحساب وتفاصيل الشكوى.');
+                return;
+            }
+
+            try {
+                await addDoc(messagesRef, {
+                    senderName: name,
+                    contactInfo: contact || 'بدون وسائل تواصل',
+                    message: message,
+                    type: 'شكوى نظام',
+                    status: 'قيد المراجعة',
+                    date: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                });
+
+                alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية، سيتم مراجعتها واتخاذ اللازم.');
+                document.getElementById('complaintMessage').value = '';
+                window.closeComplaintsModal();
+            } catch(err) {
+                alert('خطأ أثناء إرسال الشكوى: ' + err.message);
+            }
+        };
+
         async function promptDeviceVerification(userName) {
             try {
                 if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
@@ -332,7 +412,6 @@
 
                 let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
                 
-                // التحقق مما إذا كان الحساب محظوراً
                 if (existingAccount && existingAccount.isBanned) {
                     alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
                     return;
@@ -573,7 +652,6 @@
 
                 let matchedAccount = cloudAccounts.find(a => a.name === username);
                 
-                // التحقق الصارم مما إذا كان الحساب محظوراً
                 if (matchedAccount && matchedAccount.isBanned) {
                     statusEl.innerText = "❌ عذراً، هذا الحساب محظور من قِبل الإدارة!";
                     statusEl.className = "text-xs text-rose-400 font-mono block font-bold";

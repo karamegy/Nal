@@ -29,7 +29,7 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; font-size: 0.875rem; }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
@@ -131,10 +131,10 @@
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">اسم المسؤول / الجهة</th>
-                                    <th class="p-4">الدور / الصلاحية</th>
+                                    <th class="p-4">الدور / الصلاحية (معزولة)</th>
                                     <th class="p-4">معرف الشركة (Company ID)</th>
+                                    <th class="p-4">الرقم السري (PIN)</th>
                                     <th class="p-4">حالة الحساب</th>
-                                    <th class="p-4">تاريخ الإضافة</th>
                                     <th class="p-4 text-center">الإجراءات والسيطرة</th>
                                 </tr>
                             </thead>
@@ -148,10 +148,10 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة / تعديل مستخدم وتخصيصه للشركة -->
+    <!-- نافذة إضافة / تعديل مستخدم وتخصيصه للشركة مع الرقم السري ومعرف الشركة -->
     <div id="userModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد للنظام سحابياً</h3>
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl">
+            <h3 id="userModalTitle" class="font-bold text-sm text-slate-900">إضافة مسؤول جديد وحساب سحابي معزول</h3>
             <input type="hidden" id="editDocId">
             <div class="space-y-3 text-xs">
                 <div>
@@ -160,15 +160,20 @@
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">معرف الشركة (Company ID)</label>
-                    <input type="text" id="userCompanyIdInput" class="corporate-input mono-font" placeholder="اتركه فارغاً لإنشاء معرف جديد أو أدخل معرف شركتك">
+                    <input type="text" id="userCompanyIdInput" class="corporate-input mono-font" placeholder="company_founder_karm">
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">يضمن العزل التام لبيانات وقواعد الشركة.</span>
                 </div>
                 <div>
-                    <label class="block mb-1 text-slate-600 font-bold">الدور والصلاحية</label>
-                    <select id="userRole" class="corporate-input font-bold">
-                        <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
-                        <option value="محاسب أول">محاسب أول</option>
-                        <option value="مسؤول مخزن">مسؤول مخزن</option>
-                        <option value="مشرف أسطول">مشرف أسطول</option>
+                    <label class="block mb-1 text-slate-600 font-bold">الرقم السري (PIN Code / Password)</label>
+                    <input type="password" id="userPinInput" class="corporate-input mono-font text-center tracking-widest text-base" placeholder="••••" maxlength="6">
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-600 font-bold">الدور والصلاحية (عزل الرتب)</label>
+                    <select id="userRole" class="corporate-input font-bold text-slate-800">
+                        <option value="مدير نظام رئيسي">مدير نظام رئيسي (صلاحيات كاملة)</option>
+                        <option value="محاسب أول">محاسب أول (فحص وإدخال الفواتير)</option>
+                        <option value="مسؤول مخزن">مسؤول مخزن (إدارة الأصناف)</option>
+                        <option value="مشرف أسطول">مشرف أسطول (متابعة الخريطة والحركة)</option>
                     </select>
                 </div>
             </div>
@@ -202,7 +207,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules لجلب كافة الحسابات بدون شروط مسبقة -->
+    <!-- Firebase SDK Modules لجلب كافة الحسابات مع الرقم السري ومعرف الشركة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -212,8 +217,8 @@
             deleteDoc, 
             doc, 
             updateDoc, 
-            onSnapshot,
-            getDocs 
+            setDoc,
+            onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -244,7 +249,6 @@
         signInAnonymously(auth).then(async () => {
             const accountsCollection = collection(db, "accounts");
 
-            // جلب كافة المستندات من مجموعة accounts بدون قيود الـ where
             onSnapshot(accountsCollection, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 window.renderUsersTable();
@@ -266,15 +270,16 @@
             tbody.innerHTML = accountsList.map((acc) => {
                 let isBanned = acc.isBanned === true;
                 let compId = acc.companyId || acc.docId;
+                let pinCode = acc.pin || '1234';
                 return `
                     <tr class="hover:bg-slate-50 ${isBanned ? 'bg-rose-50/40' : ''}">
                         <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
                         <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
                         <td class="p-4 mono-font text-indigo-600 font-bold">${compId}</td>
+                        <td class="p-4 mono-font text-slate-700 tracking-widest">${pinCode}</td>
                         <td class="p-4">
                             ${isBanned ? '<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
                         </td>
-                        <td class="p-4 mono-font text-slate-500">${acc.date || '2026-01-01'}</td>
                         <td class="p-4 text-center space-x-1 space-x-reverse">
                             <button onclick="window.switchAndLoginAsCompany('${compId}', '${acc.name || 'مسؤول'}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
                                 <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول
@@ -309,11 +314,11 @@
         };
 
         window.openUserModal = function() {
-            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد وحساب سحابي';
+            document.getElementById('userModalTitle').innerText = 'إضافة مسؤول جديد وحساب سحابي معزول';
             document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
-            // تعيين معرف الشركة الحالي افتراضياً لتسهيل الإضافة لنفس الشركة أو تركه لإنشاء شركة جديدة
             document.getElementById('userCompanyIdInput').value = currentCompanyId;
+            document.getElementById('userPinInput').value = '1234';
             document.getElementById('userRole').value = 'محاسب أول';
             document.getElementById('userModal').classList.add('active');
         };
@@ -330,43 +335,41 @@
             document.getElementById('editDocId').value = acc.docId;
             document.getElementById('userName').value = acc.name || '';
             document.getElementById('userCompanyIdInput').value = acc.companyId || currentCompanyId;
-            document.getElementById('userRole').value = acc.role || 'مدير نظام رئيسي';
+            document.getElementById('userPinInput').value = acc.pin || '1234';
+            document.getElementById('userRole').value = acc.role || 'محاسب أول';
             document.getElementById('userModal').classList.add('active');
         };
 
         window.saveUser = async function() {
             let editDocId = document.getElementById('editDocId').value;
             let name = document.getElementById('userName').value.trim();
-            let companyIdInput = document.getElementById('userCompanyIdInput').value.trim() || ('company_' + Date.now());
+            let companyIdInput = document.getElementById('userCompanyIdInput').value.trim();
+            let pinInput = document.getElementById('userPinInput').value.trim();
             let role = document.getElementById('userRole').value;
 
-            if(!name) return alert('الرجاء إدخال اسم المسؤول.');
+            if(!name || !companyIdInput || !pinInput) {
+                return alert('الرجاء إدخال اسم المسؤول، معرف الشركة، والرقم السري بشكل صحيح.');
+            }
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
-                const accountsCollection = collection(db, "accounts");
-                if(editDocId) {
-                    await updateDoc(doc(db, "accounts", editDocId), {
-                        name: name,
-                        companyId: companyIdInput,
-                        role: role
-                    });
-                } else {
-                    await addDoc(accountsCollection, {
-                        name: name,
-                        companyId: companyIdInput,
-                        role: role,
-                        pin: "1234",
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    });
-                }
+                // استخدام معرف الشركة واسم المسؤول كمعرف فريد ومستقل للمستند لضمان العزل التام
+                let docIdToUse = editDocId || (companyIdInput + "_" + name.replace(/\s+/g, '_'));
+
+                await setDoc(doc(db, "accounts", docIdToUse), {
+                    name: name,
+                    companyId: companyIdInput,
+                    pin: pinInput,
+                    role: role,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
 
                 window.closeUserModal();
-                alert('✓ تم حفظ وإضافة الحساب والشركة في السحابة بنجاح.');
+                alert('✓ تم حفظ الحساب وإعدادات العزل السحابي بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
             }

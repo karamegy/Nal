@@ -45,6 +45,24 @@
         
         #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* تخصيص أيقونات الخريطة لمنع ظهور الخلفيات الإفتراضية البيضاء في Leaflet */
+        .custom-map-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        /* تخصيص نصوص النوافذ المنبثقة للـ Popups داخل الخريطة */
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px !important;
+            padding: 4px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+            font-family: 'Cairo', sans-serif !important;
+        }
+        .leaflet-popup-content {
+            margin: 12px 14px !important;
+            line-height: 1.5 !important;
+        }
     </style>
 
     <script>
@@ -55,13 +73,13 @@
             }
         }
 
-        window.openAddVehicleModal = function() {
+        window.openAddVehicleModal = function(defaultLat = '30.0444', defaultLng = '31.2357') {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
             document.getElementById('vehiclePlate').value = '';
-            document.getElementById('vehicleLat').value = '30.0444';
-            document.getElementById('vehicleLng').value = '31.2357';
+            document.getElementById('vehicleLat').value = defaultLat;
+            document.getElementById('vehicleLng').value = defaultLng;
             document.getElementById('vehicleModal').classList.remove('hidden');
         };
 
@@ -69,14 +87,14 @@
             document.getElementById('vehicleModal').classList.add('hidden');
         };
 
-        window.openAddShipmentModal = function() {
+        window.openAddShipmentModal = function(defaultLat = '30.0500', defaultLng = '31.2400') {
             document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
             document.getElementById('shipmentReceiver').value = '';
             document.getElementById('shipmentStatus').value = 'قيد التوصيل';
-            document.getElementById('shipmentLat').value = '30.0500';
-            document.getElementById('shipmentLng').value = '31.2400';
+            document.getElementById('shipmentLat').value = defaultLat;
+            document.getElementById('shipmentLng').value = defaultLng;
             document.getElementById('shipmentModal').classList.remove('hidden');
         };
 
@@ -134,7 +152,6 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
-                        <!-- معرف الشركة مع وضع truncate وعرض محدد على الهواتف -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         <span id="connectionBadge" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 text-[10px] sm:text-[11px] font-bold font-mono border border-emerald-200 truncate">
                             <i class="fa-solid fa-wifi ml-1"></i> متصل بالسحابة
@@ -211,7 +228,7 @@
                 <div class="corporate-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
                     <div class="flex items-center gap-2 flex-1 min-w-[260px]">
                         <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث السريع:</span>
-                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، شحنة، أو فرع..." class="corporate-input flex-1">
+                        <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو فرع..." class="corporate-input flex-1" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
                         <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
                     </div>
                     <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
@@ -230,7 +247,7 @@
                         </div>
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
                             <button onclick="window.panToFleet()" class="touch-btn"><i class="fa-solid fa-truck-fast text-indigo-600"></i> التركيز على الأسطول</button>
-                            <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي</button>
+                            <button onclick="window.panToUser()" class="touch-btn"><i class="fa-solid fa-crosshairs text-emerald-600"></i> موقعي الحالي GPS</button>
                             <button onclick="window.resetMapView()" class="touch-btn"><i class="fa-solid fa-rotate-right text-slate-600"></i> إعادة ضبط الرؤية</button>
                         </div>
                     </div>
@@ -238,6 +255,7 @@
                     <div id="leafletMap"></div>
                 </div>
 
+                <!-- جدول إدارات الشحنات -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
@@ -255,7 +273,7 @@
                                     <th class="p-3 font-bold">المستلم / العنوان</th>
                                     <th class="p-3 font-bold">حالة الشحنة</th>
                                     <th class="p-3 font-bold">الإحداثيات (Lat, Lng)</th>
-                                    <th class="p-3 font-bold text-center">الإجراءات</th>
+                                    <th class="p-3 font-bold text-center">الإجراءات والتحكم</th>
                                 </tr>
                             </thead>
                             <tbody id="shipmentsTableBody" class="divide-y divide-slate-100">
@@ -267,6 +285,7 @@
                     </div>
                 </div>
 
+                <!-- جدول إدارات الأسطول -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
@@ -285,7 +304,7 @@
                                     <th class="p-3 font-bold">خط العرض (Lat)</th>
                                     <th class="p-3 font-bold">خط الطول (Lng)</th>
                                     <th class="p-3 font-bold">آخر تحديث</th>
-                                    <th class="p-3 font-bold text-center">الإجراءات</th>
+                                    <th class="p-3 font-bold text-center">الإجراءات والتحكم</th>
                                 </tr>
                             </thead>
                             <tbody id="fleetTableBody" class="divide-y divide-slate-100">
@@ -317,14 +336,27 @@
                     <label class="block font-bold text-slate-700 mb-1">رقم اللوحة المعدنية</label>
                     <input type="text" id="vehiclePlate" required placeholder="مثال: أ ب ج 1234" class="corporate-input">
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">خط العرض (Lat)</label>
-                        <input type="number" step="any" id="vehicleLat" required value="30.0444" class="corporate-input mono-font">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-bold text-slate-700">الإحداثيات الجغرافية</label>
+                        <div class="flex gap-1">
+                            <button type="button" onclick="window.fetchGpsForModal('vehicle')" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded-lg hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-location-crosshairs text-indigo-600"></i> جلب موقعي (GPS)
+                            </button>
+                            <button type="button" onclick="window.pickFromMap('vehicle')" class="px-2.5 py-1 bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg hover:bg-slate-200 border border-slate-200 flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-map-pin text-slate-600"></i> تحديد بالنقر
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">خط الطول (Lng)</label>
-                        <input type="number" step="any" id="vehicleLng" required value="31.2357" class="corporate-input mono-font">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
+                            <input type="number" step="any" id="vehicleLat" required value="30.0444" class="corporate-input mono-font">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
+                            <input type="number" step="any" id="vehicleLng" required value="31.2357" class="corporate-input mono-font">
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
@@ -360,14 +392,27 @@
                         <option value="معلقة">معلقة</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">خط العرض (Lat)</label>
-                        <input type="number" step="any" id="shipmentLat" required value="30.0500" class="corporate-input mono-font">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-bold text-slate-700">موقع تسليم الشحنة</label>
+                        <div class="flex gap-1">
+                            <button type="button" onclick="window.fetchGpsForModal('shipment')" class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-bold rounded-lg hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-location-crosshairs text-emerald-600"></i> جلب موقعي (GPS)
+                            </button>
+                            <button type="button" onclick="window.pickFromMap('shipment')" class="px-2.5 py-1 bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg hover:bg-slate-200 border border-slate-200 flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-map-pin text-slate-600"></i> تحديد بالنقر
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">خط الطول (Lng)</label>
-                        <input type="number" step="any" id="shipmentLng" required value="31.2400" class="corporate-input mono-font">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
+                            <input type="number" step="any" id="shipmentLat" required value="30.0500" class="corporate-input mono-font">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
+                            <input type="number" step="any" id="shipmentLng" required value="31.2400" class="corporate-input mono-font">
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
@@ -399,7 +444,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules مع دعم كامل للمزامنة والتحكم بالخريطة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -411,6 +456,7 @@
             deleteDoc,
             addDoc,
             getDocs,
+            updateDoc,
             query,
             where
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -437,6 +483,143 @@
         if(badgeEl) {
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
         }
+
+        let map;
+        let pickingMode = null; // 'vehicle' or 'shipment'
+
+        try {
+            map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+            const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
+
+            streetLayer.addTo(map);
+
+            window.switchLayer = function(type) {
+                map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
+                if(type === 'street') streetLayer.addTo(map);
+                if(type === 'topo') topoLayer.addTo(map);
+                if(type === 'satellite') satelliteLayer.addTo(map);
+            };
+
+            // النقر المباشر على الخريطة لالتقاط الإحداثيات أو إضافة مركبة/شحنة
+            map.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+
+                if (pickingMode === 'vehicle') {
+                    document.getElementById('vehicleLat').value = lat;
+                    document.getElementById('vehicleLng').value = lng;
+                    pickingMode = null;
+                    map.getContainer().style.cursor = '';
+                    alert(`✓ تم التقاط الإحداثيات للمركبة: (${lat}, ${lng})`);
+                    return;
+                }
+                if (pickingMode === 'shipment') {
+                    document.getElementById('shipmentLat').value = lat;
+                    document.getElementById('shipmentLng').value = lng;
+                    pickingMode = null;
+                    map.getContainer().style.cursor = '';
+                    alert(`✓ تم التقاط الإحداثيات للشحنة: (${lat}, ${lng})`);
+                    return;
+                }
+
+                // نافذة التفاعلات السريعة عند الضغط في أي مكان بالخريطة
+                L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(`
+                        <div style="font-family:'Cairo',sans-serif; text-align:right; font-size:12px; padding:4px;">
+                            <div style="font-weight:bold; color:#0f172a; margin-bottom:6px;">
+                                <i class="fa-solid fa-location-dot text-indigo-600"></i> الإحداثيات: <span class="mono-font text-indigo-700">${lat}, ${lng}</span>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+                                <button onclick="window.openAddVehicleModal('${lat}', '${lng}')" style="background:#4f46e5; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11px;">
+                                    <i class="fa-solid fa-plus"></i> إضافة مركبة هنا
+                                </button>
+                                <button onclick="window.openAddShipmentModal('${lat}', '${lng}')" style="background:#10b981; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11px;">
+                                    <i class="fa-solid fa-plus"></i> إضافة شحنة هنا
+                                </button>
+                            </div>
+                        </div>
+                    `)
+                    .openOn(map);
+            });
+
+        } catch (e) {
+            console.warn("Leaflet Map setup warning:", e);
+        }
+
+        // دالة جلب الموقع الحقيقي عبر الـ GPS
+        window.fetchGpsForModal = function(target) {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const lat = pos.coords.latitude.toFixed(6);
+                    const lng = pos.coords.longitude.toFixed(6);
+                    if (target === 'vehicle') {
+                        document.getElementById('vehicleLat').value = lat;
+                        document.getElementById('vehicleLng').value = lng;
+                    } else if (target === 'shipment') {
+                        document.getElementById('shipmentLat').value = lat;
+                        document.getElementById('shipmentLng').value = lng;
+                    }
+                    if (map) map.setView([lat, lng], 15);
+                    alert(`✓ تم جلب إحداثيات موقعك الحالي بنجاح: (${lat}, ${lng})`);
+                }, err => {
+                    alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى تفعيل خدمة GPS بالموبايل/الكمبيوتر.");
+                }, { enableHighAccuracy: true, timeout: 10000 });
+            } else {
+                alert("خدمة تحديد الموقع (GPS) غير مدعومة في متصفحك.");
+            }
+        };
+
+        // التحديد بالنقر على الخريطة
+        window.pickFromMap = function(target) {
+            pickingMode = target;
+            if (map) {
+                map.getContainer().style.cursor = 'crosshair';
+                alert("💡 انقر الآن على المكان المطلوب داخل الخريطة لالتقاط الإحداثيات تلقائياً!");
+            }
+        };
+
+        // التركيز المباشر على عنصر في الخريطة من الجدول
+        window.focusOnMap = function(lat, lng, label) {
+            if (map && !isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 16, { animate: true });
+                L.popup()
+                    .setLatLng([lat, lng])
+                    .setContent(`<div style="font-family:'Cairo',sans-serif; text-align:right; font-weight:bold;">📍 ${label}</div>`)
+                    .openOn(map);
+            }
+        };
+
+        // دالة البحث عن عنوان عبر OpenStreetMap Nominatim API
+        window.searchCustomLocation = async function() {
+            const queryText = document.getElementById('customSearchInput').value.trim();
+            if(!queryText) return;
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}`);
+                const data = await res.json();
+
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    if (map) {
+                        map.setView([lat, lon], 14);
+                        L.popup()
+                            .setLatLng([lat, lon])
+                            .setContent(`<div style="font-family:'Cairo',sans-serif; text-align:right;"><b>🔍 نتيجة البحث:</b><br>${data[0].display_name}</div>`)
+                            .openOn(map);
+                    }
+                } else {
+                    alert("لم يتم العثور على نتائج للعنوان المدخل.");
+                }
+            } catch(e) {
+                alert("حدث خطأ أثناء إجراء البحث عن المكان.");
+            }
+        };
 
         window.saveVehicle = async function(e) {
             if (e && e.preventDefault) e.preventDefault();
@@ -542,26 +725,19 @@
             }
         };
 
-        let map;
-        try {
-            map = L.map('leafletMap', { zoomControl: false }).setView([30.0444, 31.2357], 13);
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
-            const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap' });
-            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri' });
-
-            streetLayer.addTo(map);
-
-            window.switchLayer = function(type) {
-                map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
-                if(type === 'street') streetLayer.addTo(map);
-                if(type === 'topo') topoLayer.addTo(map);
-                if(type === 'satellite') satelliteLayer.addTo(map);
-            };
-        } catch (e) {
-            console.warn("Leaflet Map setup warning:", e);
-        }
+        // دالة تغيير حالة الشحنة مباشرة بنقرة واحدة من الخريطة
+        window.toggleShipmentStatusOnMap = async function(id, currentStatus) {
+            const nextStatus = currentStatus === 'تم التسليم' ? 'قيد التوصيل' : 'تم التسليم';
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+            try {
+                await updateDoc(doc(db, "shipments", id), { status: nextStatus });
+                alert(`✓ تم تحديث حالة الشحنة إلى: (${nextStatus}) بنجاح.`);
+            } catch(e) {
+                alert("فشل تحديث حالة الشحنة: " + e.message);
+            }
+        };
 
         signInAnonymously(auth).then(async () => {
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
@@ -570,16 +746,16 @@
 
             // جلب أولي فوري باستخدام getDocs
             try {
-                const [clientsSnap, fleetSnap, shipmentsSnap] = await Promise.all([
+                await Promise.all([
                     getDocs(clientsRef),
                     getDocs(fleetRef),
                     getDocs(shipmentsRef)
                 ]);
-                // البيانات جاهزة للاستخدام الأولي الفوري
             } catch (e) {
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
+            // الاستماع اللحظي للسيارات مع الأيقونات الدائرية الفاخرة بدون المربع الأبيض
             let fleetMarkers = {};
             onSnapshot(fleetRef, (snapshot) => {
                 if (map) {
@@ -606,12 +782,35 @@
                     let vLng = parseFloat(v.lng);
 
                     if (map && !isNaN(vLat) && !isNaN(vLng)) {
+                        // أيقونة دائرية أنيقة وشفافة الحواف بدون مربع أبيض
                         let marker = L.marker([vLat, vLng], {
                             icon: L.divIcon({
-                                html: '<div style="background:#4f46e5; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-truck-fast"></i></div>',
-                                iconSize: [36, 36]
+                                className: 'custom-map-icon',
+                                html: `
+                                    <div style="background: linear-gradient(135deg, #4f46e5, #4338ca); color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 12px rgba(79,70,229,0.4); border:3px solid white; transition: transform 0.2s;">
+                                        <i class="fa-solid fa-truck-fast text-base"></i>
+                                    </div>`,
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20]
                             })
-                        }).addTo(map).bindPopup(`<b>${v.name || 'مركبة أسطول'}</b><br>لوحة: ${v.plate || 'بدون'}<br>السرعة: ${v.speed || 0} كم/س`);
+                        }).addTo(map).bindPopup(`
+                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:180px;">
+                                <div style="display:flex; align-items:center; gap:6px; font-weight:bold; color:#0f172a; margin-bottom:4px;">
+                                    <i class="fa-solid fa-truck text-indigo-600"></i> ${v.name || 'مركبة أسطول'}
+                                </div>
+                                <div style="font-size:12px; color:#64748b;">لوحة: <b>${v.plate || 'بدون'}</b></div>
+                                <div style="font-size:12px; color:#64748b;">السرعة الحالية: <b style="color:#10b981;">${v.speed || 0} كم/س</b></div>
+                                <hr style="margin:8px 0; border-color:#e2e8f0;">
+                                <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                    <button onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" style="background:#e0e7ff; color:#4338ca; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-pen-to-square"></i> تعديل
+                                    </button>
+                                    <button onclick="window.deleteVehicle('${id}')" style="background:#fee2e2; color:#991b1b; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-trash"></i> حذف
+                                    </button>
+                                </div>
+                            </div>
+                        `);
                         
                         fleetMarkers[id] = marker;
                     }
@@ -624,6 +823,7 @@
                             <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
                             <td class="p-3 text-center">
+                                <button type="button" onclick="window.focusOnMap(${vLat || 30.0444}, ${vLng || 31.2357}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
                                 <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat || 30.0444}, ${vLng || 31.2357})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
                             </td>
@@ -633,10 +833,9 @@
 
                 document.getElementById('mapFleetCount').innerText = fleetDocs.length + ' مركبة';
                 document.getElementById('fleetTableBody').innerHTML = tableHtml;
-            }, (err) => {
-                console.error("Fleet Snapshot Error: ", err);
             });
 
+            // الاستماع اللحظي للشحنات مع الأيقونات الدائرية الخضراء الفاخرة بدون المربع الأبيض
             let shipmentMarkers = {};
             onSnapshot(shipmentsRef, (snapshot) => {
                 if (map) {
@@ -663,16 +862,35 @@
                     let sLng = parseFloat(s.lng);
 
                     if (map && !isNaN(sLat) && !isNaN(sLng)) {
+                        let isDelivered = s.status === 'تم التسليم';
+                        let markerColor = isDelivered ? '#059669' : '#10b981';
+
                         let marker = L.marker([sLat, sLng], {
                             icon: L.divIcon({
-                                html: '<div style="background:#10b981; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:2px solid white;"><i class="fa-solid fa-box"></i></div>',
-                                iconSize: [34, 34]
+                                className: 'custom-map-icon',
+                                html: `
+                                    <div style="background: linear-gradient(135deg, ${markerColor}, #047857); color:white; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 12px rgba(16,185,129,0.4); border:3px solid white;">
+                                        <i class="fa-solid fa-box text-sm"></i>
+                                    </div>`,
+                                iconSize: [38, 38],
+                                iconAnchor: [19, 19]
                             })
                         }).addTo(map).bindPopup(`
-                            <div style="font-family:'Cairo',sans-serif; text-align:right;">
-                                <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> شحنة: ${s.code || id}</b><hr style="margin:4px 0;">
-                                <div style="font-size:12px;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
-                                <div style="font-size:12px;">الحالة: <span style="color:#10b981; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                            <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:190px;">
+                                <div style="display:flex; justify-between; align-items:center;">
+                                    <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${s.code || id}</b>
+                                </div>
+                                <hr style="margin:6px 0; border-color:#e2e8f0;">
+                                <div style="font-size:12px; color:#475569;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
+                                <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                                <div style="display:flex; gap:4px; margin-top:8px; justify-flex-end;">
+                                    <button onclick="window.toggleShipmentStatusOnMap('${id}', '${s.status}')" style="background:#d1fae5; color:#047857; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-arrows-rotate"></i> تبديل الحالة
+                                    </button>
+                                    <button onclick="window.deleteShipment('${id}')" style="background:#fee2e2; color:#991b1b; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                        <i class="fa-solid fa-trash"></i> حذف
+                                    </button>
+                                </div>
                             </div>
                         `);
                         
@@ -686,6 +904,7 @@
                             <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
                             <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-center">
+                                <button type="button" onclick="window.focusOnMap(${sLat || 30.0500}, ${sLng || 31.2400}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
                                 <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
@@ -694,10 +913,9 @@
 
                 document.getElementById('mapShipmentsCount').innerText = shipmentDocs.length + ' شحنة';
                 document.getElementById('shipmentsTableBody').innerHTML = tableHtml;
-            }, (err) => {
-                console.error("Shipments Snapshot Error: ", err);
             });
 
+            // الاستماع اللحظي للعملاء مع أيقونات دائرية برتقالية فاخرة
             let clientMarkers = [];
             onSnapshot(clientsRef, (snapshot) => {
                 let clients = [];
@@ -716,10 +934,21 @@
                         
                         let marker = L.marker([lat, lng], {
                             icon: L.divIcon({
-                                html: '<div style="background:#f59e0b; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 5px rgba(0,0,0,0.2); border:2px solid white;"><i class="fa-solid fa-building"></i></div>',
-                                iconSize: [30, 30]
+                                className: 'custom-map-icon',
+                                html: `
+                                    <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(245,158,11,0.4); border:2.5px solid white;">
+                                        <i class="fa-solid fa-building text-xs"></i>
+                                    </div>`,
+                                iconSize: [34, 34],
+                                iconAnchor: [17, 17]
                             })
-                        }).addTo(map).bindPopup(`<b>${c.name}</b><br>هاتف: ${phone}<br>الرصيد: ${balance} ج.م`);
+                        }).addTo(map).bindPopup(`
+                            <div style="font-family:'Cairo',sans-serif; text-align:right;">
+                                <b><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><br>
+                                <span style="font-size:12px; color:#64748b;">هاتف: ${phone}</span><br>
+                                <span style="font-size:12px; color:#10b981; font-weight:bold;">الرصيد: ${balance} ج.م</span>
+                            </div>
+                        `);
 
                         clientMarkers.push(marker);
                     });
@@ -734,6 +963,8 @@
             if("geolocation" in navigator && map) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                }, () => {
+                    alert("تعذر الحصول على موقع جهازك. تأكد من إعطاء إذن التحديد الجغرافي للمتصفح.");
                 });
             }
         };

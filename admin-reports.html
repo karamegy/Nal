@@ -84,14 +84,14 @@
                         <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0"><i class="fa-solid fa-shield-halved"></i></div>
                         <div>
                             <h3 class="font-black text-slate-900 text-sm">لوحة الإشراف الرقابي للمدير</h3>
-                            <p class="text-xs text-slate-600">يمكنك هنا مراجعة الشكاوى والمستندات المقدمة ضد أي حساب مخالف، واتخاذ إجراء فوري إما بحظر الحساب أو حذفه نهائياً من النظام السحابي.</p>
+                            <p class="text-xs text-slate-600">يمكنك هنا مراجعة الشكاوى ومستندات الدعم الفني الواردة من المستخدمين، واتخاذ إجراء فوري بحظر الحساب المخالف أو إغلاق الشكوى.</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-                        <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> قائمة البلاغات والشكاوى المسجلة سحابياً</h3>
+                        <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> قائمة البلاغات والشكاوى المسجلة سحابياً (مجموعة messages)</h3>
                         <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
                     </div>
 
@@ -99,17 +99,16 @@
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                    <th class="p-3 font-bold">المُبلِغ</th>
-                                    <th class="p-3 font-bold">الحساب المشتكى عليه</th>
-                                    <th class="p-3 font-bold">سبب الشكوى والتفاصيل</th>
-                                    <th class="p-3 font-bold">المستند / المرفق</th>
+                                    <th class="p-3 font-bold">اسم المُشتكي / الجهة</th>
+                                    <th class="p-3 font-bold">وسيلة التواصل</th>
+                                    <th class="p-3 font-bold">تفاصيل الشكوى أو المشكلة</th>
                                     <th class="p-3 font-bold">التاريخ</th>
                                     <th class="p-3 font-bold text-center">الإجراءات والسيطرة</th>
                                 </tr>
                             </thead>
                             <tbody id="reportsTableBody" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري قراءة سجل الشكاوى من سحابة Firebase...</td>
+                                    <td colspan="5" class="p-4 text-center text-slate-400">جاري قراءة سجل الشكاوى من سحابة Firebase...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -129,8 +128,6 @@
             doc, 
             deleteDoc, 
             updateDoc,
-            query,
-            where,
             getDocs 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -164,13 +161,11 @@
         });
 
         window.banReportedUser = async function(reportId, targetUsername) {
-            if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername}) نهائياً بسبب هذه الشكوى؟`)) return;
+            if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername}) نهائياً؟`)) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
-                // تحديث حالة الحظر في جدول الحسابات أو المستخدمين
                 await updateDoc(doc(db, "accounts", targetUsername), { isBanned: true });
-                // حذف بلاغ الشكوى بعد معالجتها
-                await deleteDoc(doc(db, "reports", reportId));
+                await deleteDoc(doc(db, "messages", reportId));
                 alert(`✓ تم حظر الحساب (${targetUsername}) بنجاح وإغلاق البلاغ.`);
             } catch (e) {
                 alert("حدث خطأ أثناء تنفيذ الإجراء: " + e.message);
@@ -178,48 +173,48 @@
         };
 
         window.dismissReport = async function(reportId) {
-            if (!confirm("هل تريد تجاهل وإغلاق هذا البلاغ دون حظر الحساب؟")) return;
+            if (!confirm("هل تريد إغلاق وحذف هذه الشكوى؟")) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
-                await deleteDoc(doc(db, "reports", reportId));
-                alert("✓ تم إغلاق وتجاهل البلاغ بنجاح.");
+                await deleteDoc(doc(db, "messages", reportId));
+                alert("✓ تم إغلاق الشكوى بنجاح.");
             } catch (e) {
                 alert("حدث خطأ أثناء حذف البلاغ: " + e.message);
             }
         };
 
         signInAnonymously(auth).then(() => {
-            const reportsRef = query(collection(db, "reports"), where("companyId", "==", currentCompanyId));
+            // الاستماع المباشر لمجموعة messages حيث يتم تخزين شكاوى النظام والدعم
+            const messagesRef = collection(db, "messages");
             
-            onSnapshot(reportsRef, (snapshot) => {
+            onSnapshot(messagesRef, (snapshot) => {
                 let tbody = document.getElementById('reportsTableBody');
-                document.getElementById('reportsCountBadge').innerText = snapshot.docs.length + ' بلاغ نشط';
+                let allDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // تصفية الرسائل لتظهر الشكاوى والبلاغات فقط
+                let complaintsList = allDocs.filter(m => m.type === 'شكوى نظام' || m.message);
 
-                if (snapshot.empty) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">لا توجد أي بلاغات أو شكاوى مسجلة حالياً. المنظومة مستقرة والحمد لله.</td></tr>`;
+                document.getElementById('reportsCountBadge').innerText = complaintsList.length + ' بلاغ نشط';
+
+                if (complaintsList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">لا توجد أي بلاغات أو شكاوى مسجلة حالياً.</td></tr>`;
                     return;
                 }
 
                 let html = '';
-                snapshot.forEach(docSnap => {
-                    let r = docSnap.data();
-                    let id = docSnap.id;
-
+                complaintsList.forEach(r => {
                     html += `
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 font-bold text-slate-900">${r.complainant || 'مستخدم'}</td>
-                            <td class="p-3 font-mono text-rose-600 font-bold">${r.reportedUser || 'غير محدد'}</td>
-                            <td class="p-3 text-slate-700 max-w-xs truncate" title="${r.reason || ''}">${r.reason || 'بدون تفاصيل'}</td>
-                            <td class="p-3">
-                                ${r.attachmentUrl ? `<a href="${r.attachmentUrl}" target="_blank" class="text-indigo-600 font-bold underline"><i class="fa-solid fa-file-image ml-1"></i> عرض المستند</a>` : '<span class="text-slate-400">لا يوجد مرفق</span>'}
-                            </td>
-                            <td class="p-3 mono-font text-slate-500">${r.date ? new Date(r.date).toLocaleDateString('ar-EG') : 'اليوم'}</td>
+                            <td class="p-3 font-bold text-slate-900">${r.senderName || r.complainant || 'مستخدم'}</td>
+                            <td class="p-3 mono-font text-indigo-600 font-bold">${r.contactInfo || '---'}</td>
+                            <td class="p-3 text-slate-700 max-w-xs truncate" title="${r.message || r.reason || ''}">${r.message || r.reason || 'بدون تفاصيل'}</td>
+                            <td class="p-3 mono-font text-slate-500">${r.date || 'اليوم'}</td>
                             <td class="p-3 text-center space-x-1 space-x-reverse">
-                                <button onclick="window.banReportedUser('${id}', '${r.reportedUser}')" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer">
-                                    <i class="fa-solid fa-ban ml-1"></i> حظر الحساب
+                                <button onclick="window.banReportedUser('${r.id}', '${r.senderName || ''}')" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer">
+                                    <i class="fa-solid fa-ban ml-1"></i> حظر المُشتكي
                                 </button>
-                                <button onclick="window.dismissReport('${id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition cursor-pointer">
-                                    تجاهل
+                                <button onclick="window.dismissReport('${r.id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition cursor-pointer">
+                                    إغلاق / حذف
                                 </button>
                             </td>
                         </tr>

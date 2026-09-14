@@ -105,6 +105,31 @@
             </div>
         </div>
 
+        <!-- جدول الشكاوى والبلاغات الواردة -->
+        <div class="corporate-card p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-triangle-exclamation ml-2 text-amber-400"></i> قائمة الشكاوى والبلاغات الواردة (مجموعة messages)</h3>
+                <span class="text-xs text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-right text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-300 font-mono border-b border-slate-800">
+                            <th class="p-4">اسم المُشتكي / الجهة</th>
+                            <th class="p-4">وسيلة التواصل</th>
+                            <th class="p-4">نص الشكوى / البلاغ</th>
+                            <th class="p-4">تاريخ الإرسال</th>
+                            <th class="p-4 text-center">إجراءات الإدارة والقرار</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminComplaintsTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
+                        <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل الشكاوى...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <!-- نافذة إضافة حساب جديد من لوحة المدير -->
@@ -136,7 +161,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules لجلب كافة الحسابات بدون شروط مسبقة -->
+    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -163,17 +188,29 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const accountsRef = collection(db, "accounts");
+        const messagesRef = collection(db, "messages"); // استخدام مجموعة messages الموجودة
 
         let accountsList = [];
 
         signInAnonymously(auth).then(() => {
-            // جلب كافة المستندات من مجموعة accounts بدون أي شروط where
+            // جلب كافة الحسابات
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderAccountsTable(accountsList);
                 document.getElementById('syncStatusText').innerText = "✓ تم جلب وعرض كافة الحسابات سحابياً بنجاح";
             }, (err) => {
                 document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة: " + err.message;
+            });
+
+            // جلب الشكاوى والبلاغات من مجموعة messages
+            onSnapshot(messagesRef, (snapshot) => {
+                let allMessages = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                // تصفية الرسائل لتظهر التي نوعها شكوى أو تحتوي على بلاغ
+                let complaintsList = allMessages.filter(m => m.type === 'شكوى نظام' || m.message);
+                renderComplaintsTable(complaintsList);
+                document.getElementById('complaintsSyncStatus').innerText = `✓ تم تحديث الشكاوى (${complaintsList.length})`;
+            }, (err) => {
+                document.getElementById('complaintsSyncStatus').innerText = "⚠️ خطأ في مزامنة الشكاوى";
             });
         });
 
@@ -221,6 +258,36 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function renderComplaintsTable(data) {
+            let tbody = document.getElementById('adminComplaintsTableBody');
+            if(!data.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد أي شكاوى أو بلاغات جديدة حالياً.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(comp => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30 shrink-0">
+                            ${comp.senderName ? comp.senderName.charAt(0) : 'ش'}
+                        </div>
+                        <span class="truncate max-w-[150px]">${comp.senderName || 'جهة غير معروفة'}</span>
+                    </td>
+                    <td class="p-4 mono-font text-indigo-300 text-[11px]">${comp.contactInfo || '---'}</td>
+                    <td class="p-4 text-slate-200 max-w-xs truncate" title="${comp.message}">${comp.message}</td>
+                    <td class="p-4 mono-font text-slate-500 text-[11px]">${comp.date || '---'}</td>
+                    <td class="p-4 text-center space-x-1 space-x-reverse">
+                        <button onclick="window.resolveComplaint('${comp.docId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <i class="fa-solid fa-check ml-1"></i> تم الحل
+                        </button>
+                        <button onclick="window.deleteComplaint('${comp.docId}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف الشكوى">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         window.openAddAccountModal = function() {
@@ -277,6 +344,25 @@
                 alert('✓ تم حذف الحساب من السحابة بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء الحذف: ' + err.message);
+            }
+        };
+
+        window.deleteComplaint = async function(docId) {
+            if(!confirm('هل أنت متأكد من حذف هذه الشكوى؟')) return;
+            try {
+                await deleteDoc(doc(db, "messages", docId));
+                alert('✓ تم حذف الشكوى بنجاح.');
+            } catch(err) {
+                alert('خطأ أثناء حذف الشكوى: ' + err.message);
+            }
+        };
+
+        window.resolveComplaint = async function(docId) {
+            try {
+                await deleteDoc(doc(db, "messages", docId));
+                alert('✓ تم إغلاق الشكوى ومعالجتها بنجاح.');
+            } catch(err) {
+                alert('خطأ: ' + err.message);
             }
         };
 

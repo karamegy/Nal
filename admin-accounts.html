@@ -33,6 +33,8 @@
         .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
 </head>
@@ -40,7 +42,7 @@
 
     <div class="max-w-6xl mx-auto space-y-6">
         
-        <!-- رأس الصفحة -->
+        <!-- رأس الصفحة والإجراءات الإدارية الأساسية -->
         <div class="corporate-card p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/30">
             <div class="flex items-center gap-3">
                 <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -52,12 +54,15 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
-                    <i class="fa-solid fa-arrow-right"></i> العودة للوحة الرئيسية
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-right"></i> الرئيسية
                 </a>
-                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-4 flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
+                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-plus"></i> إضافة حساب
+                </button>
+                <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط الافتراضي
                 </button>
             </div>
         </div>
@@ -133,7 +138,7 @@
     </div>
 
     <!-- نافذة إضافة حساب جديد من لوحة المدير -->
-    <div id="adminAddModal" class="custom-modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div id="adminAddModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-user-plus ml-2 text-indigo-400"></i> إضافة حساب ومعرف شركة جديد</h3>
@@ -145,8 +150,12 @@
                     <input type="text" id="modalAccountName" class="corporate-input w-full text-xs" placeholder="أدخل الاسم الكامل">
                 </div>
                 <div>
+                    <label class="block mb-1 text-slate-300 font-bold">الرقم السري (PIN Code)</label>
+                    <input type="password" id="modalAccountPin" class="corporate-input w-full text-xs mono-font text-center" placeholder="1234" value="1234" maxlength="6">
+                </div>
+                <div>
                     <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
-                    <select id="modalAccountRole" class="corporate-input w-full text-xs bg-slate-900">
+                    <select id="modalAccountRole" class="corporate-input w-full text-xs bg-slate-900 font-bold">
                         <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
                         <option value="محاسب أول">محاسب أول</option>
                         <option value="مسؤول مخزن">مسؤول مخزن</option>
@@ -167,10 +176,11 @@
         import { 
             getFirestore, 
             collection, 
-            addDoc, 
+            setDoc,
             deleteDoc, 
             doc, 
             updateDoc,
+            getDocs,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -188,7 +198,8 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const accountsRef = collection(db, "accounts");
-        const messagesRef = collection(db, "messages"); // استخدام مجموعة messages الموجودة
+        const messagesRef = collection(db, "messages");
+        const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
         let accountsList = [];
 
@@ -202,10 +213,9 @@
                 document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة: " + err.message;
             });
 
-            // جلب الشكاوى والبلاغات من مجموعة messages
+            // جلب الشكاوى والبلاغات
             onSnapshot(messagesRef, (snapshot) => {
                 let allMessages = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                // تصفية الرسائل لتظهر التي نوعها شكوى أو تحتوي على بلاغ
                 let complaintsList = allMessages.filter(m => m.type === 'شكوى نظام' || m.message);
                 renderComplaintsTable(complaintsList);
                 document.getElementById('complaintsSyncStatus').innerText = `✓ تم تحديث الشكاوى (${complaintsList.length})`;
@@ -292,28 +302,30 @@
 
         window.openAddAccountModal = function() {
             document.getElementById('modalAccountName').value = '';
-            document.getElementById('adminAddModal').classList.add('flex');
-            document.getElementById('adminAddModal').classList.remove('hidden');
+            document.getElementById('modalAccountPin').value = '1234';
+            document.getElementById('adminAddModal').classList.add('active');
         };
 
         window.closeAddAccountModal = function() {
-            document.getElementById('adminAddModal').classList.add('hidden');
-            document.getElementById('adminAddModal').classList.remove('flex');
+            document.getElementById('adminAddModal').classList.remove('active');
         };
 
         window.saveAdminAccount = async function() {
             let name = document.getElementById('modalAccountName').value.trim();
+            let pin = document.getElementById('modalAccountPin').value.trim() || "1234";
             let role = document.getElementById('modalAccountRole').value;
 
             if(!name) return alert('الرجاء إدخال اسم المسؤول.');
 
             try {
-                let companyId = 'company_' + Date.now();
-                await addDoc(accountsRef, {
+                let cleanNameKey = name.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let companyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+                
+                await setDoc(doc(db, "accounts", companyId), {
                     name: name,
                     role: role,
                     companyId: companyId,
-                    pin: "1234",
+                    pin: pin,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 });
@@ -324,13 +336,34 @@
             }
         };
 
+        window.resetDefaultAccounts = async function() {
+            if (!confirm('هل تريد إعادة تعيين الحسابات وحذف كل الحسابات الأخرى من السحابة والابقاء على حساب المدير فقط؟')) return;
+
+            try {
+                const querySnapshot = await getDocs(accountsRef);
+                for (let d of querySnapshot.docs) {
+                    await deleteDoc(doc(db, "accounts", d.id));
+                }
+                await setDoc(doc(db, "accounts", "company_founder_karm"), {
+                    name: FOUNDER_NAME,
+                    pin: "1234",
+                    role: 'مدير نظام رئيسي',
+                    companyId: 'company_founder_karm',
+                    biometricVerified: true,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+                alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
+            } catch (err) {
+                alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
+            }
+        };
+
         window.toggleAccountBan = async function(docId, currentStatus) {
             let actionName = currentStatus ? 'إلغاء الحظر عن' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
             try {
-                await updateDoc(doc(db, "accounts", docId), {
-                    isBanned: !currentStatus
-                });
+                await updateDoc(doc(db, "accounts", docId), { isBanned: !currentStatus });
                 alert(`✓ تم تنفيذ إجراء ${actionName} بنجاح.`);
             } catch(err) {
                 alert('خطأ أثناء تحديث حالة الحظر: ' + err.message);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v15-cache'; // تم تحديث الإصدار لضمان مسح الكاش القديم
+const CACHE_NAME = 'eidco-v16-cache'; // تم تحديث الإصدار لضمان مسح الكاش القديم
 const assetsToCache = [
   './index.html',
   './auth.html',

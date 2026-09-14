@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // إدارة الشكاوى وبلاغات الحسابات المخالفة</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        table th, table td { white-space: nowrap; }
+    </style>
+
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+    </script>
+</head>
+<body>
+
+    <div class="flex min-h-screen">
+        <!-- القائمة الجانبية للشاشات الكبيرة -->
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين</a>
+                <a href="admin-reports.html" class="nav-link active"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <i class="fa-solid fa-bars text-lg"></i>
+                        </button>
+                        <h1 class="font-black text-slate-900 text-xs sm:text-sm">إدارة الشكاوى والبلاغات وضبط الحسابات المخالفة</h1>
+                    </div>
+                    <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold">معرف الشركة: جاري التحميل...</span>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                
+                <div class="corporate-card p-5 space-y-3 bg-amber-50/60 border-amber-200">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div>
+                            <h3 class="font-black text-slate-900 text-sm">لوحة الإشراف الرقابي للمدير</h3>
+                            <p class="text-xs text-slate-600">يمكنك هنا مراجعة الشكاوى والمستندات المقدمة ضد أي حساب مخالف، واتخاذ إجراء فوري إما بحظر الحساب أو حذفه نهائياً من النظام السحابي.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="corporate-card p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                        <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> قائمة البلاغات والشكاوى المسجلة سحابياً</h3>
+                        <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                    <th class="p-3 font-bold">المُبلِغ</th>
+                                    <th class="p-3 font-bold">الحساب المشتكى عليه</th>
+                                    <th class="p-3 font-bold">سبب الشكوى والتفاصيل</th>
+                                    <th class="p-3 font-bold">المستند / المرفق</th>
+                                    <th class="p-3 font-bold">التاريخ</th>
+                                    <th class="p-3 font-bold text-center">الإجراءات والسيطرة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري قراءة سجل الشكاوى من سحابة Firebase...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            doc, 
+            deleteDoc, 
+            updateDoc,
+            query,
+            where,
+            getDocs 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        document.getElementById('companyBadgeDisplay').innerText = `معرف الشركة: ${currentCompanyId}`;
+
+        // تمرير معرف الشركة للروابط
+        document.querySelectorAll('a[href]').forEach(link => {
+            let href = link.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                let separator = href.includes('?') ? '&' : '?';
+                link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+            }
+        });
+
+        window.banReportedUser = async function(reportId, targetUsername) {
+            if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername}) نهائياً بسبب هذه الشكوى؟`)) return;
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                // تحديث حالة الحظر في جدول الحسابات أو المستخدمين
+                await updateDoc(doc(db, "accounts", targetUsername), { isBanned: true });
+                // حذف بلاغ الشكوى بعد معالجتها
+                await deleteDoc(doc(db, "reports", reportId));
+                alert(`✓ تم حظر الحساب (${targetUsername}) بنجاح وإغلاق البلاغ.`);
+            } catch (e) {
+                alert("حدث خطأ أثناء تنفيذ الإجراء: " + e.message);
+            }
+        };
+
+        window.dismissReport = async function(reportId) {
+            if (!confirm("هل تريد تجاهل وإغلاق هذا البلاغ دون حظر الحساب؟")) return;
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                await deleteDoc(doc(db, "reports", reportId));
+                alert("✓ تم إغلاق وتجاهل البلاغ بنجاح.");
+            } catch (e) {
+                alert("حدث خطأ أثناء حذف البلاغ: " + e.message);
+            }
+        };
+
+        signInAnonymously(auth).then(() => {
+            const reportsRef = query(collection(db, "reports"), where("companyId", "==", currentCompanyId));
+            
+            onSnapshot(reportsRef, (snapshot) => {
+                let tbody = document.getElementById('reportsTableBody');
+                document.getElementById('reportsCountBadge').innerText = snapshot.docs.length + ' بلاغ نشط';
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">لا توجد أي بلاغات أو شكاوى مسجلة حالياً. المنظومة مستقرة والحمد لله.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(docSnap => {
+                    let r = docSnap.data();
+                    let id = docSnap.id;
+
+                    html += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-bold text-slate-900">${r.complainant || 'مستخدم'}</td>
+                            <td class="p-3 font-mono text-rose-600 font-bold">${r.reportedUser || 'غير محدد'}</td>
+                            <td class="p-3 text-slate-700 max-w-xs truncate" title="${r.reason || ''}">${r.reason || 'بدون تفاصيل'}</td>
+                            <td class="p-3">
+                                ${r.attachmentUrl ? `<a href="${r.attachmentUrl}" target="_blank" class="text-indigo-600 font-bold underline"><i class="fa-solid fa-file-image ml-1"></i> عرض المستند</a>` : '<span class="text-slate-400">لا يوجد مرفق</span>'}
+                            </td>
+                            <td class="p-3 mono-font text-slate-500">${r.date ? new Date(r.date).toLocaleDateString('ar-EG') : 'اليوم'}</td>
+                            <td class="p-3 text-center space-x-1 space-x-reverse">
+                                <button onclick="window.banReportedUser('${id}', '${r.reportedUser}')" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer">
+                                    <i class="fa-solid fa-ban ml-1"></i> حظر الحساب
+                                </button>
+                                <button onclick="window.dismissReport('${id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition cursor-pointer">
+                                    تجاهل
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            });
+        }).catch(err => {
+            console.error("خطأ بالمصادقة في صفحة الشكاوى:", err);
+        });
+    </script>
+</body>
+</html>

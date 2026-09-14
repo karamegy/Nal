@@ -47,8 +47,8 @@
                     <i class="fa-solid fa-shield-halved text-xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-black text-white">لوحة تحكم المدير المؤسس // إدارة الحسابات والشركات</h1>
-                    <p class="text-[10px] text-indigo-300 font-mono">التحكم المركزي السحابي في صلاحيات ومفاتيح عزل الشركات والبصمات</p>
+                    <h1 class="text-base font-black text-white">لوحة تحكم المدير المؤسس // إدارة كافة الحسابات والشركات</h1>
+                    <p class="text-[10px] text-indigo-300 font-mono">التحكم المركزي الشامل في جميع الحسابات المسجلة بقاعدة البيانات</p>
                 </div>
             </div>
             
@@ -65,24 +65,24 @@
         <!-- عدادات وإحصائيات سريعة -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="corporate-card p-5 border-l-4 border-l-indigo-500">
-                <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات المعزولة</span>
+                <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات المسجلة</span>
                 <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
             </div>
             <div class="corporate-card p-5 border-l-4 border-l-emerald-500">
-                <span class="text-xs text-slate-400 block mb-1">حسابات موثقة بالبصمة البيومترية</span>
-                <span class="text-2xl font-black text-emerald-400 mono-font" id="biometricCount">0</span>
+                <span class="text-xs text-slate-400 block mb-1">حسابات نشطة ومصرحة</span>
+                <span class="text-2xl font-black text-emerald-400 mono-font" id="activeAccountsCount">0</span>
             </div>
             <div class="corporate-card p-5 border-l-4 border-l-cyan-500">
-                <span class="text-xs text-slate-400 block mb-1">المدير الحالي الجلسة</span>
+                <span class="text-xs text-slate-400 block mb-1">المدير الحالي للجلسة</span>
                 <span class="text-base font-black text-cyan-400" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
             </div>
         </div>
 
-        <!-- جدول الحسابات السحابية -->
+        <!-- جدول الحسابات السحابية بالكامل -->
         <div class="corporate-card p-6 space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة الحسابات والشركات المرتبطة بالسحابة (Firebase Firestore)</h3>
-                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري مزامنة السجلات لحظياً...</span>
+                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة كافة الحسابات والشركات في مجموعة accounts (Firebase)</h3>
+                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري جلب كافة السجلات لحظياً...</span>
             </div>
 
             <div class="overflow-x-auto rounded-xl border border-slate-800">
@@ -92,10 +92,10 @@
                             <th class="p-4">اسم المستخدم / الجهة</th>
                             <th class="p-4">الصلاحية / الدور</th>
                             <th class="p-4">معرف الشركة (Company ID)</th>
-                            <th class="p-4">البريد / الهاتف</th>
-                            <th class="p-4 text-center">البصمة</th>
+                            <th class="p-4">البريد الإلكتروني / الهاتف</th>
+                            <th class="p-4 text-center">حالة الحظر</th>
                             <th class="p-4">تاريخ الإنشاء</th>
-                            <th class="p-4 text-center">إجراءات الإدارة</th>
+                            <th class="p-4 text-center">إجراءات السيطرة والإدارة</th>
                         </tr>
                     </thead>
                     <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
@@ -122,10 +122,10 @@
                 <div>
                     <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
                     <select id="modalAccountRole" class="corporate-input w-full text-xs bg-slate-900">
+                        <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
                         <option value="محاسب أول">محاسب أول</option>
                         <option value="مسؤول مخزن">مسؤول مخزن</option>
                         <option value="مشرف أسطول">مشرف أسطول</option>
-                        <option value="مدير فرع">مدير فرع</option>
                     </select>
                 </div>
             </div>
@@ -136,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules لإدارة الحسابات سحابياً بالكامل -->
+    <!-- Firebase SDK Modules لجلب كافة الحسابات بدون شروط مسبقة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -145,6 +145,7 @@
             addDoc, 
             deleteDoc, 
             doc, 
+            updateDoc,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -166,52 +167,60 @@
         let accountsList = [];
 
         signInAnonymously(auth).then(() => {
+            // جلب كافة المستندات من مجموعة accounts بدون أي شروط where
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderAccountsTable(accountsList);
-                document.getElementById('syncStatusText').innerText = "✓ متصل ومزامن سحابياً لحظياً";
+                document.getElementById('syncStatusText').innerText = "✓ تم جلب وعرض كافة الحسابات سحابياً بنجاح";
             }, (err) => {
-                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة";
+                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة: " + err.message;
             });
         });
 
         function renderAccountsTable(data) {
             document.getElementById('totalAccountsCount').innerText = data.length;
-            document.getElementById('biometricCount').innerText = data.filter(a => a.biometricLinked).length;
+            document.getElementById('activeAccountsCount').innerText = data.filter(a => !a.isBanned).length;
 
             let tbody = document.getElementById('adminAccountsTableBody');
             if(!data.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة في السحابة حالياً.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة في مجموعة accounts حالياً.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = data.map(acc => `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="p-4 font-bold text-white flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30">
-                            ${acc.name ? acc.name.charAt(0) : 'م'}
-                        </div>
-                        ${acc.name || 'بدون اسم'}
-                    </td>
-                    <td class="p-4 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
-                    <td class="p-4 mono-font text-indigo-400 font-bold">${acc.companyId || '---'}</td>
-                    <td class="p-4 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي / بصمة'}</td>
-                    <td class="p-4 text-center">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${acc.biometricLinked ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
-                            ${acc.biometricLinked ? 'مفعلة ✓' : 'غير مرتبطة'}
-                        </span>
-                    </td>
-                    <td class="p-4 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
-                    <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <button onclick="window.switchAndLoginAsCompany('${acc.companyId}', '${acc.name}')" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
-                            <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول كـ
-                        </button>
-                        <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف الحساب نهائياً">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = data.map(acc => {
+                let isBanned = acc.isBanned === true;
+                let compId = acc.companyId || acc.docId;
+                return `
+                    <tr class="hover:bg-slate-800/40 transition ${isBanned ? 'bg-rose-950/20' : ''}">
+                        <td class="p-4 font-bold text-white flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30 overflow-hidden shrink-0">
+                                ${acc.avatar ? `<img src="${acc.avatar}" class="w-full h-full object-cover">` : (acc.name ? acc.name.charAt(0) : 'م')}
+                            </div>
+                            <span class="truncate max-w-[150px]">${acc.name || 'بدون اسم'}</span>
+                        </td>
+                        <td class="p-4 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
+                        <td class="p-4 mono-font text-indigo-400 font-bold">${compId}</td>
+                        <td class="p-4 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي'}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isBanned ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                                ${isBanned ? 'محظور ⛔' : 'نشط ✓'}
+                            </span>
+                        </td>
+                        <td class="p-4 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
+                        <td class="p-4 text-center space-x-1 space-x-reverse">
+                            <button onclick="window.switchAndLoginAsCompany('${compId}', '${acc.name || 'مسؤول'}')" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer" title="دخول مباشر لبيئة هذه الشركة">
+                                <i class="fa-solid fa-right-to-bracket ml-1"></i> دخول
+                            </button>
+                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
+                                <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'فك الحظر' : 'حظر'}
+                            </button>
+                            <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف نهائي">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         window.openAddAccountModal = function() {
@@ -237,13 +246,27 @@
                     name: name,
                     role: role,
                     companyId: companyId,
-                    biometricLinked: true,
+                    pin: "1234",
+                    isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 });
                 alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyId}) بالسحابة بنجاح!`);
                 window.closeAddAccountModal();
             } catch(err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+            }
+        };
+
+        window.toggleAccountBan = async function(docId, currentStatus) {
+            let actionName = currentStatus ? 'إلغاء الحظر عن' : 'حظر';
+            if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
+            try {
+                await updateDoc(doc(db, "accounts", docId), {
+                    isBanned: !currentStatus
+                });
+                alert(`✓ تم تنفيذ إجراء ${actionName} بنجاح.`);
+            } catch(err) {
+                alert('خطأ أثناء تحديث حالة الحظر: ' + err.message);
             }
         };
 

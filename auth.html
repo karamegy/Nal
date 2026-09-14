@@ -52,20 +52,14 @@
             </button>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
-                    <i class="fa-solid fa-cube text-xl text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-base sm:text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
-                    <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات السحابية</p>
-                </div>
+        <div class="flex items-center gap-3 relative z-10">
+            <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+                <i class="fa-solid fa-cube text-xl text-white"></i>
             </div>
-            
-            <button id="addAccountBtn" onclick="openAddAccountModal()" class="hidden bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-user-plus"></i> إضافة حساب
-            </button>
+            <div>
+                <h1 class="text-base sm:text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
+                <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات السحابية</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-2">
@@ -93,7 +87,7 @@
         <div class="space-y-3 relative z-10">
             <div>
                 <label class="block text-xs text-slate-300 font-bold mb-1">اسم المستخدم / الحساب / الشركة:</label>
-                <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء..." oninput="checkFounderAccess()">
+                <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء...">
             </div>
             <div>
                 <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code):</label>
@@ -111,9 +105,8 @@
             </div>
         </div>
 
-        <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between items-center">
+        <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono">
             <span>EIDCO Business OS &copy; 2026</span>
-            <button id="resetBtn" onclick="resetDefaultAccounts()" class="hidden text-slate-400 hover:text-rose-400 transition cursor-pointer">إعادة ضبط الافتراضي</button>
         </div>
     </div>
 
@@ -170,39 +163,6 @@
         </div>
     </div>
 
-    <!-- نافذة إضافة حساب -->
-    <div id="addAccountModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-user-plus ml-2 text-indigo-500"></i> إضافة حساب / مسؤول جديد</h3>
-                <button onclick="closeAddAccountModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
-            </div>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block mb-1 text-slate-300 font-bold">اسم المسؤول / المستخدم</label>
-                    <input type="text" id="newAccountName" class="corporate-input text-xs" placeholder="أدخل الاسم الكامل">
-                </div>
-                <div>
-                    <label class="block mb-1 text-slate-300 font-bold">تعيين رقم سري (PIN Code)</label>
-                    <input type="password" id="newAccountPin" class="corporate-input text-xs mono-font tracking-widest text-center text-sm" placeholder="4 أرقام أو أكثر" maxlength="6">
-                </div>
-                <div>
-                    <label class="block mb-1 text-slate-300 font-bold">الصلاحية / الدور</label>
-                    <select id="newAccountRole" class="corporate-input text-xs font-bold">
-                        <option value="مدير نظام رئيسي">مدير نظام رئيسي</option>
-                        <option value="محاسب أول">محاسب أول</option>
-                        <option value="مسؤول مخزن">مسؤول مخزن</option>
-                        <option value="مشرف أسطول">مشرف أسطول</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex gap-2 pt-2">
-                <button onclick="saveNewAccount()" class="btn-primary flex-1 py-2 text-xs">حفظ بالسحابة</button>
-                <button onclick="closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -210,7 +170,6 @@
             collection, 
             setDoc, 
             addDoc,
-            deleteDoc, 
             doc, 
             getDocs,
             onSnapshot 
@@ -237,35 +196,12 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const accountsRef = collection(db, "accounts");
-        const messagesRef = collection(db, "messages"); // استخدام مجموعة messages الموجودة
+        const messagesRef = collection(db, "messages");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
-        let accountsData = [];
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const container = document.getElementById('installContainer');
-            if (container) {
-                container.classList.remove('hidden');
-            }
-        });
-
-        document.getElementById('installAppBtn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('تم تثبيت التطبيق بنجاح');
-                }
-                deferredPrompt = null;
-                document.getElementById('installContainer').classList.add('hidden');
-            }
-        });
 
         onSnapshot(accountsRef, (snapshot) => {
-            accountsData = snapshot.docs.map(docSnap => ({
+            let accountsData = snapshot.docs.map(docSnap => ({
                 id: docSnap.id,
                 ...docSnap.data()
             }));
@@ -281,35 +217,6 @@
                 }, { merge: true });
             }
         });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedAdmin = localStorage.getItem('eidco_v14_admin') || '';
-            const inputEl = document.getElementById('usernameInput');
-            if (savedAdmin) {
-                inputEl.value = savedAdmin;
-            }
-            window.checkFounderAccess();
-        });
-
-        window.checkFounderAccess = function() {
-            const inputVal = document.getElementById('usernameInput').value.trim();
-            const addBtn = document.getElementById('addAccountBtn');
-            const resetBtn = document.getElementById('resetBtn');
-
-            if (inputVal === FOUNDER_NAME) {
-                addBtn.classList.remove('hidden');
-                resetBtn.classList.remove('hidden');
-            } else {
-                addBtn.classList.add('hidden');
-                resetBtn.classList.add('hidden');
-            }
-
-            if (inputVal) {
-                document.getElementById('selectedAccountDisplay').innerText = `الحساب المستهدف: ${inputVal}`;
-            } else {
-                document.getElementById('selectedAccountDisplay').innerText = `يرجى كتابة اسم الحساب والرقم السري ثم النقر للتحقق`;
-            }
-        };
 
         // دوال نافذة الشكاوى
         window.openComplaintsModal = function() {
@@ -359,33 +266,21 @@
                     if (isAvailable) {
                         const challenge = new Uint8Array(32);
                         window.crypto.getRandomValues(challenge);
-                        
                         try {
                             await navigator.credentials.create({
                                 publicKey: {
                                     challenge: challenge,
                                     rp: { name: "EIDCO Business OS", id: window.location.hostname },
-                                    user: {
-                                        id: new TextEncoder().encode(userName),
-                                        name: userName,
-                                        displayName: userName
-                                    },
+                                    user: { id: new TextEncoder().encode(userName), name: userName, displayName: userName },
                                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                                    authenticatorSelection: { 
-                                        authenticatorAttachment: "platform", 
-                                        userVerification: "required" 
-                                    },
+                                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
                                     timeout: 60000
                                 }
                             });
                             return true;
                         } catch (err) {
                             const assertion = await navigator.credentials.get({
-                                publicKey: {
-                                    challenge: challenge,
-                                    timeout: 60000,
-                                    userVerification: "required"
-                                }
+                                publicKey: { challenge: challenge, timeout: 60000, userVerification: "required" }
                             });
                             return !!assertion;
                         }
@@ -487,9 +382,7 @@
 
             try {
                 if (!window.recaptchaVerifier) {
-                    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                        'size': 'invisible'
-                    });
+                    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
                 }
                 confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
                 document.getElementById('phoneStep1').classList.add('hidden');
@@ -552,80 +445,6 @@
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
-            }
-        };
-
-        window.openAddAccountModal = function() {
-            document.getElementById('newAccountName').value = '';
-            document.getElementById('newAccountPin').value = '';
-            document.getElementById('addAccountModal').classList.add('active');
-        };
-        window.closeAddAccountModal = function() {
-            document.getElementById('addAccountModal').classList.remove('active');
-        };
-
-        window.saveNewAccount = async function() {
-            let nameInput = document.getElementById('newAccountName').value.trim();
-            let pinInput = document.getElementById('newAccountPin').value.trim();
-            let roleInput = document.getElementById('newAccountRole').value;
-
-            if (!nameInput) {
-                alert('الرجاء إدخال اسم المسؤول.');
-                return;
-            }
-            if (!pinInput || pinInput.length < 4) {
-                alert('الرجاء إدخال رقم سري (PIN) لا يقل عن 4 أرقام.');
-                return;
-            }
-
-            try {
-                const querySnapshot = await getDocs(accountsRef);
-                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                if (cloudAccounts.some(a => a.name === nameInput)) {
-                    alert('هذا الاسم مسجل مسبقاً في السحابة.');
-                    return;
-                }
-
-                let cleanNameKey = nameInput.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let generatedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
-
-                await setDoc(doc(db, "accounts", generatedCompanyId), {
-                    name: nameInput,
-                    pin: pinInput,
-                    role: roleInput,
-                    companyId: generatedCompanyId,
-                    isBanned: false,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-
-                alert('✓ تمت إضافة الحساب وتخصيص بيئة معزولة له في سحابة Firebase بنجاح!');
-                window.closeAddAccountModal();
-            } catch (err) {
-                alert('حدث خطأ أثناء الحفظ في سحابة Firebase: ' + err.message);
-            }
-        };
-
-        window.resetDefaultAccounts = async function() {
-            if (!confirm('هل تريد إعادة تعيين الحسابات للافتراضي وحذف كل الحسابات الأخرى من السحابة؟')) return;
-
-            try {
-                const querySnapshot = await getDocs(accountsRef);
-                for (let d of querySnapshot.docs) {
-                    await deleteDoc(doc(db, "accounts", d.id));
-                }
-                await setDoc(doc(db, "accounts", "company_founder_karm"), {
-                    name: FOUNDER_NAME,
-                    pin: "1234",
-                    role: 'مدير نظام رئيسي',
-                    companyId: 'company_founder_karm',
-                    biometricVerified: true,
-                    isBanned: false,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-                alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
-            } catch (err) {
-                alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
         };
 

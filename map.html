@@ -45,11 +45,6 @@
             touch-action: pan-x pan-y pinch-zoom;
         }
 
-        /* سلاسة تدوير طبقة الخريطة */
-        .leaflet-map-pane {
-            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
         .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
         
         .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 260px; transition: all 0.3s ease; }
@@ -89,14 +84,12 @@
             }
         }
 
-        // فتح نافذة الإضافة بدون إحداثيات افتراضية ثابتة
         window.openAddVehicleModal = function(defaultLat = '', defaultLng = '') {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
             document.getElementById('vehiclePlate').value = '';
             
-            // جلب مركز الخريطة المباشر حالياً بدلاً من وضع أرقام افتراضية
             let currentLat = defaultLat || (window.map ? window.map.getCenter().lat.toFixed(6) : '');
             let currentLng = defaultLng || (window.map ? window.map.getCenter().lng.toFixed(6) : '');
             
@@ -164,12 +157,10 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- الهيدر المحدث والمتجاوب مع الشاشات الصغيرة -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -186,7 +177,6 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -251,7 +241,6 @@
                     </div>
                 </div>
 
-                <!-- شريط الملاحة وبحث العناوين ورسم المسارات -->
                 <div class="corporate-card p-4 space-y-3 text-xs">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-2 flex-1 min-w-[260px]">
@@ -267,7 +256,6 @@
                         </div>
                     </div>
 
-                    <!-- شريط التوجيه ورسم المسارات بين النقطتين -->
                     <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
                         <span class="font-bold text-indigo-600 whitespace-nowrap"><i class="fa-solid fa-route ml-1"></i> ملاحة المسارات:</span>
                         <input type="text" id="routeStartInput" placeholder="نقطة البداية (أو اتركها فارغة لموقعك GPS)" class="corporate-input flex-1 min-w-[180px]">
@@ -284,11 +272,10 @@
                 <div class="corporate-card p-4 relative overflow-hidden">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
-                            <span class="text-[11px] font-bold text-indigo-600 font-mono">التحكم الذكي بالأسطول والتدوير</span>
+                            <span class="text-[11px] font-bold text-indigo-600 font-mono">التدوير الحر وإعدادات العرض</span>
                             <i id="panelToggleIcon" class="fa-solid fa-chevron-down text-xs text-slate-500"></i>
                         </div>
                         <div class="panel-content flex flex-col gap-1.5 pt-1">
-                            <!-- أدوات تدوير الخريطة 360 درجة -->
                             <div class="flex items-center gap-1">
                                 <button onclick="window.rotateMap(-30)" class="touch-btn flex-1 justify-center" title="تدوير يساراً"><i class="fa-solid fa-rotate-left text-indigo-600"></i> -30°</button>
                                 <button onclick="window.rotateMap(30)" class="touch-btn flex-1 justify-center" title="تدوير يميناً"><i class="fa-solid fa-rotate-right text-indigo-600"></i> +30°</button>
@@ -305,11 +292,10 @@
                     <div id="leafletMap"></div>
                 </div>
 
-                <!-- جدول إدارات الشحنات -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً (Firebase Shipments المعزولة)</h3>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً</h3>
                             <p class="text-xs text-slate-500">سجل الشحنات الحالية ومواقع تسليمها لتظهر مباشرة على خريطة الملاحة.</p>
                         </div>
                         <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
@@ -335,11 +321,10 @@
                     </div>
                 </div>
 
-                <!-- جدول إدارات الأسطول -->
                 <div class="corporate-card p-5 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً (Firebase Fleet المعزولة)</h3>
+                            <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
                         <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
@@ -473,8 +458,9 @@
         </div>
     </div>
 
-    <!-- Leaflet JS & Plugins -->
+    <!-- Leaflet JS & Plugins & Leaflet-Rotate المحرك الأصلي للتدوير الحر -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.js"></script>
 
@@ -494,7 +480,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules ونظام التدوير 360 درجة بدون مواقع افتراضية -->
+    <!-- Firebase SDK Modules ونظام التدوير الحر -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -536,13 +522,19 @@
 
         let map;
         window.map = null;
-        let pickingMode = null; // 'vehicle' or 'shipment'
+        let pickingMode = null;
         let activeRoutingControl = null;
-        let mapRotationAngle = 0; // زاوية تدوير الخريطة 360 درجة
 
         try {
-            // تهيئة الخريطة بدون موقع افتراضي ثبّتي، بل بالاعتماد على موقع الـ GPS أو العناصر
-            map = L.map('leafletMap', { zoomControl: false }).setView([26.8206, 30.8025], 6);
+            // تهيئة الخريطة بمحرك التدوير الحر الأصلي (تدوير بأصبعين في الموبايل بالكامل مع بقاء الكلمات عدلة)
+            map = L.map('leafletMap', { 
+                zoomControl: false,
+                rotate: true,
+                touchRotate: true,
+                rotateControl: false,
+                bearing: 0
+            }).setView([26.8206, 30.8025], 6);
+            
             window.map = map;
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -553,7 +545,6 @@
 
             streetLayer.addTo(map);
 
-            // جلب موقع المستخدم الحقيقي مباشرة عند البدء دون فرض أي موقع افتراضي
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     map.setView([pos.coords.latitude, pos.coords.longitude], 13);
@@ -567,7 +558,6 @@
                 if(type === 'satellite') satelliteLayer.addTo(map);
             };
 
-            // النقر المباشر على الخريطة لالتقاط الإحداثيات
             map.on('click', function(e) {
                 const lat = e.latlng.lat.toFixed(6);
                 const lng = e.latlng.lng.toFixed(6);
@@ -612,71 +602,38 @@
                     .openOn(map);
             });
 
+            // تحديث البوصلة تلقائياً عند الدوران الحر بالإصبع
+            map.on('rotate', function() {
+                const bearing = map.getBearing ? map.getBearing() : 0;
+                const compass = document.getElementById('compassNeedle');
+                if (compass) {
+                    compass.style.transform = `rotate(${-bearing}deg)`;
+                }
+            });
+
         } catch (e) {
             console.warn("Leaflet Map setup warning:", e);
         }
 
         // ==========================================
-        // 🔄 محرك تدوير الخريطة 360 درجة (Map Rotation)
+        // 🔄 وظائف التدوير الأصلي بالبوصلة والأزرار
         // ==========================================
         window.rotateMap = function(degDelta) {
-            mapRotationAngle = (mapRotationAngle + degDelta) % 360;
-            applyMapRotation();
+            if (!map) return;
+            let currentBearing = map.getBearing ? map.getBearing() : 0;
+            let newBearing = (currentBearing + degDelta) % 360;
+            if (map.setBearing) {
+                map.setBearing(newBearing);
+            }
         };
 
         window.resetMapRotation = function() {
-            mapRotationAngle = 0;
-            applyMapRotation();
+            if (!map) return;
+            if (map.setBearing) {
+                map.setBearing(0);
+            }
         };
 
-        function applyMapRotation() {
-            const pane = document.querySelector('.leaflet-map-pane');
-            if (pane) {
-                pane.style.transform = `rotate(${mapRotationAngle}deg)`;
-            }
-            const compass = document.getElementById('compassNeedle');
-            if (compass) {
-                compass.style.transform = `rotate(${-mapRotationAngle}deg)`;
-            }
-        }
-
-        // دعم تدوير الخريطة باللمس بإصبعين على الشاشات الذكية (Multi-touch gesture rotation)
-        (function setupTouchRotation() {
-            const mapContainer = document.getElementById('leafletMap');
-            if (!mapContainer) return;
-
-            let initialAngle = 0;
-            let isRotating = false;
-
-            mapContainer.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 2) {
-                    isRotating = true;
-                    initialAngle = getAngleBetweenTouches(e.touches[0], e.touches[1]) - mapRotationAngle;
-                }
-            }, { passive: true });
-
-            mapContainer.addEventListener('touchmove', (e) => {
-                if (isRotating && e.touches.length === 2) {
-                    const currentAngle = getAngleBetweenTouches(e.touches[0], e.touches[1]);
-                    mapRotationAngle = Math.round((currentAngle - initialAngle) % 360);
-                    applyMapRotation();
-                }
-            }, { passive: true });
-
-            mapContainer.addEventListener('touchend', (e) => {
-                if (e.touches.length < 2) {
-                    isRotating = false;
-                }
-            }, { passive: true });
-
-            function getAngleBetweenTouches(t1, t2) {
-                const dy = t2.clientY - t1.clientY;
-                const dx = t2.clientX - t1.clientX;
-                return Math.atan2(dy, dx) * (180 / Math.PI);
-            }
-        })();
-
-        // دالة احتواء وتكبير جميع المركبات والشحنات الموجودة دون مواقع افتراضية
         let currentFleetDocs = [];
         let currentShipmentDocs = [];
 
@@ -703,7 +660,6 @@
             }
         };
 
-        // دالة رسم المسار الملاحي
         window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
             if (!map) return;
             if (activeRoutingControl) {
@@ -1116,7 +1072,6 @@
                 document.getElementById('mapFleetCount').innerText = currentFleetDocs.length + ' مركبة';
                 document.getElementById('fleetTableBody').innerHTML = tableHtml;
 
-                // التكبير والتأطير التلقائي على الأسطول والشحنات إذا وجدت
                 window.resetMapView();
             });
 

@@ -53,7 +53,27 @@
             0% { box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4), 0 0 10px rgba(99, 102, 241, 0.4); transform: rotateX(5deg) rotateY(-5deg); }
             100% { box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9); transform: rotateX(-5deg) rotateY(5deg); }
         }
+
+        /* تنسيق ظهور القائمة الجانبية في الجوال عند النقر على زر القائمة */
+        #appSidebar.mobile-open {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            height: 100vh !important;
+            z-index: 100 !important;
+            box-shadow: -10px 0 25px rgba(0,0,0,0.3);
+        }
     </style>
+
+    <script>
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('mobile-open');
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -93,17 +113,23 @@
     </div>
 
     <div class="flex min-h-screen">
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
-            <div class="flex items-center gap-3 mb-8 px-2">
-                <div class="logo-3d-container">
-                    <div class="logo-3d-badge w-11 h-11 text-lg">
-                        <i class="fa-solid fa-cube drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"></i>
+        <!-- القائمة الجانبية -->
+        <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
+            <div class="flex items-center justify-between mb-8 px-2">
+                <div class="flex items-center gap-3">
+                    <div class="logo-3d-container">
+                        <div class="logo-3d-badge w-11 h-11 text-lg">
+                            <i class="fa-solid fa-cube drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base tracking-wide">EIDCO <span class="text-indigo-600">//</span> عيدكو</h2>
+                        <span class="text-[10px] text-indigo-600 font-mono font-bold tracking-widest">3D BUSINESS OS</span>
                     </div>
                 </div>
-                <div>
-                    <h2 class="font-black text-slate-900 text-base tracking-wide">EIDCO <span class="text-indigo-600">//</span> عيدكو</h2>
-                    <span class="text-[10px] text-indigo-600 font-mono font-bold tracking-widest">3D BUSINESS OS</span>
-                </div>
+                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <nav class="space-y-1.5 flex-1 overflow-y-auto">
@@ -119,13 +145,15 @@
                 <!-- إدارة المستخدمين والصلاحيات (للمؤسس فقط) -->
                 <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
                 
+                <!-- إدارة الحسابات والشركات (للمؤسس فقط) -->
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
+
                 <!-- زر الشكاوى والبلاغات الجديد (للمؤسس حصرياً) -->
                 <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link text-amber-700 bg-amber-50/60 font-black"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> إدارة الشكاوى والبلاغات</a>
 
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
-                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة الحسابات والشركات</a>
                 <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -135,6 +163,10 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
+                        <!-- زر إظهار القائمة الجانبية في الجوال -->
+                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 shrink-0" title="إظهار / إخفاء القائمة الجانبية">
+                            <i class="fa-solid fa-bars text-base"></i>
+                        </button>
                         <div class="logo-3d-container lg:hidden">
                             <div class="logo-3d-badge w-9 h-9 text-sm">
                                 <i class="fa-solid fa-cube"></i>
@@ -273,6 +305,12 @@
                             <div><h4 class="font-bold text-sm text-slate-900">إدارة المستخدمين والصلاحيات</h4><span class="text-[11px] text-slate-500">عرض الحسابات والصلاحيات المسجلة</span></div>
                         </a>
 
+                        <!-- بطاقة إدارة الحسابات والشركات (للمؤسس فقط) -->
+                        <a href="admin-accounts.html" id="gridAdminAccountsCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
+                            <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-building-shield"></i></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">إدارة الحسابات والشركات</h4><span class="text-[11px] text-slate-500">متابعة حسابات النظام والشركات</span></div>
+                        </a>
+
                         <!-- بطاقة الشكاوى والبلاغات الجديدة (للمؤسس فقط) -->
                         <a href="admin-reports.html" id="gridReportsCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -358,7 +396,7 @@
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-            // قصر إعدادات الأمان والبصمة وإدارة المستخدمين والشكاوى على المؤسس كرم حمدي عبدالعظيم فقط
+            // قصر إعدادات الأمان وبصمة الأصبع وإدارة الحسابات والمستخدمين والشكاوى على المؤسس فقط
             if (currentAdminName !== FOUNDER_NAME) {
                 const sidebarAuth = document.getElementById('sidebarAuthNavLink');
                 if (sidebarAuth) sidebarAuth.style.display = 'none';
@@ -369,13 +407,15 @@
                 const adminAccountsLink = document.getElementById('sidebarAdminAccountsLink');
                 if (adminAccountsLink) adminAccountsLink.style.display = 'none';
 
+                const gridAdminAccounts = document.getElementById('gridAdminAccountsCard');
+                if (gridAdminAccounts) gridAdminAccounts.style.display = 'none';
+
                 const sidebarUsers = document.getElementById('sidebarUsersLink');
                 if (sidebarUsers) sidebarUsers.style.display = 'none';
 
                 const gridUsers = document.getElementById('gridUsersCard');
                 if (gridUsers) gridUsers.style.display = 'none';
 
-                // إخفاء زر وشكاوى البلاغات عن غير المؤسس
                 const sidebarReports = document.getElementById('sidebarReportsLink');
                 if (sidebarReports) sidebarReports.style.display = 'none';
 

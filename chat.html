@@ -316,7 +316,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم البحث الشامل عن فواتير العميل -->
+    <!-- Firebase SDK Modules مع التعديل لتصحيح خطأ العنصر المفقود -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -461,12 +461,10 @@
             `).join('');
         }
 
-        // دالة شاملة وذكية لجلب فواتير العميل بالاسم أو المعرف
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
             window.selectChatMode(clientId, `فواتير العميل: ${clientName}`, clientName.charAt(0));
 
             try {
-                // جلب كافة فواتير الشركة والفواتير المجمعة لتجنب أخطاء حقول التسمية المختلفة
                 const [invSnap, batchSnap] = await Promise.all([
                     getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId))),
                     getDocs(query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId)))
@@ -475,7 +473,6 @@
                 let allIndInvoices = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 let allBatchInvoices = batchSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // مطابقة مرنة للعميل عبر الاسم أو معرف العميل (clientId)
                 let indInvoices = allIndInvoices.filter(inv => {
                     let cName = (inv.clientName || inv.client || inv.name || '').trim().toLowerCase();
                     let cId = String(inv.clientId || '').trim();
@@ -697,7 +694,6 @@
                     createdAt: Date.now()
                 });
 
-                document.getElementById('newStoryTextInput5').value = '';
                 document.getElementById('newStoryTextInput').value = '';
                 document.getElementById('storyMediaInput').value = '';
                 closeAddStoryModal();

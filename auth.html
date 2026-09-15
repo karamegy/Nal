@@ -178,14 +178,15 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithPopup, 
+            signInWithRedirect, 
+            getRedirectResult, 
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
-            authDomain: "w2a-37531-672997.firebaseapp.com",
+            authDomain: "karamegy.github.io",
             projectId: "w2a-37531-672997",
             storageBucket: "w2a-37531-672997.firebasestorage.app",
             messagingSenderId: "515898424721",
@@ -199,6 +200,15 @@
         const messagesRef = collection(db, "messages");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+
+        // التحقق التلقائي عند العودة من إعادة التوجيه
+        getRedirectResult(auth).then(async (result) => {
+            if (result && result.user) {
+                await handleGoogleUserAuth(result.user);
+            }
+        }).catch((error) => {
+            console.error("خطأ المصادقة أثناء التوجيه:", error);
+        });
 
         onSnapshot(accountsRef, (snapshot) => {
             let accountsData = snapshot.docs.map(docSnap => ({
@@ -292,12 +302,19 @@
             }
         }
 
+        // تسجيل الدخول بإعادة التوجيه بدون نوافذ منبثقة
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                
+                await signInWithRedirect(auth, provider);
+            } catch (error) {
+                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
+            }
+        };
+
+        // معالجة بيانات الحساب بعد نجاح الدخول
+        async function handleGoogleUserAuth(user) {
+            try {
                 let userEmail = user.email || '';
                 let userDisplayName = user.displayName || userEmail.split('@')[0];
                 let userPhotoUrl = user.photoURL || '';
@@ -360,9 +377,9 @@
                 alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة حسابك والدخول بنجاح!`);
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
-                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
+                alert('خطأ أثناء معالجة بيانات التسجيل: ' + error.message);
             }
-        };
+        }
 
         window.openPhoneAuthModal = function() {
             document.getElementById('phoneAuthModal').classList.add('active');

@@ -54,7 +54,6 @@
             100% { box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9); transform: rotateX(-5deg) rotateY(5deg); }
         }
 
-        /* تنسيق ظهور القائمة الجانبية في الجوال عند النقر على زر القائمة */
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
@@ -100,15 +99,15 @@
         </div>
     </div>
 
+    <!-- زر TV الطافي المحدث لفتح الصفحة داخلياً دون ظهور الرابط -->
     <div id="floatingTvTrigger" class="cursor-grab active:cursor-grabbing select-none">
-        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
             </span>
             <i class="fa-solid fa-tv text-amber-300 text-sm group-hover:rotate-12 transition-transform"></i>
             <span class="tracking-wide">بث EIDCO TV 4K</span>
-            <i class="fa-solid fa-up-right-from-square text-[10px] text-indigo-300 mr-1"></i>
         </a>
     </div>
 
@@ -142,18 +141,14 @@
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 
-                <!-- إدارة المستخدمين والصلاحيات (للمؤسس فقط) -->
                 <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
-                
-                <!-- إدارة الحسابات والشركات (للمؤسس فقط) -->
                 <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
-
-                <!-- زر الشكاوى والبلاغات الجديد (للمؤسس حصرياً) -->
                 <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link text-amber-700 bg-amber-50/60 font-black"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> إدارة الشكاوى والبلاغات</a>
 
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="tv.html" target="_blank" class="nav-link text-indigo-600"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K ↗</a>
+                <!-- زر شاشة البث في القائمة بدون target=_blank -->
+                <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
                 <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -163,7 +158,6 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
-                        <!-- زر إظهار القائمة الجانبية في الجوال -->
                         <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 shrink-0" title="إظهار / إخفاء القائمة الجانبية">
                             <i class="fa-solid fa-bars text-base"></i>
                         </button>
@@ -178,9 +172,10 @@
                         <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
                             <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة سحابياً
                         </button>
-                        <a href="tv.html" target="_blank" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 text-decoration-none">
+                        <!-- زر فتح EIDCO TV في الهيدر محدث بدون target=_blank -->
+                        <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 cursor-pointer">
                             <i class="fa-solid fa-tv text-amber-300"></i> فتح EIDCO TV
-                        </a>
+                        </button>
                         <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-print text-indigo-600"></i> طباعة
                         </button>
@@ -209,9 +204,9 @@
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1 truncate max-w-[220px] sm:max-w-none" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
-                    <a href="tv.html" target="_blank" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 text-decoration-none">
-                        <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> فتح شاشة التلفزيون بصفحة جديدة ↗
-                    </a>
+                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer">
+                        <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> فتح شاشة التلفزيون بصفحة جديدة
+                    </button>
                 </div>
 
                 <div class="corporate-card p-4 flex items-center gap-3">
@@ -299,19 +294,16 @@
                             <div><h4 class="font-bold text-sm text-slate-900">الملف الشخصي</h4><span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span></div>
                         </a>
                         
-                        <!-- بطاقة إدارة المستخدمين والصلاحيات (للمؤسس فقط) -->
                         <a href="users.html" id="gridUsersCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-users-gear"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">إدارة المستخدمين والصلاحيات</h4><span class="text-[11px] text-slate-500">عرض الحسابات والصلاحيات المسجلة</span></div>
                         </a>
 
-                        <!-- بطاقة إدارة الحسابات والشركات (للمؤسس فقط) -->
                         <a href="admin-accounts.html" id="gridAdminAccountsCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-building-shield"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">إدارة الحسابات والشركات</h4><span class="text-[11px] text-slate-500">متابعة حسابات النظام والشركات</span></div>
                         </a>
 
-                        <!-- بطاقة الشكاوى والبلاغات الجديدة (للمؤسس فقط) -->
                         <a href="admin-reports.html" id="gridReportsCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-triangle-exclamation"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">إدارة الشكاوى والبلاغات</h4><span class="text-[11px] text-slate-500">مراجعة البلاغات وحظر المخالفين</span></div>
@@ -396,7 +388,6 @@
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-            // قصر إعدادات الأمان وبصمة الأصبع وإدارة الحسابات والمستخدمين والشكاوى على المؤسس فقط
             if (currentAdminName !== FOUNDER_NAME) {
                 const sidebarAuth = document.getElementById('sidebarAuthNavLink');
                 if (sidebarAuth) sidebarAuth.style.display = 'none';
@@ -423,7 +414,6 @@
                 if (gridReports) gridReports.style.display = 'none';
             }
 
-            // تمرير معرف الجلسة والشركة (companyId) تلقائياً لكافة الروابط الداخلية للحفاظ على الاتصال
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -434,7 +424,6 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 

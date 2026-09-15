@@ -45,7 +45,6 @@
     <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
-        <!-- زر التثبيت البرمجي الظاهر عند جهوزية المتصفح -->
         <div id="installContainer" class="hidden text-center relative z-10">
             <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-5 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
                 <i class="fa-solid fa-download text-amber-300 text-sm"></i> تثبيت تطبيق EIDCO الرسمي على الهاتف
@@ -71,7 +70,6 @@
             </button>
         </div>
 
-        <!-- زر الشكاوي والدعم الفني الجديد -->
         <div class="relative z-10">
             <button onclick="openComplaintsModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow">
                 <i class="fa-solid fa-triangle-exclamation"></i> هل تواجه مشكلة؟ إرسال شكوى أو بلاغ للإدارة
@@ -110,7 +108,7 @@
         </div>
     </div>
 
-    <!-- نافذة إرسال شكوى جديدة -->
+    <!-- نافذة الشكاوى -->
     <div id="complaintsModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -178,13 +176,11 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithRedirect, 
-            getRedirectResult, 
+            signInWithPopup, 
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // تم تصحيح authDomain ليعود للرابط الافتراضي لمعالجة مسار المصادقة بدون خطأ 404
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -201,15 +197,6 @@
         const messagesRef = collection(db, "messages");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
-
-        // التحقق التلقائي عند العودة من إعادة التوجيه
-        getRedirectResult(auth).then(async (result) => {
-            if (result && result.user) {
-                await handleGoogleUserAuth(result.user);
-            }
-        }).catch((error) => {
-            console.error("خطأ المصادقة أثناء التوجيه:", error);
-        });
 
         onSnapshot(accountsRef, (snapshot) => {
             let accountsData = snapshot.docs.map(docSnap => ({
@@ -229,7 +216,6 @@
             }
         });
 
-        // دوال نافذة الشكاوى
         window.openComplaintsModal = function() {
             let currentInputName = document.getElementById('usernameInput').value.trim();
             if(currentInputName) {
@@ -303,19 +289,13 @@
             }
         }
 
-        // تسجيل الدخول بإعادة التوجيه بدون نوافذ منبثقة
+        // استخدام signInWithPopup المستقر لضمان إتمام تسجيل الدخول على GitHub Pages
         window.signInWithGoogle = async function() {
             try {
                 const provider = new GoogleAuthProvider();
-                await signInWithRedirect(auth, provider);
-            } catch (error) {
-                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
-            }
-        };
-
-        // معالجة بيانات الحساب بعد نجاح الدخول
-        async function handleGoogleUserAuth(user) {
-            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                
                 let userEmail = user.email || '';
                 let userDisplayName = user.displayName || userEmail.split('@')[0];
                 let userPhotoUrl = user.photoURL || '';
@@ -378,9 +358,9 @@
                 alert(`✓ أهلاً بك يا ${finalUserName}, تمت مزامنة حسابك والدخول بنجاح!`);
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
-                alert('خطأ أثناء معالجة بيانات التسجيل: ' + error.message);
+                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
             }
-        }
+        };
 
         window.openPhoneAuthModal = function() {
             document.getElementById('phoneAuthModal').classList.add('active');

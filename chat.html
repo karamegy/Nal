@@ -316,7 +316,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع وظيفة الضغط الذكي للوسائط -->
+    <!-- Firebase SDK Modules مع دعم البحث الشامل عن فواتير العميل -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -436,7 +436,7 @@
         function loadClients() {
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             onSnapshot(clientsRef, (snapshot) => {
-                clientsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                clientsList = snapshot.docs.map(d => ({ id: d.id, docId: d.id, ...d.data() }));
                 renderClientsBar();
             }, (err) => console.error("خطأ في جلب العملاء:", err));
         }
@@ -449,45 +449,67 @@
             }
 
             container.innerHTML = clientsList.map(c => `
-                <div onclick="window.selectClientAndShowInvoices('${c.id || c.docId}', '${c.name || 'عميل'}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+                <div onclick="window.selectClientAndShowInvoices('${c.id || c.docId}', '${c.name || c.clientName || 'عميل'}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
                     <div class="relative">
                         <div class="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-slate-400">
-                            ${c.name ? c.name.charAt(0) : 'ع'}
+                            ${(c.name || c.clientName || 'ع').charAt(0)}
                         </div>
                         <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                     </div>
-                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${c.name || 'عميل'}</span>
+                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${c.name || c.clientName || 'عميل'}</span>
                 </div>
             `).join('');
         }
 
+        // دالة شاملة وذكية لجلب فواتير العميل بالاسم أو المعرف
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
             window.selectChatMode(clientId, `فواتير العميل: ${clientName}`, clientName.charAt(0));
 
             try {
+                // جلب كافة فواتير الشركة والفواتير المجمعة لتجنب أخطاء حقول التسمية المختلفة
                 const [invSnap, batchSnap] = await Promise.all([
-                    getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId), where("clientName", "==", clientName))),
+                    getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId))),
                     getDocs(query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId)))
                 ]);
 
-                let indInvoices = invSnap.docs.map(d => d.data());
-                let batchInvoices = batchSnap.docs.map(d => d.data()).filter(b => b.clientName === clientName);
+                let allIndInvoices = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                let allBatchInvoices = batchSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // مطابقة مرنة للعميل عبر الاسم أو معرف العميل (clientId)
+                let indInvoices = allIndInvoices.filter(inv => {
+                    let cName = (inv.clientName || inv.client || inv.name || '').trim().toLowerCase();
+                    let cId = String(inv.clientId || '').trim();
+                    let targetName = clientName.trim().toLowerCase();
+                    return cName === targetName || cId === String(clientId);
+                });
+
+                let batchInvoices = allBatchInvoices.filter(b => {
+                    let bName = (b.clientName || b.client || b.name || '').trim().toLowerCase();
+                    let bId = String(b.clientId || '').trim();
+                    let targetName = clientName.trim().toLowerCase();
+                    return bName === targetName || bId === String(clientId);
+                });
 
                 let reportContent = `📄 *تقرير فواتير وحساب العميل: ${clientName}* 🏢\n`;
+                
                 if (indInvoices.length > 0) {
                     reportContent += `\n--- الفواتير الفردية (${indInvoices.length}) ---\n`;
                     indInvoices.forEach((inv, idx) => {
-                        reportContent += `${idx+1}. فاتورة #${inv.invoiceNumber || '---'} - القيمة: ${inv.totalAmount || inv.amount || 0} ج.م (${inv.date || '---'})\n`;
+                        let amount = inv.totalAmount || inv.total || inv.amount || 0;
+                        reportContent += `${idx+1}. فاتورة #${inv.invoiceNumber || inv.id || '---'} - القيمة: ${Number(amount).toLocaleString()} ج.م (${inv.date || '---'})\n`;
                     });
                 } else {
                     reportContent += `\n- لا توجد فواتير فردية مسجلة لهذا العميل.\n`;
                 }
 
-                if (batchInvoices.length > 0)  {
+                if (batchInvoices.length > 0) {
                     reportContent += `\n--- الفواتير المجمعة (${batchInvoices.length}) ---\n`;
                     batchInvoices.forEach((b, idx) => {
-                        reportContent += `${idx+1}. مجموعة #${b.batchNumber || '---'} - الإجمالي: ${b.totalAmount || 0} ج.م\n`;
+                        let amount = b.totalAmount || b.total || 0;
+                        reportContent += `${idx+1}. مجموعة #${b.batchNumber || b.id || '---'} - الإجمالي: ${Number(amount).toLocaleString()} ج.م (${b.date || '---'})\n`;
                     });
+                } else {
+                    reportContent += `\n- لا توجد فواتير مجمعة مسجلة لهذا العميل.\n`;
                 }
 
                 let area = document.getElementById('chatMessagesArea');
@@ -609,7 +631,6 @@
             }
         };
 
-        // دالة ضغط الصور والفيديوهات ذكياً لتقليل استهلاك قراءات وحجم قاعدة البيانات
         function compressMediaFile(file) {
             return new Promise((resolve) => {
                 if (file.type.startsWith('image')) {
@@ -639,7 +660,6 @@
                             canvas.height = height;
                             let ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-                            // ضغط جودة الصورة إلى 75% لتقليل الحجم ومنع التكلفة المفاجئة
                             let compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
                             resolve({ type: 'image', url: compressedDataUrl });
                         };
@@ -647,7 +667,6 @@
                     };
                     reader.readAsDataURL(file);
                 } else {
-                    // للفيديو، يتم التحويل مع حدود آمنة
                     let reader = new FileReader();
                     reader.onload = function(e) {
                         resolve({ type: 'video', url: e.target.result });
@@ -678,10 +697,11 @@
                     createdAt: Date.now()
                 });
 
+                document.getElementById('newStoryTextInput5').value = '';
                 document.getElementById('newStoryTextInput').value = '';
                 document.getElementById('storyMediaInput').value = '';
                 closeAddStoryModal();
-                alert('✓ تم ضغط ونشر الستوري بنجاح (بحجم مخفض لحماية القراءات والمصروفات).');
+                alert('✓ تم ضغط ونشر الستوري بنجاح.');
             } catch (e) {
                 alert('خطأ أثناء النشر: ' + e.message);
             }

@@ -33,7 +33,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* لوحة إيموجي احترافية ومدمجة */
         #emojiPickerPopup { display: none; position: absolute; bottom: 70px; right: 15px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 10px 25px -3px rgba(0,0,0,0.15); padding: 12px; z-index: 50; width: 280px; max-height: 220px; overflow-y: auto; grid-template-columns: repeat(6, 1fr); gap: 8px; text-align: center; }
         #emojiPickerPopup.active { display: grid; }
         .emoji-item { font-size: 1.35rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: transform 0.1s, background 0.1s; }
@@ -117,7 +116,7 @@
                 <!-- شريط الحسابات والستوري والعملاء -->
                 <div class="corporate-card p-4 bg-white space-y-3">
                     <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users ml-1 text-indigo-600"></i> حسابات الشركة والستوري (انقر لبدء المحادثة أو عرض الحالة)</h3>
+                        <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users ml-1 text-indigo-600"></i> حسابات الشركة والستوري (انقر لعرض الحالة الحيّة لمدة 60 ثانية)</h3>
                         <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
                             <i class="fa-solid fa-plus text-[10px]"></i> إضافة ستوري جديد
                         </button>
@@ -168,7 +167,6 @@
                             <i class="fa-regular fa-face-laugh-squint text-lg text-amber-500"></i>
                         </button>
                         
-                        <!-- نافذة الإيموجي السريعة -->
                         <div id="emojiPickerPopup">
                             <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
                             <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
@@ -200,7 +198,7 @@
         </div>
     </div>
 
-    <!-- نافذة عرض الستوري (لمدة دقيقة) -->
+    <!-- نافذة عرض الستوري (لمدة 60 ثانية حقيقية) -->
     <div id="storyViewerModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 bg-slate-900 text-white shadow-2xl relative text-center">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
@@ -213,7 +211,7 @@
             <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                 <div id="storyProgressBar" class="bg-amber-400 h-full w-full transition-all duration-[60000ms] linear"></div>
             </div>
-            <span class="text-[10px] text-slate-400 block font-mono">تنتهي الحالة تلقائياً بعد دقيقة واحدة</span>
+            <span class="text-[10px] text-slate-400 block font-mono">تنتهي الحالة تلقائياً بعد 60 ثانية</span>
         </div>
     </div>
 
@@ -221,7 +219,7 @@
     <div id="addStoryModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-black text-sm text-indigo-600"><i class="fa-solid fa-plus-circle ml-1"></i> نشر ستوري جديد (حالة لمدة دقيقة)</h3>
+                <h3 class="font-black text-sm text-indigo-600"><i class="fa-solid fa-plus-circle ml-1"></i> نشر ستوري جديد (حالة لمدة 60 ثانية)</h3>
                 <button onclick="closeAddStoryModal()" class="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-3 text-xs">
@@ -279,7 +277,7 @@
             if (storyTimer) clearTimeout(storyTimer);
             storyTimer = setTimeout(() => {
                 closeStoryViewer();
-            }, 60000); // 60 ثانية (دقيقة كاملة)
+            }, 60000); // 60 ثانية دقيقة كاملة
         }
 
         function closeStoryViewer() {
@@ -305,7 +303,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules ومزامنة الخوادم -->
+    <!-- Firebase SDK Modules ومزامنة الخوادم وجلب ملخص الفواتير والستوري -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -347,8 +345,55 @@
         signInAnonymously(auth).then(async () => {
             loadAdminAccount();
             loadClients();
+            loadStories();
             loadMessages('global');
+            // توليد وعرض ملخص الفواتير الفردية والمجمعة والجدول تلقائياً في الشات العام
+            generateAndSendInvoicesSummary();
         }).catch(err => console.error("فشل الاتصال بالمصادقة السحابية:", err));
+
+        async function generateAndSendInvoicesSummary() {
+            try {
+                // جلب الفواتير الفردية والمجمعة، العملاء، المخزن، والخزنة
+                const [invSnap, batchInvSnap, clientsSnap, productsSnap] = await Promise.all([
+                    getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId))),
+                    getDocs(query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId))),
+                    getDocs(query(collection(db, "clients"), where("companyId", "==", currentCompanyId))),
+                    getDocs(query(collection(db, "products"), where("companyId", "==", currentCompanyId)))
+                ]);
+
+                let totalIndInvoices = invSnap.size;
+                let totalBatchInvoices = batchInvSnap.size;
+                let totalClients = clientsSnap.size;
+                let totalProducts = productsSnap.size;
+
+                let summaryText = `📊 *ملخص العمليات والفواتير السحابية (EIDCO)* 🚀\n` +
+                                  `👤 المدير / المسؤول: ${localStorage.getItem('eidco_v14_admin') || 'كرم حمدي عبدالعظيم'}\n` +
+                                  `📄 الفواتير الفردية: ${totalIndInvoices} فاتورة\n` +
+                                  `📑 الفواتير المجمعة: ${totalBatchInvoices} فاتورة\n` +
+                                  `🏢 إجمالي العملاء: ${totalClients} جهة\n` +
+                                  `📦 أصناف المخزن: ${totalProducts} صنف\n` +
+                                  `💰 إجمالي المبيعات والنشاط: متزامن ومعزول\n` +
+                                  `📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
+
+                // التأكد من عدم تكرار إرسال الملخص في الشات العام لنفس الجلسة
+                const globalMsgQuery = query(collection(db, "messages"), where("companyId", "==", currentCompanyId), where("chatType", "==", "global"));
+                const msgSnap = await getDocs(globalMsgQuery);
+                let alreadyHasSummary = msgSnap.docs.some(d => d.data().text.includes('ملخص العمليات والفواتير'));
+
+                if (!alreadyHasSummary) {
+                    await addDoc(collection(db, "messages"), {
+                        companyId: currentCompanyId,
+                        chatType: 'global',
+                        sender: 'system',
+                        text: summaryText,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        createdAt: Date.now()
+                    });
+                }
+            } catch (e) {
+                console.error("خطأ في جلب ملخص الفواتير:", e);
+            }
+        }
 
         function loadAdminAccount() {
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
@@ -368,7 +413,7 @@
 
             container.innerHTML = `
                 <div onclick="window.selectChatMode('admin_${acc.companyId || 'profile'}', '${name}', '${name.charAt(0)}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
-                    <div class="relative">
+                    <div class="relative" onclick="event.stopPropagation(); checkAndOpenLatestStory('${name}')">
                         <div class="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-indigo-400 overflow-hidden">
                             ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
                         </div>
@@ -406,6 +451,30 @@
                 </div>
             `).join('');
         }
+
+        let activeStoriesMap = {};
+        function loadStories() {
+            const storiesRef = query(collection(db, "stories"), where("companyId", "==", currentCompanyId));
+            onSnapshot(storiesRef, (snapshot) => {
+                let now = Date.now();
+                snapshot.docs.forEach(d => {
+                    let data = d.data();
+                    // الستوري فعال فقط لمدة 60 ثانية (دقيقة واحدة)
+                    if (now - (data.createdAt || 0) <= 60000) {
+                        activeStoriesMap[data.author] = data.text;
+                    }
+                });
+            });
+        }
+
+        window.checkAndOpenLatestStory = function(authorName) {
+            let storyText = activeStoriesMap[authorName];
+            if (storyText) {
+                openStoryViewer(authorName, storyText);
+            } else {
+                alert(`لا توجد حالات نشطة حالياً لـ (${authorName}) أو أن الـ 60 ثانية قد انتهت.`);
+            }
+        };
 
         window.selectChatMode = function(mode, name, initial) {
             currentChatMode = mode;
@@ -453,12 +522,19 @@
                 return;
             }
 
-            area.innerHTML = messagesList.map(m => `
-                <div class="flex flex-col ${m.sender === 'me' ? 'items-end' : 'items-start'}">
-                    <div class="max-w-[75%] px-3.5 py-2 rounded-2xl text-xs ${m.sender === 'me' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border text-slate-800 shadow-sm'}">${m.text}</div>
-                    <span class="text-[9px] text-slate-400 mt-0.5 mono-font">${m.time || ''}</span>
-                </div>
-            `).join('');
+            area.innerHTML = messagesList.map(m => {
+                let isSystem = m.sender === 'system';
+                let isMe = m.sender === 'me';
+                let alignment = isSystem ? 'items-center text-center' : (isMe ? 'items-end' : 'items-start');
+                let bgStyle = isSystem ? 'bg-indigo-900 text-white font-mono shadow-md border border-indigo-500' : (isMe ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border text-slate-800 shadow-sm');
+                
+                return `
+                    <div class="flex flex-col ${alignment}">
+                        <div class="max-w-[85%] px-4 py-3 rounded-2xl text-xs whitespace-pre-line leading-relaxed ${bgStyle}">${m.text}</div>
+                        <span class="text-[9px] text-slate-400 mt-0.5 mono-font">${m.time || ''}</span>
+                    </div>
+                `;
+            }).join('');
             area.scrollTop = area.scrollHeight;
         }
 
@@ -501,7 +577,7 @@
                 });
                 document.getElementById('newStoryTextInput').value = '';
                 closeAddStoryModal();
-                alert('✓ تم نشر الستوري بنجاح وعالي الدقة.');
+                alert('✓ تم نشر الستوري بنجاح، وستبقى الحالة نشطة لمدة 60 ثانية حقيقية.');
             } catch (e) {
                 alert('خطأ أثناء النشر: ' + e.message);
             }

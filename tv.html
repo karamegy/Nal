@@ -267,6 +267,18 @@
         import { getFirestore, collection, onSnapshot, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        // طلب ملء الشاشة تلقائياً عند فتح الصفحة لإخفاء شريط العنوان والمتصفح الداخلي
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                let elem = document.documentElement;
+                if (elem.requestFullscreen && !document.fullscreenElement) {
+                    elem.requestFullscreen().catch(err => {
+                        console.log("وضع ملء الشاشة يتطلب تفاعل المستخدم أحياناً.");
+                    });
+                }
+            }, 800);
+        });
+
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -290,7 +302,7 @@
         }
 
         let state = { invoices: [], batch_invoices: [], transactions: [], clients: [], products: [], fleet: [], account: {} };
-        let currentTvChannel = 'metrics'; // تعيين القناة الأولى لتكون جدول المؤشرات
+        let currentTvChannel = 'metrics';
         let tvAutoSlideInterval = null;
         let isTvPoweredOn = true;
         let isTvMuted = false;

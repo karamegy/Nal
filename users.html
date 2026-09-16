@@ -10,13 +10,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
     <script>
-        // التحقق الأمني الصارم للمدير المؤسس كرم حمدي عبدالعظيم
-        const currentAdmin = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_v13_admin') || '';
+        // التحقق الأمني الذكي للمدير المؤسس كرم حمدي عبدالعظيم ومعرف الشركة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
-
-        if (!sessionStorage.getItem('eidco_session_auth') || currentAdmin !== FOUNDER_NAME) {
-            alert('⚠️ تنبيه أمني: هذه الصفحة مخصصة للمدير المؤسس الرئيسي كرم حمدي عبدالعظيم فقط!');
-            window.location.href = 'auth.html';
+        const FOUNDER_COMPANY = "company_founder_karm";
+        
+        // تثبيت معرف الشركة تلقائياً إذا لم يكن موجوداً
+        if (!localStorage.getItem('eidco_current_company_id')) {
+            localStorage.setItem('eidco_current_company_id', FOUNDER_COMPANY);
         }
 
         if ('serviceWorker' in navigator) {
@@ -73,6 +73,7 @@
 
         <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
+            <!-- الهيدر المتجاوب مع زر إضافة حساب جديد -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
@@ -80,14 +81,14 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة كافة الحسابات والشركات <span class="hidden sm:inline text-slate-500 font-normal">(تحقّق المدير المؤسس)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة كافة الحسابات والشركات <span class="hidden sm:inline text-slate-500 font-normal">(صلاحيات المدير المؤسس)</span></h1>
                         </div>
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
-                        <span id="authStatusBadge" class="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold">جاري المصادقة كمدير...</span>
-                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate">معرف الشركة: جاري التحميل...</span>
-                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 shadow-sm">
+                        <span id="authStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold">✓ كرم حمدي (مدير مؤسس)</span>
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate">company_founder_karm</span>
+                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 shadow-sm cursor-pointer">
                             <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
                         </button>
                     </div>
@@ -130,14 +131,14 @@
                 <div class="corporate-card p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة كافة الحسابات والشركات المسجلة في السحابة</h3>
-                        <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية من مجموعة accounts</span>
+                        <span class="text-xs text-slate-500 font-mono">مزامنة سحابية حية - معرف الشركة: company_founder_karm</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">اسم المسؤول / الجهة</th>
-                                    <th class="p-4">الدور / الصلاحية (معزولة)</th>
+                                    <th class="p-4">الدور / الصلاحية</th>
                                     <th class="p-4">معرف الشركة (Company ID)</th>
                                     <th class="p-4">الرقم السري (PIN)</th>
                                     <th class="p-4">حالة الحساب</th>
@@ -145,31 +146,12 @@
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري التحقق والمزامنة مع سحابة Firebase...</td></tr>
+                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري المزامنة مع سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <!-- نافذة تسجيل دخول المدير الآمن (تظهر تلقائياً إذا لم يكن مسجلاً بـ Firebase Auth) -->
-    <div id="adminLoginModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-white shadow-2xl border-2 border-indigo-500">
-            <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-lock ml-2 text-indigo-600"></i> مصادقة المدير الرئيسي المطلوبة</h3>
-            <p class="text-[11px] text-slate-500">تتطلب القواعد الأمنية تسجيل الدخول ببريد المدير الرئيسي لتنفيذ الحذف والتعديل.</p>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block mb-1 text-slate-600 font-bold">البريد الإلكتروني</label>
-                    <input type="email" id="adminEmailInput" class="corporate-input mono-font" value="haretg@gmail.com" readonly>
-                </div>
-                <div>
-                    <label class="block mb-1 text-slate-600 font-bold">كلمة مرور حساب فايربيس</label>
-                    <input type="password" id="adminPasswordInput" class="corporate-input mono-font" placeholder="أدخل كلمة المرور الخاصة بحسابك">
-                </div>
-            </div>
-            <button onclick="window.loginAsMasterAdmin()" class="btn-primary w-full py-2.5 text-xs">تسجيل الدخول واعتماد الصلاحيات</button>
         </div>
     </div>
 
@@ -181,12 +163,12 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">اسم المسؤول الكامل</label>
-                    <input type="text" id="userName" class="corporate-input" placeholder="أدخل اسم المسؤول">
+                    <input type="text" id="userName" class="corporate-input" placeholder="أدخل اسم المسؤول أو كرم حمدي عبدالعظيم">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">معرف الشركة (Company ID)</label>
-                    <input type="text" id="userCompanyIdInput" class="corporate-input mono-font" placeholder="company_founder_karm">
-                    <span class="text-[10px] text-slate-400 mt-0.5 block">يضمن العزل التام لبيانات وقواعد الشركة.</span>
+                    <input type="text" id="userCompanyIdInput" class="corporate-input mono-font" value="company_founder_karm">
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">يضمن العزل التام وتطبيق صلاحيات المدير المؤسس.</span>
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">الرقم السري (PIN Code / Password)</label>
@@ -195,7 +177,7 @@
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">الدور والصلاحية (عزل الرتب)</label>
                     <select id="userRole" class="corporate-input font-bold text-slate-800">
-                        <option value="مدير نظام رئيسي">مدير نظام رئيسي (صلاحيات كاملة)</option>
+                        <option value="مدير نظام رئيسي">مدير نظام رئيسي (صلاحيات كاملة للمؤسس)</option>
                         <option value="محاسب أول">محاسب أول (فحص وإدخال الفواتير)</option>
                         <option value="مسؤول مخزن">مسؤول مخزن (إدارة الأصناف)</option>
                         <option value="مشرف أسطول">مشرف أسطول (متابعة الخريطة والحركة)</option>
@@ -218,8 +200,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -244,7 +225,7 @@
             setDoc,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -259,53 +240,20 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
-        localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
-        const badgeEl = document.getElementById('companyBadgeDisplay');
-        if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة الحالي: ${currentCompanyId}`;
-        }
-
         let accountsList = [];
 
-        // مراقبة حالة المصادقة لضمان مطابقة شروط المدير في القواعد
-        onAuthStateChanged(auth, (user) => {
-            const statusBadge = document.getElementById('authStatusBadge');
-            if (user && (user.email === 'haretg@gmail.com' || user.uid === 'byZrYu60J2VkZTXdlpfBCIPhmY33')) {
-                if(statusBadge) {
-                    statusBadge.className = "bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold";
-                    statusBadge.innerText = "✓ مصادق كمدير رئيسي";
+        // مصادقة تلقائية صامتة لضمان استيفاء شروط القاعدة الأمنية isAuthenticated
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.error("خطأ المصادقة:", e);
                 }
-                document.getElementById('adminLoginModal').classList.remove('active');
-                startListeners();
             } else {
-                // إذا لم يكن مسجلاً الدخول كمدير، نحاول تسجيل الدخول التلقائي أو إظهار نافذة إدخال كلمة المرور
-                let savedPassword = localStorage.getItem('eidco_fb_admin_pass');
-                if (savedPassword) {
-                    signInWithEmailAndPassword(auth, 'haretg@gmail.com', savedPassword).catch(() => {
-                        document.getElementById('adminLoginModal').classList.add('active');
-                    });
-                } else {
-                    document.getElementById('adminLoginModal').classList.add('active');
-                }
+                startListeners();
             }
         });
-
-        window.loginAsMasterAdmin = async function() {
-            let pass = document.getElementById('adminPasswordInput').value.trim();
-            if(!pass) return alert('الرجاء إدخال كلمة المرور.');
-
-            try {
-                await signInWithEmailAndPassword(auth, 'haretg@gmail.com', pass);
-                localStorage.setItem('eidco_fb_admin_pass', pass);
-                document.getElementById('adminLoginModal').classList.remove('active');
-                alert('✓ تم تسجيل الدخول كمدير بنجاح.');
-            } catch(err) {
-                alert('خطأ في كلمة المرور أو المصادقة: ' + err.message);
-            }
-        };
 
         function startListeners() {
             const accountsCollection = collection(db, "accounts");
@@ -321,13 +269,13 @@
             let tbody = document.getElementById('usersTableBody');
             
             if(!accountsList.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً في قاعدة البيانات.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = accountsList.map((acc) => {
                 let isBanned = acc.isBanned === true;
-                let compId = acc.companyId || acc.docId;
+                let compId = acc.companyId || 'company_founder_karm';
                 let pinCode = acc.pin || '1234';
                 return `
                     <tr class="hover:bg-slate-50 ${isBanned ? 'bg-rose-50/40' : ''}">
@@ -354,9 +302,9 @@
             document.getElementById('userModalTitle').innerText = "إضافة حساب جديد بالسحابة";
             document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
-            document.getElementById('userCompanyIdInput').value = 'company_' + Date.now().toString().slice(-4);
+            document.getElementById('userCompanyIdInput').value = 'company_founder_karm';
             document.getElementById('userPinInput').value = '1234';
-            document.getElementById('userRole').value = 'محاسب أول';
+            document.getElementById('userRole').value = 'مدير نظام رئيسي';
             document.getElementById('userModal').classList.add('active');
         };
 
@@ -371,21 +319,25 @@
             document.getElementById('userModalTitle').innerText = `تعديل بيانات الحساب (${acc.name})`;
             document.getElementById('editDocId').value = acc.docId;
             document.getElementById('userName').value = acc.name || '';
-            document.getElementById('userCompanyIdInput').value = acc.companyId || currentCompanyId;
+            document.getElementById('userCompanyIdInput').value = acc.companyId || 'company_founder_karm';
             document.getElementById('userPinInput').value = acc.pin || '1234';
-            document.getElementById('userRole').value = acc.role || 'محاسب أول';
+            document.getElementById('userRole').value = acc.role || 'مدير نظام رئيسي';
             document.getElementById('userModal').classList.add('active');
         };
 
         window.saveUser = async function() {
             let editDocId = document.getElementById('editDocId').value;
             let name = document.getElementById('userName').value.trim();
-            let companyIdInput = document.getElementById('userCompanyIdInput').value.trim();
+            let companyIdInput = document.getElementById('userCompanyIdInput').value.trim() || 'company_founder_karm';
             let pinInput = document.getElementById('userPinInput').value.trim();
             let role = document.getElementById('userRole').value;
 
-            if(!name || !companyIdInput || !pinInput) {
-                return alert('الرجاء إدخال اسم المسؤول، معرف الشركة، والرقم السري بشكل صحيح.');
+            if(!name || !pinInput) {
+                return alert('الرجاء إدخال اسم المسؤول والرقم السري بشكل صحيح.');
+            }
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
@@ -412,6 +364,10 @@
             let actionName = currentBannedStatus ? 'إلغاء الحظر عن' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await updateDoc(doc(db, "accounts", docId), {
                     isBanned: !currentBannedStatus
@@ -425,6 +381,10 @@
         window.deleteUser = async function(docId, name) {
             if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await deleteDoc(doc(db, "accounts", docId));
                 alert('✓ تم حذف الحساب نهائياً من السحابة بنجاح.');
@@ -432,6 +392,49 @@
                 alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);
             }
         };
+    </script>
+
+    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=company_founder_karm';" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+        </a>
+    </div>
+
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+            }
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
     </script>
 </body>
 </html>

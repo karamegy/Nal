@@ -183,7 +183,7 @@
             getDocs,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -202,8 +202,24 @@
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
         let accountsList = [];
+        let isInitialized = false;
 
-        signInAnonymously(auth).then(() => {
+        // مراقبة حالة المصادقة لضمان تفعيل الجلسة قبل جلب البيانات أو التعديل
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                if (!isInitialized) {
+                    isInitialized = true;
+                    startListeners();
+                }
+            } else {
+                signInAnonymously(auth).catch(err => {
+                    document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة: تأكد من تفعيل Anonymous Auth في فايربيس";
+                    console.error("Auth error:", err);
+                });
+            }
+        });
+
+        function startListeners() {
             // جلب كافة الحسابات
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
@@ -222,7 +238,7 @@
             }, (err) => {
                 document.getElementById('complaintsSyncStatus').innerText = "⚠️ خطأ في مزامنة الشكاوى";
             });
-        });
+        }
 
         function renderAccountsTable(data) {
             document.getElementById('totalAccountsCount').innerText = data.length;

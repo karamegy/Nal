@@ -31,7 +31,6 @@
         }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
 
-        /* تصميم شاشة OLED 4K المباشرة */
         .real-tv-bezel {
             background: linear-gradient(145deg, #1e293b 0%, #090d16 100%);
             box-shadow: 0 30px 80px -10px rgba(0, 0, 0, 0.95), 0 0 40px rgba(79, 70, 229, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2);
@@ -261,20 +260,17 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم جلب البروفايل وجدول المؤشرات -->
+    <!-- Firebase SDK Modules مع دعم جلب البروفايل وجدول المؤشرات ودعم أزرار الريموت الذكي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, getDocs, query, where, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // طلب ملء الشاشة تلقائياً عند فتح الصفحة لإخفاء شريط العنوان والمتصفح الداخلي
         window.addEventListener('load', () => {
             setTimeout(() => {
                 let elem = document.documentElement;
                 if (elem.requestFullscreen && !document.fullscreenElement) {
-                    elem.requestFullscreen().catch(err => {
-                        console.log("وضع ملء الشاشة يتطلب تفاعل المستخدم أحياناً.");
-                    });
+                    elem.requestFullscreen().catch(() => {});
                 }
             }, 800);
         });
@@ -376,6 +372,54 @@
             speakArabicText(textToSpeak);
         };
 
+        // ==========================================
+        // 🎮 محرك استقبال أوامر الريموت الذكي (Smart Remote Handler)
+        // ==========================================
+        window.addEventListener('keydown', (e) => {
+            const key = e.key;
+            const code = e.keyCode;
+            const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
+            let currentIdx = channels.indexOf(currentTvChannel);
+
+            // منع السلوك الافتراضي لأسهم الاتجاهات والقنوات حتى لا يحدث سكرول للشاشة
+            const keysToPrevent = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ChannelUp', 'ChannelDown', 'MediaTrackNext', 'MediaTrackPrevious'];
+            if (keysToPrevent.includes(key) || [37, 38, 39, 40, 427, 428].includes(code)) {
+                e.preventDefault();
+            }
+
+            // 1️⃣ أسهم الاتجاهات / أزرار التنقل بين القنوات (سهم يمين أو أعلى = القناة التالية، سهم يسار أو أسفل = القناة السابقة)
+            if (key === 'ArrowRight' || key === 'ArrowUp' || key === 'ChannelUp' || key === 'MediaTrackNext' || code === 39 || code === 38 || code === 427) {
+                window.switchTvChannel(channels[(currentIdx + 1) % channels.length]);
+            } 
+            else if (key === 'ArrowLeft' || key === 'ArrowDown' || key === 'ChannelDown' || key === 'MediaTrackPrevious' || code === 37 || code === 40 || code === 428) {
+                window.switchTvChannel(channels[(currentIdx - 1 + channels.length) % channels.length]);
+            }
+            // 2️⃣ أرقام القنوات المباشرة (1 - 6) من ريموت الكنترول أو لوحة المفاتيح
+            else if ((code >= 49 && code <= 54) || (key >= '1' && key <= '6')) {
+                const targetNum = parseInt(key) || (code - 48);
+                if (targetNum >= 1 && targetNum <= 6) {
+                    window.switchTvChannel(channels[targetNum - 1]);
+                }
+            }
+            // 3️⃣ زر OK / Enter (تشغيل أو إيقاف السلايد التلقائي للدوران بين القنوات)
+            else if (key === 'Enter' || code === 13) {
+                window.toggleTvAutoSlide();
+            }
+            // 4️⃣ الأزرار الملونة لريموت الشاشة (Red, Green, Yellow, Blue) أو الاختصارات بالحروف (P, M, S, F)
+            else if (key === 'Red' || key === 'ColorF0Red' || code === 403 || key.toLowerCase() === 'p') {
+                window.toggleTvPower(); // الزر الأحمر: التشغيل/الإطفاء
+            }
+            else if (key === 'Green' || key === 'ColorF1Green' || code === 404 || key.toLowerCase() === 'm') {
+                window.toggleTvAudio(); // الزر الأخضر: كتم/تشغيل الصوت
+            }
+            else if (key === 'Yellow' || key === 'ColorF2Yellow' || code === 405 || key.toLowerCase() === 's') {
+                window.toggleSpeechAnnouncer(); // الزر الأصفر: الناطق الفوري
+            }
+            else if (key === 'Blue' || key === 'ColorF3Blue' || code === 406 || key.toLowerCase() === 'f') {
+                window.toggleTvFullscreen(); // الزر الأزرق: الشاشة الكاملة
+            }
+        });
+
         signInAnonymously(auth).then(async () => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId));
@@ -384,6 +428,22 @@
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
             const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
+
+            // الاستماع السحابي لأوامر ريموت الهاتف اللحظية من Firebase
+            onSnapshot(doc(db, "tv_remote", currentCompanyId), (snapshot) => {
+                if (snapshot.exists()) {
+                    const cmd = snapshot.data();
+                    if (cmd.action === 'change_channel' && cmd.channel) {
+                        window.switchTvChannel(cmd.channel);
+                    } else if (cmd.action === 'power') {
+                        window.toggleTvPower();
+                    } else if (cmd.action === 'mute') {
+                        window.toggleTvAudio();
+                    } else if (cmd.action === 'speech') {
+                        window.speakCurrentScreenInfo();
+                    }
+                }
+            });
 
             try {
                 const [invSnap, batchSnap, transSnap, clientsSnap, prodSnap, fleetSnap, accSnap] = await Promise.all([
@@ -687,7 +747,7 @@
                     <div class="space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-purple-400 border-b border-slate-800 pb-2">
                             <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-map-location-dot"></i> أسطول النقل والشحنات اللوجستية (GPS)</span>
-                            <span class="text-[11px] text-slate-400 font-mono">المواقع النشطة: ${state.fleet.length}</span>
+                            <span class="text-[11px] text-slate-400 font-mono">الم مواقع النشطة: ${state.fleet.length}</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             ${recentFleet.map(f => `

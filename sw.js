@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v21-cache'; // تم تحديث الإصدار لضمان تحديث الكاش وملف الشكاوى الجديد
+const CACHE_NAME = 'eidco-v22-cache'; // تم تحديث الإصدار لضمان تحديث الكاش وملف الشكاوى الجديد
 const assetsToCache = [
   './index.html',
   './auth.html',

@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        // التثبيت التلقائي لمعرف الشركة وصلاحيات المؤسس كرم حمدي عبدالعظيم دون قيود محلية مزعجة
+        // التثبيت التلقائي لمعرف الشركة وصلاحيات المؤسس كرم حمدي عبدالعظيم
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
         
@@ -189,7 +189,7 @@
             getDocs,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -210,7 +210,7 @@
         let accountsList = [];
         let isInitialized = false;
 
-        // مصادقة تلقائية صامتة تضمن عمل كافة قواعد الحذف والتعديل
+        // إدارة المصادقة بذكاء لتتوافق مع القواعد الأمنية للمدير
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 if (!isInitialized) {
@@ -218,6 +218,7 @@
                     startListeners();
                 }
             } else {
+                // إذا لم يكن مسجلاً، نحاول الدخول المجهول لتفعيل isAuthenticated مع الـ Rules الحالية
                 signInAnonymously(auth).catch(err => {
                     document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة سحابية";
                     console.error("Auth error:", err);
@@ -319,7 +320,7 @@
 
         window.openAddAccountModal = function() {
             document.getElementById('modalAccountName').value = '';
-            document.getElementById('modalAccountCompanyId').value = 'company_founder_karm';
+            document.getElementById('modalAccountCompanyId').value = FOUNDER_COMPANY;
             document.getElementById('modalAccountPin').value = '1234';
             document.getElementById('adminAddModal').classList.add('active');
         };
@@ -330,7 +331,7 @@
 
         window.saveAdminAccount = async function() {
             let name = document.getElementById('modalAccountName').value.trim();
-            let companyIdInput = document.getElementById('modalAccountCompanyId').value.trim() || 'company_founder_karm';
+            let companyIdInput = document.getElementById('modalAccountCompanyId').value.trim() || FOUNDER_COMPANY;
             let pin = document.getElementById('modalAccountPin').value.trim() || "1234";
             let role = document.getElementById('modalAccountRole').value;
 
@@ -371,11 +372,11 @@
                 for (let d of querySnapshot.docs) {
                     await deleteDoc(doc(db, "accounts", d.id));
                 }
-                await setDoc(doc(db, "accounts", "company_founder_karm"), {
+                await setDoc(doc(db, "accounts", FOUNDER_COMPANY), {
                     name: FOUNDER_NAME,
                     pin: "1234",
                     role: 'مدير نظام رئيسي',
-                    companyId: 'company_founder_karm',
+                    companyId: FOUNDER_COMPANY,
                     biometricVerified: true,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]

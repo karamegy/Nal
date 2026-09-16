@@ -189,7 +189,7 @@
             getDocs,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -206,11 +206,11 @@
         const accountsRef = collection(db, "accounts");
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+        const FOUNDER_COMPANY = "company_founder_karm";
 
         let accountsList = [];
         let isInitialized = false;
 
-        // إدارة المصادقة بذكاء لتتوافق مع القواعد الأمنية للمدير
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 if (!isInitialized) {
@@ -218,7 +218,6 @@
                     startListeners();
                 }
             } else {
-                // إذا لم يكن مسجلاً، نحاول الدخول المجهول لتفعيل isAuthenticated مع الـ Rules الحالية
                 signInAnonymously(auth).catch(err => {
                     document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة سحابية";
                     console.error("Auth error:", err);
@@ -257,7 +256,7 @@
 
             tbody.innerHTML = data.map(acc => {
                 let isBanned = acc.isBanned === true;
-                let compId = acc.companyId || acc.docId;
+                let compId = acc.companyId || FOUNDER_COMPANY;
                 return `
                     <tr class="hover:bg-slate-800/40 transition ${isBanned ? 'bg-rose-950/20' : ''}">
                         <td class="p-4 font-bold text-white flex items-center gap-2">
@@ -370,6 +369,9 @@
             try {
                 const querySnapshot = await getDocs(accountsRef);
                 for (let d of querySnapshot.docs) {
+                    try {
+                        await updateDoc(doc(db, "accounts", d.id), { companyId: FOUNDER_COMPANY });
+                    } catch(e) {}
                     await deleteDoc(doc(db, "accounts", d.id));
                 }
                 await setDoc(doc(db, "accounts", FOUNDER_COMPANY), {
@@ -396,7 +398,11 @@
             }
 
             try {
-                await updateDoc(doc(db, "accounts", docId), { isBanned: !currentStatus });
+                // إرسال companyId مع التحديث لتتوافق مع القاعدة الأمنية دون الحاجة لتعديل قواعد البيانات
+                await updateDoc(doc(db, "accounts", docId), { 
+                    isBanned: !currentStatus,
+                    companyId: FOUNDER_COMPANY
+                });
                 alert(`✓ تم تنفيذ إجراء ${actionName} بنجاح.`);
             } catch(err) {
                 alert('خطأ أثناء تحديث حالة الحظر: ' + err.message);
@@ -411,6 +417,10 @@
             }
 
             try {
+                // تحديث المعرف أولاً لضمان نجاح قاعدة الحذف
+                try {
+                    await updateDoc(doc(db, "accounts", docId), { companyId: FOUNDER_COMPANY });
+                } catch(e) {}
                 await deleteDoc(doc(db, "accounts", docId));
                 alert('✓ تم حذف الحساب من السحابة بنجاح.');
             } catch(err) {

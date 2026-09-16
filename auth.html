@@ -208,22 +208,27 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        onSnapshot(accountsRef, (snapshot) => {
-            let accountsData = snapshot.docs.map(docSnap => ({
-                id: docSnap.id,
-                ...docSnap.data()
-            }));
+        // تسجيل دخول مجهول أولاً لتلبية متطلبات قواعد الأمان (isAuthenticated)
+        signInAnonymously(auth).then(() => {
+            onSnapshot(accountsRef, (snapshot) => {
+                let accountsData = snapshot.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    ...docSnap.data()
+                }));
 
-            if (accountsData.length === 0) {
-                setDoc(doc(db, "accounts", "company_founder_karm"), {
-                    name: FOUNDER_NAME,
-                    pin: "1234",
-                    role: 'مدير نظام رئيسي',
-                    companyId: 'company_founder_karm',
-                    biometricVerified: true,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-            }
+                if (accountsData.length === 0) {
+                    setDoc(doc(db, "accounts", "company_founder_karm"), {
+                        name: FOUNDER_NAME,
+                        pin: "1234",
+                        role: 'مدير نظام رئيسي',
+                        companyId: 'company_founder_karm',
+                        biometricVerified: true,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
+                }
+            });
+        }).catch(err => {
+            console.error("خطأ في المصادقة الأولية:", err);
         });
 
         // دوال نافذة الشكاوى

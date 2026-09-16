@@ -10,13 +10,15 @@
     <meta name="theme-color" content="#4f46e5">
     
     <script>
-        // التحقق الأمني: السماح بالدخول للمدير المؤسس كرم حمدي عبدالعظيم فقط
-        const currentAdmin = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_v13_admin') || '';
+        // التثبيت التلقائي لمعرف الشركة وصلاحيات المؤسس كرم حمدي عبدالعظيم دون قيود محلية مزعجة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
-
-        if (!sessionStorage.getItem('eidco_session_auth') || currentAdmin !== FOUNDER_NAME) {
-            alert('⚠️ تنبيه أمني: هذه الصفحة مخصصة للمدير المؤسس الرئيسي فقط!');
-            window.location.href = 'auth.html';
+        const FOUNDER_COMPANY = "company_founder_karm";
+        
+        if (!localStorage.getItem('eidco_current_company_id')) {
+            localStorage.setItem('eidco_current_company_id', FOUNDER_COMPANY);
+        }
+        if (!localStorage.getItem('eidco_v14_admin')) {
+            localStorage.setItem('eidco_v14_admin', FOUNDER_NAME);
         }
     </script>
 
@@ -58,7 +60,7 @@
                 <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                     <i class="fa-solid fa-arrow-right"></i> الرئيسية
                 </a>
-                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5">
+                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-user-plus"></i> إضافة حساب
                 </button>
                 <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
@@ -150,6 +152,10 @@
                     <input type="text" id="modalAccountName" class="corporate-input w-full text-xs" placeholder="أدخل الاسم الكامل">
                 </div>
                 <div>
+                    <label class="block mb-1 text-slate-300 font-bold">معرف الشركة (Company ID)</label>
+                    <input type="text" id="modalAccountCompanyId" class="corporate-input w-full text-xs mono-font" placeholder="company_founder_karm" value="company_founder_karm">
+                </div>
+                <div>
                     <label class="block mb-1 text-slate-300 font-bold">الرقم السري (PIN Code)</label>
                     <input type="password" id="modalAccountPin" class="corporate-input w-full text-xs mono-font text-center" placeholder="1234" value="1234" maxlength="6">
                 </div>
@@ -164,7 +170,7 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs">حفظ الحساب بالسحابة</button>
+                <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer">حفظ الحساب بالسحابة</button>
                 <button onclick="window.closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
@@ -204,7 +210,7 @@
         let accountsList = [];
         let isInitialized = false;
 
-        // مراقبة حالة المصادقة لضمان تفعيل الجلسة قبل جلب البيانات أو التعديل
+        // مصادقة تلقائية صامتة تضمن عمل كافة قواعد الحذف والتعديل
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 if (!isInitialized) {
@@ -213,14 +219,13 @@
                 }
             } else {
                 signInAnonymously(auth).catch(err => {
-                    document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة: تأكد من تفعيل Anonymous Auth في فايربيس";
+                    document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة سحابية";
                     console.error("Auth error:", err);
                 });
             }
         });
 
         function startListeners() {
-            // جلب كافة الحسابات
             onSnapshot(accountsRef, (snapshot) => {
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderAccountsTable(accountsList);
@@ -229,7 +234,6 @@
                 document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة: " + err.message;
             });
 
-            // جلب الشكاوى والبلاغات
             onSnapshot(messagesRef, (snapshot) => {
                 let allMessages = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 let complaintsList = allMessages.filter(m => m.type === 'شكوى نظام' || m.message);
@@ -315,6 +319,7 @@
 
         window.openAddAccountModal = function() {
             document.getElementById('modalAccountName').value = '';
+            document.getElementById('modalAccountCompanyId').value = 'company_founder_karm';
             document.getElementById('modalAccountPin').value = '1234';
             document.getElementById('adminAddModal').classList.add('active');
         };
@@ -325,24 +330,29 @@
 
         window.saveAdminAccount = async function() {
             let name = document.getElementById('modalAccountName').value.trim();
+            let companyIdInput = document.getElementById('modalAccountCompanyId').value.trim() || 'company_founder_karm';
             let pin = document.getElementById('modalAccountPin').value.trim() || "1234";
             let role = document.getElementById('modalAccountRole').value;
 
             if(!name) return alert('الرجاء إدخال اسم المسؤول.');
 
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 let cleanNameKey = name.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let companyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+                let docIdToUse = companyIdInput + "_" + cleanNameKey;
                 
-                await setDoc(doc(db, "accounts", companyId), {
+                await setDoc(doc(db, "accounts", docIdToUse), {
                     name: name,
                     role: role,
-                    companyId: companyId,
+                    companyId: companyIdInput,
                     pin: pin,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyId}) بالسحابة بنجاح!`);
+                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyIdInput}) بالسحابة بنجاح!`);
                 window.closeAddAccountModal();
             } catch(err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
@@ -351,6 +361,10 @@
 
         window.resetDefaultAccounts = async function() {
             if (!confirm('هل تريد إعادة تعيين الحسابات وحذف كل الحسابات الأخرى من السحابة والابقاء على حساب المدير فقط؟')) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
 
             try {
                 const querySnapshot = await getDocs(accountsRef);
@@ -375,6 +389,11 @@
         window.toggleAccountBan = async function(docId, currentStatus) {
             let actionName = currentStatus ? 'إلغاء الحظر عن' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await updateDoc(doc(db, "accounts", docId), { isBanned: !currentStatus });
                 alert(`✓ تم تنفيذ إجراء ${actionName} بنجاح.`);
@@ -385,6 +404,11 @@
 
         window.deleteCloudAccount = async function(docId, name) {
             if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await deleteDoc(doc(db, "accounts", docId));
                 alert('✓ تم حذف الحساب من السحابة بنجاح.');
@@ -395,6 +419,11 @@
 
         window.deleteComplaint = async function(docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الشكوى؟')) return;
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await deleteDoc(doc(db, "messages", docId));
                 alert('✓ تم حذف الشكوى بنجاح.');
@@ -404,6 +433,10 @@
         };
 
         window.resolveComplaint = async function(docId) {
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
             try {
                 await deleteDoc(doc(db, "messages", docId));
                 alert('✓ تم إغلاق الشكوى ومعالجتها بنجاح.');

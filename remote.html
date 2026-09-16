@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // جهاز التحكم عن بُعد (Remote)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #020617; color: #f8fafc; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+        
+        <!-- الهيدر والمعلومات -->
+        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xs"><i class="fa-solid fa-gamepad"></i></div>
+                <div>
+                    <h1 class="text-sm font-black text-white">EIDCO TV REMOTE</h1>
+                    <p class="text-[10px] text-indigo-400 font-mono" id="remoteCompanyId">الشركة: ...</p>
+                </div>
+            </div>
+            <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-1 rounded-full font-bold">● متصل</span>
+        </div>
+
+        <!-- أزرار الطاقة والصوت -->
+        <div class="grid grid-cols-3 gap-3">
+            <button onclick="sendCommand('power')" class="bg-rose-600 hover:bg-rose-700 text-white p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-power-off text-lg"></i> تشغيل/إطفاء
+            </button>
+            <button onclick="sendCommand('mute')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs border border-slate-700 active:scale-95 transition">
+                <i class="fa-solid fa-volume-xmark text-lg text-emerald-400"></i> كتم الصوت
+            </button>
+            <button onclick="sendCommand('speech')" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs border border-indigo-700 active:scale-95 transition">
+                <i class="fa-solid fa-microphone-lines text-lg text-cyan-400"></i> نطق الشاشة
+            </button>
+        </div>
+
+        <!-- أزرار اختيار القنوات -->
+        <div class="space-y-2">
+            <h2 class="text-xs font-bold text-slate-400">اختر القناة:</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="sendChannel('metrics')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">01</span>
+                    📊 المؤشرات
+                </button>
+                <button onclick="sendChannel('invoices')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">02</span>
+                    🧾 الفواتير
+                </button>
+                <button onclick="sendChannel('inventory')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">03</span>
+                    📦 المخزن
+                </button>
+                <button onclick="sendChannel('fleet')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">04</span>
+                    🚛 الأسطول
+                </button>
+                <button onclick="sendChannel('clients')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">05</span>
+                    👥 العملاء
+                </button>
+                <button onclick="sendChannel('profile')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
+                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">06</span>
+                    👤 البروفايل
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        document.getElementById('remoteCompanyId').innerText = `الشركة: ${currentCompanyId}`;
+
+        window.sendChannel = async function(channelName) {
+            await setDoc(doc(db, "tv_remote", currentCompanyId), {
+                action: 'change_channel',
+                channel: channelName,
+                updatedAt: Date.now()
+            });
+        };
+
+        window.sendCommand = async function(actionName) {
+            await setDoc(doc(db, "tv_remote", currentCompanyId), {
+                action: actionName,
+                updatedAt: Date.now()
+            });
+        };
+    </script>
+</body>
+</html>

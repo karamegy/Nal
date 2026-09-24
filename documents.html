@@ -445,13 +445,15 @@
             const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
             const clientPaymentsRef = query(collection(db, "client_payments"), where("companyId", "==", currentCompanyId));
 
-            // الاستماع الفوري لشجرة المستندات (المستندات والملفات فقط)
+            // الاستماع الفوري لشجرة المستندات (مع فلترة وتجاهل أي مدفوعات قديمة لمنع التكرار)
             onSnapshot(docsRef, (snapshot) => {
-                documentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                documentsList = snapshot.docs
+                    .map(d => ({ docId: d.id, ...d.data() }))
+                    .filter(d => d.category !== 'المدفوعات والتحويلات البنكية');
                 renderTree();
             });
 
-            // الاستماع الفوري لمدفوعات العملاء لمنع التكرار وجعلها المصدر الوحيد للمدفوعات
+            // الاستماع الفوري لمدفوعات العملاء كمرجع وحيد للمدفوعات
             onSnapshot(clientPaymentsRef, (snapshot) => {
                 clientPaymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTree();
@@ -460,7 +462,7 @@
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // دالة حفظ مستند أو دفعة جديدة بدون تكرار في قاعدة البيانات
+        // دالة حفظ مستند أو دفعة جديدة دون ازدواجية
         window.saveDocument = async function() {
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
@@ -491,7 +493,6 @@
             let processFileAndSave = async (fileData = '') => {
                 let today = new Date().toISOString().split('T')[0];
 
-                // إذا كان القسم "المدفوعات والتحويلات البنكية"، يتم حفظها حصرياً في جدول client_payments والخزنة دون ازدواجية في documents_tree
                 if (category === 'المدفوعات والتحويلات البنكية') {
                     let numAmount = Number(amount) || 0;
                     if (numAmount <= 0) {
@@ -504,7 +505,7 @@
                     try {
                         let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
-                        // 1. حفظ في المدفوعات
+                        // حفظ في المدفوعات والخزنة فقط دون كتابة أي شيء في documents_tree
                         await addDoc(collection(db, "client_payments"), {
                             companyId: currentCompanyId,
                             id: payId,
@@ -516,7 +517,6 @@
                             fileData: fileData
                         });
 
-                        // 2. تسجيل في الخزنة والمعاملات
                         await addDoc(collection(db, "transactions"), {
                             companyId: currentCompanyId,
                             type: 'إيراد',
@@ -536,7 +536,6 @@
                         alert('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
                     }
                 } else {
-                    // باقي الأقسام العادية (إدارية، عقود، مالية، أسطول) تُحفظ في جدول documents_tree فقط
                     let docPayload = {
                         companyId: currentCompanyId,
                         category,
@@ -652,7 +651,6 @@
             document.getElementById('previewModal').classList.remove('active');
         };
 
-        // رسم شجرة المستندات والتحويلات المالية بدون أي تكرار
         window.renderTree = function() {
             let container = document.getElementById('documentTreeContainer');
             let search = document.getElementById('searchDocsInput').value.toLowerCase().trim();
@@ -664,7 +662,6 @@
                 "المدفوعات والتحويلات البنكية"
             ];
 
-            // تحويل مدفوعات العملاء الحقيقية من جدول client_payments لعرضها تحت قسم المدفوعات بدقة
             let paymentsAsTreeItems = clientPaymentsList.map(pay => ({
                 docId: pay.docId,
                 category: 'المدفوعات والتحويلات البنكية',

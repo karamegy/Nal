@@ -124,8 +124,18 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block mb-1 text-slate-600 font-bold">عنوان المستند أو اسم العميل</label>
-                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد أو اسم العميل دفعات">
+                            <!-- حقل اختيار العميل المسجل (يظهر فقط عند قسم المدفوعات والتحويلات) -->
+                            <div id="clientSelectContainer" class="hidden">
+                                <label class="block mb-1 text-slate-600 font-bold">اختر العميل المسجل لربط الدفعة بكشف حسابه</label>
+                                <select id="docClientSelect" class="corporate-input bg-white">
+                                    <option value="">-- اختر العميل من القائمة --</option>
+                                </select>
+                            </div>
+                            <!-- حقل عنوان المستند العادي (يظهر لباقي الأقسام) -->
+                            <div id="titleInputContainer">
+                                <label class="block mb-1 text-slate-600 font-bold">عنوان المستند أو اسم العميل</label>
+                                <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد أو اسم المستند">
+                            </div>
                         </div>
                         <div>
                             <label class="block mb-1 text-slate-600 font-bold">تاريخ الاستحقاق أو الدفع</label>
@@ -201,7 +211,7 @@
                 <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل المستند والمعاينة الشاملة</h3>
                 <button onclick="window.closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <!-- تفاصيل البيانات الكاملة (تشبه معاينة الفاتورة) -->
+            <!-- تفاصيل البيانات الكاملة -->
             <div id="previewDetailsMeta" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <!-- يتم تعبئتها ديناميكياً -->
             </div>
@@ -223,10 +233,17 @@
 
         window.togglePaymentFields = function(category) {
             const extraFields = document.getElementById('paymentExtraFields');
+            const clientSelectContainer = document.getElementById('clientSelectContainer');
+            const titleInputContainer = document.getElementById('titleInputContainer');
+
             if (category === 'المدفوعات والتحويلات البنكية') {
                 extraFields.classList.remove('hidden');
+                clientSelectContainer.classList.remove('hidden');
+                titleInputContainer.classList.add('hidden');
             } else {
                 extraFields.classList.add('hidden');
+                clientSelectContainer.classList.add('hidden');
+                titleInputContainer.classList.remove('hidden');
             }
         };
 
@@ -281,8 +298,32 @@
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         let documentsList = [];
+        let clientsList = [];
+
+        // جلب قائمة العملاء المسجلين للشركة الحالية لتعبئة قائمة اختيار العملاء
+        async function fetchClients() {
+            try {
+                const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+                const snapshot = await getDocs(clientsQuery);
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
+                
+                let clientSelect = document.getElementById('docClientSelect');
+                if (clientSelect) {
+                    let optionsHtml = `<option value="">-- اختر العميل من القائمة --</option>`;
+                    clientsList.forEach(c => {
+                        let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
+                        optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
+                    });
+                    clientSelect.innerHTML = optionsHtml;
+                }
+            } catch(e) {
+                console.error("خطأ في جلب العملاء:", e);
+            }
+        }
 
         signInAnonymously(auth).then(async () => {
+            await fetchClients();
+
             const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
             
             try {
@@ -299,17 +340,28 @@
 
         window.saveDocument = async function() {
             let category = document.getElementById('docCategory').value;
-            let title = document.getElementById('docTitle').value.trim();
             let expiryDate = document.getElementById('docExpiryDate').value;
             let tag = document.getElementById('docTag').value;
             let fileInput = document.getElementById('docFileInput');
+
+            let title = '';
+            let selectedClientId = '';
+
+            if (category === 'المدفوعات والتحويلات البنكية') {
+                let clientSelect = document.getElementById('docClientSelect');
+                selectedClientId = clientSelect.value;
+                if (!selectedClientId) return alert('⚠️ يرجى اختيار العميل المسجل من القائمة لربط الدفعة بكشف حسابه.');
+                let selectedOption = clientSelect.options[clientSelect.selectedIndex];
+                title = selectedOption.getAttribute('data-name') || 'عميل مسجل';
+            } else {
+                title = document.getElementById('docTitle').value.trim();
+                if(!title) return alert('⚠️ يرجى إدخال عنوان المستند.');
+            }
 
             // حقول المدفوعات الإضافية
             let amount = document.getElementById('paymentAmount').value;
             let paymentMethod = document.getElementById('paymentMethod').value;
             let paymentRef = document.getElementById('paymentRef').value;
-
-            if(!title) return alert('⚠️ يرجى إدخال عنوان المستند أو اسم العميل على الأقل.');
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -320,6 +372,7 @@
                     companyId: currentCompanyId,
                     category,
                     title,
+                    clientId: selectedClientId || '',
                     expiryDate: expiryDate || 'غير محدد',
                     tag,
                     fileData,
@@ -335,11 +388,12 @@
 
                 addDoc(collection(db, "documents_tree"), docPayload).then(() => {
                     document.getElementById('docTitle').value = '';
+                    document.getElementById('docClientSelect').value = '';
                     document.getElementById('docExpiryDate').value = '';
                     document.getElementById('paymentAmount').value = '';
                     document.getElementById('paymentRef').value = '';
                     fileInput.value = '';
-                    alert('✓ تم حفظ المستند أو دفعة العميل وربطها بنجاح بمعرف الشركة في الأرشيف السحابي.');
+                    alert('✓ تم حفظ المستند أو دفعة العميل وربطها بنجاح بكشف حساب العميل ومعرف الشركة في الأرشيف السحابي.');
                 }).catch(err => {
                     alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
                 });
@@ -385,6 +439,7 @@
 
             if (isPayment) {
                 metaHtml += `
+                    <div><span class="text-slate-500 block font-bold">العميل المرتبط:</span> <span class="font-bold text-indigo-700">${i.title}</span></div>
                     <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
                     <div><span class="text-slate-500 block font-bold">طريقة الدفع:</span> <span class="font-bold text-indigo-700">${i.paymentMethod}</span></div>
                     <div><span class="text-slate-500 block font-bold">رقم المرجع:</span> <span class="mono-font">${i.paymentRef}</span></div>

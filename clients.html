@@ -50,6 +50,7 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -66,7 +67,6 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -75,7 +75,6 @@
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
-                        <!-- معرف الشركة مع وضع truncate وعرض محدد على الموبايل لعدم تدمير التخطيط -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
                         <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2 !w-auto cursor-pointer py-2 px-3 sm:px-4">
@@ -104,6 +103,7 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -115,7 +115,6 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- جدول العملاء -->
                 <div class="corporate-card p-6 space-y-4">
                     <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة العملاء والشركات السحابية المعزولة</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -165,7 +164,7 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي -->
+    <!-- نافذة كشف حساب العميل التفصيلي المحدثة بالمزامنة -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
@@ -193,13 +192,13 @@
                 </div>
 
                 <div class="space-y-2">
-                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات السحابية:</span>
+                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات والتحويلات السحابية:</span>
                     <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-2.5">الرقم / المعاملة</th>
-                                    <th class="p-2.5">التفاصيل</th>
+                                    <th class="p-2.5">التفاصيل / الطريقة</th>
                                     <th class="p-2.5">المبلغ</th>
                                     <th class="p-2.5">التاريخ</th>
                                     <th class="p-2.5 text-center">الإجراءات</th>
@@ -211,10 +210,19 @@
                 </div>
             </div>
 
+            <!-- إضافة خيارات طريقة السداد للمزامنة المباشرة مع الشجرة -->
             <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
-                <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs" dir="ltr">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
+                    <select id="paymentMethodInput" class="corporate-input text-xs bg-white">
+                        <option value="كاش">💵 دفع نقدي (كاش الخزنة)</option>
+                        <option value="انستا باي">⚡ تحويل إنستا باي (InstaPay)</option>
+                        <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
+                        <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
+                    </select>
+                </div>
                 <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية سحابياً
+                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية ومزامنتها بالشجرة
                 </button>
             </div>
 
@@ -299,7 +307,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules والمزامنة المزدوجة بين المدفوعات وشجرة المستندات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -343,7 +351,8 @@
             clients: [],
             invoices: [],
             transactions: [],
-            payments: []
+            payments: [],
+            treeDocs: []
         };
 
         let currentActiveClient = null;
@@ -359,63 +368,37 @@
             unsubscribers.forEach(unsub => unsub());
             unsubscribers = [];
 
-            const clientsCollection = collection(db, "clients");
-            const invoicesCollection = collection(db, "invoices");
-            const transactionsCollection = collection(db, "transactions");
-            const paymentsCollection = collection(db, "client_payments");
-
-            const clientsRef = query(clientsCollection, where("companyId", "==", companyId));
-            const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
-            const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
-            const paymentsRef = query(paymentsCollection, where("companyId", "==", companyId));
-
-            // جلب أولي فوري باستخدام getDocs لضمان توفر البيانات مباشرة دون انتظار الـ snapshot
-            try {
-                const [clientsSnap, invoicesSnap, transactionsSnap, paymentsSnap] = await Promise.all([
-                    getDocs(clientsRef),
-                    getDocs(invoicesRef),
-                    getDocs(transactionsRef),
-                    getDocs(paymentsRef)
-                ]);
-
-                state.clients = clientsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                state.invoices = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                state.payments = paymentsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-
-                renderClients();
-            } catch (e) {
-                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
-            }
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
+            const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", companyId));
+            const treeDocsRef = query(collection(db, "documents_tree"), where("companyId", "==", companyId));
 
             // الاستماع للتغييرات اللحظية سحابياً
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();
-            }, (error) => {
-                console.error("خطأ في جلب العملاء سحابياً:", error);
             }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-            }, (error) => {
-                console.error("خطأ في جلب الفواتير سحابياً:", error);
             }));
 
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-            }, (error) => {
-                console.error("خطأ في جلب المعاملات سحابياً:", error);
             }));
 
             unsubscribers.push(onSnapshot(paymentsRef, (snapshot) => {
                 state.payments = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-            }, (error) => {
-                console.error("خطأ في جلب المدفوعات سحابياً:", error);
+            }));
+
+            unsubscribers.push(onSnapshot(treeDocsRef, (snapshot) => {
+                state.treeDocs = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
             }));
         }
 
@@ -430,8 +413,12 @@
                 let clientInvoices = state.invoices.filter(i => i.client === c.name);
                 let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
 
+                // دمج المدفوعات المسجلة من كشف الحساب والمدفوعات المسجلة من شجرة المستندات
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
-                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+                let treePayments = state.treeDocs.filter(td => td.clientName === c.name && td.category === 'المدفوعات والتحويلات البنكية');
+                
+                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
+                                treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
 
                 let dueBalance = totalPurchases - totalPaid;
 
@@ -505,9 +492,11 @@
 
             let clientInvoices = state.invoices.filter(i => i.client === clientName);
             let clientPayments = state.payments.filter(p => p.clientName === clientName);
+            let treePayments = state.treeDocs.filter(td => td.clientName === clientName && td.category === 'المدفوعات والتحويلات البنكية');
 
             let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
+                            treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
             document.getElementById('stmtTotalPurchases').innerText = totalPurchases.toLocaleString() + ' ج.م';
@@ -524,7 +513,7 @@
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center">
                             <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة">
-                                <i class="fa-solid fa-eye"></i> معاينة الفاتورة
+                                <i class="fa-solid fa-eye"></i> معاينة
                             </button>
                         </td>
                     </tr>
@@ -535,16 +524,31 @@
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
-                        <td class="p-2.5">دفعة نقدية مسددة سحابياً</td>
+                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد مباشر'})</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
                         <td class="p-2.5 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل الدفعة">
-                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل">
+                                <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف الدفعة">
-                                <i class="fa-solid fa-trash"></i> حذف
+                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف">
+                                <i class="fa-solid fa-trash"></i>
                             </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // عرض التحويلات المسجلة من صفحة الشجرة مباشرة داخل كشف الحساب
+            treePayments.forEach(tPay => {
+                rowsHtml += `
+                    <tr class="bg-indigo-50/40">
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${tPay.paymentRef || 'TREE-PAY'}</td>
+                        <td class="p-2.5 font-bold text-indigo-900">تحويل شجري (${tPay.paymentMethod || 'إنستا باي/بنك'})</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(tPay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${tPay.date || '---'}</td>
+                        <td class="p-2.5 text-center">
+                            <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">مزامن من الشجرة</span>
                         </td>
                     </tr>
                 `;
@@ -561,6 +565,60 @@
         window.closeStatementModal = function() {
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
+        };
+
+        window.recordClientPayment = async function() {
+            if(!currentActiveClient) return;
+            let amount = Number(document.getElementById('paymentAmountInput').value);
+            let method = document.getElementById('paymentMethodInput').value;
+            if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+
+            let today = new Date().toISOString().split('T')[0];
+
+            try {
+                const paymentsCollection = collection(db, "client_payments");
+                const transactionsCollection = collection(db, "transactions");
+                const treeDocsCollection = collection(db, "documents_tree");
+
+                let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
+
+                // 1. تسجيل السداد في مجموعات المدفوعات والخزنة
+                await addDoc(paymentsCollection, {
+                    companyId: currentCompanyId,
+                    id: payId,
+                    clientName: currentActiveClient.name,
+                    amount: amount,
+                    method: method,
+                    date: today
+                });
+
+                await addDoc(transactionsCollection, {
+                    companyId: currentCompanyId,
+                    type: 'إيراد',
+                    amount: amount,
+                    desc: `تحصيل دفعة (${method}) من العميل ${currentActiveClient.name}`,
+                    date: today
+                });
+
+                // 2. المزامنة المباشرة: تسجيل الدفعة تلقائياً بالشجرة في documents.html
+                await addDoc(treeDocsCollection, {
+                    companyId: currentCompanyId,
+                    category: 'المدفوعات والتحويلات البنكية',
+                    title: `تحصيل دفعة: ${currentActiveClient.name}`,
+                    clientName: currentActiveClient.name,
+                    amount: amount,
+                    paymentMethod: method,
+                    paymentRef: payId,
+                    tag: 'مهم',
+                    date: today,
+                    admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
+                });
+
+                document.getElementById('paymentAmountInput').value = '';
+                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وشجرة المستندات سحابياً بنجاح');
+            } catch (err) {
+                alert('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
+            }
         };
 
         window.deletePayment = async function(payDocId) {
@@ -658,46 +716,16 @@
             });
         };
 
-        window.recordClientPayment = async function() {
-            if(!currentActiveClient) return;
-            let amount = Number(document.getElementById('paymentAmountInput').value);
-            if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
-
-            let today = new Date().toISOString().split('T')[0];
-
-            try {
-                const paymentsCollection = collection(db, "client_payments");
-                const transactionsCollection = collection(db, "transactions");
-
-                await addDoc(paymentsCollection, {
-                    companyId: currentCompanyId,
-                    id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
-                    clientName: currentActiveClient.name,
-                    amount: amount,
-                    date: today
-                });
-
-                await addDoc(transactionsCollection, {
-                    companyId: currentCompanyId,
-                    type: 'إيراد',
-                    amount: amount,
-                    desc: `تحصيل دفعة من العميل ${currentActiveClient.name}`,
-                    date: today
-                });
-
-                document.getElementById('paymentAmountInput').value = '';
-                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة السحابية بنجاح');
-            } catch (err) {
-                alert('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
-            }
-        };
-
         window.sendStatementWhatsApp = function() {
             if(!currentActiveClient) return;
             let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
             let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            
             let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+            let treePayments = state.treeDocs.filter(td => td.clientName === currentActiveClient.name && td.category === 'المدفوعات والتحويلات البنكية');
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
+                            treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
+            
             let dueBalance = totalPurchases - totalPaid;
 
             let text = `📊 *EIDCO // كشف حساب العميل*\n`;
@@ -713,7 +741,7 @@
         };
     </script>
     
-    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
@@ -755,6 +783,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

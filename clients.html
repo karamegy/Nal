@@ -18,6 +18,9 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- مكتبة jsPDF لتصدير كشوف الحسابات كملفات PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -164,7 +167,7 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي المحدثة بالمزامنة -->
+    <!-- نافذة كشف حساب العميل التفصيلي مع أزرار التصدير المحدثة -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
@@ -210,7 +213,7 @@
                 </div>
             </div>
 
-            <!-- إضافة خيارات طريقة السداد للمزامنة المباشرة مع الشجرة -->
+            <!-- تسجيل طريقة الدفع والسداد -->
             <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
@@ -226,14 +229,18 @@
                 </button>
             </div>
 
-            <div class="flex flex-wrap gap-2 pt-2 w-full">
-                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-image"></i> تصدير كشف الحساب صورة
+            <!-- أزرار التصدير بما فيها حفظ كشف الحساب PDF -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
+                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-file-pdf text-sm"></i> تصدير PDF
                 </button>
-                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال واتساب
+                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-image"></i> تصدير صورة
                 </button>
-                <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> واتساب
+                </button>
+                <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
             </div>
         </div>
     </div>
@@ -307,7 +314,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules والمزامنة المزدوجة بين المدفوعات وشجرة المستندات -->
+    <!-- Firebase SDK Modules ودوال تصدير PDF والصورة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -374,7 +381,6 @@
             const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", companyId));
             const treeDocsRef = query(collection(db, "documents_tree"), where("companyId", "==", companyId));
 
-            // الاستماع للتغييرات اللحظية سحابياً
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();
@@ -413,7 +419,6 @@
                 let clientInvoices = state.invoices.filter(i => i.client === c.name);
                 let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
 
-                // دمج المدفوعات المسجلة من كشف الحساب والمدفوعات المسجلة من شجرة المستندات
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
                 let treePayments = state.treeDocs.filter(td => td.clientName === c.name && td.category === 'المدفوعات والتحويلات البنكية');
                 
@@ -539,7 +544,6 @@
                 `;
             });
 
-            // عرض التحويلات المسجلة من صفحة الشجرة مباشرة داخل كشف الحساب
             treePayments.forEach(tPay => {
                 rowsHtml += `
                     <tr class="bg-indigo-50/40">
@@ -582,7 +586,6 @@
 
                 let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
-                // 1. تسجيل السداد في مجموعات المدفوعات والخزنة
                 await addDoc(paymentsCollection, {
                     companyId: currentCompanyId,
                     id: payId,
@@ -600,7 +603,6 @@
                     date: today
                 });
 
-                // 2. المزامنة المباشرة: تسجيل الدفعة تلقائياً بالشجرة في documents.html
                 await addDoc(treeDocsCollection, {
                     companyId: currentCompanyId,
                     category: 'المدفوعات والتحويلات البنكية',
@@ -713,6 +715,33 @@
                 link.download = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
+            });
+        };
+
+        // دالة تصدير كشف الحساب ملف PDF عالي الجودة
+        window.downloadStatementPDF = function() {
+            let element = document.getElementById('statementPrintArea');
+            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210; 
+                const pageHeight = 295;  
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                pdf.save('EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.pdf');
             });
         };
 

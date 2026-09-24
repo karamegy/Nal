@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شجرة المستندات والأرشيف السحابي المتقدم</title>
+    <title>EIDCO // شجرة المستندات والأرشيف المالي المتقدم</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,7 +50,7 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -69,7 +69,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">شجرة المستندات والأرشيف السحابي المتقدم <span class="hidden sm:inline text-slate-500 font-normal">(إدارة العقود والتنبيهات)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">شجرة المستندات وتحويلات العملاء <span class="hidden sm:inline text-slate-500 font-normal">(إدارة الكاش والبنك)</span></h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
@@ -97,7 +97,7 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                        <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -109,26 +109,47 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <!-- نموذج إضافة مستند جديد مع رفع الملفات وتاريخ الانتهاء -->
+                <!-- نموذج إضافة مستند أو مدفوعات عملاء جديدة -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
-                    <h3 class="font-bold text-sm text-slate-900 border-b pb-3"><i class="fa-solid fa-folder-plus ml-2 text-indigo-600"></i> إضافة مستند جديد مع تنبيهات الانتهاء والرفع الفعلي</h3>
+                    <h3 class="font-bold text-sm text-slate-900 border-b pb-3"><i class="fa-solid fa-folder-plus ml-2 text-indigo-600"></i> إضافة مستند أو تسجيل دفعة عميل (كاش / تحويل بنكي) للشجرة</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
-                            <label class="block mb-1 text-slate-600 font-bold">قسم المجلد الرئيسي</label>
-                            <select id="docCategory" class="corporate-input">
+                            <label class="block mb-1 text-slate-600 font-bold">قسم المجلد / نوع الإدخال</label>
+                            <select id="docCategory" class="corporate-input" onchange="window.togglePaymentFields(this.value)">
                                 <option value="المستندات الإدارية">📁 المستندات الإدارية والتأسيسية</option>
                                 <option value="العقود والاتفاقيات">📁 العقود والاتفاقيات التجارية</option>
-                                <option value="المستندات المالية">📁 المستندات والحسابات المالية</option>
+                                <option value="المستندات المالية">📁 المستندات والحسابات المالية العامة</option>
                                 <option value="اللوجستيات والأسطول">📁 تراخيص وعقود الأسطول واللوجستيات</option>
+                                <option value="المدفوعات والتحويلات البنكية">💰 مدفوعات وتحويلات العملاء (كاش / بنك)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block mb-1 text-slate-600 font-bold">عنوان المستند / العقد</label>
-                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: رخصة تشغيل سيارة نقل رقم 502">
+                            <label class="block mb-1 text-slate-600 font-bold">عنوان المستند أو اسم العميل</label>
+                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد أو اسم العميل دفعات">
                         </div>
                         <div>
-                            <label class="block mb-1 text-slate-600 font-bold">تاريخ انتهاء الصلاحية (للتنبيهات)</label>
+                            <label class="block mb-1 text-slate-600 font-bold">تاريخ الاستحقاق أو الدفع</label>
                             <input type="date" id="docExpiryDate" class="corporate-input mono-font">
+                        </div>
+                    </div>
+
+                    <!-- حقول إضافية خاصة بالمدفوعات والتحويلات -->
+                    <div id="paymentExtraFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 hidden">
+                        <div>
+                            <label class="block mb-1 text-indigo-900 font-bold">قيمة المبلغ (ج.م)</label>
+                            <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-indigo-900 font-bold">طريقة الدفع</label>
+                            <select id="paymentMethod" class="corporate-input bg-white">
+                                <option value="كاش">💵 دفع نقدي (كاش)</option>
+                                <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
+                                <option value="شيك بنكي">📜 شيك بنكي</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-indigo-900 font-bold">رقم مرجع التحويل أو الإيصال</label>
+                            <input type="text" id="paymentRef" class="corporate-input mono-font bg-white" placeholder="REF-123456">
                         </div>
                     </div>
 
@@ -142,42 +163,42 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block mb-1 text-slate-600 font-bold">رفع ملف فعلي (PDF / صورة) أو رابط خارجي</label>
+                            <label class="block mb-1 text-slate-600 font-bold">رفـع إيصال الدفع أو المستند (PDF / صورة)</label>
                             <input type="file" id="docFileInput" class="corporate-input text-slate-500 py-2">
                         </div>
                     </div>
 
                     <div class="pt-2">
                         <button onclick="window.saveDocument()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5">
-                            <i class="fa-solid fa-cloud-arrow-up text-base"></i> رفع الحفظ والتخزين الشجري سحابياً
+                            <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ وربط السجل بمعرف الشركة سحابياً
                         </button>
                     </div>
                 </div>
 
-                <!-- شريط البحث الفوري في الأرشيف -->
+                <!-- شريط البحث الفوري في الأرشيف الشجري -->
                 <div class="corporate-card p-4 flex gap-3 items-center bg-white">
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="searchDocsInput" oninput="window.renderTree()" placeholder="بحث سريع في عناوين المستندات، الأقسام، أو الوسوم..." class="corporate-input pr-10 text-xs">
+                        <input type="text" id="searchDocsInput" oninput="window.renderTree()" placeholder="بحث سريع في المستندات، تحويلات العملاء، أو المبالغ..." class="corporate-input pr-10 text-xs">
                     </div>
                 </div>
 
-                <!-- شجرة المستندات العرضية -->
+                <!-- شجرة المستندات والمدفوعات -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-sitemap ml-2 text-indigo-600"></i> الهيكل الشجري للأرشيف والمستندات (مزامنة سحابية لحظية)</h3>
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-sitemap ml-2 text-indigo-600"></i> الهيكل الشجري للأرشيف والتحويلات المالية (مزامنة مع معرف الحساب)</h3>
                     <div id="documentTreeContainer" class="space-y-4 text-xs">
-                        <p class="text-slate-400 text-center py-6 font-bold">جاري تحميل شجرة المستندات من سحابة Firebase...</p>
+                        <p class="text-slate-400 text-center py-6 font-bold">جاري تحميل شجرة المستندات والمدفوعات من سحابة Firebase...</p>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- نافذة معاينة الملفات المنبثقة -->
+    <!-- نافذة معاينة الملفات / الإيصالات المنبثقة -->
     <div id="previewModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">معاينة المستند</h3>
+                <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">معاينة المستند أو الإيصال</h3>
                 <button onclick="window.closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="previewBody" class="max-h-[60vh] overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-xl border">
@@ -194,6 +215,15 @@
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
+
+        window.togglePaymentFields = function(category) {
+            const extraFields = document.getElementById('paymentExtraFields');
+            if (category === 'المدفوعات والتحويلات البنكية') {
+                extraFields.classList.remove('hidden');
+            } else {
+                extraFields.classList.add('hidden');
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -213,7 +243,7 @@
         });
     </script>
 
-    <!-- Firebase SDK والمخزن الشجري المتقدم -->
+    <!-- Firebase SDK والمخزن الشجري المرتبط بمعرف الحساب -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -269,14 +299,19 @@
             let tag = document.getElementById('docTag').value;
             let fileInput = document.getElementById('docFileInput');
 
-            if(!title) return alert('⚠️ يرجى إدخال عنوان المستند على الأقل.');
+            // حقول المدفوعات الإضافية
+            let amount = document.getElementById('paymentAmount').value;
+            let paymentMethod = document.getElementById('paymentMethod').value;
+            let paymentRef = document.getElementById('paymentRef').value;
+
+            if(!title) return alert('⚠️ يرجى إدخال عنوان المستند أو اسم العميل على الأقل.');
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             let processFileAndSave = (fileData = '') => {
-                addDoc(collection(db, "documents_tree"), {
+                let docPayload = {
                     companyId: currentCompanyId,
                     category,
                     title,
@@ -285,11 +320,21 @@
                     fileData,
                     date: new Date().toISOString().split('T')[0],
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
-                }).then(() => {
+                };
+
+                if (category === 'المدفوعات والتحويلات البنكية') {
+                    docPayload.amount = Number(amount) || 0;
+                    docPayload.paymentMethod = paymentMethod;
+                    docPayload.paymentRef = paymentRef || '---';
+                }
+
+                addDoc(collection(db, "documents_tree"), docPayload).then(() => {
                     document.getElementById('docTitle').value = '';
                     document.getElementById('docExpiryDate').value = '';
+                    document.getElementById('paymentAmount').value = '';
+                    document.getElementById('paymentRef').value = '';
                     fileInput.value = '';
-                    alert('✓ تم حفظ المستند ورفع الملف بنجاح إلى الأرشيف السحابي.');
+                    alert('✓ تم حفظ المستند أو دفعة العميل وربطها بنجاح بمعرف الشركة في الأرشيف السحابي.');
                 }).catch(err => {
                     alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
                 });
@@ -308,7 +353,7 @@
         };
 
         window.deleteDocument = async function(docId) {
-            if(!confirm('هل أنت متأكد من حذف هذا المستند من الأرشيف الشجري؟')) return;
+            if(!confirm('هل أنت متأكد من حذف هذا السجل من الأرشيف الشجري؟')) return;
             try {
                 await deleteDoc(doc(db, "documents_tree", docId));
                 alert('✓ تم الحذف بنجاح.');
@@ -321,7 +366,7 @@
             document.getElementById('previewTitle').innerText = `معاينة: ${title}`;
             let body = document.getElementById('previewBody');
             if(!fileData) {
-                body.innerHTML = `<p class="text-slate-500 font-bold py-8">لا يوجد ملف مرفق فعلي لهذا المستند (تم حفظه كعنوان نصي فقط).</p>`;
+                body.innerHTML = `<p class="text-slate-500 font-bold py-8">لا يوجد ملف مرفق فعلي لهذا السجل.</p>`;
             } else if(fileData.startsWith('data:image')) {
                 body.innerHTML = `<img src="${fileData}" class="max-w-full max-h-[55vh] object-contain rounded-lg shadow-md">`;
             } else if(fileData.startsWith('data:application/pdf')) {
@@ -343,17 +388,19 @@
                 "المستندات الإدارية",
                 "العقود والاتفاقيات",
                 "المستندات المالية",
-                "اللوجستيات والأسطول"
+                "اللوجستيات والأسطول",
+                "المدفوعات والتحويلات البنكية"
             ];
 
             let filteredDocs = documentsList.filter(d => 
                 d.title.toLowerCase().includes(search) || 
                 d.category.toLowerCase().includes(search) || 
-                d.tag.toLowerCase().includes(search)
+                d.tag.toLowerCase().includes(search) ||
+                (d.paymentMethod && d.paymentMethod.toLowerCase().includes(search))
             );
 
             if(!filteredDocs.length) {
-                container.innerHTML = `<p class="text-slate-400 text-center py-6 font-bold">لا توجد مستندات مطابقة للبحث أو الأرشيف فارغ حالياً.</p>`;
+                container.innerHTML = `<p class="text-slate-400 text-center py-6 font-bold">لا توجد مستندات أو مدفوعات مطابقة للبحث أو الأرشيف فارغ حالياً.</p>`;
                 return;
             }
 
@@ -361,38 +408,67 @@
 
             container.innerHTML = categories.map(cat => {
                 let items = filteredDocs.filter(d => d.category === cat);
-                if(search && !items.length) return ''; // إخفاء الأقسام الفارغة أثناء البحث
+                if(search && !items.length) return '';
+                let isPaymentsCat = (cat === 'المدفوعات والتحويلات البنكية');
+                let catIcon = isPaymentsCat ? 'fa-wallet text-emerald-500' : 'fa-folder-open text-amber-500';
+                
                 return `
                     <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                         <div class="flex items-center gap-2 font-black text-indigo-700 text-sm">
-                            <i class="fa-solid fa-folder-open text-amber-500"></i>
+                            <i class="fa-solid ${catIcon}"></i>
                             <span>${cat}</span>
-                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-mono">${items.length} ملفات</span>
+                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-mono">${items.length} سجلات</span>
                         </div>
                         <div class="tree-node space-y-2 pt-1">
                             ${items.length ? items.map(i => {
                                 let isExpired = i.expiryDate && i.expiryDate !== 'غير محدد' && i.expiryDate < todayStr;
                                 let tagColor = i.tag === 'سري للغاية' ? 'bg-rose-100 text-rose-700' : (i.tag === 'مهم' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700');
-                                return `
-                                    <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 shadow-sm gap-2">
-                                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                                            <i class="fa-solid fa-file-lines text-indigo-600 text-base"></i>
-                                            <div class="truncate">
-                                                <span class="font-bold text-slate-900 block truncate">${i.title}</span>
-                                                <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
-                                                    <span>الإضافة: ${i.date || '---'}</span>
-                                                    <span>•</span>
-                                                    <span class="${isExpired ? 'text-rose-600 font-bold' : ''}">الانتهاء: ${i.expiryDate}${isExpired ? '(منتهي!)' : ''}</span>
+                                
+                                if (isPaymentsCat) {
+                                    return `
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-emerald-200 shadow-sm gap-2">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                <i class="fa-solid fa-money-bill-transfer text-emerald-600 text-base"></i>
+                                                <div class="truncate">
+                                                    <span class="font-bold text-slate-900 block truncate">العميل: ${i.title}</span>
+                                                    <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-0.5">
+                                                        <span>التاريخ: ${i.date || '---'}</span>
+                                                        <span>•</span>
+                                                        <span class="text-indigo-600 font-bold">الطريقة: ${i.paymentMethod}</span>
+                                                        <span>•</span>
+                                                        <span>المرجع: ${i.paymentRef}</span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-2.5 py-1 rounded-lg">${Number(i.amount || 0).toLocaleString()} ج.م</span>
+                                                ${i.fileData ? `<button onclick="window.previewDocument('${i.title}', '${i.fileData}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> الإيصال</button>` : ''}
+                                                <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف الدفعة"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center gap-2 shrink-0">
-                                            <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${tagColor}">${i.tag}</span>${i.fileData ? `<button onclick="window.previewDocument('${i.title}', '${i.fileData}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> معاينة</button>` : ''}
-                                            <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف المستند"><i class="fa-solid fa-trash"></i></button>
+                                    `;
+                                } else {
+                                    return `
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 shadow-sm gap-2">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                <i class="fa-solid fa-file-lines text-indigo-600 text-base"></i>
+                                                <div class="truncate">
+                                                    <span class="font-bold text-slate-900 block truncate">${i.title}</span>
+                                                    <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
+                                                        <span>الإضافة: ${i.date || '---'}</span>
+                                                        <span>•</span>
+                                                        <span class="${isExpired ? 'text-rose-600 font-bold' : ''}">الانتهاء: ${i.expiryDate}${isExpired ? '(منتهي!)' : ''}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${tagColor}">${i.tag}</span>${i.fileData ? `<button onclick="window.previewDocument('${i.title}', '${i.fileData}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> معاينة</button>` : ''}
+                                                <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف المستند"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
                                         </div>
-                                    </div>
-                                `;
-                            }).join('') : '<p class="text-slate-400 text-xs py-1">لا توجد ملفات داخل هذا المجلد.</p>'}
+                                    `;
+                                }
+                            }).join('') : '<p class="text-slate-400 text-xs py-1">لا توجد سجلات داخل هذا المجلد.</p>'}
                         </div>
                     </div>
                 `;

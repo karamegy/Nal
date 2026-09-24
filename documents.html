@@ -238,7 +238,7 @@
                         <!-- عنوان المستند أو البيان -->
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">عنوان المستند أو اسم البيان</label>
-                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد دقيق، إيصال سداد، رخصة سيارة...">
+                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد، إيصال سداد، تحويل إنستا باي...">
                         </div>
                     </div>
 
@@ -292,7 +292,7 @@
 
                     <div class="pt-2">
                         <button onclick="window.saveDocument()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md">
-                            <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ وربط السجل بمعرف الشركة سحابياً في الأرشيف
+                            <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ وربط السجل بمعرف الشركة سحابياً في الأرشيف وكشف العميل
                         </button>
                     </div>
                 </div>
@@ -370,7 +370,7 @@
             const badgeEl = document.getElementById('companyBadgeDisplay');
             if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
-            // تمرير معرف الشركة لجميع الروابط تلقائياً للحفاظ على السياق المعزول
+            // تمرير معرف الشركة لجميع الروابط تلقائياً
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -381,7 +381,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتكامل وإدارة الأرشيف السحابي -->
+    <!-- سكربت Firebase المتكامل وإدارة الأرشيف السحابي بـ المزامنة المزدوجة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -414,9 +414,10 @@
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         let documentsList = [];
+        let clientPaymentsList = [];
         let clientsList = [];
 
-        // دالة لجلب قائمة العملاء المسجلين للشركة الحالية وتعبئة قائمة الاختيار الشاملة
+        // دالة لجلب قائمة العملاء المسجلين
         async function fetchClients() {
             try {
                 const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
@@ -442,25 +443,24 @@
             await fetchClients();
 
             const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
-            
-            try {
-                const snapshot = await getDocs(docsRef);
-                documentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTree();
-            } catch(e) { 
-                console.error("خطأ في قراءة الأرشيف الشجري:", e); 
-            }
+            const clientPaymentsRef = query(collection(db, "client_payments"), where("companyId", "==", currentCompanyId));
 
-            // الاستماع الفوري للتحديثات
+            // الاستماع الفوري لشجرة المستندات
             onSnapshot(docsRef, (snapshot) => {
                 documentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTree();
+            });
+
+            // الاستماع الفوري لمدفوعات العملاء من صفحة clients.html
+            onSnapshot(clientPaymentsRef, (snapshot) => {
+                clientPaymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTree();
             });
         }).catch(err => {
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // دالة حفظ مستند أو دفعة جديدة سحابياً
+        // دالة حفظ مستند أو دفعة جديدة سحابياً مع المزامنة المزدوجة
         window.saveDocument = async function() {
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
@@ -480,7 +480,6 @@
                 title = `${category} - ${selectedClientName}`;
             }
 
-            // حقول المدفوعات الإضافية في حال اختيار قسم المدفوعات
             let amount = document.getElementById('paymentAmount').value;
             let paymentMethod = document.getElementById('paymentMethod').value;
             let paymentRef = document.getElementById('paymentRef').value;
@@ -489,7 +488,8 @@
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
-            let processFileAndSave = (fileData = '') => {
+            let processFileAndSave = async (fileData = '') => {
+                let today = new Date().toISOString().split('T')[0];
                 let docPayload = {
                     companyId: currentCompanyId,
                     category,
@@ -499,14 +499,40 @@
                     expiryDate: expiryDate || 'غير محدد',
                     tag,
                     fileData,
-                    date: new Date().toISOString().split('T')[0],
+                    date: today,
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
                 };
 
                 if (category === 'المدفوعات والتحويلات البنكية') {
-                    docPayload.amount = Number(amount) || 0;
+                    let numAmount = Number(amount) || 0;
+                    docPayload.amount = numAmount;
                     docPayload.paymentMethod = paymentMethod;
                     docPayload.paymentRef = paymentRef || '---';
+
+                    // المزامنة: إضافة التحويل أيضاً لحسابات العملاء والخزنة الرئيسية
+                    if (selectedClientName && numAmount > 0) {
+                        try {
+                            await addDoc(collection(db, "client_payments"), {
+                                companyId: currentCompanyId,
+                                id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
+                                clientName: selectedClientName,
+                                amount: numAmount,
+                                method: paymentMethod,
+                                ref: paymentRef || '---',
+                                date: today
+                            });
+
+                            await addDoc(collection(db, "transactions"), {
+                                companyId: currentCompanyId,
+                                type: 'إيراد',
+                                amount: numAmount,
+                                desc: `تحصيل عبر الشجرة (${paymentMethod}) من العميل ${selectedClientName}`,
+                                date: today
+                            });
+                        } catch(errSync) {
+                            console.error("خطأ في مزامنة الدفعة المجمعة:", errSync);
+                        }
+                    }
                 }
 
                 addDoc(collection(db, "documents_tree"), docPayload).then(() => {
@@ -516,7 +542,7 @@
                     document.getElementById('paymentAmount').value = '';
                     document.getElementById('paymentRef').value = '';
                     fileInput.value = '';
-                    alert('✓ تم حفظ السجل أو الدفعة المالية وربطها بنجاح بكشف حساب العميل ومعرف الشركة في سحابة Firebase.');
+                    alert('✓ تم حفظ السجل والتحويل المالي وربطه فوراً بشجرة المستندات وكشف حساب العميل بنجاح.');
                 }).catch(err => {
                     alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
                 });
@@ -534,7 +560,6 @@
             }
         };
 
-        // حذف مستند أو دفعة من السحابة
         window.deleteDocument = async function(docId, event) {
             if (event) event.stopPropagation();
             if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً من الأرشيف الشجري السحابي؟')) return;
@@ -546,13 +571,27 @@
             }
         };
 
-        // معاينة تفاصيل المستند أو الدفعة المنبثقة
         window.previewDocument = function(docId) {
             let i = documentsList.find(d => d.docId === docId);
-            if (!i) return;
+            if (!i) {
+                // البحث في مدفوعات العملاء المزامنة
+                let pay = clientPaymentsList.find(p => p.docId === docId);
+                if (pay) {
+                    i = {
+                        title: `دفعة مسددة: ${pay.clientName}`,
+                        category: 'المدفوعات والتحويلات البنكية',
+                        clientName: pay.clientName,
+                        date: pay.date,
+                        tag: 'مهم',
+                        amount: pay.amount,
+                        paymentMethod: pay.method || 'دفعة سداد مباشرة',
+                        paymentRef: pay.id || pay.ref || '---',
+                        fileData: ''
+                    };
+                } else return;
+            }
 
             document.getElementById('previewTitle').innerText = `معاينة وتفاصيل: ${i.title}`;
-            
             let metaContainer = document.getElementById('previewDetailsMeta');
             let isPayment = (i.category === 'المدفوعات والتحويلات البنكية');
 
@@ -560,18 +599,18 @@
                 <div><span class="text-slate-500 block font-bold">القسم الشجري:</span> <span class="text-indigo-900 font-bold">${i.category}</span></div>
                 <div><span class="text-slate-500 block font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">${i.clientName || 'عام (بدون عميل)'}</span></div>
                 <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font">${i.date || '---'}</span></div>
-                <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${i.tag}</span></div>
+                <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${i.tag || 'عادي'}</span></div>
             `;
 
             if (isPayment) {
                 metaHtml += `
                     <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
-                    <div><span class="text-slate-500 block font-bold">طريقة التحويل:</span> <span class="font-bold text-indigo-700">${i.paymentMethod}</span></div>
-                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font">${i.paymentRef}</span></div>
+                    <div><span class="text-slate-500 block font-bold">طريقة التحويل:</span> <span class="font-bold text-indigo-700">${i.paymentMethod || i.method || 'كاش'}</span></div>
+                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font">${i.paymentRef || i.ref || '---'}</span></div>
                 `;
             } else {
                 metaHtml += `
-                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800">${i.expiryDate}</span></div>
+                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800">${i.expiryDate || '---'}</span></div>
                 `;
             }
             metaContainer.innerHTML = metaHtml;
@@ -595,7 +634,7 @@
             document.getElementById('previewModal').classList.remove('active');
         };
 
-        // رسم شجرة المستندات والتحويلات مع تصفية البحث الفوري
+        // رسم شجرة المستندات والتحويلات المزامنة
         window.renderTree = function() {
             let container = document.getElementById('documentTreeContainer');
             let search = document.getElementById('searchDocsInput').value.toLowerCase().trim();
@@ -607,7 +646,23 @@
                 "المدفوعات والتحويلات البنكية"
             ];
 
-            let filteredDocs = documentsList.filter(d => 
+            // تحويل المدفوعات من clients.html إلى هيئة عناصر شجرية للمزامنة المباشرة
+            let syncedPaymentsDocs = clientPaymentsList.map(pay => ({
+                docId: pay.docId,
+                category: 'المدفوعات والتحويلات البنكية',
+                title: `دفعة سداد مسددة: ${pay.clientName}`,
+                clientName: pay.clientName,
+                amount: pay.amount,
+                paymentMethod: pay.method || 'تحويل سديد / كاش',
+                paymentRef: pay.id || pay.ref || 'REF-CLIENT',
+                date: pay.date,
+                tag: 'مهم',
+                isSyncedFromClients: true
+            }));
+
+            let allMergedDocs = [...documentsList, ...syncedPaymentsDocs];
+
+            let filteredDocs = allMergedDocs.filter(d => 
                 (d.title && d.title.toLowerCase().includes(search)) || 
                 (d.category && d.category.toLowerCase().includes(search)) || 
                 (d.tag && d.tag.toLowerCase().includes(search)) ||
@@ -617,7 +672,7 @@
             );
 
             let counterEl = document.getElementById('totalDocsCountCounter');
-            if(counterEl) counterEl.innerText = `إجمالي السجلات: ${documentsList.length} (المعروض: ${filteredDocs.length})`;
+            if(counterEl) counterEl.innerText = `إجمالي السجلات المزامنة: ${allMergedDocs.length} (المعروض: ${filteredDocs.length})`;
 
             if (!filteredDocs.length) {
                 container.innerHTML = `<p class="text-slate-400 text-center py-8 font-bold">لا توجد مستندات أو تحويلات مطابقة للبحث أو الأرشيف فارغ حالياً.</p>`;
@@ -666,14 +721,15 @@
                                             </div>
                                             <div class="flex items-center gap-2.5 shrink-0">
                                                 <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
-                                                    ${Number(i.amount || 0).toLocaleString()} ج.م
+                                                    +${Number(i.amount || 0).toLocaleString()} ج.م
                                                 </span>
                                                 <button onclick="window.previewDocument('${i.docId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
                                                     <i class="fa-solid fa-eye ml-1"></i> التفاصيل
                                                 </button>
+                                                ${!i.isSyncedFromClients ? `
                                                 <button onclick="window.deleteDocument('${i.docId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف الدفعة">
                                                     <i class="fa-solid fa-trash"></i>
-                                                </button>
+                                                </button>` : ''}
                                             </div>
                                         </div>
                                     `;

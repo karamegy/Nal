@@ -18,7 +18,6 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- مكتبة jsPDF لتصدير كشوف الحسابات كملفات PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -36,6 +35,39 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
+
+        /* تنسيقات حصرية للطباعة والتصدير كـ PDF مثل صورة النظام تماماً */
+        @media print {
+            body * { visibility: hidden !important; }
+            #statementModal, #statementModal * { visibility: visible !important; }
+            #statementModal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+            .corporate-card {
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .no-print, button, input, select, #floatingTvTrigger {
+                display: none !important;
+            }
+            #statementPrintArea {
+                border: none !important;
+                padding: 0 !important;
+            }
+            .max-h-48 {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -167,16 +199,16 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي مع أزرار التصدير المحدثة -->
+    <!-- نافذة كشف حساب العميل التفصيلي -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
                 <div class="flex justify-between items-center border-b pb-3">
                     <div>
                         <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
-                        <span class="text-[11px] text-slate-500">كشف الحساب السحابي التفصيلي والمديونيات - EIDCO</span>
+                        <span class="text-[11px] text-slate-500">EIDCO // كشف حساب وتفاصيل المديونية المعتمد</span>
                     </div>
-                    <button onclick="closeStatementModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    <button onclick="closeStatementModal()" class="no-print text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
@@ -204,7 +236,7 @@
                                     <th class="p-2.5">التفاصيل / الطريقة</th>
                                     <th class="p-2.5">المبلغ</th>
                                     <th class="p-2.5">التاريخ</th>
-                                    <th class="p-2.5 text-center">الإجراءات</th>
+                                    <th class="p-2.5 text-center no-print">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -214,7 +246,7 @@
             </div>
 
             <!-- تسجيل طريقة الدفع والسداد -->
-            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
+            <div class="no-print p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
                     <select id="paymentMethodInput" class="corporate-input text-xs bg-white">
@@ -229,10 +261,10 @@
                 </button>
             </div>
 
-            <!-- أزرار التصدير بما فيها حفظ كشف الحساب PDF -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
+            <!-- أزرار التصدير بما فيها حفظ كشف الحساب PDF بالنظام المباشر -->
+            <div class="no-print grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
                 <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
-                    <i class="fa-solid fa-file-pdf text-sm"></i> تصدير PDF
+                    <i class="fa-solid fa-file-pdf text-sm"></i> حفظ كـ PDF
                 </button>
                 <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> تصدير صورة
@@ -281,7 +313,7 @@
                 </div>
             </div>
             
-            <div class="flex gap-2 pt-2 w-full">
+            <div class="flex gap-2 pt-2 w-full no-print">
                 <button onclick="downloadSingleInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-image"></i> تحميل الفاتورة صورة
                 </button>
@@ -314,7 +346,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules ودوال تصدير PDF والصورة -->
+    <!-- Firebase SDK Modules ودوال تصدير PDF بالنظام المباشر -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -516,7 +548,7 @@
                         <td class="p-2.5">فاتورة مبيعات سحابية (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
-                        <td class="p-2.5 text-center">
+                        <td class="p-2.5 text-center no-print">
                             <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة">
                                 <i class="fa-solid fa-eye"></i> معاينة
                             </button>
@@ -532,7 +564,7 @@
                         <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد مباشر'})</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
-                        <td class="p-2.5 text-center space-x-1 space-x-reverse">
+                        <td class="p-2.5 text-center space-x-1 space-x-reverse no-print">
                             <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
@@ -551,7 +583,7 @@
                         <td class="p-2.5 font-bold text-indigo-900">تحويل شجري (${tPay.paymentMethod || 'إنستا باي/بنك'})</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(tPay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${tPay.date || '---'}</td>
-                        <td class="p-2.5 text-center">
+                        <td class="p-2.5 text-center no-print">
                             <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">مزامن من الشجرة</span>
                         </td>
                     </tr>
@@ -718,31 +750,9 @@
             });
         };
 
-        // دالة تصدير كشف الحساب ملف PDF عالي الجودة
+        // استدعاء نافذة الطباعة التلقائية الخاصة بالنظام الموضحة في صورتك لتصدير PDF
         window.downloadStatementPDF = function() {
-            let element = document.getElementById('statementPrintArea');
-            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const imgWidth = 210; 
-                const pageHeight = 295;  
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-
-                pdf.save('EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.pdf');
-            });
+            window.print();
         };
 
         window.sendStatementWhatsApp = function() {
@@ -771,7 +781,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>

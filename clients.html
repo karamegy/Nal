@@ -36,7 +36,6 @@
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
 
-        /* تنسيقات حصرية للطباعة والتصدير كـ PDF مثل صورة النظام تماماً */
         @media print {
             body * { visibility: hidden !important; }
             #statementModal, #statementModal * { visibility: visible !important; }
@@ -245,7 +244,7 @@
                 </div>
             </div>
 
-            <!-- تسجيل طريقة الدفع والسداد -->
+            <!-- تسجيل طريقة الدفع والسداد (حصرياً في client_payments والخزنة دون ازدواجية بالشجرة) -->
             <div class="no-print p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
@@ -257,7 +256,7 @@
                     </select>
                 </div>
                 <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية ومزامنتها بالشجرة
+                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية وإضافتها للخزنة وكشف الحساب
                 </button>
             </div>
 
@@ -346,7 +345,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules ودوال تصدير PDF بالنظام المباشر -->
+    <!-- Firebase SDK Modules بدون ازدواجية الحفظ -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -390,8 +389,7 @@
             clients: [],
             invoices: [],
             transactions: [],
-            payments: [],
-            treeDocs: []
+            payments: []
         };
 
         let currentActiveClient = null;
@@ -411,7 +409,6 @@
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
             const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", companyId));
-            const treeDocsRef = query(collection(db, "documents_tree"), where("companyId", "==", companyId));
 
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
@@ -433,11 +430,6 @@
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
             }));
-
-            unsubscribers.push(onSnapshot(treeDocsRef, (snapshot) => {
-                state.treeDocs = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-            }));
         }
 
         function renderClients() {
@@ -452,10 +444,7 @@
                 let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
 
                 let clientPayments = state.payments.filter(p => p.clientName === c.name);
-                let treePayments = state.treeDocs.filter(td => td.clientName === c.name && td.category === 'المدفوعات والتحويلات البنكية');
-                
-                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
-                                treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
+                let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
                 let dueBalance = totalPurchases - totalPaid;
 
@@ -529,11 +518,9 @@
 
             let clientInvoices = state.invoices.filter(i => i.client === clientName);
             let clientPayments = state.payments.filter(p => p.clientName === clientName);
-            let treePayments = state.treeDocs.filter(td => td.clientName === clientName && td.category === 'المدفوعات والتحويلات البنكية');
 
             let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
-                            treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
             document.getElementById('stmtTotalPurchases').innerText = totalPurchases.toLocaleString() + ' ج.م';
@@ -576,20 +563,6 @@
                 `;
             });
 
-            treePayments.forEach(tPay => {
-                rowsHtml += `
-                    <tr class="bg-indigo-50/40">
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${tPay.paymentRef || 'TREE-PAY'}</td>
-                        <td class="p-2.5 font-bold text-indigo-900">تحويل شجري (${tPay.paymentMethod || 'إنستا باي/بنك'})</td>
-                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(tPay.amount).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${tPay.date || '---'}</td>
-                        <td class="p-2.5 text-center no-print">
-                            <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">مزامن من الشجرة</span>
-                        </td>
-                    </tr>
-                `;
-            });
-
             if(!rowsHtml) {
                 rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد معاملات سحابية مسجلة بعد.</td></tr>`;
             }
@@ -614,10 +587,10 @@
             try {
                 const paymentsCollection = collection(db, "client_payments");
                 const transactionsCollection = collection(db, "transactions");
-                const treeDocsCollection = collection(db, "documents_tree");
 
                 let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
+                // حفظ الدفعة في client_payments و transactions فقط دون تكرار في documents_tree
                 await addDoc(paymentsCollection, {
                     companyId: currentCompanyId,
                     id: payId,
@@ -635,21 +608,8 @@
                     date: today
                 });
 
-                await addDoc(treeDocsCollection, {
-                    companyId: currentCompanyId,
-                    category: 'المدفوعات والتحويلات البنكية',
-                    title: `تحصيل دفعة: ${currentActiveClient.name}`,
-                    clientName: currentActiveClient.name,
-                    amount: amount,
-                    paymentMethod: method,
-                    paymentRef: payId,
-                    tag: 'مهم',
-                    date: today,
-                    admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
-                });
-
                 document.getElementById('paymentAmountInput').value = '';
-                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وشجرة المستندات سحابياً بنجاح');
+                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وكشف الحساب سحابياً بنجاح بدون تكرار');
             } catch (err) {
                 alert('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
             }
@@ -750,7 +710,6 @@
             });
         };
 
-        // استدعاء نافذة الطباعة التلقائية الخاصة بالنظام الموضحة في صورتك لتصدير PDF
         window.downloadStatementPDF = function() {
             window.print();
         };
@@ -761,10 +720,7 @@
             let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
             
             let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
-            let treePayments = state.treeDocs.filter(td => td.clientName === currentActiveClient.name && td.category === 'المدفوعات والتحويلات البنكية');
-            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + 
-                            treePayments.reduce((sum, td) => sum + Number(td.amount || 0), 0);
-            
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
             let text = `📊 *EIDCO // كشف حساب العميل*\n`;

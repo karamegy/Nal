@@ -194,17 +194,22 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الملفات / الإيصالات المنبثقة -->
+    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة -->
     <div id="previewModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">معاينة المستند أو الإيصال</h3>
+                <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل المستند والمعاينة الشاملة</h3>
                 <button onclick="window.closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="previewBody" class="max-h-[60vh] overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-xl border">
+            <!-- تفاصيل البيانات الكاملة (تشبه معاينة الفاتورة) -->
+            <div id="previewDetailsMeta" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <!-- يتم تعبئتها ديناميكياً -->
+            </div>
+            <div id="previewBody" class="max-h-[50vh] overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-xl border">
                 <!-- محتوى المعاينة -->
             </div>
-            <div class="pt-2 border-t flex justify-end">
+            <div class="pt-2 border-t flex justify-between items-center">
+                <span id="previewAdminInfo" class="text-[11px] text-slate-500 font-mono"></span>
                 <button onclick="window.closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer">إغلاق النافذة</button>
             </div>
         </div>
@@ -352,7 +357,8 @@
             }
         };
 
-        window.deleteDocument = async function(docId) {
+        window.deleteDocument = async function(docId, event) {
+            if(event) event.stopPropagation();
             if(!confirm('هل أنت متأكد من حذف هذا السجل من الأرشيف الشجري؟')) return;
             try {
                 await deleteDoc(doc(db, "documents_tree", docId));
@@ -362,18 +368,46 @@
             }
         };
 
-        window.previewDocument = function(title, fileData) {
-            document.getElementById('previewTitle').innerText = `معاينة: ${title}`;
-            let body = document.getElementById('previewBody');
-            if(!fileData) {
-                body.innerHTML = `<p class="text-slate-500 font-bold py-8">لا يوجد ملف مرفق فعلي لهذا السجل.</p>`;
-            } else if(fileData.startsWith('data:image')) {
-                body.innerHTML = `<img src="${fileData}" class="max-w-full max-h-[55vh] object-contain rounded-lg shadow-md">`;
-            } else if(fileData.startsWith('data:application/pdf')) {
-                body.innerHTML = `<iframe src="${fileData}" class="w-full h-[55vh] rounded-lg border"></iframe>`;
+        window.previewDocument = function(docId) {
+            let i = documentsList.find(d => d.docId === docId);
+            if(!i) return;
+
+            document.getElementById('previewTitle').innerText = `معاينة وتفاصيل: ${i.title}`;
+            
+            let metaContainer = document.getElementById('previewDetailsMeta');
+            let isPayment = (i.category === 'المدفوعات والتحويلات البنكية');
+
+            let metaHtml = `
+                <div><span class="text-slate-500 block font-bold">القسم:</span> <span class="text-indigo-900 font-bold">${i.category}</span></div>
+                <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font">${i.date || '---'}</span></div>
+                <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${i.tag}</span></div>
+            `;
+
+            if (isPayment) {
+                metaHtml += `
+                    <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
+                    <div><span class="text-slate-500 block font-bold">طريقة الدفع:</span> <span class="font-bold text-indigo-700">${i.paymentMethod}</span></div>
+                    <div><span class="text-slate-500 block font-bold">رقم المرجع:</span> <span class="mono-font">${i.paymentRef}</span></div>
+                `;
             } else {
-                body.innerHTML = `<a href="${fileData}" target="_blank" class="btn-primary inline-block py-2 px-4 text-xs">تحميل أو فتح الملف المرفق</a>`;
+                metaHtml += `
+                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800">${i.expiryDate}</span></div>
+                `;
             }
+            metaContainer.innerHTML = metaHtml;
+
+            let body = document.getElementById('previewBody');
+            if(!i.fileData) {
+                body.innerHTML = `<p class="text-slate-400 font-bold py-6">لا يوجد ملف مرفق فعلي لهذا السجل.</p>`;
+            } else if(i.fileData.startsWith('data:image')) {
+                body.innerHTML = `<img src="${i.fileData}" class="max-w-full max-h-[50vh] object-contain rounded-lg shadow-md">`;
+            } else if(i.fileData.startsWith('data:application/pdf')) {
+                body.innerHTML = `<iframe src="${i.fileData}" class="w-full h-[50vh] rounded-lg border"></iframe>`;
+            } else {
+                body.innerHTML = `<a href="${i.fileData}" target="_blank" class="btn-primary inline-block py-2 px-4 text-xs">تحميل أو فتح الملف المرفق</a>`;
+            }
+
+            document.getElementById('previewAdminInfo').innerText = `المسؤول المسجل: ${i.admin || 'مسؤول الحساب'}`;
             document.getElementById('previewModal').classList.add('active');
         };
 
@@ -426,7 +460,7 @@
                                 
                                 if (isPaymentsCat) {
                                     return `
-                                        <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-emerald-200 shadow-sm gap-2">
+                                        <div onclick="window.previewDocument('${i.docId}')" class="flex items-center justify-between p-3 bg-white rounded-xl border border-emerald-200 shadow-sm gap-2 cursor-pointer hover:bg-emerald-50/30 transition">
                                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                                 <i class="fa-solid fa-money-bill-transfer text-emerald-600 text-base"></i>
                                                 <div class="truncate">
@@ -442,14 +476,14 @@
                                             </div>
                                             <div class="flex items-center gap-2 shrink-0">
                                                 <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-2.5 py-1 rounded-lg">${Number(i.amount || 0).toLocaleString()} ج.م</span>
-                                                ${i.fileData ? `<button onclick="window.previewDocument('${i.title}', '${i.fileData}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> الإيصال</button>` : ''}
-                                                <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف الدفعة"><i class="fa-solid fa-trash"></i></button>
+                                                <button onclick="window.previewDocument('${i.docId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> التفاصيل</button>
+                                                <button onclick="window.deleteDocument('${i.docId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف الدفعة"><i class="fa-solid fa-trash"></i></button>
                                             </div>
                                         </div>
                                     `;
                                 } else {
                                     return `
-                                        <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 shadow-sm gap-2">
+                                        <div onclick="window.previewDocument('${i.docId}')" class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 shadow-sm gap-2 cursor-pointer hover:bg-slate-50 transition">
                                             <div class="flex items-center gap-3 flex-1 min-w-0">
                                                 <i class="fa-solid fa-file-lines text-indigo-600 text-base"></i>
                                                 <div class="truncate">
@@ -462,8 +496,9 @@
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2 shrink-0">
-                                                <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${tagColor}">${i.tag}</span>${i.fileData ? `<button onclick="window.previewDocument('${i.title}', '${i.fileData}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> معاينة</button>` : ''}
-                                                <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف المستند"><i class="fa-solid fa-trash"></i></button>
+                                                <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${tagColor}">${i.tag}</span>
+                                                <button onclick="window.previewDocument('${i.docId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> التفاصيل</button>
+                                                <button onclick="window.deleteDocument('${i.docId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1" title="حذف المستند"><i class="fa-solid fa-trash"></i></button>
                                             </div>
                                         </div>
                                     `;

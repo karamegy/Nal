@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // شجرة المستندات والأرشيف السحابي</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    <script src="./eidco-core.js"></script>
+
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; width: 100%; font-size: 14px; box-sizing: border-box; }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; width: 100%; }
+        .btn-primary:active { transform: scale(0.98); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .tree-node { border-right: 2px dashed #cbd5e1; margin-right: 1rem; padding-right: 1rem; position: relative; }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen">
+        <!-- القائمة الجانبية للشاشات الكبيرة -->
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+            </div>
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div class="flex items-center justify-between w-full lg:w-auto gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                                <i class="fa-solid fa-bars text-lg"></i>
+                            </button>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">شجرة المستندات والأرشيف السحابي <span class="hidden sm:inline text-slate-500 font-normal">(إدارة العقود والملفات)</span></h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
+                        <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
+            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+                <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
+                            <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <nav class="space-y-1.5 flex-1">
+                        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                        <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                        <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                        <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                        <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                        <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                        <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                        <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                        <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- نموذج إضافة مستند جديد للشجرة -->
+                <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
+                    <h3 class="font-bold text-sm text-slate-900 border-b pb-3"><i class="fa-solid fa-folder-plus ml-2 text-indigo-600"></i> إضافة مستند أو مجلد جديد في الأرشيف الشجري</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                            <label class="block mb-1 text-slate-600 font-bold">قسم المجلد الرئيسي</label>
+                            <select id="docCategory" class="corporate-input">
+                                <option value="المستندات الإدارية">📁 المستندات الإدارية والتأسيسية</option>
+                                <option value="العقود والاتفاقيات">📁 العقود والاتفاقيات التجارية</option>
+                                <option value="المستندات المالية">📁 المستندات والحسابات المالية</option>
+                                <option value="اللوجستيات والأسطول">📁 تراخيص وعقود الأسطول واللوجستيات</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-slate-600 font-bold">عنوان المستند / الملف</label>
+                            <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد رقم 102">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-slate-600 font-bold">رابط المستند أو الملاحظات (URL)</label>
+                            <input type="text" id="docLink" class="corporate-input mono-font" placeholder="https://... أو تفاصيل المستند">
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="window.saveDocument()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3">
+                            <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ وإضافة المستند للشجرة سحابياً
+                        </button>
+                    </div>
+                </div>
+
+                <!-- شجرة المستندات العرضية -->
+                <div class="corporate-card p-6 space-y-4 bg-white">
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-sitemap ml-2 text-indigo-600"></i> الهيكل الشجري للمستندات والملفات (مزامنة سحابية)</h3>
+                    <div id="documentTreeContainer" class="space-y-4 text-xs">
+                        <p class="text-slate-400 text-center py-6">جاري تحميل شجرة المستندات من سحابة Firebase...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+            
+            const badgeEl = document.getElementById('companyBadgeDisplay');
+            if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- Firebase SDK والمخزن الشجري -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot,
+            getDocs,
+            query,
+            where 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
+            authDomain: "w2a-37531-672997.firebaseapp.com",
+            projectId: "w2a-37531-672997",
+            storageBucket: "w2a-37531-672997.firebasestorage.app",
+            messagingSenderId: "515898424721",
+            appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+
+        let documentsList = [];
+
+        signInAnonymously(auth).then(async () => {
+            const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
+            
+            try {
+                const snapshot = await getDocs(docsRef);
+                documentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTree();
+            } catch(e) { console.error(e); }
+
+            onSnapshot(docsRef, (snapshot) => {
+                documentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTree();
+            });
+        }).catch(err => console.error(err));
+
+        window.saveDocument = async function() {
+            let category = document.getElementById('docCategory').value;
+            let title = document.getElementById('docTitle').value.trim();
+            let link = document.getElementById('docLink').value.trim();
+
+            if(!title) return alert('⚠️ يرجى إدخال عنوان المستند على الأقل.');
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
+            try {
+                await addDoc(collection(db, "documents_tree"), {
+                    companyId: currentCompanyId,
+                    category,
+                    title,
+                    link: link || '#',
+                    date: new Date().toISOString().split('T')[0]
+                });
+                document.getElementById('docTitle').value = '';
+                document.getElementById('docLink').value = '';
+                alert('✓ تم حفظ المستند وإضافته لشجرة الأرشيف سحابياً بنجاح.');
+            } catch(err) {
+                alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+            }
+        };
+
+        window.deleteDocument = async function(docId) {
+            if(!confirm('هل أنت متأكد من حذف هذا المستند من الأرشيف الشجري؟')) return;
+            try {
+                await deleteDoc(doc(db, "documents_tree", docId));
+                alert('✓ تم الحذف بنجاح.');
+            } catch(err) {
+                alert('خطأ أثناء الحذف: ' + err.message);
+            }
+        };
+
+        function renderTree() {
+            let container = document.getElementById('documentTreeContainer');
+            let categories = [
+                "المستندات الإدارية",
+                "العقود والاتفاقيات",
+                "المستندات المالية",
+                "اللوجستيات والأسطول"
+            ];
+
+            if(!documentsList.length) {
+                container.innerHTML = `<p class="text-slate-400 text-center py-6 font-bold">لا توجد مستندات مسجلة في الشجرة سحابياً لهذا الحساب حتى الآن.</p>`;
+                return;
+            }
+
+            container.innerHTML = categories.map(cat => {
+                let items = documentsList.filter(d => d.category === cat);
+                return `
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 font-black text-indigo-700 text-sm">
+                            <i class="fa-solid fa-folder-open text-amber-500"></i>
+                            <span>${cat}</span>
+                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-mono">${items.length} ملفات</span>
+                        </div>
+                        <div class="tree-node space-y-2 pt-1">
+                            ${items.length ? items.map(i => `
+                                <div class="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200 shadow-sm">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-file-lines text-indigo-500"></i>
+                                        <span class="font-bold text-slate-800">${i.title}</span>
+                                        <span class="text-[10px] text-slate-400 font-mono">(${i.date || '---'})</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        ${i.link && i.link !== '#' ? `<a href="${i.link}" target="_blank" class="text-indigo-600 hover:underline text-xs font-bold"><i class="fa-solid fa-external-link-alt ml-1"></i> فتح الملف</a>` : ''}
+                                        <button onclick="window.deleteDocument('${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            `).join('') : '<p class="text-slate-400 text-xs py-1">لا توجد ملفات داخل هذا المجلد.</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

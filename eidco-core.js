@@ -8,12 +8,33 @@
 
 class EIDCOCore {
     constructor() {
-        this.version = '3.0.0';
+        this.version = '3.1.0';
         this.state = {
             companyId: 'company_founder_karm',
             isOnline: navigator.onLine,
             syncQueue: JSON.parse(localStorage.getItem('eidco_sync_queue') || '[]'),
-            activeModule: null
+            activeModule: null,
+            registeredModules: [
+                'dashboard.html',
+                'index.html',
+                'invoices.html',
+                'batch-invoices.html',
+                'inventory.html',
+                'clients.html',
+                'documents.html', // 🟢 تمت الإضافة بنجاح لنواة المنظومة
+                'chat.html',
+                'profile.html',
+                'vault.html',
+                'map.html',
+                'auth.html',
+                'settings.html',
+                'remote.html',
+                'users.html',
+                'admin-accounts.html',
+                'admin-reports.html',
+                'tv.html',
+                'intelligence.html'
+            ]
         };
         this.eventListeners = {};
         this.initCoreSystem();
@@ -47,7 +68,7 @@ class EIDCOCore {
     }
 
     /**
-     * نظام إدارة الأحداث المركزي (Event Bus) لربط الـ 19 ملفاً لحظياً
+     * نظام إدارة الأحداث المركزي (Event Bus) لربط ملفات المنظومة لحظياً
      */
     on(event, callback) {
         if (!this.eventListeners[event]) {

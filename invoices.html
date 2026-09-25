@@ -23,6 +23,7 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -35,9 +36,14 @@
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
+        @media print {
+            body * { visibility: hidden; }
+            #invoicePrintArea, #invoicePrintArea * { visibility: visible; }
+            #invoicePrintArea { position: absolute; inset: 0; width: 100%; margin: 0; padding: 20px; border: none; box-shadow: none; }
+        }
     </style>
 </head>
 <body>
@@ -70,7 +76,6 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -79,7 +84,6 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
-                        <!-- معرف الشركة مع وضع truncate وعرض محدد على الهواتف -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
                         <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-1.5 cursor-pointer py-2 px-3 sm:px-4">
@@ -131,7 +135,7 @@
                                     <th class="p-4">الإجمالي</th>
                                     <th class="p-4">الربح</th>
                                     <th class="p-4 text-center">حالة الضرائب</th>
-                                    <th class="p-4 text-center">إجراء</th>
+                                    <th class="p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
@@ -144,6 +148,7 @@
         </div>
     </div>
 
+    <!-- نافذة إصدار فاتورة جديدة -->
     <div id="invoiceModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl">
             <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة سحابياً</h3>
@@ -159,6 +164,52 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2"><button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ وتحديث المخزن سحابياً</button><button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+        </div>
+    </div>
+
+    <!-- نافذة معاينة الفاتورة الفردية للتصدير PDF أو صورة أو واتساب -->
+    <div id="previewModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative">
+            <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base">EIDCO // فاتورة مبيعات فردية معتمدة</h2>
+                        <span id="prevInvId" class="text-xs text-indigo-600 font-mono font-bold" dir="ltr"></span>
+                    </div>
+                    <div class="text-left text-xs text-slate-500">
+                        <div>التاريخ: <span id="prevDate" class="mono-font" dir="ltr"></span></div>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500">العميل:</span>
+                    <h3 id="prevClient" class="font-bold text-sm text-slate-900"></h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-xs border rounded-lg">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                <th class="p-2.5">الصنف</th>
+                                <th class="p-2.5 text-center">الكمية</th>
+                                <th class="p-2.5 text-center">سعر الوحدة</th>
+                                <th class="p-2.5 text-left">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prevItemsBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div class="space-y-1 pt-2 border-t text-xs">
+                    <div class="flex justify-between items-center pt-1 border-t font-bold text-sm text-slate-900">
+                        <span>الإجمالي النهائي:</span>
+                        <span id="prevTotal" class="text-indigo-600 mono-font text-base font-black" dir="ltr"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
+                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-image"></i> صورة</button>
+                <button type="button" onclick="closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -238,7 +289,6 @@
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
-            // جلب أولي فوري باستخدام getDocs
             try {
                 const [clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
                     getDocs(clientsRef),
@@ -256,7 +306,6 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             });
@@ -299,12 +348,14 @@
                             ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
                         </span>
                     </td>
-                    <td class="p-4 text-center flex items-center justify-center gap-2">
+                    <td class="p-4 text-center space-x-1.5 space-x-reverse flex items-center justify-center">
                         ${!i.etaSubmitted ? `
                             <button onclick="window.sendToETA('${i.id}', '${i.docId || ''}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200" title="إرسال لمصلحة الضرائب">
                                 <i class="fa-solid fa-file-arrow-up"></i>
                             </button>
                         ` : ''}
+                        <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-emerald-200" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
                         <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200" title="حذف الفاتورة">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -395,6 +446,65 @@
             }
         };
 
+        window.openInvoicePreview = function(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+
+            document.getElementById('prevInvId').innerText = inv.id;
+            document.getElementById('prevDate').innerText = inv.date || '---';
+            document.getElementById('prevClient').innerText = inv.client;
+            document.getElementById('prevTotal').innerText = Number(inv.total).toLocaleString() + ' ج.م';
+
+            let itemsHtml = `
+                <tr>
+                    <td class="p-2.5 font-bold text-slate-900">${inv.productName}</td>
+                    <td class="p-2.5 text-center"><span class="mono-font" dir="ltr">${inv.qty}</span></td>
+                    <td class="p-2.5 text-center"><span class="mono-font" dir="ltr">${Number(inv.unitPrice).toLocaleString()}</span></td>
+                    <td class="p-2.5 text-left"><span class="mono-font text-indigo-600 font-bold" dir="ltr">${Number(inv.total).toLocaleString()}</span></td>
+                </tr>
+            `;
+
+            document.getElementById('prevItemsBody').innerHTML = itemsHtml;
+            document.getElementById('previewModal').classList.add('active');
+        };
+
+        window.closePreviewModal = function() {
+            document.getElementById('previewModal').classList.remove('active');
+        };
+
+        window.printInvoicePDF = function() {
+            window.print();
+        };
+
+        window.downloadInvoiceImage = function() {
+            let element = document.getElementById('invoicePrintArea');
+            html2canvas(element, { scale: 2 }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = 'EIDCO-Invoice-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        window.sendInvoiceWhatsApp = function(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+
+            let text = `📄 *EIDCO // فاتورة مبيعات فردية*\n`;
+            text += `🆔 رقم الفاتورة: *${inv.id}*\n`;
+            text += `👤 العميل: *${inv.client}*\n`;
+            text += `📅 التاريخ: ${inv.date || '---'}\n\n`;
+            text += `📦 الصنف: *${inv.productName}*\n`;
+            text += `   - الكمية: ${inv.qty}\n`;
+            text += `   - سعر الوحدة: ${Number(inv.unitPrice).toLocaleString()} ج.م\n`;
+            text += `💰 *الإجمالي النهائي: ${Number(inv.total).toLocaleString()} ج.م*\n`;
+            text += `--------------------------\n`;
+            text += `شكراً لتعاملكم معنا! 🙏`;
+
+            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
+        };
+
         window.deleteInvoice = async function(id, docId) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة سحابياً.')) return;
             
@@ -428,7 +538,6 @@
             }
         };
 
-        // دالة إرسال الفاتورة إلى مصلحة الضرائب عبر Vercel API
         window.sendToETA = async function(invoiceId, docId) {
             let inv = state.invoices.find(i => i.id === invoiceId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -438,7 +547,6 @@
             try {
                 alert('⏳ جاري إرسال الفاتورة إلى خادم مصلحة الضرائب...');
 
-                // إرسال الطلب إلى مسار الـ API على Vercel
                 const response = await fetch('/api/submit-invoice', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -466,7 +574,7 @@
         };
     </script>
     
-    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
@@ -508,6 +616,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

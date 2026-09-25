@@ -524,7 +524,7 @@
             }
         };
 
-        // حفظ الفاتورة المجمعة مع استخدام getDocs لجلب أحدث حالة للمنتجات والمخزن مباشرة من السحابة قبل الحفظ
+        // حفظ الفاتورة المجمعة مع مزامنة كشف حساب العملاء والخزنة والمخزن سحابياً
         window.saveBatchInvoice = async function() {
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار العميل');
@@ -627,6 +627,7 @@
                     await deleteDoc(doc(db, "transactions", existingTx.id));
                 }
 
+                // تسجيل الحركة في الخزنة إذا كانت نقدي لتتزامن مع حسابات الخزنة
                 if(paymentType === 'نقدي') {
                     await addDoc(transactionsCollection, {
                         companyId: currentCompanyId,
@@ -635,9 +636,18 @@
                         desc: `قيمة فاتورة مبيعات مجمعة نقدي ${batchId} (${clientName})`,
                         date: today
                     });
+                } else {
+                    // إذا كانت آجل، نسجلها كحركة مديونية في المعاملات لترتبط بكشف حساب العميل
+                    await addDoc(transactionsCollection, {
+                        companyId: currentCompanyId,
+                        type: 'آجل',
+                        amount: grandTotal,
+                        desc: `فاتورة مبيعات مجمعة آجل ${batchId} على العميل (${clientName})`,
+                        date: today
+                    });
                 }
 
-                alert('✓ تم حفظ الفاتورة وتحديث المخزن سحابياً بنجاح');
+                alert('✓ تم حفظ الفاتورة وتحديث المخزن وكشف حساب العميل والخزنة سحابياً بنجاح');
                 window.resetBatchForm();
             } catch (err) {
                 alert('حدث خطأ أثناء الحفظ بالسحابة: ' + err.message);
@@ -716,7 +726,7 @@
             `).join('');
         }
 
-        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر Vercel API
+        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر خادم Vercel الأساسي (لتجنب خطأ GitHub Pages)
         window.sendBatchToETA = async function(batchId) {
             let inv = state.invoices.find(i => i.id === batchId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -726,7 +736,7 @@
             try {
                 alert('⏳ جاري إرسال الفاتورة المجمعة إلى خادم مصلحة الضرائب...');
 
-                const response = await fetch('/api/submit-invoice', {
+                const response = await fetch('https://nal-app-2026.vercel.app/api/submit-invoice', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ invoiceData: inv })
@@ -936,7 +946,8 @@
             window.initBatchPage();
         });
     </script>
-        <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">

@@ -21,7 +21,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- مكتبة html2pdf لتوليد وتحميل ملفات الـ PDF بكل سهولة -->
+    <!-- مكتبة html2pdf لتوليد وتحميل ملفات الـ PDF بمعيار A4 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
@@ -160,7 +160,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة المستندات وتحويلات العملاء 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة / PDF وإرسال واتساب)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة / PDF بمعيار A4 وإرسال واتساب)</span>
                             </h1>
                         </div>
                     </div>
@@ -228,7 +228,7 @@
                             </select>
                         </div>
 
-                        <!-- ربط بالعميل المسجل (متاح في جميع الأقسام لكشف الحساب) -->
+                        <!-- ربط بالعميل المسجل -->
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">
                                 <i class="fa-solid fa-building-user ml-1"></i> ربط بالعميل المسجل (كشف الحساب)
@@ -263,7 +263,7 @@
                         </div>
                     </div>
 
-                    <!-- حقول المدفوعات والتحويلات المتقدمة (إنستا باي، محافظ، تحويل بنكي، كاش) -->
+                    <!-- حقول المدفوعات والتحويلات المتقدمة -->
                     <div id="paymentExtraFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 hidden">
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">قيمة المبلغ المدفوع (ج.م)</label>
@@ -300,7 +300,7 @@
                     </div>
                 </div>
 
-                <!-- شريط البحث الفوري في الأرشيف الشجري والتحويلات -->
+                <!-- شريط البحث الفوري -->
                 <div class="corporate-card p-4 flex gap-3 items-center bg-white shadow-sm">
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
@@ -326,7 +326,7 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة مع أزرار التحميل (صورة / PDF) وإرسال واتساب -->
+    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة مع أزرار التحميل معيار A4 وإرسال واتساب -->
     <div id="previewModal" class="custom-modal">
         <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
             <div class="flex justify-between items-center border-b pb-3">
@@ -343,13 +343,13 @@
                 <!-- محتوى المعاينة الفعلية -->
             </div>
             
-            <!-- أزرار الإجراءات الإضافية: حفظ صورة، حفظ PDF، إرسال واتساب -->
+            <!-- أزرار الإجراءات الإضافية: حفظ صورة، حفظ PDF بـ A4، إرسال واتساب -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t">
                 <button onclick="window.downloadDocAsImage()" class="bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> حفظ كصورة (PNG)
                 </button>
                 <button onclick="window.downloadDocAsPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                    <i class="fa-solid fa-file-pdf"></i> حفظ كملف PDF
+                    <i class="fa-solid fa-file-pdf"></i> حفظ PDF (معيار A4)
                 </button>
                 <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-brands fa-whatsapp text-sm"></i> إرسال عبر واتساب
@@ -363,7 +363,7 @@
         </div>
     </div>
 
-    <!-- نصوص البرمجة العامة (Navigation & UI Helpers) -->
+    <!-- نصوص البرمجة العامة -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
@@ -387,7 +387,6 @@
             const badgeEl = document.getElementById('companyBadgeDisplay');
             if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
-            // تمرير معرف الشركة لجميع الروابط تلقائياً
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -398,7 +397,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتكامل وإدارة الأرشيف السحابي بدون ازدواجية الحفظ -->
+    <!-- سكربت Firebase وإدارة الأرشيف -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -435,7 +434,6 @@
         let clientsList = [];
         let activePreviewItem = null;
 
-        // دالة لجلب قائمة العملاء المسجلين
         async function fetchClients() {
             try {
                 const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
@@ -456,14 +454,12 @@
             }
         }
 
-        // المصادقة والبدء السحابي
         signInAnonymously(auth).then(async () => {
             await fetchClients();
 
             const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
             const clientPaymentsRef = query(collection(db, "client_payments"), where("companyId", "==", currentCompanyId));
 
-            // الاستماع الفوري لشجرة المستندات
             onSnapshot(docsRef, (snapshot) => {
                 documentsList = snapshot.docs
                     .map(d => ({ docId: d.id, ...d.data() }))
@@ -471,7 +467,6 @@
                 renderTree();
             });
 
-            // الاستماع الفوري لمدفوعات العملاء
             onSnapshot(clientPaymentsRef, (snapshot) => {
                 clientPaymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTree();
@@ -480,7 +475,6 @@
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // دالة حفظ مستند أو دفعة جديدة دون ازدواجية
         window.saveDocument = async function() {
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
@@ -674,21 +668,10 @@
             document.getElementById('previewModal').classList.remove('active');
         };
 
-        // دالة حفظ المستند كصورة (PNG) باستخدام html2pdf أو canvas
         window.downloadDocAsImage = function() {
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
             
-            // استخدام html2pdf لإنشاء صورة أو PDF
-            let opt = {
-                margin:       10,
-                filename:     `${activePreviewItem.title || 'document'}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            // إذا كان المرفق صورة أصلية، يمكن تحميلها مباشرة
             if (activePreviewItem.fileData && activePreviewItem.fileData.startsWith('data:image')) {
                 let a = document.createElement('a');
                 a.href = activePreviewItem.fileData;
@@ -698,7 +681,6 @@
                 document.body.removeChild(a);
                 alert('✓ تم تحميل المستند كصورة بنجاح.');
             } else {
-                // التقاط بطاقة المعاينة كصورة
                 html2canvas(element, { scale: 2 }).then(canvas => {
                     let link = document.createElement('a');
                     link.download = `${activePreviewItem.title || 'document'}.png`;
@@ -711,57 +693,45 @@
             }
         };
 
-        // دالة حفظ المستند كملف PDF
+        // دالة حفظ المستند بصيغة PDF مع ضبط قياسات ورقة ISO A4 وال هوامش للطباعة
         window.downloadDocAsPDF = function() {
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
+            
             let opt = {
-                margin:       10,
-                filename:     `${activePreviewItem.title || 'document'}.pdf`,
+                margin:       [10, 10, 10, 10], // هوامش متناسقة لورقة A4
+                filename:     `${activePreviewItem.title || 'document'}_A4.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             html2pdf().from(element).set(opt).save().then(() => {
-                alert('✓ تم تحميل المستند كملف PDF بنجاح.');
+                alert('✓ تم تصدير وتحميل المستند كملف PDF (معيار A4) بنجاح.');
             }).catch(err => {
                 alert('خطأ أثناء تصدير PDF: ' + err.message);
             });
         };
 
-        // دالة إرسال المستند أو تفاصيله عبر واتساب
         window.sendDocWhatsApp = function() {
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let i = activePreviewItem;
-            let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢
-
-` +
-                      `• *العنوان:* ${i.title}
-` +
-                      `• *القسم:* ${i.category}
-` +
-                      `• *العميل:* ${i.clientName || 'عام'}
-` +
-                      `• *التاريخ:* ${i.date || '---'}
-` +
-                      `• *درجة الأهمية:* ${i.tag || 'عادي'}
-`;
+            let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢\n\n` +
+                      `• *العنوان:* ${i.title}\n` +
+                      `• *القسم:* ${i.category}\n` +
+                      `• *العميل:* ${i.clientName || 'عام'}\n` +
+                      `• *التاريخ:* ${i.date || '---'}\n` +
+                      `• *درجة الأهمية:* ${i.tag || 'عادي'}\n`;
 
             if (i.category === 'المدفوعات والتحويلات البنكية') {
-                msg += `• *المبلغ المدفوع:* ${Number(i.amount || 0).toLocaleString()} ج.م
-` +
-                       `• *طريقة التحويل:* ${i.paymentMethod || 'كاش'}
-` +
-                       `• *رقم المرجع:* ${i.paymentRef || '---'}
-`;
+                msg += `• *المبلغ المدفوع:* ${Number(i.amount || 0).toLocaleString()} ج.م\n` +
+                       `• *طريقة التحويل:* ${i.paymentMethod || 'كاش'}\n` +
+                       `• *رقم المرجع:* ${i.paymentRef || '---'}\n`;
             } else {
-                msg += `• *تاريخ الاستحقاق:* ${i.expiryDate || '---'}
-`;
+                msg += `• *تاريخ الاستحقاق:* ${i.expiryDate || '---'}\n`;
             }
 
-            msg += `
-_تم الإرسال عبر نظام EIDCO Business OS_`;
+            msg += `\n_تم الإرسال عبر نظام EIDCO Business OS_`;
 
             let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
             window.open(whatsappUrl, '_blank');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شجرة المستندات والأرشيف المالي المتقدم والمدفوعات</title>
+    <title>EIDCO // شجرة المستندات والأرشيف المالي والمدفوعات</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,6 +20,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- مكتبة html2pdf لتوليد وتحميل ملفات الـ PDF بكل سهولة -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         :root { 
@@ -157,7 +160,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة المستندات وتحويلات العملاء 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(إدارة الكاش، البنك، إنستا باي، والمحافظ)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة / PDF وإرسال واتساب)</span>
                             </h1>
                         </div>
                     </div>
@@ -323,9 +326,9 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة -->
+    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة مع أزرار التحميل (صورة / PDF) وإرسال واتساب -->
     <div id="previewModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
+        <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل المستند والمعاينة الشاملة</h3>
                 <button onclick="window.closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
@@ -336,10 +339,24 @@
             <div id="previewDetailsMeta" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <!-- يتم تعبئتها ديناميكياً -->
             </div>
-            <div id="previewBody" class="max-h-[50vh] overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-xl border">
+            <div id="previewBody" class="max-h-[45vh] overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-xl border">
                 <!-- محتوى المعاينة الفعلية -->
             </div>
-            <div class="pt-2 border-t flex justify-between items-center">
+            
+            <!-- أزرار الإجراءات الإضافية: حفظ صورة، حفظ PDF، إرسال واتساب -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t">
+                <button onclick="window.downloadDocAsImage()" class="bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-image"></i> حفظ كصورة (PNG)
+                </button>
+                <button onclick="window.downloadDocAsPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-file-pdf"></i> حفظ كملف PDF
+                </button>
+                <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال عبر واتساب
+                </button>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
                 <span id="previewAdminInfo" class="text-[11px] text-slate-500 font-mono"></span>
                 <button onclick="window.closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق النافذة</button>
             </div>
@@ -416,6 +433,7 @@
         let documentsList = [];
         let clientPaymentsList = [];
         let clientsList = [];
+        let activePreviewItem = null;
 
         // دالة لجلب قائمة العملاء المسجلين
         async function fetchClients() {
@@ -445,7 +463,7 @@
             const docsRef = query(collection(db, "documents_tree"), where("companyId", "==", currentCompanyId));
             const clientPaymentsRef = query(collection(db, "client_payments"), where("companyId", "==", currentCompanyId));
 
-            // الاستماع الفوري لشجرة المستندات (مع فلترة وتجاهل أي مدفوعات قديمة لمنع التكرار)
+            // الاستماع الفوري لشجرة المستندات
             onSnapshot(docsRef, (snapshot) => {
                 documentsList = snapshot.docs
                     .map(d => ({ docId: d.id, ...d.data() }))
@@ -453,7 +471,7 @@
                 renderTree();
             });
 
-            // الاستماع الفوري لمدفوعات العملاء كمرجع وحيد للمدفوعات
+            // الاستماع الفوري لمدفوعات العملاء
             onSnapshot(clientPaymentsRef, (snapshot) => {
                 clientPaymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderTree();
@@ -505,7 +523,6 @@
                     try {
                         let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
-                        // حفظ في المدفوعات والخزنة فقط دون كتابة أي شيء في documents_tree
                         await addDoc(collection(db, "client_payments"), {
                             companyId: currentCompanyId,
                             id: payId,
@@ -591,6 +608,7 @@
                 let pay = clientPaymentsList.find(p => p.docId === docId);
                 if (pay) {
                     i = {
+                        docId: pay.docId,
                         title: `دفعة مسددة: ${pay.clientName}`,
                         category: 'المدفوعات والتحويلات البنكية',
                         clientName: pay.clientName,
@@ -599,14 +617,19 @@
                         amount: pay.amount,
                         paymentMethod: pay.method || 'دفعة سداد مباشرة',
                         paymentRef: pay.id || pay.ref || '---',
-                        fileData: pay.fileData || ''
+                        fileData: pay.fileData || '',
+                        isPaymentRecord: true
                     };
                 }
             } else {
-                i = documentsList.find(d => d.docId === docId);
+                let docItem = documentsList.find(d => d.docId === docId);
+                if (docItem) {
+                    i = { ...docItem, isPaymentRecord: false };
+                }
             }
 
             if (!i) return;
+            activePreviewItem = i;
 
             document.getElementById('previewTitle').innerText = `معاينة وتفاصيل: ${i.title}`;
             let metaContainer = document.getElementById('previewDetailsMeta');
@@ -636,9 +659,9 @@
             if (!i.fileData) {
                 body.innerHTML = `<p class="text-slate-400 font-bold py-8">لا يوجد ملف مرفق فعلي أو إيصال سحابي لهذا السجل.</p>`;
             } else if (i.fileData.startsWith('data:image')) {
-                body.innerHTML = `<img src="${i.fileData}" class="max-w-full max-h-[50vh] object-contain rounded-lg shadow-md">`;
+                body.innerHTML = `<img src="${i.fileData}" class="max-w-full max-h-[45vh] object-contain rounded-lg shadow-md">`;
             } else if (i.fileData.startsWith('data:application/pdf')) {
-                body.innerHTML = `<iframe src="${i.fileData}" class="w-full h-[50vh] rounded-lg border"></iframe>`;
+                body.innerHTML = `<iframe src="${i.fileData}" class="w-full h-[45vh] rounded-lg border"></iframe>`;
             } else {
                 body.innerHTML = `<a href="${i.fileData}" target="_blank" class="btn-primary inline-block py-2.5 px-6 text-xs text-center">فتح أو تحميل الملف المرفق السحابي</a>`;
             }
@@ -649,6 +672,99 @@
 
         window.closePreviewModal = function() {
             document.getElementById('previewModal').classList.remove('active');
+        };
+
+        // دالة حفظ المستند كصورة (PNG) باستخدام html2pdf أو canvas
+        window.downloadDocAsImage = function() {
+            if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
+            let element = document.getElementById('previewCardContent');
+            
+            // استخدام html2pdf لإنشاء صورة أو PDF
+            let opt = {
+                margin:       10,
+                filename:     `${activePreviewItem.title || 'document'}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // إذا كان المرفق صورة أصلية، يمكن تحميلها مباشرة
+            if (activePreviewItem.fileData && activePreviewItem.fileData.startsWith('data:image')) {
+                let a = document.createElement('a');
+                a.href = activePreviewItem.fileData;
+                a.download = `${activePreviewItem.title || 'document'}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                alert('✓ تم تحميل المستند كصورة بنجاح.');
+            } else {
+                // التقاط بطاقة المعاينة كصورة
+                html2canvas(element, { scale: 2 }).then(canvas => {
+                    let link = document.createElement('a');
+                    link.download = `${activePreviewItem.title || 'document'}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    alert('✓ تم حفظ المستند كصورة (PNG) بنجاح.');
+                }).catch(err => {
+                    alert('خطأ أثناء حفظ الصورة: ' + err.message);
+                });
+            }
+        };
+
+        // دالة حفظ المستند كملف PDF
+        window.downloadDocAsPDF = function() {
+            if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
+            let element = document.getElementById('previewCardContent');
+            let opt = {
+                margin:       10,
+                filename:     `${activePreviewItem.title || 'document'}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                alert('✓ تم تحميل المستند كملف PDF بنجاح.');
+            }).catch(err => {
+                alert('خطأ أثناء تصدير PDF: ' + err.message);
+            });
+        };
+
+        // دالة إرسال المستند أو تفاصيله عبر واتساب
+        window.sendDocWhatsApp = function() {
+            if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
+            let i = activePreviewItem;
+            let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢
+
+` +
+                      `• *العنوان:* ${i.title}
+` +
+                      `• *القسم:* ${i.category}
+` +
+                      `• *العميل:* ${i.clientName || 'عام'}
+` +
+                      `• *التاريخ:* ${i.date || '---'}
+` +
+                      `• *درجة الأهمية:* ${i.tag || 'عادي'}
+`;
+
+            if (i.category === 'المدفوعات والتحويلات البنكية') {
+                msg += `• *المبلغ المدفوع:* ${Number(i.amount || 0).toLocaleString()} ج.م
+` +
+                       `• *طريقة التحويل:* ${i.paymentMethod || 'كاش'}
+` +
+                       `• *رقم المرجع:* ${i.paymentRef || '---'}
+`;
+            } else {
+                msg += `• *تاريخ الاستحقاق:* ${i.expiryDate || '---'}
+`;
+            }
+
+            msg += `
+_تم الإرسال عبر نظام EIDCO Business OS_`;
+
+            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+            window.open(whatsappUrl, '_blank');
         };
 
         window.renderTree = function() {
@@ -672,7 +788,8 @@
                 paymentRef: pay.id || pay.ref || '---',
                 date: pay.date,
                 tag: 'مهم',
-                isPaymentRecord: true
+                isPaymentRecord: true,
+                fileData: pay.fileData || ''
             }));
 
             let allMergedDocs = [...documentsList, ...paymentsAsTreeItems];

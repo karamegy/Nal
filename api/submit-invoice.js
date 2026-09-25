@@ -1,13 +1,23 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// تهيئة Firebase Admin SDK للخادم بشكل آمن
+// تهيئة Firebase Admin SDK للخادم بشكل آمن ومحصن ضد مشاكل تنسيق المفتاح
 if (!getApps().length) {
+    let rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY || '';
+    
+    // إزالة أي علامات تنصيص زائدة قد يتم إضافتها بالخطأ عند اللصق في متغيرات البيئة
+    rawPrivateKey = rawPrivateKey.trim().replace(/^["']|["']$/g, '');
+    
+    // معالجة الأسطر الجديدة سواء كانت \n نصية أو أسطر حقيقية
+    const formattedPrivateKey = rawPrivateKey.includes('\\n') 
+        ? rawPrivateKey.replace(/\\n/g, '\n') 
+        : rawPrivateKey;
+
     initializeApp({
         credential: cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined
+            privateKey: formattedPrivateKey
         })
     });
 }
@@ -36,7 +46,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ success: false, error: 'بيانات الفاتورة مفقودة' });
         }
 
-        // استخراج معرف الشركة الحالي المرتبط بالفاتورة
+        // استخراج معرف الشركة الحالي المرتبط بالفاتورة لضمان العزل التام
         const companyId = invoiceData.companyId || 'default_company';
 
         // 1. البحث في قاعدة البيانات (Firestore) عن إعدادات الضرائب الخاصة بهذه الشركة حصرياً
@@ -81,7 +91,7 @@ export default async function handler(req, res) {
 
         const accessToken = tokenData.access_token;
 
-        // 3. إرسال الفاتورة إلى بوابة مصلحة الضرائب
+        // 3. إرسال الفاتورة إلى بوابة مصلحة الضرائب الرسمية
         const etaRes = await fetch('https://api.invoicing.eta.gov.eg/api/v1/documents', {
             method: 'POST',
             headers: {

@@ -21,9 +21,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- مكتبة html2pdf و html2canvas لتوليد ملفات الـ PDF بمعيار A4 والصور -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         :root { 
@@ -44,7 +42,7 @@
             padding-bottom: 5rem; 
             box-sizing: border-box; 
         }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         .corporate-card { 
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
@@ -79,9 +77,7 @@
             transition: all 0.2s; 
             width: 100%; 
         }
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); }
         .nav-link { 
             display: flex; 
@@ -95,28 +91,28 @@
             text-decoration: none; 
             transition: all 0.2s; 
         }
-        .nav-link:hover, .nav-link.active { 
-            background-color: #e0e7ff; 
-            color: var(--primary); 
-        }
-        .tree-node { 
-            border-right: 2px dashed #cbd5e1; 
-            margin-right: 1rem; 
-            padding-right: 1.25rem; 
-            position: relative; 
-        }
-        .custom-modal { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(15, 23, 42, 0.75); 
-            z-index: 1000; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 1rem; 
-            backdrop-filter: blur(4px); 
-        }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .tree-node { border-right: 2px dashed #cbd5e1; margin-right: 1rem; padding-right: 1.25rem; position: relative; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #previewCardContent, #previewCardContent * { visibility: visible !important; }
+            #previewCardContent {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px !important;
+                display: block !important;
+            }
+            .no-print, button, input, select { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -124,9 +120,7 @@
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
-                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg">
-                    <i class="fa-solid fa-cube"></i>
-                </div>
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-cube"></i></div>
                 <div>
                     <h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2>
                     <span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS & ARCHIVE</span>
@@ -151,7 +145,6 @@
 
         <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- رأس الصفحة العلوي -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
@@ -161,7 +154,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة المستندات وتحويلات العملاء 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة كاملة / PDF بمعيار A4 وإرسال واتساب)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة / PDF بمعيار A4 وإرسال واتساب)</span>
                             </h1>
                         </div>
                     </div>
@@ -217,7 +210,6 @@
                     </h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                        <!-- القسم / المجلد -->
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">قسم المجلد / نوع الإدخال الشجري</label>
                             <select id="docCategory" class="corporate-input" onchange="window.togglePaymentFields(this.value)">
@@ -229,7 +221,6 @@
                             </select>
                         </div>
 
-                        <!-- ربط بالعميل المسجل -->
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">
                                 <i class="fa-solid fa-building-user ml-1"></i> ربط بالعميل المسجل (كشف الحساب)
@@ -239,7 +230,6 @@
                             </select>
                         </div>
 
-                        <!-- عنوان المستند أو البيان -->
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">عنوان المستند أو اسم البيان</label>
                             <input type="text" id="docTitle" class="corporate-input" placeholder="مثال: عقد توريد، إيصال سداد، تحويل إنستا باي...">
@@ -247,13 +237,11 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <!-- تاريخ الاستحقاق أو الدفع -->
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">تاريخ الاستحقاق أو تاريخ المعاملة</label>
-                            <input type="date" id="docExpiryDate" class="corporate-input mono-font">
+                            <input type="date" id="docExpiryDate" class="corporate-input mono-font" dir="ltr">
                         </div>
 
-                        <!-- درجة الأهمية / الوسم -->
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">درجة الأهمية / الوسم الأمني</label>
                             <select id="docTag" class="corporate-input">
@@ -268,7 +256,7 @@
                     <div id="paymentExtraFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 hidden">
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">قيمة المبلغ المدفوع (ج.م)</label>
-                            <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white" placeholder="0.00">
+                            <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white" placeholder="0.00" dir="ltr">
                         </div>
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">طريقة الدفع أو التحويل المالي</label>
@@ -276,13 +264,13 @@
                                 <option value="كاش">💵 دفع نقدي (كاش الخزنة)</option>
                                 <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
                                 <option value="انستا باي">⚡ تحويل إنستا باي (InstaPay)</option>
-                                <option value="محفظة إلكترونية">📱 محفظة إلكترونية (فودافون/أورانج/اتصالات/أمنية)</option>
+                                <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
                                 <option value="شيك بنكي">📜 شيك بنكي معتمد</option>
                             </select>
                         </div>
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">رقم المرجع / IPN / رقم المحفظة / الإيصال</label>
-                            <input type="text" id="paymentRef" class="corporate-input mono-font bg-white" placeholder="REF-123456 أو رقم IPN أو رقم المحفظة">
+                            <input type="text" id="paymentRef" class="corporate-input mono-font bg-white" placeholder="REF-123456" dir="ltr">
                         </div>
                     </div>
 
@@ -316,7 +304,7 @@
                             <i class="fa-solid fa-sitemap text-indigo-600"></i> 
                             الهيكل الشجري للأرشيف والتحويلات المالية (مزامنة فورية مع معرف الحساب)
                         </h3>
-                        <span class="text-xs text-slate-500 font-mono" id="totalDocsCountCounter">جاري العد...</span>
+                        <span class="text-xs text-slate-500 font-mono" id="totalDocsCountCounter" dir="ltr">جاري العد...</span>
                     </div>
                     <div id="documentTreeContainer" class="space-y-4 text-xs">
                         <p class="text-slate-400 text-center py-8 font-bold">جاري تحميل شجرة المستندات والمدفوعات من سحابة Firebase...</p>
@@ -327,12 +315,12 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة مع أزرار التحميل (صورة كاملة / PDF بمعيار A4) وإرسال واتساب -->
+    <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة -->
     <div id="previewModal" class="custom-modal">
-        <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative">
+        <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative box-border">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل المستند والمعاينة الشاملة</h3>
-                <button onclick="window.closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
+                <button onclick="window.closePreviewModal()" class="no-print text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -344,13 +332,13 @@
                 <!-- محتوى المعاينة الفعلية -->
             </div>
             
-            <!-- أزرار الإجراءات الإضافية: حفظ صورة كاملة، حفظ PDF بمعيار A4، إرسال واتساب -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t">
+            <!-- أزرار الإجراءات الإضافية -->
+            <div class="no-print grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t">
                 <button onclick="window.downloadDocAsImage()" class="bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> حفظ كصورة كاملة (PNG)
                 </button>
                 <button onclick="window.downloadDocAsPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                    <i class="fa-solid fa-file-pdf"></i> حفظ PDF (معيار ISO A4)
+                    <i class="fa-solid fa-file-pdf"></i> حفظ PDF (معيار A4)
                 </button>
                 <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-brands fa-whatsapp text-sm"></i> إرسال عبر واتساب
@@ -358,8 +346,8 @@
             </div>
 
             <div class="flex justify-between items-center pt-2">
-                <span id="previewAdminInfo" class="text-[11px] text-slate-500 font-mono"></span>
-                <button onclick="window.closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق النافذة</button>
+                <span id="previewAdminInfo" class="text-[11px] text-slate-500 font-mono" dir="ltr"></span>
+                <button onclick="window.closePreviewModal()" class="no-print bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق النافذة</button>
             </div>
         </div>
     </div>
@@ -373,7 +361,7 @@
 
         window.togglePaymentFields = function(category) {
             const extraFields = document.getElementById('paymentExtraFields');
-            if (category === 'المسدفعات والتحويلات البنكية' || category === 'المدفوعات والتحويلات البنكية') {
+            if (category === 'المدفوعات والتحويلات البنكية') {
                 extraFields.classList.remove('hidden');
             } else {
                 extraFields.classList.add('hidden');
@@ -633,19 +621,19 @@
             let metaHtml = `
                 <div><span class="text-slate-500 block font-bold">القسم الشجري:</span> <span class="text-indigo-900 font-bold">${i.category}</span></div>
                 <div><span class="text-slate-500 block font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">${i.clientName || 'عام (بدون عميل)'}</span></div>
-                <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font">${i.date || '---'}</span></div>
+                <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font" dir="ltr">${i.date || '---'}</span></div>
                 <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${i.tag || 'عادي'}</span></div>
             `;
 
             if (isPaymentCat) {
                 metaHtml += `
-                    <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
+                    <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
                     <div><span class="text-slate-500 block font-bold">طريقة التحويل:</span> <span class="font-bold text-indigo-700">${i.paymentMethod || i.method || 'كاش'}</span></div>
-                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font">${i.paymentRef || i.ref || '---'}</span></div>
+                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font" dir="ltr">${i.paymentRef || i.ref || '---'}</span></div>
                 `;
             } else {
                 metaHtml += `
-                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800">${i.expiryDate || '---'}</span></div>
+                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800" dir="ltr">${i.expiryDate || '---'}</span></div>
                 `;
             }
             metaContainer.innerHTML = metaHtml;
@@ -669,41 +657,24 @@
             document.getElementById('previewModal').classList.remove('active');
         };
 
-        // دالة حفظ كامل الفاتورة أو المعاينة كصورة (PNG) بدقة عالية وضمان عدم وجود أخطاء
         window.downloadDocAsImage = function() {
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
             
-            // استخدام html2canvas لالتقاط نافذة المعاينة كاملة كصورة
             html2canvas(element, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
-                link.download = `${activePreviewItem.title || 'invoice'}_full.png`;
+                link.download = `${activePreviewItem.title || 'document'}_full.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-                alert('✓ تم حفظ الفاتورة بالكامل كصورة (PNG) بنجاح.');
+                alert('✓ تم حفظ المستند بالكامل كصورة (PNG) بنجاح.');
             }).catch(err => {
                 alert('خطأ أثناء حفظ الصورة: ' + err.message);
             });
         };
 
-        // دالة حفظ المستند بصيغة PDF مع ضبط قياسات ورقة ISO A4 وال هوامش للطباعة بدون أخطاء
+        // دالة الطباعة وتصدير PDF بمعيار A4 تماماً مثل صفحة العملاء
         window.downloadDocAsPDF = function() {
-            if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
-            let element = document.getElementById('previewCardContent');
-            
-            let opt = {
-                margin:       [10, 10, 10, 10], // هوامش متناسقة لورقة A4
-                filename:     `${activePreviewItem.title || 'document'}_ISO_A4.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().from(element).set(opt).save().then(() => {
-                alert('✓ تم تصدير وتحميل المستند كملف PDF (معيار ISO A4) بنجاح.');
-            }).catch(err => {
-                alert('خطأ أثناء تصدير PDF: ' + err.message);
-            });
+            window.print();
         };
 
         window.sendDocWhatsApp = function() {
@@ -787,7 +758,7 @@
                         <div class="flex items-center gap-2 font-black text-indigo-700 text-sm">
                             <i class="fa-solid ${catIcon}"></i>
                             <span>${cat}</span>
-                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono">${items.length} سجلات</span>
+                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono" dir="ltr">${items.length} سجلات</span>
                         </div>
                         <div class="tree-node space-y-2 pt-1">
                             ${items.length ? items.map(i => {
@@ -805,7 +776,7 @@
                                                     <span class="font-bold text-slate-900 block truncate">
                                                         ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''}
                                                     </span>
-                                                    <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5">
+                                                    <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5" dir="ltr">
                                                         <span>التاريخ: ${i.date || '---'}</span>
                                                         <span>•</span>
                                                         <span class="text-indigo-700 font-bold">الطريقة: ${i.paymentMethod}</span>
@@ -815,7 +786,7 @@
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2.5 shrink-0">
-                                                <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+                                                <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200" dir="ltr">
                                                     +${Number(i.amount || 0).toLocaleString()} ج.م
                                                 </span>
                                                 <button onclick="window.previewDocument('${i.docId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
@@ -838,7 +809,7 @@
                                                     <span class="font-bold text-slate-900 block truncate">
                                                         ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''}
                                                     </span>
-                                                    <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5">
+                                                    <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5" dir="ltr">
                                                         <span>الإضافة: ${i.date || '---'}</span>
                                                         <span>•</span>
                                                         <span class="${isExpired ? 'text-rose-600 font-bold' : 'text-slate-600'}">

@@ -11,6 +11,15 @@
     <script src="./eidco-core.js"></script>
 
     <script>
+        // إلغاء تفعيل أي Service Worker قديم لمنع التخزين المؤقت العنيف على الموبايل
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -726,7 +735,7 @@
             `).join('');
         }
 
-        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر الرابط الثابت النظيف
+        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب الآمنة والمحصنة ضد أخطاء الاتصال
         window.sendBatchToETA = async function(batchId) {
             let inv = state.invoices.find(i => i.id === batchId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -736,10 +745,15 @@
             try {
                 alert('⏳ جاري إرسال الفاتورة المجمعة إلى خادم مصلحة الضرائب...');
 
+                const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
+
                 const response = await fetch('https://nal-app-2026.vercel.app/api/submit-invoice', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invoiceData: inv })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ invoiceData: cleanInvoiceData })
                 });
 
                 const responseText = await response.text();
@@ -747,7 +761,7 @@
                 try {
                     result = JSON.parse(responseText);
                 } catch (parseErr) {
-                    throw new Error('استجابة غير صالحة من الخادم: ' + responseText.substring(0, 120));
+                    throw new Error('استجابة غير صالحة من الخادم: ' + responseText);
                 }
 
                 if (response.ok && result.success) {
@@ -760,10 +774,10 @@
                     alert('✅ تم إرسال الفاتورة المجمعة بنجاح إلى مصلحة الضرائب وتحديث حالة المستند!');
                 } else {
                     console.error('ETA Rejection:', result.error);
-                    alert('❌ فشل اعتماد الفاتورة من الضرائب: ' + JSON.stringify(result.error || 'خطأ غير معروف'));
+                    alert('❌ رفضت مصلحة الضرائب الفاتورة: ' + (typeof result.error === 'object' ? JSON.stringify(result.error) : result.error));
                 }
             } catch (err) {
-                console.error('Network Error:', err);
+                console.error('Network Error Details:', err);
                 alert('❌ تفاصيل الخطأ الفعلي: ' + err.message);
             }
         };

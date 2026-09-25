@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v26-cache'; // تم تحديث الإصدار لتفريغ الكاش القديم
+const CACHE_NAME = 'eidco-v27-cache'; // تحديث الإصدار ليشمل كافة الصفحات والملفات الجديدة
 const assetsToCache = [
   './index.html',
   './auth.html',
@@ -16,9 +16,16 @@ const assetsToCache = [
   './map.html',
   './settings.html',
   './tv.html',
+  './documents.html',
+  './privacy.html',
+  './remote.html',
+  './eidco-core.js',
+  './firebase-config.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-new-192.png',
+  './icon-new-512.png'
 ];
 
 self.addEventListener('install', (e) => {

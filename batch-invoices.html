@@ -726,7 +726,7 @@
             `).join('');
         }
 
-        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر خادم Vercel الأساسي (تم تحديث الرابط بالنطاق النشط الصحيح)
+        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر الرابط الثابت النظيف
         window.sendBatchToETA = async function(batchId) {
             let inv = state.invoices.find(i => i.id === batchId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -736,13 +736,19 @@
             try {
                 alert('⏳ جاري إرسال الفاتورة المجمعة إلى خادم مصلحة الضرائب...');
 
-                const response = await fetch('https://nal-app-2026-anzngqg3-karamapk.vercel.app/api/submit-invoice', {
+                const response = await fetch('https://nal-app-2026.vercel.app/api/submit-invoice', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ invoiceData: inv })
                 });
 
-                const result = await response.json();
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseErr) {
+                    throw new Error('استجابة غير صالحة من الخادم: ' + responseText.substring(0, 120));
+                }
 
                 if (response.ok && result.success) {
                     if (inv.docId) {
@@ -758,7 +764,7 @@
                 }
             } catch (err) {
                 console.error('Network Error:', err);
-                alert('❌ حدث خطأ أثناء الاتصال بخدمة الإرسال: ' + err.message);
+                alert('❌ تفاصيل الخطأ الفعلي: ' + err.message);
             }
         };
 

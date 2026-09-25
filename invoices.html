@@ -355,7 +355,7 @@
                             </button>
                         ` : ''}
                         <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
-                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-emerald-200" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
                         <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200" title="حذف الفاتورة">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -538,7 +538,7 @@
             }
         };
 
-        // دالة إرسال الفاتورة الفردية إلى مصلحة الضرائب (تم تصحيح الرابط هنا ليطابق نطاق Vercel النشط)
+        // دالة إرسال الفاتورة الفردية إلى مصلحة الضرائب مع معالجة دقيقة للاستجابة والأخطاء
         window.sendToETA = async function(invoiceId, docId) {
             let inv = state.invoices.find(i => i.id === invoiceId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -554,7 +554,13 @@
                     body: JSON.stringify({ invoiceData: inv })
                 });
 
-                const result = await response.json();
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseErr) {
+                    throw new Error('استجابة غير صالحة من الخادم: ' + responseText.substring(0, 120));
+                }
 
                 if (response.ok && result.success) {
                     if (docId) {
@@ -570,7 +576,7 @@
                 }
             } catch (err) {
                 console.error('Network Error:', err);
-                alert('❌ حدث خطأ أثناء الاتصال بخدمة الإرسال: ' + err.message);
+                alert('❌ تفاصيل الخطأ الفعلي: ' + err.message);
             }
         };
     </script>

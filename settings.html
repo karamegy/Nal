@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+    <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
@@ -67,7 +67,6 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
@@ -76,7 +75,6 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <!-- معرف الشركة مع ضبط العرض والتجاوب -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
@@ -112,6 +110,28 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- قسم إعدادات الربط الضريبي (ETA Integration) -->
+                <div class="corporate-card p-6 sm:p-8 space-y-4 bg-white border border-indigo-100">
+                    <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-shield text-indigo-600 ml-2"></i> إعدادات الربط مع مصلحة الضرائب المصرية (ETA)</h2>
+                    <p class="text-xs text-slate-500">أدخل مفاتيح التكامل الخاصة بشركتك (Client ID & Client Secret) المستخرجة من بوابة الفاتورة الإلكترونية ليتم إرسال الاعتمادات باسمك سحابياً.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-xs">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">ETA Client ID</label>
+                            <input type="text" id="etaClientIdInput" placeholder="أدخل معرف العميل الضريبي..." class="corporate-input mono-font" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">ETA Client Secret</label>
+                            <input type="password" id="etaClientSecretInput" placeholder="أدخل السر الضريبي..." class="corporate-input mono-font" dir="ltr">
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="window.saveEtaSettings()" class="btn-primary text-xs py-2.5 px-6 cursor-pointer">
+                            <i class="fa-solid fa-floppy-disk ml-1.5"></i> حفظ مفاتيح الضرائب سحابياً
+                        </button>
+                    </div>
+                </div>
+
                 <!-- قسم النسخ الاحتياطي والتصدير -->
                 <div class="corporate-card p-6 sm:p-8 space-y-4 bg-white">
                     <h2 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-cloud-arrow-down text-indigo-600 ml-2"></i> خيارات النسخ الاحتياطي والتصدير السحابي المعزول</h2>
@@ -254,14 +274,57 @@
         }
 
         signInAnonymously(auth).then(async () => {
-            // جلب أولي فوري باستخدام getDocs للتأكد من الاتصال وجاهزية البيانات
             try {
-                const testQuery = query(collection(db, "settings"), where("companyId", "==", currentCompanyId));
-                await getDocs(testQuery);
+                const settingsQuery = query(collection(db, "settings"), where("companyId", "==", currentCompanyId));
+                const snap = await getDocs(settingsQuery);
+                if (!snap.empty) {
+                    let settingsData = snap.docs[0].data();
+                    if(settingsData.etaClientId) document.getElementById('etaClientIdInput').value = settingsData.etaClientId;
+                    if(settingsData.etaClientSecret) document.getElementById('etaClientSecretInput').value = settingsData.etaClientSecret;
+                }
             } catch (e) {
-                console.error("خطأ في الاتصال الأولي باستخدام getDocs:", e);
+                console.error("خطأ في جلب إعدادات الضرائب سحابياً:", e);
             }
         }).catch(err => console.log("Auth error:", err));
+
+        // دالة حفظ مفاتيح مصلحة الضرائب الخاصة بالشركة سحابياً
+        window.saveEtaSettings = async function() {
+            let clientId = document.getElementById('etaClientIdInput').value.trim();
+            let clientSecret = document.getElementById('etaClientSecretInput').value.trim();
+
+            if(!clientId || !clientSecret) return alert('⚠️ يرجى إدخال Client ID و ClientSecret بشكل صحيح');
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
+            try {
+                const settingsQuery = query(collection(db, "settings"), where("companyId", "==", currentCompanyId));
+                const snap = await getDocs(settingsQuery);
+
+                let settingDocRef;
+                if (!snap.empty) {
+                    settingDocRef = doc(db, "settings", snap.docs[0].id);
+                    await setDoc(settingDocRef, {
+                        etaClientId: clientId,
+                        etaClientSecret: clientSecret,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                } else {
+                    settingDocRef = doc(collection(db, "settings"));
+                    await setDoc(settingDocRef, {
+                        companyId: currentCompanyId,
+                        etaClientId: clientId,
+                        etaClientSecret: clientSecret,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
+                alert('✓ تم حفظ مفاتيح مصلحة الضرائب سحابياً بنجاح لهذا الحساب المعزول!');
+            } catch (err) {
+                alert('خطأ أثناء حفظ مفاتيح الضرائب: ' + err.message);
+            }
+        };
 
         window.saveCompanyGmail = function() {
             let gmail = document.getElementById('companyGmailInput').value.trim();
@@ -461,6 +524,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

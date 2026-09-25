@@ -124,11 +124,18 @@
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b border-slate-200">
-                                    <th class="p-4">رقم الفاتورة</th><th class="p-4">العميل</th><th class="p-4">الصنف</th><th class="p-4">الكمية</th><th class="p-4">الإجمالي</th><th class="p-4">الربح</th><th class="p-4 text-center">إجراء</th>
+                                    <th class="p-4">رقم الفاتورة</th>
+                                    <th class="p-4">العميل</th>
+                                    <th class="p-4">الصنف</th>
+                                    <th class="p-4">الكمية</th>
+                                    <th class="p-4">الإجمالي</th>
+                                    <th class="p-4">الربح</th>
+                                    <th class="p-4 text-center">حالة الضرائب</th>
+                                    <th class="p-4 text-center">إجراء</th>
                                 </tr>
                             </thead>
                             <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
+                                <tr><td colspan="8" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -275,7 +282,7 @@
             let tbody = document.getElementById('invoicesTableBody');
             
             if(!singleInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
@@ -288,7 +295,17 @@
                     <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 text-center">
-                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer" title="حذف الفاتورة سحابياً">
+                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${i.etaSubmitted ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
+                            ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center flex items-center justify-center gap-2">
+                        ${!i.etaSubmitted ? `
+                            <button onclick="window.sendToETA('${i.id}', '${i.docId || ''}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200" title="إرسال لمصلحة الضرائب">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200" title="حذف الفاتورة">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -358,7 +375,8 @@
                     total, 
                     profit, 
                     date: today,
-                    isBatch: false
+                    isBatch: false,
+                    etaSubmitted: false
                 });
 
                 await addDoc(collection(db, "transactions"), { 
@@ -407,6 +425,43 @@
                 alert('✓ تم حذف الفاتورة وتحديث النظام سحابياً بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حذف الفاتورة بالسحابة: ' + err.message);
+            }
+        };
+
+        // دالة إرسال الفاتورة إلى مصلحة الضرائب عبر Vercel API
+        window.sendToETA = async function(invoiceId, docId) {
+            let inv = state.invoices.find(i => i.id === invoiceId);
+            if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
+
+            if (!confirm(`هل أنت متأكد من إرسال الفاتورة (${invoiceId}) إلى مصلحة الضرائب المصرية؟`)) return;
+
+            try {
+                alert('⏳ جاري إرسال الفاتورة إلى خادم مصلحة الضرائب...');
+
+                // إرسال الطلب إلى مسار الـ API على Vercel
+                const response = await fetch('/api/submit-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoiceData: inv })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (docId) {
+                        await updateDoc(doc(db, "invoices", docId), { 
+                            etaSubmitted: true, 
+                            etaResponse: result.response 
+                        });
+                    }
+                    alert('✅ تم إرسال الفاتورة بنجاح إلى مصلحة الضرائب وتحديث حالة المستند!');
+                } else {
+                    console.error('ETA Rejection:', result.error);
+                    alert('❌ فشل اعتماد الفاتورة من الضرائب: ' + JSON.stringify(result.error || 'خطأ غير معروف'));
+                }
+            } catch (err) {
+                console.error('Network Error:', err);
+                alert('❌ حدث خطأ أثناء الاتصال بخدمة الإرسال: ' + err.message);
             }
         };
     </script>

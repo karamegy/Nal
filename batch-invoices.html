@@ -223,6 +223,7 @@
                                     <th class="p-4">الإجمالي الكلي</th>
                                     <th class="p-4">صافي الربح</th>
                                     <th class="p-4">التاريخ</th>
+                                    <th class="p-4 text-center">حالة الضرائب</th>
                                     <th class="p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
@@ -535,7 +536,6 @@
             if(!rows.length) return alert('الرجاء إضافة صنف واحد على الأقل');
 
             try {
-                // جلب المنتجات مباشرة من سحابة Firestore باستخدام getDocs لضمان الموثوقية التامة
                 const productsSnap = await getDocs(query(collection(db, "products"), where("companyId", "==", currentCompanyId)));
                 let cloudProducts = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
@@ -575,14 +575,13 @@
                                 let p = cloudProducts.find(x => x.code === it.code);
                                 if(p && p.docId) {
                                     await updateDoc(doc(db, "products", p.docId), { qty: p.qty + it.qty });
-                                    p.qty += it.qty; // تحديث محلي مؤقت
+                                    p.qty += it.qty;
                                 }
                             }
                         }
                     }
                 }
 
-                // التحقق من الكميات المتاحة في سحابة المخزن عبر البيانات المحدثة
                 for(let item of items) {
                     let p = cloudProducts.find(x => x.code === item.code);
                     if(!p || p.qty < item.qty) {
@@ -590,7 +589,6 @@
                     }
                 }
 
-                // خصم الكميات من المخزن السحابي
                 for(let item of items) {
                     let p = cloudProducts.find(x => x.code === item.code);
                     if(p && p.docId) {
@@ -609,7 +607,8 @@
                     discount: discount,
                     total: grandTotal,
                     profit: totalProfit,
-                    date: today
+                    date: today,
+                    etaSubmitted: false
                 };
 
                 const invoicesCollection = collection(db, "invoices");
@@ -684,7 +683,7 @@
             let batchInvs = state.invoices.filter(i => i.isBatch);
 
             if(!batchInvs.length) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
@@ -697,7 +696,17 @@
                     <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit||0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${i.etaSubmitted ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
+                            ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
+                        </span>
+                    </td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
+                        ${!i.etaSubmitted ? `
+                            <button type="button" onclick="window.sendBatchToETA('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-indigo-50 rounded-lg border border-indigo-200" title="إرسال لمصلحة الضرائب">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                            </button>
+                        ` : ''}
                         <button type="button" onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
                         <button type="button" onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
                         <button type="button" onclick="window.editBatchInvoice('${i.id}')" class="text-amber-600 hover:text-amber-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -707,7 +716,42 @@
             `).join('');
         }
 
-        // حذف الفاتورة مع استخدام getDocs لجلب المنتجات والتحقق السحابي الفوري
+        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب عبر Vercel API
+        window.sendBatchToETA = async function(batchId) {
+            let inv = state.invoices.find(i => i.id === batchId);
+            if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
+
+            if (!confirm(`هل أنت متأكد من إرسال الفاتورة المجمعة (${batchId}) إلى مصلحة الضرائب المصرية؟`)) return;
+
+            try {
+                alert('⏳ جاري إرسال الفاتورة المجمعة إلى خادم مصلحة الضرائب...');
+
+                const response = await fetch('/api/submit-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoiceData: inv })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (inv.docId) {
+                        await updateDoc(doc(db, "invoices", inv.docId), { 
+                            etaSubmitted: true, 
+                            etaResponse: result.response 
+                        });
+                    }
+                    alert('✅ تم إرسال الفاتورة المجمعة بنجاح إلى مصلحة الضرائب وتحديث حالة المستند!');
+                } else {
+                    console.error('ETA Rejection:', result.error);
+                    alert('❌ فشل اعتماد الفاتورة من الضرائب: ' + JSON.stringify(result.error || 'خطأ غير معروف'));
+                }
+            } catch (err) {
+                console.error('Network Error:', err);
+                alert('❌ حدث خطأ أثناء الاتصال بخدمة الإرسال: ' + err.message);
+            }
+        };
+
         window.deleteBatchInvoice = async function(id) {
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إعادة الأصناف للمخزن في السحابة.')) return;
             

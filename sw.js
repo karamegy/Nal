@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v25-cache'; // تم تحديث الإصدار لضمان تحديث الكاش وملف الشكاوى الجديد
+const CACHE_NAME = 'eidco-v26-cache'; // تم تحديث الإصدار لتفريغ الكاش القديم
 const assetsToCache = [
   './index.html',
   './auth.html',
@@ -10,7 +10,7 @@ const assetsToCache = [
   './chat.html',
   './profile.html',
   './users.html',
-  './admin-reports.html', // تمت الإضافه بنجاح
+  './admin-reports.html',
   './admin-accounts.html',
   './vault.html',
   './map.html',
@@ -49,6 +49,11 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   let requestURL = new URL(e.request.url);
+
+  // 🛑 الاستثناء الأهم: السماح لطلبات Vercel أو طلبات POST بالمرور مباشرة عبر الشبكة دون أي اعتراض
+  if (requestURL.hostname.includes('vercel.app') || e.request.method !== 'GET') {
+    return; 
+  }
 
   if (e.request.mode === 'navigate' || requestURL.pathname.endsWith('.html') || requestURL.pathname === '/') {
     e.respondWith(

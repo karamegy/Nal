@@ -91,8 +91,7 @@
             transition: all 0.2s; 
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .tree-node { border-right: 2px dashed #cbd5e1; margin-right: 1rem; padding-right: 1.25rem; position: relative; }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); overflow-y: auto; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 0.75rem; backdrop-filter: blur(4px); overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
 
         @media print {
@@ -152,7 +151,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(نظام مستقر بدون قراءات مفاجئة، مع رفع الصور وجداول الملفات)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(نظام مستقر ومحدث لعرض العملاء بدقة)</span>
                             </h1>
                         </div>
                     </div>
@@ -274,7 +273,7 @@
                     </div>
 
                     <div class="pt-2">
-                        <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md">
+                        <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md w-full">
                             <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب ورفع الصورة وربطه بالعميل سحابياً
                         </button>
                     </div>
@@ -288,7 +287,7 @@
                     </div>
                 </div>
 
-                <!-- قائمة المجلدات/الملفات (عند النقر على أي ملف يفتح الجدول الخاص به) -->
+                <!-- قائمة المجلدات/الملفات -->
                 <div class="corporate-card p-6 space-y-4 bg-white shadow-sm">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
@@ -306,12 +305,12 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه (تم تصحيح التخطيط وزر الحفظ والعملاء بالكامل) -->
     <div id="folderTableModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[90vh] flex flex-col">
+        <div class="corporate-card p-4 sm:p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
                 <div>
-                    <h3 id="folderModalTitle" class="font-black text-slate-900 text-base flex items-center gap-2">
+                    <h3 id="folderModalTitle" class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
                         <i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف
                     </h3>
                     <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض ومدخلات الملف المحدد مع إمكانية إضافة وسحب البيانات</span>
@@ -321,8 +320,8 @@
                 </button>
             </div>
 
-            <!-- نموذج إضافة سريع داخل جدول الملف المختار مع العميل والصورة -->
-            <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3 shrink-0">
+            <!-- نموذج إضافة سريع داخل جدول الملف المختار (تصميم متجاوب ومنفصل لمنع أي تداخل) -->
+            <div class="p-3 sm:p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3 shrink-0">
                 <span class="text-xs font-bold text-indigo-900 block"><i class="fa-solid fa-plus-circle ml-1"></i> إضافة مدخل جديد لهذا الملف:</span>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <input type="text" id="modalInputTitle" class="corporate-input bg-white" placeholder="اسم الحساب أو البيان...">
@@ -331,14 +330,15 @@
                         <option value="">-- اختر العميل المسجل --</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="grid grid-cols-1 gap-3 text-xs">
                     <input type="text" id="modalInputNotes" class="corporate-input bg-white" placeholder="ملاحظات إضافية...">
-                    <div class="flex gap-2 items-center">
-                        <input type="file" id="modalInputFile" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer py-2">
-                        <button onclick="window.saveItemToFolder()" class="btn-primary text-xs py-2 px-4 shrink-0 flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> حفظ بالملف
-                        </button>
-                    </div>
+                </div>
+                <!-- منطقة رفع الملف وزر الحفظ موضوعة بوضوح تحت بعضها على الموبايل وبجانب بعضها على الشاشات الكبيرة لمنع التداخل تماماً -->
+                <div class="flex flex-col sm:flex-row gap-3 items-stretch pt-1">
+                    <input type="file" id="modalInputFile" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer py-2 flex-1">
+                    <button onclick="window.saveItemToFolder()" class="btn-primary text-xs py-3 px-6 flex items-center justify-center gap-2 cursor-pointer shrink-0">
+                        <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ بالملف
+                    </button>
                 </div>
             </div>
 
@@ -357,7 +357,7 @@
                         </tr>
                     </thead>
                     <tbody id="folderTableBody" class="divide-y divide-slate-100">
-                        <!-- يتم تعبئتها برمجياً -->
+                        <!-- يتم تعبئتها برمجياً بدقة -->
                     </tbody>
                 </table>
             </div>
@@ -520,7 +520,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase لإدارة شجرة الملفات والمصروفات والعملاء (بدون قراءات مفاجئة) -->
+    <!-- سكربت Firebase لإدارة شجرة الملفات والمصروفات والعملاء -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -562,13 +562,11 @@
         window.generalUploadedImageBase64 = '';
         window.modalUploadedImageBase64 = '';
 
-        // جلب العملاء وملء قوائم الاختيار والبحث دون تكرار مزعج
         async function fetchClientsAndDropdowns() {
             try {
                 const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
                 const snapshot = await getDocs(clientsQuery);
                 clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
-                
                 updateClientsDropdowns(clientsList);
             } catch(e) {
                 console.error("خطأ في جلب قائمة العملاء السحابية:", e);
@@ -578,7 +576,6 @@
         window.updateClientsDropdowns = function(listToRender) {
             let clientSelect = document.getElementById('accClientSelect');
             let modalClientSelect = document.getElementById('modalInputClient');
-            
             let currentSelectedVal = clientSelect ? clientSelect.value : '';
 
             let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
@@ -589,12 +586,11 @@
 
             if (clientSelect) {
                 clientSelect.innerHTML = optionsHtml;
-                clientSelect.value = currentSelectedVal; // الحفاظ على الاختيار الحالي لمنع أي إعادة ضبط مفاجئة
+                clientSelect.value = currentSelectedVal;
             }
             if (modalClientSelect) modalClientSelect.innerHTML = optionsHtml;
         };
 
-        // وظيفة البحث الذكي عن اسم العميل لتصفية القائمة
         window.filterClientDropdown = function() {
             let searchVal = document.getElementById('clientSearchInput').value.toLowerCase().trim();
             if (!searchVal) {
@@ -624,13 +620,14 @@
             onSnapshot(accountsRef, (snapshot) => {
                 accountsTreeList = snapshot.docs.map(d => ({ accountId: d.id, ...d.data() }));
                 renderAccountsTree();
-                if (currentActiveFolder) openFolderTable(currentActiveFolder, true); // تحديث صامت للجدول المفتوح
+                if (currentActiveFolder) openFolderTable(currentActiveFolder, true);
             });
 
             onSnapshot(clientsRef, (snapshot) => {
                 clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 renderAccountsTree();
                 updateClientsDropdowns(clientsList);
+                if (currentActiveFolder === "حسابات العملاء والشركات") openFolderTable(currentActiveFolder, true);
             });
 
             onSnapshot(invoicesRef, (snapshot) => {
@@ -649,7 +646,6 @@
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // حفظ حساب/مدخل جديد مع رفع الصورة والعميل
         window.saveAccountNode = async function() {
             let category = document.getElementById('accCategory').value;
             let title = document.getElementById('accTitle').value.trim();
@@ -685,7 +681,6 @@
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
                 });
 
-                // تفريغ المدخلات بلطف
                 document.getElementById('accTitle').value = '';
                 document.getElementById('accCode').value = '';
                 document.getElementById('accAmount').value = '';
@@ -700,7 +695,6 @@
             }
         };
 
-        // استيراد شجرة الحسابات الافتراضية
         window.seedDefaultAccountsTree = async function() {
             if (!confirm('هل تريد استيراد شجرة الحسابات والملفات الافتراضية؟')) return;
             
@@ -737,7 +731,6 @@
             }
         };
 
-        // فتح الجدول المخصص للملف/التصنيف عند النقر عليه
         window.openFolderTable = function(categoryName, isSilent = false) {
             currentActiveFolder = categoryName;
             document.getElementById('folderModalTitle').innerHTML = `<i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف: ${categoryName}`;
@@ -751,16 +744,16 @@
 
             if (isClientsFolder) {
                 items.forEach(c => {
-                    let cName = c.name || c.clientName || 'عميل بدون اسم';
+                    let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
                     let cPhone = c.phone || '---';
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="window.openClientStatement('${cName}')">
-                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId.substring(0,6)}</td>
-                            <td class="p-3 font-bold text-slate-900">${cName} (${cPhone})</td>
-                            <td class="p-3 text-indigo-700 font-bold">عميل مسجل</td>
-                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">---</td>
+                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
+                            <td class="p-3 font-bold text-slate-900">${cName}</td>
+                            <td class="p-3 text-indigo-700 font-bold">${cPhone}</td>
+                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">نشط</td>
                             <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
-                            <td class="p-3">---</td>
+                            <td class="p-3">مسجل</td>
                             <td class="p-3 text-center">
                                 <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
                                     <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
@@ -809,7 +802,6 @@
             currentActiveFolder = null;
         };
 
-        // حفظ عنصر جديد مباشرة داخل الملف المفتوح حالياً من نافذة الجدول المخصص
         window.saveItemToFolder = async function() {
             if (!currentActiveFolder) return;
             let title = document.getElementById('modalInputTitle').value.trim();
@@ -873,7 +865,6 @@
             document.getElementById('imagePreviewModal').classList.remove('active');
         };
 
-        // فتح كشف حساب العميل الشامل والبحث عن معلوماته
         window.openClientStatement = function(clientName) {
             currentActiveClient = clientsList.find(c => (c.name || c.clientName || c.companyName) === clientName);
             if(!currentActiveClient) return;
@@ -996,7 +987,6 @@
             window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
         };
 
-        // عرض قائمة الملفات والتصنيفات
         window.renderAccountsTree = function() {
             let container = document.getElementById('accountsTreeContainer');
             

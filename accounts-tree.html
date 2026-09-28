@@ -151,7 +151,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(عرض الجداول والمستندات مباشرة عند النقر)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(عرض الجداول والمستندات بانتظام تام)</span>
                             </h1>
                         </div>
                     </div>
@@ -305,7 +305,7 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه (تمت إزالة نموذج الإضافة تماماً والاكتفاء بعرض الجدول فقط) -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
     <div id="folderTableModal" class="custom-modal">
         <div class="corporate-card p-4 sm:p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
@@ -320,19 +320,11 @@
                 </button>
             </div>
 
-            <!-- جدول محتويات الملف المختار -->
-            <div class="flex-1 overflow-y-auto rounded-xl border border-slate-200">
-                <table class="w-full text-right text-xs">
-                    <thead class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b">
-                        <tr>
-                            <th class="p-3">الكود / الرقم</th>
-                            <th class="p-3">البيان / الحساب</th>
-                            <th class="p-3">العميل المرتبط</th>
-                            <th class="p-3">المبلغ</th>
-                            <th class="p-3">التاريخ</th>
-                            <th class="p-3">المستند / الصورة</th>
-                            <th class="p-3 text-center">الإجراءات</th>
-                        </tr>
+            <!-- جدول محتويات الملف المختار (مع min-w لضمان ترتيب الأعمدة وعدم تداخلها) -->
+            <div class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
+                <table class="w-full min-w-[700px] text-right text-xs">
+                    <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b">
+                        <!-- يتم تعبئة الرؤوس ديناميكياً حسب نوع الملف -->
                     </thead>
                     <tbody id="folderTableBody" class="divide-y divide-slate-100">
                         <!-- يتم تعبئتها برمجياً بدقة -->
@@ -699,10 +691,23 @@
             let isClientsFolder = (categoryName === "حسابات العملاء والشركات");
             let items = isClientsFolder ? clientsList : accountsTreeList.filter(a => a.category === categoryName);
 
+            let thead = document.getElementById('folderTableHead');
             let tbody = document.getElementById('folderTableBody');
+            let headerHtml = '';
             let rowsHtml = '';
 
             if (isClientsFolder) {
+                headerHtml = `
+                    <tr>
+                        <th class="p-3">كود العميل</th>
+                        <th class="p-3">اسم العميل</th>
+                        <th class="p-3">الهاتف</th>
+                        <th class="p-3">الحالة</th>
+                        <th class="p-3">التاريخ</th>
+                        <th class="p-3">النوع</th>
+                        <th class="p-3 text-center">الإجراءات</th>
+                    </tr>
+                `;
                 items.forEach(c => {
                     let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
                     let cPhone = c.phone || '---';
@@ -710,10 +715,10 @@
                         <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="window.openClientStatement('${cName}')">
                             <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
                             <td class="p-3 font-bold text-slate-900">${cName}</td>
-                            <td class="p-3 text-indigo-700 font-bold">${cPhone}</td>
-                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">نشط</td>
+                            <td class="p-3 text-indigo-700 font-bold" dir="ltr">${cPhone}</td>
+                            <td class="p-3 font-bold text-emerald-600">نشط</td>
                             <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
-                            <td class="p-3">مسجل</td>
+                            <td class="p-3 text-slate-600">عميل مسجل</td>
                             <td class="p-3 text-center">
                                 <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
                                     <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
@@ -723,6 +728,17 @@
                     `;
                 });
             } else {
+                headerHtml = `
+                    <tr>
+                        <th class="p-3">الكود / الرقم</th>
+                        <th class="p-3">البيان / الحساب</th>
+                        <th class="p-3">العميل المرتبط</th>
+                        <th class="p-3">المبلغ</th>
+                        <th class="p-3">التاريخ</th>
+                        <th class="p-3">المستند / الصورة</th>
+                        <th class="p-3 text-center">الإجراءات</th>
+                    </tr>
+                `;
                 items.forEach(i => {
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition">
@@ -748,9 +764,11 @@
             }
 
             if (!rowsHtml) {
-                rowsHtml = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
+                let colSpan = isClientsFolder ? 7 : 7;
+                rowsHtml = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
             }
 
+            if (thead) thead.innerHTML = headerHtml;
             tbody.innerHTML = rowsHtml;
             if (!isSilent) {
                 document.getElementById('folderTableModal').classList.add('active');

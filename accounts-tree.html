@@ -98,17 +98,15 @@
 
         @media print {
             body * { visibility: hidden !important; }
-            #previewCardContent, #previewCardContent * { visibility: visible !important; }
-            #previewCardContent {
+            #statementModal, #statementModal * { visibility: visible !important; }
+            #statementModal {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
-                max-width: 100% !important;
+                height: auto !important;
                 background: white !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 10px !important;
+                padding: 0 !important;
                 display: block !important;
             }
             .no-print, button, input, select { display: none !important; }
@@ -231,7 +229,6 @@
                             </select>
                         </div>
 
-                        <!-- قائمة اختيار العميل المسجل لديك تماماً مثل صفحة المستندات -->
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">
                                 <i class="fa-solid fa-building-user ml-1"></i> اختر العميل المسجل (لتتبع الحساب عليه)
@@ -292,7 +289,85 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الحساب أو التعديل -->
+    <!-- نافذة كشف حساب العميل التفصيلي (مطابق لصفحة clients.html) -->
+    <div id="statementModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
+            <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
+                        <span class="text-[11px] text-slate-500">EIDCO // كشف حساب وتفاصيل المديونية المعتمد</span>
+                    </div>
+                    <button onclick="closeStatementModal()" class="no-print text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                    <div class="p-3 bg-slate-50 rounded-xl border">
+                        <span class="text-[10px] text-slate-500 block">إجمالي المشتريات سحابياً</span>
+                        <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <span class="text-[10px] text-emerald-600 block">إجمالي المدفوعات</span>
+                        <strong id="stmtTotalPaid" class="text-emerald-700 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
+                    <div class="p-3 bg-rose-50 rounded-xl border border-rose-100">
+                        <span class="text-[10px] text-rose-600 block">المتبقي (المديونية)</span>
+                        <strong id="stmtTotalDue" class="text-rose-700 mono-font text-sm" dir="ltr">0 ج.م</strong>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات والتحويلات السحابية:</span>
+                    <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-2.5">الرقم / المعاملة</th>
+                                    <th class="p-2.5">التفاصيل / الطريقة</th>
+                                    <th class="p-2.5">المبلغ</th>
+                                    <th class="p-2.5">التاريخ</th>
+                                    <th class="p-2.5 text-center no-print">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تسجيل طريقة الدفع والسداد -->
+            <div class="no-print p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
+                    <select id="paymentMethodInput" class="corporate-input text-xs bg-white">
+                        <option value="كاش">💵 دفع نقدي (كاش الخزنة)</option>
+                        <option value="انستا باي">⚡ تحويل إنستا باي (InstaPay)</option>
+                        <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
+                        <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
+                    </select>
+                </div>
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية وإضافتها للخزنة وكشف الحساب
+                </button>
+            </div>
+
+            <!-- أزرار التصدير -->
+            <div class="no-print grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
+                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-file-pdf text-sm"></i> حفظ كـ PDF
+                </button>
+                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-image"></i> تصدير صورة
+                </button>
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> واتساب
+                </button>
+                <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة معاينة الحساب العادي أو الحسابات الأخرى -->
     <div id="previewModal" class="custom-modal">
         <div id="previewCardContent" class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border">
             <div class="flex justify-between items-center border-b pb-3">
@@ -335,7 +410,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase لإدارة شجرة الحسابات والعملاء -->
+    <!-- سكربت Firebase لإدارة شجرة الحسابات والعملاء وكشوفات الحساب -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -343,6 +418,7 @@
             collection, 
             addDoc, 
             deleteDoc, 
+            updateDoc,
             doc, 
             onSnapshot,
             getDocs,
@@ -369,6 +445,10 @@
 
         let accountsTreeList = [];
         let clientsList = [];
+        let invoicesList = [];
+        let paymentsList = [];
+        let transactionsList = [];
+        let currentActiveClient = null;
 
         async function fetchClients() {
             try {
@@ -395,6 +475,9 @@
 
             const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+            const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
+            const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", currentCompanyId));
+            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
             onSnapshot(accountsRef, (snapshot) => {
                 accountsTreeList = snapshot.docs.map(d => ({ accountId: d.id, ...d.data() }));
@@ -404,17 +487,34 @@
             onSnapshot(clientsRef, (snapshot) => {
                 clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 renderAccountsTree();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
             });
+
+            onSnapshot(invoicesRef, (snapshot) => {
+                invoicesList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderAccountsTree();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            });
+
+            onSnapshot(paymentsRef, (snapshot) => {
+                paymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderAccountsTree();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            });
+
+            onSnapshot(transactionsRef, (snapshot) => {
+                transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            });
+
         }).catch(err => {
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // استيراد شجرة الحسابات الافتراضية الشاملة (المستخرجة من ملف الإكسيل)
+        // استيراد شجرة الحسابات الافتراضية الشاملة
         window.seedDefaultAccountsTree = async function() {
             if (!confirm('هل تريد استيراد شجرة الحسابات الافتراضية الشاملة من ملف الإكسيل للدليل المحاسبي؟')) return;
             
             const defaultAccounts = [
-                // الأصول الثابتة والمتداولة
                 { category: "الأصول الثابتة", title: "الأصول الثابتة الرئيسية", code: "1001" },
                 { category: "الأصول الثابتة", title: "اراضي", code: "100101" },
                 { category: "الأصول الثابتة", title: "مبانى وانشاءات ومرافق", code: "100102" },
@@ -430,8 +530,6 @@
                 { category: "الأصول المتداولة", title: "مخزون أخر المدة", code: "10024" },
                 { category: "الأصول المتداولة", title: "المخزون", code: "10025" },
                 { category: "الأصول المتداولة", title: "الاعتمادات المستندية", code: "10026" },
-
-                // المصروفات العمومية والادارية
                 { category: "المصروفات العمومية والادارية", title: "مصروفات عمومية وادارية", code: "2001" },
                 { category: "المصروفات العمومية والادارية", title: "اجور ومرتبات", code: "20001" },
                 { category: "المصروفات العمومية والادارية", title: "اضافى", code: "20002" },
@@ -452,8 +550,6 @@
                 { category: "المصروفات العمومية والادارية", title: "ادوات مكتبية", code: "20017" },
                 { category: "المصروفات العمومية والادارية", title: "ومواد ومهمات", code: "20018" },
                 { category: "المصروفات العمومية والادارية", title: "متنوعة", code: "20019" },
-
-                // المصروفات البيعية
                 { category: "المصروفات البيعية", title: "مصروفات بيعية رئيسية", code: "3001" },
                 { category: "المصروفات البيعية", title: "اجور ومرتبات", code: "30001" },
                 { category: "المصروفات البيعية", title: "اضافى", code: "30002" },
@@ -473,8 +569,6 @@
                 { category: "المصروفات البيعية", title: "ادوات مكتبية", code: "30016" },
                 { category: "المصروفات البيعية", title: "ومواد ومهمات", code: "30017" },
                 { category: "المصروفات البيعية", title: "متنوعة", code: "30018" },
-
-                // مصروفات صناعية (تشغيلية)
                 { category: "مصروفات صناعية (تشغيلية)", title: "مصروفات صناعية رئيسية", code: "4001" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "اجور ومرتبات", code: "40001" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "اضافى", code: "40002" },
@@ -499,8 +593,6 @@
                 { category: "مصروفات صناعية (تشغيلية)", title: "ادوات مكتبية", code: "40021" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "ومواد ومهمات", code: "40022" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "متنوعة", code: "40023" },
-
-                // الارصدة الدائنة والالتزامات
                 { category: "الارصدة الدائنة", title: "الارصدة الدائنة", code: "9000" },
                 { category: "الارصدة الدائنة", title: "تامينات اجتماعية", code: "90001" },
                 { category: "الارصدة الدائنة", title: "ض ا . ت . ص", code: "90002" },
@@ -509,8 +601,6 @@
                 { category: "الارصدة الدائنة", title: "امانات عاملين", code: "90005" },
                 { category: "الارصدة الدائنة", title: "ايرادات متنوعة", code: "90006" },
                 { category: "الارصدة الدائنة", title: "الموردين", code: "2002" },
-
-                // الارصدة المدينة والعهد
                 { category: "الارصدة المدينة", title: "الارصدة المدينة", code: "8000" },
                 { category: "الارصدة المدينة", title: "اوارق الدفع", code: "8001" },
                 { category: "الارصدة المدينة", title: "بنك مصر", code: "8002" },
@@ -520,19 +610,13 @@
                 { category: "الارصدة المدينة", title: "محمود حسن", code: "80051" },
                 { category: "الارصدة المدينة", title: "اسامة احمد", code: "80052" },
                 { category: "الارصدة المدينة", title: "احمد خليفة", code: "80053" },
-
-                // حسابات العملاء والشركات
                 { category: "حسابات العملاء والشركات", title: "العملاء", code: "10023" },
                 { category: "حسابات العملاء والشركات", title: "تصنيع للغير", code: "5001" },
                 { category: "حسابات العملاء والشركات", title: "تصنيع لدى الغير", code: "5002" },
-
-                // المخازن
                 { category: "المخازن", title: "المخازن", code: "6000" },
                 { category: "المخازن", title: "مخزن خامات رئيسية", code: "6001" },
                 { category: "المخازن", title: "مخزن خامات مساعدة", code: "6002" },
                 { category: "المخازن", title: "مخزن منتج تام", code: "6003" },
-
-                // مبيعات
                 { category: "مبيعات", title: "مبيعات", code: "7000" },
                 { category: "مبيعات", title: "مبيعات كرتون", code: "7001" },
                 { category: "مبيعات", title: "مردودات مبيعات", code: "7002" },
@@ -552,7 +636,7 @@
                         admin: localStorage.getItem('eidco_v14_admin') || 'مدير النظام'
                     });
                 }
-                alert('✓ تم استيراد شجرة الحسابات الافتراضية الشاملة من ملف الإكسيل بنجاح.');
+                alert('✓ تم استيراد شجرة الحسابات الافتراضية الشاملة بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الاستيراد: ' + err.message);
             }
@@ -614,19 +698,152 @@
             }
         };
 
+        // فتح كشف حساب العميل الاحترافي الكامل (مثل صفحة clients.html) عند النقر على العميل
+        window.openClientStatement = function(clientName) {
+            currentActiveClient = clientsList.find(c => (c.name || c.clientName) === clientName);
+            if(!currentActiveClient) return;
+
+            document.getElementById('stmtClientName').innerText = currentActiveClient.name || currentActiveClient.clientName;
+
+            let clientInvoices = invoicesList.filter(i => i.client === clientName);
+            let clientPayments = paymentsList.filter(p => p.clientName === clientName);
+
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+            let dueBalance = totalPurchases - totalPaid;
+
+            document.getElementById('stmtTotalPurchases').innerText = totalPurchases.toLocaleString() + ' ج.م';
+            document.getElementById('stmtTotalPaid').innerText = totalPaid.toLocaleString() + ' ج.م';
+            document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
+
+            let rowsHtml = '';
+            clientInvoices.forEach(inv => {
+                rowsHtml += `
+                    <tr>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
+                        <td class="p-2.5">فاتورة مبيعات سحابية (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
+                        <td class="p-2.5 text-center no-print">
+                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            clientPayments.forEach(pay => {
+                rowsHtml += `
+                    <tr class="bg-emerald-50/50">
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
+                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد مباشر'})</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
+                        <td class="p-2.5 text-center space-x-1 space-x-reverse no-print">
+                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs" title="حذف">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if(!rowsHtml) {
+                rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد معاملات سحابية مسجلة بعد.</td></tr>`;
+            }
+
+            document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
+            document.getElementById('statementModal').classList.add('active');
+        };
+
+        window.closeStatementModal = function() {
+            document.getElementById('statementModal').classList.remove('active');
+            currentActiveClient = null;
+        };
+
+        window.recordClientPayment = async function() {
+            if(!currentActiveClient) return;
+            let amount = Number(document.getElementById('paymentAmountInput').value);
+            let method = document.getElementById('paymentMethodInput').value;
+            let clientName = currentActiveClient.name || currentActiveClient.clientName;
+            if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+
+            let today = new Date().toISOString().split('T')[0];
+
+            try {
+                let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
+                await addDoc(collection(db, "client_payments"), {
+                    companyId: currentCompanyId,
+                    id: payId,
+                    clientName: clientName,
+                    amount: amount,
+                    method: method,
+                    date: today
+                });
+
+                await addDoc(collection(db, "transactions"), {
+                    companyId: currentCompanyId,
+                    type: 'إيراد',
+                    amount: amount,
+                    desc: `تحصيل دفعة (${method}) من العميل ${clientName}`,
+                    date: today
+                });
+
+                document.getElementById('paymentAmountInput').value = '';
+                alert('✓ تم تسجيل الدفعة بنجاح وإضافتها للخزنة وكشف الحساب');
+            } catch (err) {
+                alert('خطأ أثناء تسجيل الدفعة: ' + err.message);
+            }
+        };
+
+        window.deletePayment = async function(payDocId) {
+            if(!confirm('هل أنت متأكد من حذف دفعة السداد؟')) return;
+            try {
+                let pay = paymentsList.find(p => p.docId === payDocId);
+                await deleteDoc(doc(db, "client_payments", payDocId));
+                if (pay) {
+                    let tx = transactionsList.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
+                    if (tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
+                }
+                alert('✓ تم الحذف بنجاح.');
+            } catch(e) {
+                alert('خطأ أثناء الحذف: ' + e.message);
+            }
+        };
+
+        window.downloadStatementImage = function() {
+            html2canvas(document.getElementById('statementPrintArea'), { scale: 2, useCORS: true }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = 'EIDCO-Statement-' + (currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : Date.now()) + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        window.downloadStatementPDF = function() {
+            window.print();
+        };
+
+        window.sendStatementWhatsApp = function() {
+            if(!currentActiveClient) return;
+            let cName = currentActiveClient.name || currentActiveClient.clientName;
+            let cInv = invoicesList.filter(i => i.client === cName);
+            let totalPur = cInv.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            let cPay = paymentsList.filter(p => p.clientName === cName);
+            let totalPd = cPay.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+            let due = totalPur - totalPd;
+
+            let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n\n💰 إجمالي المشتريات: ${totalPur.toLocaleString()} ج.م\n✅ إجمالي المدفوعات: ${totalPd.toLocaleString()} ج.م\n📌 *الرصيد المتبقي (المديونية): ${due.toLocaleString()} ج.م*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
+            let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
+        };
+
         window.previewAccount = function(accountId, isClient = false) {
             if (isClient) {
                 let client = clientsList.find(c => c.clientId === accountId);
                 if (!client) return;
-                document.getElementById('previewTitle').innerText = `تفاصيل حساب العميل: ${client.name || client.clientName || 'بدون اسم'}`;
-                let metaContainer = document.getElementById('previewDetailsMeta');
-                metaContainer.innerHTML = `
-                    <div><span class="text-slate-500 font-bold">التصنيف:</span> <span class="text-indigo-900 font-bold">حسابات العملاء والشركات</span></div>
-                    <div><span class="text-slate-500 font-bold">اسم العميل / الشركة:</span> <span class="text-slate-900 font-bold">${client.name || client.clientName || '---'}</span></div>
-                    <div><span class="text-slate-500 font-bold">رقم الهاتف:</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${client.phone || '---'}</span></div>
-                    <div><span class="text-slate-500 font-bold">العنوان:</span> <span class="text-slate-700 font-bold">${client.address || '---'}</span></div>
-                    <div><span class="text-slate-500 font-bold">إجمالي المشتريات:</span> <span class="mono-font text-emerald-600 font-black" dir="ltr">${Number(client.totalPurchases || client.balance || 0).toLocaleString()} ج.م</span></div>
-                `;
+                window.openClientStatement(client.name || client.clientName);
             } else {
                 let acc = accountsTreeList.find(a => a.accountId === accountId);
                 if (!acc) return;
@@ -640,8 +857,8 @@
                     <div><span class="text-slate-500 font-bold">ملاحظات:</span> <span class="text-slate-700">${acc.notes || '---'}</span></div>
                     <div><span class="text-slate-500 font-bold">تاريخ التسجيل:</span> <span class="mono-font" dir="ltr">${acc.date || '---'}</span></div>
                 `;
+                document.getElementById('previewModal').classList.add('active');
             }
-            document.getElementById('previewModal').classList.add('active');
         };
 
         window.closePreviewModal = function() {
@@ -711,7 +928,12 @@
                                     let cName = i.name || i.clientName || 'عميل بدون اسم';
                                     let cPhone = i.phone || '---';
                                     let cAddress = i.address || '---';
-                                    let cTotal = Number(i.totalPurchases || i.balance || 0).toLocaleString();
+                                    let clientInvoices = invoicesList.filter(inv => inv.client === cName);
+                                    let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+                                    let clientPayments = paymentsList.filter(p => p.clientName === cName);
+                                    let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+                                    let dueBalance = totalPurchases - totalPaid;
+
                                     return `
                                         <div onclick="window.previewAccount('${i.clientId}', true)" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
                                             <div class="flex items-center gap-3.5 flex-1 min-w-0">
@@ -722,15 +944,12 @@
                                                     <span class="font-bold text-slate-900 block truncate">
                                                         ${cName} <span class="text-indigo-600 font-semibold text-[11px]">(${cPhone})</span>
                                                     </span>
-                                                    <span class="text-[11px] text-slate-500 font-mono">العنوان: ${cAddress}</span>
+                                                    <span class="text-[11px] text-slate-500 font-mono">المديونية: <strong class="${dueBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}">${dueBalance.toLocaleString()} ج.م</strong></span>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2.5 shrink-0">
-                                                <span class="text-xs font-black text-indigo-700 mono-font bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-200" dir="ltr">
-                                                    ${cTotal} ج.م
-                                                </span>
-                                                <button onclick="window.previewAccount('${i.clientId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
-                                                    <i class="fa-solid fa-eye ml-1"></i> التفاصيل
+                                                <button onclick="window.previewAccount('${i.clientId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                                                 </button>
                                             </div>
                                         </div>

@@ -155,13 +155,13 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(الأصول، المصروفات، وحسابات العملاء والشركات السحابية)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(الأصول، المصروفات، وربط العمليات بحسابات العملاء)</span>
                             </h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
                         <button onclick="window.seedDefaultAccountsTree()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-file-excel text-indigo-600"></i> استيراد شجرة الحسابات الافتراضية
+                            <i class="fa-solid fa-file-excel text-indigo-600"></i> استيراد شجرة الحسابات الافتراضية الشاملة (من الإكسيل)
                         </button>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[220px] sm:max-w-none">
                             معرف الشركة: جاري التحميل...
@@ -207,11 +207,11 @@
             <!-- محتوى الصفحة الرئيسي -->
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <!-- نموذج إضافة حساب جديد أو بند في الشجرة -->
+                <!-- نموذج إضافة حساب أو ربط الحساب بالعميل -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <h3 class="font-bold text-sm text-slate-900 border-b pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i> 
-                        إضافة حساب جديد أو بند شجري في الدليل المحاسبي
+                        إضافة حساب جديد أو ربطه بحساب عميل مسجل
                     </h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
@@ -231,20 +231,37 @@
                             </select>
                         </div>
 
+                        <!-- قائمة اختيار العميل المسجل لديك تماماً مثل صفحة المستندات -->
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">اسم الحساب المسجل</label>
-                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: أراضي، أجور ومرتبات، بنك مصر...">
+                            <label class="block mb-1 text-indigo-950 font-bold">
+                                <i class="fa-solid fa-building-user ml-1"></i> اختر العميل المسجل (لتتبع الحساب عليه)
+                            </label>
+                            <select id="accClientSelect" class="corporate-input bg-white font-bold text-indigo-900 border-indigo-200">
+                                <option value="">-- عام (بدون عميل محدد) --</option>
+                            </select>
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">رقم الحساب (الكود المحاسبي)</label>
+                            <label class="block mb-1 text-slate-700 font-bold">اسم الحساب أو البيان</label>
+                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: حساب العميل، أراضي، بنك مصر...">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <label class="block mb-1 text-slate-700 font-bold">رقم الحساب أو الكود المحاسبي</label>
                             <input type="text" id="accCode" class="corporate-input mono-font" placeholder="100101" dir="ltr">
+                        </div>
+
+                        <div>
+                            <label class="block mb-1 text-slate-700 font-bold">ملاحظات أو تفاصيل إضافية</label>
+                            <input type="text" id="accNotes" class="corporate-input" placeholder="ملاحظات الحساب...">
                         </div>
                     </div>
 
                     <div class="pt-2">
                         <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md">
-                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب في شجرة الحسابات سحابياً
+                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب وربطه بالعميل سحابياً في الشجرة
                         </button>
                     </div>
                 </div>
@@ -353,7 +370,29 @@
         let accountsTreeList = [];
         let clientsList = [];
 
+        async function fetchClients() {
+            try {
+                const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+                const snapshot = await getDocs(clientsQuery);
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
+                
+                let clientSelect = document.getElementById('accClientSelect');
+                if (clientSelect) {
+                    let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
+                    clientsList.forEach(c => {
+                        let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
+                        optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
+                    });
+                    clientSelect.innerHTML = optionsHtml;
+                }
+            } catch(e) {
+                console.error("خطأ في جلب قائمة العملاء السحابية:", e);
+            }
+        }
+
         signInAnonymously(auth).then(async () => {
+            await fetchClients();
+
             const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
@@ -370,28 +409,134 @@
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // استيراد شجرة الحسابات الافتراضية
+        // استيراد شجرة الحسابات الافتراضية الشاملة (المستخرجة من ملف الإكسيل)
         window.seedDefaultAccountsTree = async function() {
-            if (!confirm('هل تريد استيراد شجرة الحسابات الافتراضية للدليل المحاسبي؟')) return;
+            if (!confirm('هل تريد استيراد شجرة الحسابات الافتراضية الشاملة من ملف الإكسيل للدليل المحاسبي؟')) return;
             
             const defaultAccounts = [
-                { category: "الأصول الثابتة", title: "أراضي", code: "100101" },
+                // الأصول الثابتة والمتداولة
+                { category: "الأصول الثابتة", title: "الأصول الثابتة الرئيسية", code: "1001" },
+                { category: "الأصول الثابتة", title: "اراضي", code: "100101" },
                 { category: "الأصول الثابتة", title: "مبانى وانشاءات ومرافق", code: "100102" },
                 { category: "الأصول الثابتة", title: "اثاث وتجهيزات", code: "100103" },
                 { category: "الأصول الثابتة", title: "وسائل نقل وسيارات", code: "100104" },
                 { category: "الأصول الثابتة", title: "آلات ومعدات", code: "100105" },
+                { category: "الأصول الثابتة", title: "اجهزة كهربائية", code: "100106" },
+                { category: "الأصول الثابتة", title: "اخري", code: "100108" },
+                { category: "الأصول المتداولة", title: "الأصول المتداولة الرئيسية", code: "1002" },
                 { category: "الأصول المتداولة", title: "النقدية بالخزينة", code: "10021" },
-                { category: "الأصول المتداولة", title: "البنوك (بنك مصر)", code: "10022" },
-                { category: "الأصول المتداولة", title: "العملاء", code: "10023" },
+                { category: "الأصول المتداولة", title: "البنوك", code: "10022" },
+                { category: "الأصول المتداولة", title: "المدينون واوراق القبض", code: "10022" },
+                { category: "الأصول المتداولة", title: "مخزون أخر المدة", code: "10024" },
+                { category: "الأصول المتداولة", title: "المخزون", code: "10025" },
+                { category: "الأصول المتداولة", title: "الاعتمادات المستندية", code: "10026" },
+
+                // المصروفات العمومية والادارية
+                { category: "المصروفات العمومية والادارية", title: "مصروفات عمومية وادارية", code: "2001" },
                 { category: "المصروفات العمومية والادارية", title: "اجور ومرتبات", code: "20001" },
+                { category: "المصروفات العمومية والادارية", title: "اضافى", code: "20002" },
                 { category: "المصروفات العمومية والادارية", title: "حصة المنشأة فى التأمينات الاجتماعية", code: "20003" },
+                { category: "المصروفات العمومية والادارية", title: "حافز", code: "20004" },
+                { category: "المصروفات العمومية والادارية", title: "مزايا عينية", code: "20005" },
+                { category: "المصروفات العمومية والادارية", title: "م علاج", code: "20006" },
+                { category: "المصروفات العمومية والادارية", title: "اكراميات", code: "20007" },
+                { category: "المصروفات العمومية والادارية", title: "انتقالات", code: "20008" },
+                { category: "المصروفات العمومية والادارية", title: "استشارات", code: "20009" },
+                { category: "المصروفات العمومية والادارية", title: "م ضيافة وبوفية", code: "20010" },
+                { category: "المصروفات العمومية والادارية", title: "م تليفون ونت", code: "20011" },
+                { category: "المصروفات العمومية والادارية", title: "م سيارة", code: "20012" },
+                { category: "المصروفات العمومية والادارية", title: "م صيانة", code: "20013" },
                 { category: "المصروفات العمومية والادارية", title: "كهرباء", code: "20014" },
                 { category: "المصروفات العمومية والادارية", title: "مياة", code: "20015" },
+                { category: "المصروفات العمومية والادارية", title: "م بريد و رسوم واشتراكات", code: "20016" },
+                { category: "المصروفات العمومية والادارية", title: "ادوات مكتبية", code: "20017" },
+                { category: "المصروفات العمومية والادارية", title: "ومواد ومهمات", code: "20018" },
+                { category: "المصروفات العمومية والادارية", title: "متنوعة", code: "20019" },
+
+                // المصروفات البيعية
+                { category: "المصروفات البيعية", title: "مصروفات بيعية رئيسية", code: "3001" },
+                { category: "المصروفات البيعية", title: "اجور ومرتبات", code: "30001" },
+                { category: "المصروفات البيعية", title: "اضافى", code: "30002" },
+                { category: "المصروفات البيعية", title: "حصة المنشأة فى التأمينات الاجتماعية", code: "30003" },
+                { category: "المصروفات البيعية", title: "حافز", code: "30004" },
+                { category: "المصروفات البيعية", title: "مزايا عينية", code: "30005" },
+                { category: "المصروفات البيعية", title: "م علاج", code: "30006" },
+                { category: "المصروفات البيعية", title: "اكراميات", code: "30007" },
+                { category: "المصروفات البيعية", title: "انتقالات", code: "30008" },
                 { category: "المصروفات البيعية", title: "عمولات", code: "30009" },
                 { category: "المصروفات البيعية", title: "نولون", code: "30010" },
+                { category: "المصروفات البيعية", title: "م ضيافة وبوفية", code: "30011" },
+                { category: "المصروفات البيعية", title: "م تليفون ونت", code: "30012" },
+                { category: "المصروفات البيعية", title: "م سيارة", code: "30013" },
+                { category: "المصروفات البيعية", title: "م صيانة", code: "30014" },
+                { category: "المصروفات البيعية", title: "م بريد و رسوم واشتراكات", code: "30015" },
+                { category: "المصروفات البيعية", title: "ادوات مكتبية", code: "30016" },
+                { category: "المصروفات البيعية", title: "ومواد ومهمات", code: "30017" },
+                { category: "المصروفات البيعية", title: "متنوعة", code: "30018" },
+
+                // مصروفات صناعية (تشغيلية)
+                { category: "مصروفات صناعية (تشغيلية)", title: "مصروفات صناعية رئيسية", code: "4001" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "اجور ومرتبات", code: "40001" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "اضافى", code: "40002" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "حصة المنشأة فى التأمينات الاجتماعية", code: "40003" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "حافز", code: "40004" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "مزايا عينية", code: "40005" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "م علاج", code: "40006" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "اكراميات", code: "40007" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "انتقالات", code: "40008" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "استشارات", code: "40009" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "نولون", code: "40010" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "ايجار", code: "40011" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "م ضيافة وبوفية", code: "40012" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "م تليفون ونت", code: "40013" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "م سيارة", code: "40014" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "ايجار كلارك", code: "40015" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "م صيانة", code: "40016" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "كهرباء", code: "40017" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "مياة", code: "40018" },
                 { category: "مصروفات صناعية (تشغيلية)", title: "غاز", code: "40019" },
-                { category: "الارصدة الدائنة", title: "ضريبة القيمة المضافة", code: "90001" }
+                { category: "مصروفات صناعية (تشغيلية)", title: "م بريد و رسوم واشتراكات", code: "40020" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "ادوات مكتبية", code: "40021" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "ومواد ومهمات", code: "40022" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "متنوعة", code: "40023" },
+
+                // الارصدة الدائنة والالتزامات
+                { category: "الارصدة الدائنة", title: "الارصدة الدائنة", code: "9000" },
+                { category: "الارصدة الدائنة", title: "تامينات اجتماعية", code: "90001" },
+                { category: "الارصدة الدائنة", title: "ض ا . ت . ص", code: "90002" },
+                { category: "الارصدة الدائنة", title: "ض . القيمة المضافة", code: "90003" },
+                { category: "الارصدة الدائنة", title: "م مستحقة", code: "90004" },
+                { category: "الارصدة الدائنة", title: "امانات عاملين", code: "90005" },
+                { category: "الارصدة الدائنة", title: "ايرادات متنوعة", code: "90006" },
+                { category: "الارصدة الدائنة", title: "الموردين", code: "2002" },
+
+                // الارصدة المدينة والعهد
+                { category: "الارصدة المدينة", title: "الارصدة المدينة", code: "8000" },
+                { category: "الارصدة المدينة", title: "اوارق الدفع", code: "8001" },
+                { category: "الارصدة المدينة", title: "بنك مصر", code: "8002" },
+                { category: "الارصدة المدينة", title: "اوراق القبض", code: "8003" },
+                { category: "الارصدة المدينة", title: "دائنون متنوعون", code: "8004" },
+                { category: "الارصدة المدينة", title: "العهد والسلف", code: "8005" },
+                { category: "الارصدة المدينة", title: "محمود حسن", code: "80051" },
+                { category: "الارصدة المدينة", title: "اسامة احمد", code: "80052" },
+                { category: "الارصدة المدينة", title: "احمد خليفة", code: "80053" },
+
+                // حسابات العملاء والشركات
+                { category: "حسابات العملاء والشركات", title: "العملاء", code: "10023" },
+                { category: "حسابات العملاء والشركات", title: "تصنيع للغير", code: "5001" },
+                { category: "حسابات العملاء والشركات", title: "تصنيع لدى الغير", code: "5002" },
+
+                // المخازن
+                { category: "المخازن", title: "المخازن", code: "6000" },
+                { category: "المخازن", title: "مخزن خامات رئيسية", code: "6001" },
+                { category: "المخازن", title: "مخزن خامات مساعدة", code: "6002" },
+                { category: "المخازن", title: "مخزن منتج تام", code: "6003" },
+
+                // مبيعات
+                { category: "مبيعات", title: "مبيعات", code: "7000" },
+                { category: "مبيعات", title: "مبيعات كرتون", code: "7001" },
+                { category: "مبيعات", title: "مردودات مبيعات", code: "7002" },
+                { category: "مبيعات", title: "مردودات مشتريات", code: "7003" }
             ];
 
             try {
@@ -401,11 +546,13 @@
                         category: acc.category,
                         title: acc.title,
                         code: acc.code,
+                        clientId: '',
+                        clientName: '',
                         date: new Date().toISOString().split('T')[0],
                         admin: localStorage.getItem('eidco_v14_admin') || 'مدير النظام'
                     });
                 }
-                alert('✓ تم استيراد شجرة الحسابات الافتراضية بنجاح.');
+                alert('✓ تم استيراد شجرة الحسابات الافتراضية الشاملة من ملف الإكسيل بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الاستيراد: ' + err.message);
             }
@@ -415,9 +562,18 @@
             let category = document.getElementById('accCategory').value;
             let title = document.getElementById('accTitle').value.trim();
             let code = document.getElementById('accCode').value.trim();
+            let notes = document.getElementById('accNotes').value.trim();
+            
+            let clientSelect = document.getElementById('accClientSelect');
+            let selectedClientId = clientSelect.value;
+            let selectedClientName = selectedClientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
 
-            if (!title) {
-                return alert('⚠️ يرجى إدخال اسم الحساب.');
+            if (!title && !selectedClientId) {
+                return alert('⚠️ يرجى إدخال اسم الحساب أو اختيار العميل المرتبط.');
+            }
+
+            if (!title && selectedClientName) {
+                title = `حساب العميل: ${selectedClientName}`;
             }
 
             if (!auth.currentUser) {
@@ -430,13 +586,18 @@
                     category,
                     title,
                     code: code || '---',
+                    clientId: selectedClientId || '',
+                    clientName: selectedClientName || '',
+                    notes: notes || '',
                     date: new Date().toISOString().split('T')[0],
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
                 });
 
                 document.getElementById('accTitle').value = '';
                 document.getElementById('accCode').value = '';
-                alert('✓ تم حفظ الحساب في الشجرة بنجاح.');
+                document.getElementById('accNotes').value = '';
+                document.getElementById('accClientSelect').value = '';
+                alert('✓ تم حفظ الحساب وربطه بالعميل في الشجرة بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
@@ -474,9 +635,10 @@
                 metaContainer.innerHTML = `
                     <div><span class="text-slate-500 font-bold">التصنيف المحاسبي:</span> <span class="text-indigo-900 font-bold">${acc.category}</span></div>
                     <div><span class="text-slate-500 font-bold">اسم الحساب:</span> <span class="text-slate-900 font-bold">${acc.title}</span></div>
+                    <div><span class="text-slate-500 font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">${acc.clientName || 'عام (بدون عميل)'}</span></div>
                     <div><span class="text-slate-500 font-bold">رقم الحساب (الكود):</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${acc.code}</span></div>
+                    <div><span class="text-slate-500 font-bold">ملاحظات:</span> <span class="text-slate-700">${acc.notes || '---'}</span></div>
                     <div><span class="text-slate-500 font-bold">تاريخ التسجيل:</span> <span class="mono-font" dir="ltr">${acc.date || '---'}</span></div>
-                    <div><span class="text-slate-500 font-bold">بواسطة المسؤول:</span> <span class="text-slate-700">${acc.admin || '---'}</span></div>
                 `;
             }
             document.getElementById('previewModal').classList.add('active');
@@ -506,7 +668,8 @@
             let filteredAccounts = accountsTreeList.filter(a => 
                 (a.title && a.title.toLowerCase().includes(search)) || 
                 (a.category && a.category.toLowerCase().includes(search)) || 
-                (a.code && a.code.toLowerCase().includes(search))
+                (a.code && a.code.toLowerCase().includes(search)) ||
+                (a.clientName && a.clientName.toLowerCase().includes(search))
             );
 
             let filteredClients = clientsList.filter(c => {
@@ -581,7 +744,8 @@
                                                 </div>
                                                 <div class="truncate">
                                                     <span class="font-bold text-slate-900 block truncate">
-                                                        ${i.title} <span class="text-indigo-600 font-mono font-bold text-[11px]" dir="ltr">(${i.code || '---'})</span>
+                                                        ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''} 
+                                                        <span class="text-indigo-600 font-mono font-bold text-[11px]" dir="ltr">(${i.code || '---'})</span>
                                                     </span>
                                                     <span class="text-[11px] text-slate-500 font-mono">تاريخ التسجيل: ${i.date || '---'}</span>
                                                 </div>

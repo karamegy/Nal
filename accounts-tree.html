@@ -151,7 +151,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(النقر السريع على أي مجلد لفتح الجدول مباشرة)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(عرض الجداول والمستندات مباشرة عند النقر)</span>
                             </h1>
                         </div>
                     </div>
@@ -305,7 +305,7 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه (تمت إزالة نموذج الإضافة تماماً والاكتفاء بعرض الجدول فقط) -->
     <div id="folderTableModal" class="custom-modal">
         <div class="corporate-card p-4 sm:p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
@@ -313,32 +313,11 @@
                     <h3 id="folderModalTitle" class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
                         <i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف
                     </h3>
-                    <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض ومدخلات الملف المحدد مع إمكانية إضافة وسحب البيانات</span>
+                    <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض ومدخلات الملف المحدد مع المستندات والعملاء</span>
                 </div>
                 <button onclick="window.closeFolderModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
-            </div>
-
-            <!-- نموذج إضافة سريع داخل جدول الملف المختار -->
-            <div class="p-3 sm:p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3 shrink-0">
-                <span class="text-xs font-bold text-indigo-900 block"><i class="fa-solid fa-plus-circle ml-1"></i> إضافة مدخل جديد لهذا الملف:</span>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <input type="text" id="modalInputTitle" class="corporate-input bg-white" placeholder="اسم الحساب أو البيان...">
-                    <input type="number" id="modalInputAmount" class="corporate-input mono-font bg-white font-bold text-indigo-700" placeholder="المبلغ (ج.م)..." dir="ltr">
-                    <select id="modalInputClient" class="corporate-input bg-white font-bold text-indigo-900">
-                        <option value="">-- اختر العميل المسجل --</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 gap-3 text-xs">
-                    <input type="text" id="modalInputNotes" class="corporate-input bg-white" placeholder="ملاحظات إضافية...">
-                </div>
-                <div class="flex flex-col sm:flex-row gap-3 items-stretch pt-1">
-                    <input type="file" id="modalInputFile" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer py-2 flex-1">
-                    <button onclick="window.saveItemToFolder()" class="btn-primary text-xs py-3 px-6 flex items-center justify-center gap-2 cursor-pointer shrink-0">
-                        <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ بالملف
-                    </button>
-                </div>
             </div>
 
             <!-- جدول محتويات الملف المختار -->
@@ -501,21 +480,6 @@
                     }
                 });
             }
-
-            // معالجة اختيار ملف الصورة داخل نافذة الجدول المخصص للملف
-            const modalImgInput = document.getElementById('modalInputFile');
-            if (modalImgInput) {
-                modalImgInput.addEventListener('change', function(e) {
-                    let file = e.target.files[0];
-                    if (file) {
-                        let reader = new FileReader();
-                        reader.onload = function(event) {
-                            window.modalUploadedImageBase64 = event.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-            }
         });
     </script>
 
@@ -559,7 +523,6 @@
         let currentActiveFolder = null;
         let currentActiveClient = null;
         window.generalUploadedImageBase64 = '';
-        window.modalUploadedImageBase64 = '';
 
         async function fetchClientsAndDropdowns() {
             try {
@@ -574,7 +537,6 @@
 
         window.updateClientsDropdowns = function(listToRender) {
             let clientSelect = document.getElementById('accClientSelect');
-            let modalClientSelect = document.getElementById('modalInputClient');
             let currentSelectedVal = clientSelect ? clientSelect.value : '';
 
             let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
@@ -587,7 +549,6 @@
                 clientSelect.innerHTML = optionsHtml;
                 clientSelect.value = currentSelectedVal;
             }
-            if (modalClientSelect) modalClientSelect.innerHTML = optionsHtml;
         };
 
         window.filterClientDropdown = function() {
@@ -799,47 +760,6 @@
         window.closeFolderModal = function() {
             document.getElementById('folderTableModal').classList.remove('active');
             currentActiveFolder = null;
-        };
-
-        window.saveItemToFolder = async function() {
-            if (!currentActiveFolder) return;
-            let title = document.getElementById('modalInputTitle').value.trim();
-            let amount = Number(document.getElementById('modalInputAmount').value) || 0;
-            let clientSelect = document.getElementById('modalInputClient');
-            let clientId = clientSelect.value;
-            let clientName = clientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
-            let notes = document.getElementById('modalInputNotes').value.trim();
-            let receiptImage = window.modalUploadedImageBase64 || '';
-            let today = new Date().toISOString().split('T')[0];
-
-            if (!title) return alert('⚠️ يرجى إدخال بيان أو اسم الحساب.');
-
-            try {
-                await addDoc(collection(db, "accounts_tree"), {
-                    companyId: currentCompanyId,
-                    category: currentActiveFolder,
-                    title,
-                    code: 'MOD-' + Math.floor(1000 + Math.random() * 9000),
-                    amount,
-                    clientId,
-                    clientName,
-                    notes,
-                    receiptImage,
-                    date: today,
-                    admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحسابات'
-                });
-
-                document.getElementById('modalInputTitle').value = '';
-                document.getElementById('modalInputAmount').value = '';
-                document.getElementById('modalInputNotes').value = '';
-                document.getElementById('modalInputFile').value = '';
-                window.modalUploadedImageBase64 = '';
-
-                openFolderTable(currentActiveFolder, true);
-                alert('✓ تم حفظ المدخل داخل الملف المختار بنجاح.');
-            } catch (err) {
-                alert('خطأ أثناء الحفظ: ' + err.message);
-            }
         };
 
         window.deleteFolderItem = async function(accountId) {

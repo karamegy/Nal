@@ -209,7 +209,7 @@
         <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-black text-base text-indigo-600">إضافة حساب جديد لشجرة الحسابات</h3>
-                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
@@ -242,8 +242,8 @@
                 </div>
             </div>
             <div class="pt-3 border-t flex justify-end gap-2">
-                <button onclick="window.closeAddAccountModal()" class="bg-slate-100 px-4 py-2 rounded-xl text-xs font-bold">إلغاء</button>
-                <button onclick="window.saveNewAccount()" class="btn-primary text-xs py-2 px-5">حفظ الحساب</button>
+                <button onclick="window.closeAddAccountModal()" class="bg-slate-100 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button onclick="window.saveNewAccount()" class="btn-primary text-xs py-2 px-5 cursor-pointer">حفظ الحساب</button>
             </div>
         </div>
     </div>
@@ -276,7 +276,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتوافق مع قواعد الأمان الجديدة -->
+    <!-- سكربت Firebase المتوافق مع قواعد الأمان الجديدة وبدون استعلامات معقدة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, setDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -306,7 +306,7 @@
         const rssSpeeds = ['35s', '20s', '50s'];
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
-        // جلب العملاء المسجلين وعرضهم في القائمة المنسدلة
+        // جلب العملاء المسجلين وعرضهم في القائمة المنسدلة بدون شرط where لمنع خطأ الصلاحيات
         async function fetchClients() {
             try {
                 const snapshot = await getDocs(collection(db, "clients"));
@@ -332,7 +332,7 @@
             await loadAccountsTreeSecure();
         }).catch(err => console.error("Auth error:", err));
 
-        // جلب شجرة الحسابات مع الفلترة السليمة
+        // جلب شجرة الحسابات بالكامل ثم فلترتها برمجياً لتجنب أي قيود استعلام سحابي
         window.loadAccountsTreeSecure = async function() {
             try {
                 const snapshot = await getDocs(collection(db, "accounts_tree"));
@@ -368,9 +368,9 @@
                 { name: "الأصول المتداولة - البنوك", code: "10022", category: "أصول متداولة" },
                 { name: "الأصول المتداولة - العملاء", code: "10023", category: "أصول متداولة" },
                 { name: "المصروفات العمومية والإدارية - أجور ومرتبات", code: "20001", category: "مصروفات عمومية والإدارية" },
-                { name: "المصروفات العمومية والإدارية - تأمينات اجتماعية", code: "20003", category: "مصروفات عمومية وإدارية" },
-                { name: "المصروفات العمومية والإدارية - كهرباء", code: "20014", category: "مصروفات عمومية وإدارية" },
-                { name: "المصروفات العمومية والإدارية - مياه", code: "20015", category: "مصروفات عمومية وإدارية" },
+                { name: "المصروفات العمومية والإدارية - تأمينات اجتماعية", code: "20003", category: "مصروفات عمومية والإدارية" },
+                { name: "المصروفات العمومية والإدارية - كهرباء", code: "20014", category: "مصروفات عمومية والإدارية" },
+                { name: "المصروفات العمومية والإدارية - مياه", code: "20015", category: "مصروفات عمومية والإدارية" },
                 { name: "المصروفات البيعية - عمولات ونولون", code: "30009", category: "مصروفات بيعية" },
                 { name: "المصروفات الصناعية - إيجار كلارك وغاز", code: "40019", category: "مصروفات صناعية وتشغيلية" },
                 { name: "الإيرادات والمبيعات - مبيعات رئيسية", code: "50001", category: "إيرادات ومبيعات" }

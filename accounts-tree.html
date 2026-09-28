@@ -152,13 +152,13 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(الأصول، المصروفات مع رفع الصور، وربط العمليات بالعملاء)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(نظام مستقر بدون قراءات مفاجئة، مع رفع الصور وجداول الملفات)</span>
                             </h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
                         <button onclick="window.seedDefaultAccountsTree()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-file-excel text-indigo-600"></i> استيراد شجرة الحسابات الافتراضية الشاملة (من الإكسيل)
+                            <i class="fa-solid fa-file-excel text-indigo-600"></i> استيراد شجرة الحسابات الافتراضية
                         </button>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[220px] sm:max-w-none">
                             معرف الشركة: جاري التحميل...
@@ -204,16 +204,16 @@
             <!-- محتوى الصفحة الرئيسي -->
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <!-- نموذج إضافة حساب أو ربط الحساب بالعميل -->
+                <!-- نموذج إضافة حساب جديد أو مدخل جديد مع رفع صورة واختيار العميل المسجل والبحث -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <h3 class="font-bold text-sm text-slate-900 border-b pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i> 
-                        إضافة حساب جديد أو ربطه بحساب عميل مسجل
+                        إضافة حساب/مدخل جديد (مع رفع صورة المستند وربط العميل)
                     </h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">التصنيف المحاسبي الرئيسي</label>
+                            <label class="block mb-1 text-slate-700 font-bold">التصنيف المحاسبي الرئيسي (الملف)</label>
                             <select id="accCategory" class="corporate-input">
                                 <option value="الأصول الثابتة">📁 الأصول الثابتة</option>
                                 <option value="الأصول المتداولة">📁 الأصول المتداولة</option>
@@ -229,35 +229,53 @@
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-indigo-950 font-bold">
-                                <i class="fa-solid fa-building-user ml-1"></i> اختر العميل المسجل (لتتبع الحساب عليه)
+                            <label class="block mb-1 text-indigo-950 font-bold flex justify-between items-center">
+                                <span><i class="fa-solid fa-building-user ml-1"></i> اختر العميل المسجل</span>
+                                <span class="text-[10px] text-slate-400 font-normal">ابحث بالاسم أدناه</span>
                             </label>
-                            <select id="accClientSelect" class="corporate-input bg-white font-bold text-indigo-900 border-indigo-200">
-                                <option value="">-- عام (بدون عميل محدد) --</option>
-                            </select>
+                            <!-- حقل بحث لاختيار/تصفية العميل بسرعة -->
+                            <div class="relative">
+                                <input type="text" id="clientSearchInput" oninput="filterClientDropdown()" placeholder="بحث عن اسم العميل..." class="corporate-input mb-1 bg-white text-xs" style="padding: 8px 12px;">
+                                <select id="accClientSelect" class="corporate-input bg-white font-bold text-indigo-900 border-indigo-200">
+                                    <option value="">-- عام (بدون عميل محدد) --</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">اسم الحساب أو البيان</label>
-                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: حساب العميل، أراضي، بنك مصر...">
+                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: فاتورة صيانة، أراضي، دفعة...">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">رقم الحساب أو الكود المحاسبي</label>
                             <input type="text" id="accCode" class="corporate-input mono-font" placeholder="100101" dir="ltr">
                         </div>
-
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">ملاحظات أو تفاصيل إضافية</label>
+                            <label class="block mb-1 text-slate-700 font-bold">المبلغ (إن وجد)</label>
+                            <input type="number" id="accAmount" class="corporate-input mono-font font-bold text-indigo-700" placeholder="0.00" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-slate-700 font-bold">ملاحظات إضافية</label>
                             <input type="text" id="accNotes" class="corporate-input" placeholder="ملاحظات الحساب...">
+                        </div>
+                    </div>
+
+                    <!-- رفع صورة المستند أو الفاتورة لجميع المدخلات -->
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="block mb-1 text-slate-700 font-bold"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> رفع صورة الفاتورة أو المستند (اختياري لجميع المدخلات)</label>
+                        <input type="file" id="generalImageFileInput" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer">
+                        <div id="generalImagePreviewContainer" class="mt-2 hidden">
+                            <span class="text-[11px] text-emerald-600 font-bold block mb-1">✓ تم إرفاق الصورة بنجاح:</span>
+                            <img id="generalImagePreviewImg" src="" alt="معاينة المستند" class="w-full h-32 object-contain rounded-xl border border-slate-200 bg-white">
                         </div>
                     </div>
 
                     <div class="pt-2">
                         <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md">
-                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب وربطه بالعميل سحابياً في الشجرة
+                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب ورفع الصورة وربطه بالعميل سحابياً
                         </button>
                     </div>
                 </div>
@@ -270,17 +288,17 @@
                     </div>
                 </div>
 
-                <!-- جدول أو هيكل شجرة الحسابات وحسابات العملاء المسجلة -->
+                <!-- قائمة المجلدات/الملفات (عند النقر على أي ملف يفتح الجدول الخاص به) -->
                 <div class="corporate-card p-6 space-y-4 bg-white shadow-sm">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-folder-tree text-indigo-600"></i> 
-                            الدليل المحاسبي وحسابات العملاء السحابية (مزامنة فورية)
+                            أرشيف الملفات والتصنيفات المحاسبية (انقر على أي ملف لفتح جدوله الخاص)
                         </h3>
                         <span class="text-xs text-slate-500 font-mono" id="totalAccountsCountCounter" dir="ltr">جاري العد...</span>
                     </div>
-                    <div id="accountsTreeContainer" class="space-y-4 text-xs">
-                        <p class="text-slate-400 text-center py-8 font-bold">جاري تحميل شجرة الحسابات والعملاء من سحابة Firebase...</p>
+                    <div id="accountsTreeContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                        <p class="text-slate-400 text-center py-8 font-bold col-span-full">جاري تحميل شجرة الملفات من سحابة Firebase...</p>
                     </div>
                 </div>
 
@@ -288,70 +306,73 @@
         </div>
     </div>
 
-    <!-- نافذة تسجيل مصروف جديد مع رفع صورة الفاتورة (لجميع تصنيفات المصروفات) -->
-    <div id="expenseModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border">
-            <div class="flex justify-between items-center border-b pb-3">
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
+    <div id="folderTableModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 shrink-0">
                 <div>
-                    <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-receipt text-indigo-600"></i> تسجيل مصروف جديد ورفع صورة الفاتورة
+                    <h3 id="folderModalTitle" class="font-black text-slate-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف
                     </h3>
-                    <span id="expenseCategoryTitleDisplay" class="text-[11px] text-indigo-600 font-bold"></span>
+                    <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض ومدخلات الملف المحدد مع إمكانية إضافة وسحب البيانات</span>
                 </div>
-                <button onclick="window.closeExpenseModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
+                <button onclick="window.closeFolderModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="space-y-3 text-xs">
-                <input type="hidden" id="expCategoryHidden">
-                <div>
-                    <label class="block mb-1 text-slate-700 font-bold">بيان أو اسم المصروف</label>
-                    <input type="text" id="expTitleInput" class="corporate-input" placeholder="مثال: فاتورة كهرباء، صيانة سيارة، عمولة تسويق...">
+            <!-- نموذج إضافة سريع داخل جدول الملف المختار مع العميل والصورة -->
+            <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3 shrink-0">
+                <span class="text-xs font-bold text-indigo-900 block"><i class="fa-solid fa-plus-circle ml-1"></i> إضافة مدخل جديد لهذا الملف:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <input type="text" id="modalInputTitle" class="corporate-input bg-white" placeholder="اسم الحساب أو البيان...">
+                    <input type="number" id="modalInputAmount" class="corporate-input mono-font bg-white font-bold text-indigo-700" placeholder="المبلغ (ج.م)..." dir="ltr">
+                    <select id="modalInputClient" class="corporate-input bg-white font-bold text-indigo-900">
+                        <option value="">-- اختر العميل المسجل --</option>
+                    </select>
                 </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block mb-1 text-slate-700 font-bold">المبلغ (ج.م)</label>
-                        <input type="number" id="expAmountInput" class="corporate-input mono-font font-bold text-indigo-700" placeholder="0.00" dir="ltr">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <input type="text" id="modalInputNotes" class="corporate-input bg-white" placeholder="ملاحظات إضافية...">
+                    <div class="flex gap-2 items-center">
+                        <input type="file" id="modalInputFile" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer py-2">
+                        <button onclick="window.saveItemToFolder()" class="btn-primary text-xs py-2 px-4 shrink-0 flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> حفظ بالملف
+                        </button>
                     </div>
-                    <div>
-                        <label class="block mb-1 text-slate-700 font-bold">العميل المرتبط (اختياري)</label>
-                        <select id="expClientSelect" class="corporate-input bg-white font-bold text-indigo-900">
-                            <option value="">-- بدون عميل محدد --</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-slate-700 font-bold">رفع صورة الفاتورة أو المستند</label>
-                    <input type="file" id="expImageFileInput" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer">
-                    <div id="expImagePreviewContainer" class="mt-2 hidden">
-                        <span class="text-[11px] text-emerald-600 font-bold block mb-1">✓ تم إرفاق الصورة بنجاح:</span>
-                        <img id="expImagePreviewImg" src="" alt="معاينة الفاتورة" class="w-full h-32 object-contain rounded-xl border border-slate-200 bg-slate-50">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-slate-700 font-bold">ملاحظات إضافية</label>
-                    <input type="text" id="expNotesInput" class="corporate-input" placeholder="ملاحظات أو تفاصيل الدفع...">
                 </div>
             </div>
 
-            <div class="flex gap-2 pt-2 border-t">
-                <button onclick="window.saveExpenseRecord()" class="btn-primary text-xs flex-1 py-3 flex items-center justify-center gap-2 cursor-pointer shadow-md">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> حفظ المصروف ورفع المستند سحابياً
-                </button>
-                <button onclick="window.closeExpenseModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-3 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
+            <!-- جدول محتويات الملف المختار -->
+            <div class="flex-1 overflow-y-auto rounded-xl border border-slate-200">
+                <table class="w-full text-right text-xs">
+                    <thead class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b">
+                        <tr>
+                            <th class="p-3">الكود / الرقم</th>
+                            <th class="p-3">البيان / الحساب</th>
+                            <th class="p-3">العميل المرتبط</th>
+                            <th class="p-3">المبلغ</th>
+                            <th class="p-3">التاريخ</th>
+                            <th class="p-3">المستند / الصورة</th>
+                            <th class="p-3 text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="folderTableBody" class="divide-y divide-slate-100">
+                        <!-- يتم تعبئتها برمجياً -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t shrink-0">
+                <button onclick="window.closeFolderModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
             </div>
         </div>
     </div>
 
-    <!-- نافذة معاينة صورة الفاتورة أو المستند المرفق -->
+    <!-- نافذة معاينة صورة المستند أو الفاتورة بحجم كامل -->
     <div id="imagePreviewModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border text-center">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> معاينة مستند المصروف المرفق</h3>
+                <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> معاينة مستند أو صورة المدخل</h3>
                 <button onclick="window.closeImagePreviewModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -366,13 +387,14 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي -->
+    <!-- نافذة كشف حساب العميل التفصيلي وسجل معاملاته -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
                 <div class="flex justify-between items-center border-b pb-3">
                     <div>
                         <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
+                        <span id="stmtClientPhoneAddr" class="text-[11px] text-indigo-600 font-bold block"></span>
                         <span class="text-[11px] text-slate-500">EIDCO // كشف حساب وتفاصيل المديونية المعتمد</span>
                     </div>
                     <button onclick="closeStatementModal()" class="no-print text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
@@ -380,7 +402,7 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                     <div class="p-3 bg-slate-50 rounded-xl border">
-                        <span class="text-[10px] text-slate-500 block">إجمالي المشتريات سحابياً</span>
+                        <span class="text-[10px] text-slate-500 block">إجمالي المعاملات / المشتريات</span>
                         <strong id="stmtTotalPurchases" class="text-indigo-600 mono-font text-sm" dir="ltr">0 ج.م</strong>
                     </div>
                     <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -394,7 +416,7 @@
                 </div>
 
                 <div class="space-y-2">
-                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات والتحويلات السحابية:</span>
+                    <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات المرتبطة بالعميل:</span>
                     <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
@@ -403,7 +425,6 @@
                                     <th class="p-2.5">التفاصيل / الطريقة</th>
                                     <th class="p-2.5">المبلغ</th>
                                     <th class="p-2.5">التاريخ</th>
-                                    <th class="p-2.5 text-center no-print">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -442,23 +463,6 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الحساب العادي أو الحسابات الأخرى -->
-    <div id="previewModal" class="custom-modal">
-        <div id="previewCardContent" class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل الحساب المسجل</h3>
-                <button onclick="window.closePreviewModal()" class="no-print text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div id="previewDetailsMeta" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-2 text-xs">
-            </div>
-            <div class="flex justify-end gap-2 pt-2 border-t">
-                <button onclick="window.closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق النافذة</button>
-            </div>
-        </div>
-    </div>
-
     <!-- نصوص البرمجة العامة -->
     <script>
         function toggleMobileMenu() {
@@ -482,17 +486,32 @@
                 }
             });
 
-            // معالجة اختيار ملف صورة الفاتورة للمصروف
-            const imgFileInput = document.getElementById('expImageFileInput');
+            // معالجة اختيار ملف الصورة للنموذج الرئيسي
+            const imgFileInput = document.getElementById('generalImageFileInput');
             if (imgFileInput) {
                 imgFileInput.addEventListener('change', function(e) {
                     let file = e.target.files[0];
                     if (file) {
                         let reader = new FileReader();
                         reader.onload = function(event) {
-                            window.uploadedExpenseImageBase64 = event.target.result;
-                            document.getElementById('expImagePreviewImg').setAttribute('src', event.target.result);
-                            document.getElementById('expImagePreviewContainer').classList.remove('hidden');
+                            window.generalUploadedImageBase64 = event.target.result;
+                            document.getElementById('generalImagePreviewImg').setAttribute('src', event.target.result);
+                            document.getElementById('generalImagePreviewContainer').classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            // معالجة اختيار ملف الصورة داخل نافذة الجدول المخصص للملف
+            const modalImgInput = document.getElementById('modalInputFile');
+            if (modalImgInput) {
+                modalImgInput.addEventListener('change', function(e) {
+                    let file = e.target.files[0];
+                    if (file) {
+                        let reader = new FileReader();
+                        reader.onload = function(event) {
+                            window.modalUploadedImageBase64 = event.target.result;
                         };
                         reader.readAsDataURL(file);
                     }
@@ -501,7 +520,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase لإدارة شجرة الحسابات والمصروفات والعملاء -->
+    <!-- سكربت Firebase لإدارة شجرة الملفات والمصروفات والعملاء (بدون قراءات مفاجئة) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -538,30 +557,60 @@
         let invoicesList = [];
         let paymentsList = [];
         let transactionsList = [];
+        let currentActiveFolder = null;
         let currentActiveClient = null;
-        window.uploadedExpenseImageBase64 = '';
+        window.generalUploadedImageBase64 = '';
+        window.modalUploadedImageBase64 = '';
 
+        // جلب العملاء وملء قوائم الاختيار والبحث دون تكرار مزعج
         async function fetchClientsAndDropdowns() {
             try {
                 const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
                 const snapshot = await getDocs(clientsQuery);
                 clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 
-                let clientSelect = document.getElementById('accClientSelect');
-                let expClientSelect = document.getElementById('expClientSelect');
-
-                let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
-                clientsList.forEach(c => {
-                    let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
-                    optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
-                });
-
-                if (clientSelect) clientSelect.innerHTML = optionsHtml;
-                if (expClientSelect) expClientSelect.innerHTML = optionsHtml;
+                updateClientsDropdowns(clientsList);
             } catch(e) {
                 console.error("خطأ في جلب قائمة العملاء السحابية:", e);
             }
         }
+
+        window.updateClientsDropdowns = function(listToRender) {
+            let clientSelect = document.getElementById('accClientSelect');
+            let modalClientSelect = document.getElementById('modalInputClient');
+            
+            let currentSelectedVal = clientSelect ? clientSelect.value : '';
+
+            let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
+            listToRender.forEach(c => {
+                let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
+                optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
+            });
+
+            if (clientSelect) {
+                clientSelect.innerHTML = optionsHtml;
+                clientSelect.value = currentSelectedVal; // الحفاظ على الاختيار الحالي لمنع أي إعادة ضبط مفاجئة
+            }
+            if (modalClientSelect) modalClientSelect.innerHTML = optionsHtml;
+        };
+
+        // وظيفة البحث الذكي عن اسم العميل لتصفية القائمة
+        window.filterClientDropdown = function() {
+            let searchVal = document.getElementById('clientSearchInput').value.toLowerCase().trim();
+            if (!searchVal) {
+                updateClientsDropdowns(clientsList);
+                return;
+            }
+            let filtered = clientsList.filter(c => {
+                let name = (c.name || c.clientName || c.companyName || '').toLowerCase();
+                let phone = (c.phone || '').toLowerCase();
+                return name.includes(searchVal) || phone.includes(searchVal);
+            });
+            updateClientsDropdowns(filtered);
+            if (filtered.length === 1) {
+                document.getElementById('accClientSelect').value = filtered[0].clientId;
+            }
+        };
 
         signInAnonymously(auth).then(async () => {
             await fetchClientsAndDropdowns();
@@ -575,167 +624,47 @@
             onSnapshot(accountsRef, (snapshot) => {
                 accountsTreeList = snapshot.docs.map(d => ({ accountId: d.id, ...d.data() }));
                 renderAccountsTree();
+                if (currentActiveFolder) openFolderTable(currentActiveFolder, true); // تحديث صامت للجدول المفتوح
             });
 
             onSnapshot(clientsRef, (snapshot) => {
                 clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 renderAccountsTree();
-                fetchClientsAndDropdowns();
+                updateClientsDropdowns(clientsList);
             });
 
             onSnapshot(invoicesRef, (snapshot) => {
                 invoicesList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderAccountsTree();
             });
 
             onSnapshot(paymentsRef, (snapshot) => {
                 paymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderAccountsTree();
             });
 
             onSnapshot(transactionsRef, (snapshot) => {
                 transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderAccountsTree();
             });
 
         }).catch(err => {
             console.error("خطأ المصادقة السحابية في Firebase:", err);
         });
 
-        // دوال فتح وإغلاق نافذة المصروفات
-        window.openExpenseModal = function(categoryName) {
-            document.getElementById('expCategoryHidden').value = categoryName;
-            document.getElementById('expenseCategoryTitleDisplay').innerText = `التصنيف: ${categoryName}`;
-            document.getElementById('expTitleInput').value = '';
-            document.getElementById('expAmountInput').value = '';
-            document.getElementById('expClientSelect').value = '';
-            document.getElementById('expNotesInput').value = '';
-            document.getElementById('expImageFileInput').value = '';
-            document.getElementById('expImagePreviewContainer').classList.add('hidden');
-            window.uploadedExpenseImageBase64 = '';
-            document.getElementById('expenseModal').classList.add('active');
-        };
-
-        window.closeExpenseModal = function() {
-            document.getElementById('expenseModal').classList.remove('active');
-        };
-
-        // حفظ تفاصيل المصروف وصورة الفاتورة وربطه بالعميل والخزنة
-        window.saveExpenseRecord = async function() {
-            let category = document.getElementById('expCategoryHidden').value;
-            let title = document.getElementById('expTitleInput').value.trim();
-            let amount = Number(document.getElementById('expAmountInput').value);
-            let clientSelect = document.getElementById('expClientSelect');
-            let clientId = clientSelect.value;
-            let clientName = clientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
-            let notes = document.getElementById('expNotesInput').value.trim();
-            let receiptImage = window.uploadedExpenseImageBase64 || '';
-            let today = new Date().toISOString().split('T')[0];
-
-            if (!title) return alert('⚠️ يرجى إدخال بيان أو اسم المصروف.');
-            if (!amount || amount <= 0) return alert('⚠️ يرجى إدخال مبلغ صحيح للمصروف.');
-
-            try {
-                // 1. حفظ في accounts_tree كبند تحت التصنيف
-                await addDoc(collection(db, "accounts_tree"), {
-                    companyId: currentCompanyId,
-                    category: category,
-                    title: title,
-                    code: 'EXP-' + Math.floor(1000 + Math.random() * 9000),
-                    amount: amount,
-                    clientId: clientId,
-                    clientName: clientName,
-                    notes: notes,
-                    receiptImage: receiptImage,
-                    date: today,
-                    isExpense: true,
-                    admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحسابات'
-                });
-
-                // 2. تسجيل المصروف في transactions (الخزنة / الحركة المالية كمنصرف)
-                await addDoc(collection(db, "transactions"), {
-                    companyId: currentCompanyId,
-                    type: 'صرف',
-                    amount: amount,
-                    desc: `مصروف (${category}) - ${title} ${clientName ? '[للعميل: ' + clientName + ']' : ''}`,
-                    receiptImage: receiptImage,
-                    date: today
-                });
-
-                window.closeExpenseModal();
-                alert('✓ تم تسجيل المصروف ورفع صورة الفاتورة وحفظها سحابياً بنجاح.');
-            } catch (err) {
-                alert('خطأ أثناء حفظ المصروف بالسحابة: ' + err.message);
-            }
-        };
-
-        // عرض صورة المستند بحجم كامل
-        window.viewExpenseImage = function(imgBase64, title) {
-            if (!imgBase64) return alert('لا توجد صورة مرفقة لهذا المستند.');
-            document.getElementById('modalFullImage').setAttribute('src', imgBase64);
-            document.getElementById('modalImageInfo').innerText = `المستند: ${title}`;
-            document.getElementById('imagePreviewModal').classList.add('active');
-        };
-
-        window.closeImagePreviewModal = function() {
-            document.getElementById('imagePreviewModal').classList.remove('active');
-        };
-
-        // استيراد شجرة الحسابات الافتراضية
-        window.seedDefaultAccountsTree = async function() {
-            if (!confirm('هل تريد استيراد شجرة الحسابات الافتراضية الشاملة للدليل المحاسبي؟')) return;
-            
-            const defaultAccounts = [
-                { category: "الأصول الثابتة", title: "الأصول الثابتة الرئيسية", code: "1001" },
-                { category: "الأصول الثابتة", title: "اراضي", code: "100101" },
-                { category: "الأصول الثابتة", title: "مبانى وانشاءات ومرافق", code: "100102" },
-                { category: "الأصول الثابتة", title: "اثاث وتجهيزات", code: "100103" },
-                { category: "الأصول الثابتة", title: "وسائل نقل وسيارات", code: "100104" },
-                { category: "الأصول الثابتة", title: "آلات ومعدات", code: "100105" },
-                { category: "الأصول المتداولة", title: "النقدية بالخزينة", code: "10021" },
-                { category: "الأصول المتداولة", title: "البنوك", code: "10022" },
-                { category: "المصروفات العمومية والادارية", title: "اجور ومرتبات", code: "20001" },
-                { category: "المصروفات العمومية والادارية", title: "م تليفون ونت", code: "20011" },
-                { category: "المصروفات العمومية والادارية", title: "كهرباء ومياه", code: "20014" },
-                { category: "المصروفات البيعية", title: "عمولات بيع", code: "30009" },
-                { category: "المصروفات البيعية", title: "نولون وشحن", code: "30010" },
-                { category: "مصروفات صناعية (تشغيلية)", title: "ايجار مصنع", code: "40011" },
-                { category: "مصروفات صناعية (تشغيلية)", title: "صيانة معدات", code: "40016" },
-                { category: "المخازن", title: "مخزن خامات رئيسية", code: "6001" },
-                { category: "مبيعات", title: "مبيعات منتجات تامة", code: "7001" }
-            ];
-
-            try {
-                for (let acc of defaultAccounts) {
-                    await addDoc(collection(db, "accounts_tree"), {
-                        companyId: currentCompanyId,
-                        category: acc.category,
-                        title: acc.title,
-                        code: acc.code,
-                        clientId: '',
-                        clientName: '',
-                        date: new Date().toISOString().split('T')[0],
-                        admin: localStorage.getItem('eidco_v14_admin') || 'مدير النظام'
-                    });
-                }
-                alert('✓ تم استيراد الحسابات الافتراضية بنجاح.');
-            } catch (err) {
-                alert('خطأ أثناء الاستيراد: ' + err.message);
-            }
-        };
-
+        // حفظ حساب/مدخل جديد مع رفع الصورة والعميل
         window.saveAccountNode = async function() {
             let category = document.getElementById('accCategory').value;
             let title = document.getElementById('accTitle').value.trim();
             let code = document.getElementById('accCode').value.trim();
+            let amount = Number(document.getElementById('accAmount').value) || 0;
             let notes = document.getElementById('accNotes').value.trim();
             
             let clientSelect = document.getElementById('accClientSelect');
             let selectedClientId = clientSelect.value;
             let selectedClientName = selectedClientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
+            let receiptImage = window.generalUploadedImageBase64 || '';
+            let today = new Date().toISOString().split('T')[0];
 
             if (!title && !selectedClientId) {
-                return alert('⚠️ يرجى إدخال اسم الحساب أو اختيار العميل المرتبط.');
+                return alert('⚠️ يرجى إدخال اسم الحساب أو البيان أو اختيار العميل المرتبط.');
             }
             if (!title && selectedClientName) {
                 title = `حساب العميل: ${selectedClientName}`;
@@ -746,46 +675,218 @@
                     companyId: currentCompanyId,
                     category,
                     title,
-                    code: code || '---',
+                    code: code || ('ACC-' + Math.floor(1000 + Math.random() * 9000)),
+                    amount,
                     clientId: selectedClientId || '',
                     clientName: selectedClientName || '',
                     notes: notes || '',
-                    date: new Date().toISOString().split('T')[0],
+                    receiptImage,
+                    date: today,
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحساب'
                 });
 
+                // تفريغ المدخلات بلطف
                 document.getElementById('accTitle').value = '';
                 document.getElementById('accCode').value = '';
+                document.getElementById('accAmount').value = '';
                 document.getElementById('accNotes').value = '';
-                document.getElementById('accClientSelect').value = '';
-                alert('✓ تم حفظ الحساب وربطه بالعميل في الشجرة بنجاح.');
+                document.getElementById('generalImageFileInput').value = '';
+                document.getElementById('generalImagePreviewContainer').classList.add('hidden');
+                window.generalUploadedImageBase64 = '';
+
+                alert('✓ تم حفظ المدخل ورفع الصورة وربطه بالعميل سحابياً بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
-        window.deleteAccountNode = async function(accountId, event) {
-            if (event) event.stopPropagation();
-            if (!confirm('هل أنت متأكد من حذف هذا الحساب؟')) return;
+        // استيراد شجرة الحسابات الافتراضية
+        window.seedDefaultAccountsTree = async function() {
+            if (!confirm('هل تريد استيراد شجرة الحسابات والملفات الافتراضية؟')) return;
+            
+            const defaultAccounts = [
+                { category: "الأصول الثابتة", title: "الأصول الثابتة الرئيسية", code: "1001" },
+                { category: "الأصول الثابتة", title: "اراضي ومباني", code: "100101" },
+                { category: "الأصول المتداولة", title: "النقدية بالخزينة والبنوك", code: "10021" },
+                { category: "المصروفات العمومية والادارية", title: "اجور ومرتبات", code: "20001" },
+                { category: "المصروفات العمومية والادارية", title: "كهرباء ومياه", code: "20014" },
+                { category: "المصروفات البيعية", title: "عمولات ونولون شحن", code: "30009" },
+                { category: "مصروفات صناعية (تشغيلية)", title: "ايجار مصنع ومعدات", code: "40011" },
+                { category: "المخازن", title: "مخزن خامات وبضاعة", code: "6001" },
+                { category: "مبيعات", title: "مبيعات عامة وإيرادات", code: "7001" }
+            ];
+
             try {
-                await deleteDoc(doc(db, "accounts_tree", accountId));
-                alert('✓ تم الحذف بنجاح.');
-            } catch(err) {
-                alert('خطأ أثناء الحذف: ' + err.message);
+                for (let acc of defaultAccounts) {
+                    await addDoc(collection(db, "accounts_tree"), {
+                        companyId: currentCompanyId,
+                        category: acc.category,
+                        title: acc.title,
+                        code: acc.code,
+                        amount: 0,
+                        clientId: '',
+                        clientName: '',
+                        receiptImage: '',
+                        date: new Date().toISOString().split('T')[0],
+                        admin: localStorage.getItem('eidco_v14_admin') || 'مدير النظام'
+                    });
+                }
+                alert('✓ تم استيراد الملفات الافتراضية بنجاح.');
+            } catch (err) {
+                alert('خطأ أثناء الاستيراد: ' + err.message);
             }
         };
 
-        // فتح كشف حساب العميل الاحترافي
+        // فتح الجدول المخصص للملف/التصنيف عند النقر عليه
+        window.openFolderTable = function(categoryName, isSilent = false) {
+            currentActiveFolder = categoryName;
+            document.getElementById('folderModalTitle').innerHTML = `<i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف: ${categoryName}`;
+            document.getElementById('folderModalSubtitle').innerText = `إدارة وعرض كافة المدخلات والمستندات والعملاء التابعة لـ [${categoryName}]`;
+            
+            let isClientsFolder = (categoryName === "حسابات العملاء والشركات");
+            let items = isClientsFolder ? clientsList : accountsTreeList.filter(a => a.category === categoryName);
+
+            let tbody = document.getElementById('folderTableBody');
+            let rowsHtml = '';
+
+            if (isClientsFolder) {
+                items.forEach(c => {
+                    let cName = c.name || c.clientName || 'عميل بدون اسم';
+                    let cPhone = c.phone || '---';
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="window.openClientStatement('${cName}')">
+                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId.substring(0,6)}</td>
+                            <td class="p-3 font-bold text-slate-900">${cName} (${cPhone})</td>
+                            <td class="p-3 text-indigo-700 font-bold">عميل مسجل</td>
+                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">---</td>
+                            <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
+                            <td class="p-3">---</td>
+                            <td class="p-3 text-center">
+                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                items.forEach(i => {
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${i.code || '---'}</td>
+                            <td class="p-3 font-bold text-slate-900">
+                                ${i.title}
+                                ${i.notes ? '<span class="block text-[11px] text-slate-500 font-normal">' + i.notes + '</span>' : ''}
+                            </td>
+                            <td class="p-3 text-indigo-700 font-bold">${i.clientName || '---'}</td>
+                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</td>
+                            <td class="p-3 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
+                            <td class="p-3">
+                                ${i.receiptImage ? `<button onclick="window.viewDocumentImage('${i.receiptImage}', '${i.title}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image ml-1"></i> معاينة الصورة</button>` : '<span class="text-slate-400">بدون صورة</span>'}
+                            </td>
+                            <td class="p-3 text-center flex items-center justify-center gap-2">
+                                <button onclick="window.deleteFolderItem('${i.accountId}')" class="text-rose-500 hover:text-rose-700 text-xs p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            if (!rowsHtml) {
+                rowsHtml = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
+            }
+
+            tbody.innerHTML = rowsHtml;
+            if (!isSilent) {
+                document.getElementById('folderTableModal').classList.add('active');
+            }
+        };
+
+        window.closeFolderModal = function() {
+            document.getElementById('folderTableModal').classList.remove('active');
+            currentActiveFolder = null;
+        };
+
+        // حفظ عنصر جديد مباشرة داخل الملف المفتوح حالياً من نافذة الجدول المخصص
+        window.saveItemToFolder = async function() {
+            if (!currentActiveFolder) return;
+            let title = document.getElementById('modalInputTitle').value.trim();
+            let amount = Number(document.getElementById('modalInputAmount').value) || 0;
+            let clientSelect = document.getElementById('modalInputClient');
+            let clientId = clientSelect.value;
+            let clientName = clientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
+            let notes = document.getElementById('modalInputNotes').value.trim();
+            let receiptImage = window.modalUploadedImageBase64 || '';
+            let today = new Date().toISOString().split('T')[0];
+
+            if (!title) return alert('⚠️ يرجى إدخال بيان أو اسم الحساب.');
+
+            try {
+                await addDoc(collection(db, "accounts_tree"), {
+                    companyId: currentCompanyId,
+                    category: currentActiveFolder,
+                    title,
+                    code: 'MOD-' + Math.floor(1000 + Math.random() * 9000),
+                    amount,
+                    clientId,
+                    clientName,
+                    notes,
+                    receiptImage,
+                    date: today,
+                    admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الحسابات'
+                });
+
+                document.getElementById('modalInputTitle').value = '';
+                document.getElementById('modalInputAmount').value = '';
+                document.getElementById('modalInputNotes').value = '';
+                document.getElementById('modalInputFile').value = '';
+                window.modalUploadedImageBase64 = '';
+
+                openFolderTable(currentActiveFolder, true);
+                alert('✓ تم حفظ المدخل داخل الملف المختار بنجاح.');
+            } catch (err) {
+                alert('خطأ أثناء الحفظ: ' + err.message);
+            }
+        };
+
+        window.deleteFolderItem = async function(accountId) {
+            if (!confirm('هل أنت متأكد من حذف هذا المدخل؟')) return;
+            try {
+                await deleteDoc(doc(db, "accounts_tree", accountId));
+                if (currentActiveFolder) openFolderTable(currentActiveFolder, true);
+                alert('✓ تم الحذف بنجاح.');
+            } catch (e) {
+                alert('خطأ أثناء الحذف: ' + e.message);
+            }
+        };
+
+        window.viewDocumentImage = function(imgBase64, title) {
+            if (!imgBase64) return alert('لا توجد صورة مرفقة.');
+            document.getElementById('modalFullImage').setAttribute('src', imgBase64);
+            document.getElementById('modalImageInfo').innerText = `المستند: ${title}`;
+            document.getElementById('imagePreviewModal').classList.add('active');
+        };
+
+        window.closeImagePreviewModal = function() {
+            document.getElementById('imagePreviewModal').classList.remove('active');
+        };
+
+        // فتح كشف حساب العميل الشامل والبحث عن معلوماته
         window.openClientStatement = function(clientName) {
-            currentActiveClient = clientsList.find(c => (c.name || c.clientName) === clientName);
+            currentActiveClient = clientsList.find(c => (c.name || c.clientName || c.companyName) === clientName);
             if(!currentActiveClient) return;
 
-            document.getElementById('stmtClientName').innerText = currentActiveClient.name || currentActiveClient.clientName;
+            let cName = currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName;
+            document.getElementById('stmtClientName').innerText = cName;
+            document.getElementById('stmtClientPhoneAddr').innerText = `الهاتف: ${currentActiveClient.phone || '---'} | العنوان: ${currentActiveClient.address || '---'}`;
 
-            let clientInvoices = invoicesList.filter(i => i.client === clientName);
-            let clientPayments = paymentsList.filter(p => p.clientName === clientName);
+            let clientAccounts = accountsTreeList.filter(a => a.clientName === cName);
+            let clientInvoices = invoicesList.filter(i => i.client === cName);
+            let clientPayments = paymentsList.filter(p => p.clientName === cName);
 
-            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0) + clientAccounts.reduce((sum, a) => sum + Number(a.amount || 0), 0);
             let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
@@ -794,36 +895,39 @@
             document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
 
             let rowsHtml = '';
+            clientAccounts.forEach(acc => {
+                rowsHtml += `
+                    <tr>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${acc.code || 'ACC'}</td>
+                        <td class="p-2.5">مدخل حساب (${acc.category}) - ${acc.title}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(acc.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${acc.date || '---'}</td>
+                    </tr>
+                `;
+            });
             clientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
-                        <td class="p-2.5">فاتورة مبيعات سحابية (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
+                        <td class="p-2.5">فاتورة مبيعات سحابية</td>
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
-                        <td class="p-2.5 text-center no-print">
-                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة"><i class="fa-solid fa-eye"></i></button>
-                        </td>
                     </tr>
                 `;
             });
-
             clientPayments.forEach(pay => {
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
-                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد مباشر'})</td>
+                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد'})</td>
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
-                        <td class="p-2.5 text-center no-print">
-                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                        </td>
                     </tr>
                 `;
             });
 
             if(!rowsHtml) {
-                rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد معاملات مسجلة بعد.</td></tr>`;
+                rowsHtml = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا توجد معاملات مسجلة بعد.</td></tr>`;
             }
 
             document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
@@ -839,7 +943,7 @@
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
             let method = document.getElementById('paymentMethodInput').value;
-            let clientName = currentActiveClient.name || currentActiveClient.clientName;
+            let cName = currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName;
             if(!amount || amount <= 0) return alert('الرجاء إدخال مبلغ صحيح');
 
             let today = new Date().toISOString().split('T')[0];
@@ -849,7 +953,7 @@
                 await addDoc(collection(db, "client_payments"), {
                     companyId: currentCompanyId,
                     id: payId,
-                    clientName: clientName,
+                    clientName: cName,
                     amount: amount,
                     method: method,
                     date: today
@@ -859,7 +963,7 @@
                     companyId: currentCompanyId,
                     type: 'إيراد',
                     amount: amount,
-                    desc: `تحصيل دفعة (${method}) من العميل ${clientName}`,
+                    desc: `تحصيل دفعة (${method}) من العميل ${cName}`,
                     date: today
                 });
 
@@ -870,30 +974,11 @@
             }
         };
 
-        // الدوال المضافة لضمان عدم وجود أخطاء وتكامل الأزرار
-        window.deletePayment = async function(payDocId) {
-            if(!confirm('هل أنت متأكد من حذف دفعة السداد؟')) return;
-            try {
-                let pay = paymentsList.find(p => p.docId === payDocId);
-                await deleteDoc(doc(db, "client_payments", payDocId));
-                if (pay) {
-                    let tx = transactionsList.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
-                    if (tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
-                }
-                alert('✓ تم الحذف بنجاح.');
-            } catch(e) {
-                alert('خطأ أثناء الحذف: ' + e.message);
-            }
-        };
-
-        window.previewInvoice = function(invoiceId) {
-            window.location.href = `invoices.html?companyId=${currentCompanyId}&edit=${invoiceId}`;
-        };
-
         window.downloadStatementImage = function() {
             html2canvas(document.getElementById('statementPrintArea'), { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
-                link.download = 'EIDCO-Statement-' + (currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : Date.now()) + '.png';
+                let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : 'Client';
+                link.download = `EIDCO-Statement-${cName}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
@@ -906,47 +991,14 @@
         window.sendStatementWhatsApp = function() {
             if(!currentActiveClient) return;
             let cName = currentActiveClient.name || currentActiveClient.clientName;
-            let cInv = invoicesList.filter(i => i.client === cName);
-            let totalPur = cInv.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-            let cPay = paymentsList.filter(p => p.clientName === cName);
-            let totalPd = cPay.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-            let due = totalPur - totalPd;
-
-            let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n\n💰 إجمالي المشتريات: ${totalPur.toLocaleString()} ج.م\n✅ إجمالي المدفوعات: ${totalPd.toLocaleString()} ج.م\n📌 *الرصيد المتبقي (المديونية): ${due.toLocaleString()} ج.م*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
+            let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
             let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
             window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
         };
 
-        window.previewAccount = function(accountId, isClient = false) {
-            if (isClient) {
-                let client = clientsList.find(c => c.clientId === accountId);
-                if (!client) return;
-                window.openClientStatement(client.name || client.clientName);
-            } else {
-                let acc = accountsTreeList.find(a => a.accountId === accountId);
-                if (!acc) return;
-                document.getElementById('previewTitle').innerText = `تفاصيل الحساب: ${acc.title}`;
-                let metaContainer = document.getElementById('previewDetailsMeta');
-                metaContainer.innerHTML = `
-                    <div><span class="text-slate-500 font-bold">التصنيف المحاسبي:</span> <span class="text-indigo-900 font-bold">${acc.category}</span></div>
-                    <div><span class="text-slate-500 font-bold">اسم البيان / الحساب:</span> <span class="text-slate-900 font-bold">${acc.title}</span></div>
-                    ${acc.amount ? '<div><span class="text-slate-500 font-bold">المبلغ:</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">' + Number(acc.amount).toLocaleString() + ' ج.م</span></div>' : ''}
-                    ${acc.clientName ? '<div><span class="text-slate-500 font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">' + acc.clientName + '</span></div>' : ''}
-                    <div><span class="text-slate-500 font-bold">رقم الحساب / الكود:</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${acc.code}</span></div>
-                    <div><span class="text-slate-500 font-bold">ملاحظات:</span> <span class="text-slate-700">${acc.notes || '---'}</span></div>
-                    ${acc.receiptImage ? '<div class="pt-2"><button onclick="window.viewExpenseImage(\'' + acc.receiptImage + '\', \'' + acc.title + '\')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fa-solid fa-image ml-1"></i> معاينة صورة الفاتورة المرفقة</button></div>' : ''}
-                `;
-                document.getElementById('previewModal').classList.add('active');
-            }
-        };
-
-        window.closePreviewModal = function() {
-            document.getElementById('previewModal').classList.remove('active');
-        };
-
+        // عرض قائمة الملفات والتصنيفات
         window.renderAccountsTree = function() {
             let container = document.getElementById('accountsTreeContainer');
-            let search = document.getElementById('searchAccountsInput').value.toLowerCase().trim();
             
             let categories = [
                 "الأصول الثابتة",
@@ -961,113 +1013,27 @@
                 "مبيعات"
             ];
 
-            let filteredAccounts = accountsTreeList.filter(a => 
-                (a.title && a.title.toLowerCase().includes(search)) || 
-                (a.category && a.category.toLowerCase().includes(search)) || 
-                (a.code && a.code.toLowerCase().includes(search)) ||
-                (a.clientName && a.clientName.toLowerCase().includes(search))
-            );
-
-            let filteredClients = clientsList.filter(c => {
-                let cName = (c.name || c.clientName || '').toLowerCase();
-                let cPhone = (c.phone || '').toLowerCase();
-                let cAddr = (c.address || '').toLowerCase();
-                return cName.includes(search) || cPhone.includes(search) || cAddr.includes(search);
-            });
-
             let totalCount = accountsTreeList.length + clientsList.length;
-            let filteredCount = filteredAccounts.length + filteredClients.length;
-
             let counterEl = document.getElementById('totalAccountsCountCounter');
-            if(counterEl) counterEl.innerText = `إجمالي الحسابات والعملاء: ${totalCount} (المعروض: ${filteredCount})`;
-
-            if (!filteredCount) {
-                container.innerHTML = `<p class="text-slate-400 text-center py-8 font-bold">لا توجد حسابات أو عملاء مسجلون مطابقة للبحث حالياً.</p>`;
-                return;
-            }
+            if(counterEl) counterEl.innerText = `إجمالي المدخلات والعملاء: ${totalCount}`;
 
             container.innerHTML = categories.map(cat => {
                 let isClientsCat = (cat === "حسابات العملاء والشركات");
-                let isExpenseCat = (cat === "المصروفات العمومية والادارية" || cat === "المصروفات البيعية" || cat === "مصروفات صناعية (تشغيلية)");
-                let items = isClientsCat ? filteredClients : filteredAccounts.filter(a => a.category === cat);
-                
-                if (search && !items.length) return '';
-                
-                let catIcon = isClientsCat ? 'fa-building-user text-indigo-600' : (isExpenseCat ? 'fa-receipt text-indigo-600' : 'fa-folder-open text-indigo-600');
+                let itemsCount = isClientsCat ? clientsList.length : accountsTreeList.filter(a => a.category === cat).length;
+                let catIcon = isClientsCat ? 'fa-building-user text-indigo-600' : 'fa-folder-open text-indigo-600';
 
                 return `
-                    <div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
+                    <div onclick="window.openFolderTable('${cat}')" class="corporate-card p-4 bg-white hover:border-indigo-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-3">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2 font-black text-indigo-700 text-sm">
-                                <i class="fa-solid ${catIcon}"></i>
-                                <span>${cat}</span>
-                                <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono" dir="ltr">${items.length} عنصر</span>
+                            <div class="flex items-center gap-2 font-black text-indigo-900 text-sm truncate">
+                                <i class="fa-solid ${catIcon} text-base"></i>
+                                <span class="truncate">${cat}</span>
                             </div>
-                            ${isExpenseCat ? `
-                                <button onclick="window.openExpenseModal('${cat}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-                                    <i class="fa-solid fa-plus-circle"></i> تسجيل مصروف ورفع صورة
-                                </button>
-                            ` : ''}
+                            <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-xl font-mono font-bold shrink-0" dir="ltr">${itemsCount} عنصر</span>
                         </div>
-                        <div class="tree-node space-y-2 pt-1">
-                            ${items.length ? items.map(i => {
-                                if (isClientsCat) {
-                                    let cName = i.name || i.clientName || 'عميل بدون اسم';
-                                    let cPhone = i.phone || '---';
-                                    let cAddress = i.address || '---';
-                                    let clientInvoices = invoicesList.filter(inv => inv.client === cName);
-                                    let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-                                    let clientPayments = paymentsList.filter(p => p.clientName === cName);
-                                    let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-                                    let dueBalance = totalPurchases - totalPaid;
-
-                                    return `
-                                        <div onclick="window.previewAccount('${i.clientId}', true)" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
-                                            <div class="flex items-center gap-3.5 flex-1 min-w-0">
-                                                <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                                                    <i class="fa-solid fa-user-tie"></i>
-                                                </div>
-                                                <div class="truncate">
-                                                    <span class="font-bold text-slate-900 block truncate">
-                                                        ${cName} <span class="text-indigo-600 font-semibold text-[11px]">(${cPhone})</span>
-                                                    </span>
-                                                    <span class="text-[11px] text-slate-500 font-mono">المديونية: <strong class="${dueBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}">${dueBalance.toLocaleString()} ج.م</strong></span>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2.5 shrink-0">
-                                                <button onclick="window.previewAccount('${i.clientId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
-                                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
-                                } else {
-                                    return `
-                                        <div onclick="window.previewAccount('${i.accountId}', false)" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
-                                            <div class="flex items-center gap-3.5 flex-1 min-w-0">
-                                                <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                                                    <i class="fa-solid ${i.isExpense ? 'fa-receipt text-emerald-600' : 'fa-file-invoice'}"></i>
-                                                </div>
-                                                <div class="truncate">
-                                                    <span class="font-bold text-slate-900 block truncate">
-                                                        ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''} 
-                                                        ${i.amount ? '<span class="text-emerald-600 font-mono font-bold text-xs" dir="ltr">[' + Number(i.amount).toLocaleString() + ' ج.م]</span>' : ''}
-                                                    </span>
-                                                    <span class="text-[11px] text-slate-500 font-mono">التاريخ: ${i.date ? i.date : '---'}${i.receiptImage ? ' | <i class="fa-solid fa-image text-indigo-600"></i> يوجد صورة مرفقة' : ''}</span>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2.5 shrink-0">
-                                                <button onclick="window.previewAccount('${i.accountId}', false)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
-                                                    <i class="fa-solid fa-eye ml-1"></i> التفاصيل
-                                                </button>
-                                                <button onclick="window.deleteAccountNode('${i.accountId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
-                                }
-                            }).join('') : '<p class="text-slate-400 text-xs py-2">لا توجد حسابات أو مصروفات مسجلة تحت هذا التصنيف.</p>'}
+                        <div class="flex justify-between items-center text-[11px] text-slate-500 border-t pt-2">
+                            <span><i class="fa-solid fa-table-cells ml-1"></i> انقر لفتح الجدول</span>
+                            <i class="fa-solid fa-arrow-left text-indigo-600 font-bold"></i>
                         </div>
                     </div>
                 `;

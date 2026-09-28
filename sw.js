@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v27-cache'; // تحديث الإصدار ليشمل كافة الصفحات والملفات الجديدة
+const CACHE_NAME = 'eidco-v28-cache'; // تحديث الإصدار ليشمل كافة الصفحات والملفات الجديدة
 const assetsToCache = [
   './index.html',
   './auth.html',
@@ -26,6 +26,7 @@ const assetsToCache = [
   './icon-512.png',
   './icon-new-192.png',
   './icon-new-512.png'
+  './accounts-tree.html',
 ];
 
 self.addEventListener('install', (e) => {

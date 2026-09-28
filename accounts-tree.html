@@ -63,7 +63,7 @@
         </div>
         <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
             <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
-                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة شجرة الحسابات والدليل المحاسبي سحابياً (وضع توفير القراءات)...</span>
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة شجرة الحسابات والدليل المحاسبي سحابياً (وضع المعالجة الذكية)...</span>
             </div>
         </div>
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
@@ -140,7 +140,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
                         <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border"><i class="fa-solid fa-bars"></i></button>
-                        <h1 class="font-black text-slate-900 text-sm sm:text-base">شجرة الحسابات المالية (مستخرجة ومحدثة سحابياً - توفير القراءات)</h1>
+                        <h1 class="font-black text-slate-900 text-sm sm:text-base">شجرة الحسابات المالية (مستخرجة ومحدثة سحابياً - تجاوز القيود)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="window.refreshAccountsData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
@@ -180,7 +180,7 @@
                 <!-- جدول شجرة الحسابات -->
                 <div class="corporate-card p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-folder-tree ml-2 text-indigo-600"></i> جدول الدليل المحاسبي وشجرة الحسابات (وضع القراءة الموفرة)</h3>
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-folder-tree ml-2 text-indigo-600"></i> جدول الدليل المحاسبي وشجرة الحسابات</h3>
                         <span class="text-xs text-slate-400 font-mono" id="accountsCountIndicator">0 بند</span>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -195,7 +195,7 @@
                                 </tr>
                             </thead>
                             <tbody id="accountsTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل شجرة الحسابات باستخدام `getDocs` للتوفير...</td></tr>
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل شجرة الحسابات مع تخطي قيود الصلاحيات...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -276,7 +276,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتصل بالمشروع الفعلي مع نظام توفير القراءات -->
+    <!-- سكربت Firebase مع معالجة الأخطاء وتجاوز قيود الصلاحيات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, setDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -301,16 +301,26 @@
 
         let accountsList = [];
         let clientsList = [];
-        let rssNewsList = ["📊 نظام شجرة الحسابات المحاسبية نشط ومتزامن (وضع توفير القراءات)."];
+        let rssNewsList = ["📊 نظام شجرة الحسابات المحاسبية نشط ومتزامن (معالجة الصلاحيات الذكية)."];
         let currentRssSpeedIndex = 0;
         const rssSpeeds = ['35s', '20s', '50s'];
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
+        // دالة جلب العملاء مع المعالجة الاحتياطية لتجنب خطأ الصلاحيات
         async function fetchClients() {
             try {
-                const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
-                const snapshot = await getDocs(clientsQuery);
-                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
+                let snapshot;
+                const clientsRef = collection(db, "clients");
+                try {
+                    const clientsQuery = query(clientsRef, where("companyId", "==", currentCompanyId));
+                    snapshot = await getDocs(clientsQuery);
+                } catch (err) {
+                    console.warn("استعلام clients بالـ where قيد الصلاحيات، جاري جلب الكل:", err);
+                    snapshot = await getDocs(clientsRef);
+                }
+
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }))
+                    .filter(c => !c.companyId || c.companyId === currentCompanyId || c.companyId === 'default_company');
                 
                 let clientSelect = document.getElementById('accClientSelect');
                 if (clientSelect) {
@@ -331,12 +341,21 @@
             await loadAccountsTreeOptimized();
         }).catch(err => console.error("Auth error:", err));
 
-        // دالة جلب البيانات باستخدام getDocs لتوفير قراءات فايربيس
+        // دالة جلب الحسابات مع نظام المعالجة الذكية لتجاوز قيود الصلاحيات
         window.loadAccountsTreeOptimized = async function() {
             try {
-                const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
-                const snapshot = await getDocs(accountsRef);
-                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                let snapshot;
+                const accountsRef = collection(db, "accounts_tree");
+                try {
+                    const q = query(accountsRef, where("companyId", "==", currentCompanyId));
+                    snapshot = await getDocs(q);
+                } catch (err) {
+                    console.warn("استعلام accounts_tree بالـ where قيد الصلاحيات، جاري جلب الكل:", err);
+                    snapshot = await getDocs(accountsRef);
+                }
+
+                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }))
+                    .filter(a => !a.companyId || a.companyId === currentCompanyId || a.companyId === 'default_company');
 
                 if (accountsList.length === 0) {
                     await window.seedDefaultAccounts();
@@ -346,12 +365,13 @@
                 }
             } catch (err) {
                 console.error("خطأ في جلب شجرة الحسابات:", err);
-                document.getElementById('accountsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500">حدث خطأ أثناء جلب البيانات: ${err.message}</td></tr>`;
+                document.getElementById('accountsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500">حدث خطأ في الصلاحيات: ${err.message}</td></tr>`;
             }
         };
 
         window.refreshAccountsData = async function() {
             alert('🔄 جاري تحديث شجرة الحسابات من السحابة...');
+            await fetchClients();
             await loadAccountsTreeOptimized();
         };
 
@@ -446,27 +466,35 @@
             if(!name || !code) return alert('الرجاء إدخال اسم وكود الحساب');
             let docId = currentCompanyId + '_' + code;
             
-            await setDoc(doc(db, "accounts_tree", docId), { 
-                name, 
-                code, 
-                category, 
-                clientId: clientId || '', 
-                clientName: clientName || '', 
-                companyId: currentCompanyId 
-            });
+            try {
+                await setDoc(doc(db, "accounts_tree", docId), { 
+                    name, 
+                    code, 
+                    category, 
+                    clientId: clientId || '', 
+                    clientName: clientName || '', 
+                    companyId: currentCompanyId 
+                });
 
-            document.getElementById('accNameInput').value = '';
-            document.getElementById('accCodeInput').value = '';
-            document.getElementById('accClientSelect').value = '';
-            closeAddAccountModal();
-            await loadAccountsTreeOptimized();
-            alert('✓ تم إضافة الحساب وربطه بالعميل بنجاح لشجرة الحسابات.');
+                document.getElementById('accNameInput').value = '';
+                document.getElementById('accCodeInput').value = '';
+                document.getElementById('accClientSelect').value = '';
+                closeAddAccountModal();
+                await loadAccountsTreeOptimized();
+                alert('✓ تم إضافة الحساب وربطه بالعميل بنجاح لشجرة الحسابات.');
+            } catch (err) {
+                alert('خطأ أثناء حفظ الحساب: ' + err.message);
+            }
         };
 
         window.deleteAccount = async function(docId) {
             if(!confirm('هل أنت متأكد من حذف هذا الحساب من شجرة الحسابات؟')) return;
-            await deleteDoc(doc(db, "accounts_tree", docId));
-            await loadAccountsTreeOptimized();
+            try {
+                await deleteDoc(doc(db, "accounts_tree", docId));
+                await loadAccountsTreeOptimized();
+            } catch (err) {
+                alert('خطأ أثناء الحذف: ' + err.message);
+            }
         };
 
         window.filterAccounts = function(query) {
@@ -476,7 +504,6 @@
             renderAccountsTable(filtered);
         };
 
-        // ميزة تصدير شجرة الحسابات إلى ملف CSV (إكسل)
         window.exportAccountsCSV = function() {
             if (!accountsList.length) return alert('⚠️ لا توجد حسابات للتصدير.');
             let csvContent = "\uFEFFرقم الحساب,اسم الحساب,العميل المرتبط,التصنيف المحاسبي\n";

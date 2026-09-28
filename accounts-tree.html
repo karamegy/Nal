@@ -276,11 +276,11 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتوافق مع قواعد الأمان الجديدة وبدون استعلامات معقدة -->
+    <!-- سكربت Firebase مع مراقبة حالة المصادقة لضمان استقرار الصلاحيات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, setDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
@@ -306,12 +306,11 @@
         const rssSpeeds = ['35s', '20s', '50s'];
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
-        // جلب العملاء المسجلين وعرضهم في القائمة المنسدلة بدون شرط where لمنع خطأ الصلاحيات
+        // جلب العملاء المسجلين وعرضهم في القائمة المنسدلة
         async function fetchClients() {
             try {
                 const snapshot = await getDocs(collection(db, "clients"));
-                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }))
-                    .filter(c => !c.companyId || c.companyId === currentCompanyId || c.companyId === 'default_company');
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 
                 let clientSelect = document.getElementById('accClientSelect');
                 if (clientSelect) {
@@ -327,12 +326,17 @@
             }
         }
 
-        signInAnonymously(auth).then(async () => {
-            await fetchClients();
-            await loadAccountsTreeSecure();
-        }).catch(err => console.error("Auth error:", err));
+        // استخدام مراقب المصادقة لضمان عدم تنفيذ أي جلب أو حفظ إلا بعد تفعيل الجلسة أماناً
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await fetchClients();
+                await loadAccountsTreeSecure();
+            } else {
+                signInAnonymously(auth).catch(err => console.error("Auth error:", err));
+            }
+        });
 
-        // جلب شجرة الحسابات بالكامل ثم فلترتها برمجياً لتجنب أي قيود استعلام سحابي
+        // جلب شجرة الحسابات
         window.loadAccountsTreeSecure = async function() {
             try {
                 const snapshot = await getDocs(collection(db, "accounts_tree"));

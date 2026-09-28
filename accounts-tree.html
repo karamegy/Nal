@@ -155,6 +155,13 @@
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- شريط عرض معرف الشركة الحالي -->
+                <div class="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-900 px-4 py-2 rounded-2xl text-xs font-bold shadow-sm">
+                    <i class="fa-solid fa-building-shield text-indigo-600"></i>
+                    <span>معرف الشركة :</span>
+                    <span id="currentCompanyIdDisplay" class="mono-font bg-white px-2 py-0.5 rounded-lg border border-indigo-100 text-indigo-700">---</span>
+                </div>
+
                 <!-- إحصائيات سريعة -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="corporate-card p-5 border-l-4 border-l-indigo-600">
@@ -248,13 +255,16 @@
         </div>
     </div>
 
-    <!-- سكربت صلاحيات القائمة الجانبية وتمرير الـ companyId -->
+    <!-- سكربت إعداد المعرف وعرضه -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
             
+            let compDisplay = document.getElementById('currentCompanyIdDisplay');
+            if(compDisplay) compDisplay.innerText = currentCompanyId;
+
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
@@ -276,7 +286,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase مع مراقبة حالة المصادقة لضمان استقرار الصلاحيات -->
+    <!-- سكربت Firebase المتوافق لجلب العملاء والحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, setDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -296,7 +306,7 @@
         const auth = getAuth(app);
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let accountsList = [];
@@ -306,11 +316,12 @@
         const rssSpeeds = ['35s', '20s', '50s'];
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
-        // جلب العملاء المسجلين وعرضهم في القائمة المنسدلة
+        // جلب العملاء بدقة وفلترتهم برمجياً لضمان ظهورهم في القائمة المنسدلة
         async function fetchClients() {
             try {
                 const snapshot = await getDocs(collection(db, "clients"));
-                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }))
+                    .filter(c => !c.companyId || c.companyId === currentCompanyId || c.companyId === 'company_founder_karm' || c.companyId === 'default_company');
                 
                 let clientSelect = document.getElementById('accClientSelect');
                 if (clientSelect) {
@@ -326,7 +337,6 @@
             }
         }
 
-        // استخدام مراقب المصادقة لضمان عدم تنفيذ أي جلب أو حفظ إلا بعد تفعيل الجلسة أماناً
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 await fetchClients();
@@ -336,12 +346,11 @@
             }
         });
 
-        // جلب شجرة الحسابات
         window.loadAccountsTreeSecure = async function() {
             try {
                 const snapshot = await getDocs(collection(db, "accounts_tree"));
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }))
-                    .filter(a => !a.companyId || a.companyId === currentCompanyId || a.companyId === 'default_company');
+                    .filter(a => !a.companyId || a.companyId === currentCompanyId || a.companyId === 'company_founder_karm' || a.companyId === 'default_company');
 
                 if (accountsList.length === 0) {
                     await window.seedDefaultAccounts();
@@ -351,12 +360,12 @@
                 }
             } catch (err) {
                 console.error("خطأ في جلب شجرة الحسابات:", err);
-                document.getElementById('accountsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-bold">خطأ في الصلاحيات: ${err.message}</td></tr>`;
+                document.getElementById('accountsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-bold">خطأ في الصلاحيات أو الجلب: ${err.message}</td></tr>`;
             }
         };
 
         window.refreshAccountsData = async function() {
-            alert('🔄 جاري تحديث شجرة الحسابات بأمان من السحابة...');
+            alert('🔄 جاري تحديث شجرة الحسابات والعملاء بأمان من السحابة...');
             await fetchClients();
             await loadAccountsTreeSecure();
         };

@@ -151,7 +151,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(عرض الجداول والمستندات بانتظام تام)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(جداول مرتبة وثابتة الأعمدة تماماً)</span>
                             </h1>
                         </div>
                     </div>
@@ -320,11 +320,11 @@
                 </button>
             </div>
 
-            <!-- جدول محتويات الملف المختار (مع min-w لضمان ترتيب الأعمدة وعدم تداخلها) -->
+            <!-- جدول محتويات الملف المختار مع تثبيت الأعمدة تماماً (table-layout: fixed) -->
             <div class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
-                <table class="w-full min-w-[700px] text-right text-xs">
-                    <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b">
-                        <!-- يتم تعبئة الرؤوس ديناميكياً حسب نوع الملف -->
+                <table class="w-full min-w-[750px] text-right text-xs" style="table-layout: fixed;">
+                    <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b z-10">
+                        <!-- يتم تعبئة الرؤوس بدقة -->
                     </thead>
                     <tbody id="folderTableBody" class="divide-y divide-slate-100">
                         <!-- يتم تعبئتها برمجياً بدقة -->
@@ -388,13 +388,13 @@
                 <div class="space-y-2">
                     <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات المرتبطة بالعميل:</span>
                     <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs" style="table-layout: fixed;">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                    <th class="p-2.5">الرقم / المعاملة</th>
-                                    <th class="p-2.5">التفاصيل / الطريقة</th>
-                                    <th class="p-2.5">المبلغ</th>
-                                    <th class="p-2.5">التاريخ</th>
+                                    <th class="p-2.5 truncate" style="width: 25%;">الرقم / المعاملة</th>
+                                    <th class="p-2.5 truncate" style="width: 35%;">التفاصيل / الطريقة</th>
+                                    <th class="p-2.5 truncate" style="width: 20%;">المبلغ</th>
+                                    <th class="p-2.5 truncate" style="width: 20%;">التاريخ</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -699,13 +699,13 @@
             if (isClientsFolder) {
                 headerHtml = `
                     <tr>
-                        <th class="p-3">كود العميل</th>
-                        <th class="p-3">اسم العميل</th>
-                        <th class="p-3">الهاتف</th>
-                        <th class="p-3">الحالة</th>
-                        <th class="p-3">التاريخ</th>
-                        <th class="p-3">النوع</th>
-                        <th class="p-3 text-center">الإجراءات</th>
+                        <th class="p-3 truncate" style="width: 12%;">كود العميل</th>
+                        <th class="p-3 truncate" style="width: 25%;">اسم العميل</th>
+                        <th class="p-3 truncate" style="width: 18%;">الهاتف</th>
+                        <th class="p-3 truncate" style="width: 12%;">الحالة</th>
+                        <th class="p-3 truncate" style="width: 13%;">التاريخ</th>
+                        <th class="p-3 truncate" style="width: 10%;">النوع</th>
+                        <th class="p-3 text-center truncate" style="width: 10%;">الإجراءات</th>
                     </tr>
                 `;
                 items.forEach(c => {
@@ -713,15 +713,15 @@
                     let cPhone = c.phone || '---';
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="window.openClientStatement('${cName}')">
-                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
-                            <td class="p-3 font-bold text-slate-900">${cName}</td>
-                            <td class="p-3 text-indigo-700 font-bold" dir="ltr">${cPhone}</td>
-                            <td class="p-3 font-bold text-emerald-600">نشط</td>
-                            <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
-                            <td class="p-3 text-slate-600">عميل مسجل</td>
-                            <td class="p-3 text-center">
-                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
-                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
+                            <td class="p-3 mono-font font-bold text-indigo-600 truncate" style="width: 12%;" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
+                            <td class="p-3 font-bold text-slate-900 truncate" style="width: 25%;">${cName}</td>
+                            <td class="p-3 text-indigo-700 font-bold truncate" style="width: 18%;" dir="ltr">${cPhone}</td>
+                            <td class="p-3 font-bold text-emerald-600 truncate" style="width: 12%;">نشط</td>
+                            <td class="p-3 mono-font text-slate-500 truncate" style="width: 13%;" dir="ltr">${c.date || '---'}</td>
+                            <td class="p-3 text-slate-600 truncate" style="width: 10%;">عميل</td>
+                            <td class="p-3 text-center truncate" style="width: 10%;">
+                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg text-xs font-bold transition">
+                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف
                                 </button>
                             </td>
                         </tr>
@@ -730,30 +730,30 @@
             } else {
                 headerHtml = `
                     <tr>
-                        <th class="p-3">الكود / الرقم</th>
-                        <th class="p-3">البيان / الحساب</th>
-                        <th class="p-3">العميل المرتبط</th>
-                        <th class="p-3">المبلغ</th>
-                        <th class="p-3">التاريخ</th>
-                        <th class="p-3">المستند / الصورة</th>
-                        <th class="p-3 text-center">الإجراءات</th>
+                        <th class="p-3 truncate" style="width: 12%;">الكود</th>
+                        <th class="p-3 truncate" style="width: 23%;">البيان / الحساب</th>
+                        <th class="p-3 truncate" style="width: 18%;">العميل</th>
+                        <th class="p-3 truncate" style="width: 15%;">المبلغ</th>
+                        <th class="p-3 truncate" style="width: 12%;">التاريخ</th>
+                        <th class="p-3 truncate" style="width: 10%;">المستند</th>
+                        <th class="p-3 text-center truncate" style="width: 10%;">الإجراءات</th>
                     </tr>
                 `;
                 items.forEach(i => {
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${i.code || '---'}</td>
-                            <td class="p-3 font-bold text-slate-900">
+                            <td class="p-3 mono-font font-bold text-indigo-600 truncate" style="width: 12%;" dir="ltr">${i.code || '---'}</td>
+                            <td class="p-3 font-bold text-slate-900 truncate" style="width: 23%;">
                                 ${i.title}
-                                ${i.notes ? '<span class="block text-[11px] text-slate-500 font-normal">' + i.notes + '</span>' : ''}
+                                ${i.notes ? '<span class="block text-[10px] text-slate-500 font-normal truncate">' + i.notes + '</span>' : ''}
                             </td>
-                            <td class="p-3 text-indigo-700 font-bold">${i.clientName || '---'}</td>
-                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</td>
-                            <td class="p-3 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
-                            <td class="p-3">
-                                ${i.receiptImage ? `<button onclick="window.viewDocumentImage('${i.receiptImage}', '${i.title}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image ml-1"></i> معاينة الصورة</button>` : '<span class="text-slate-400">بدون صورة</span>'}
+                            <td class="p-3 text-indigo-700 font-bold truncate" style="width: 18%;">${i.clientName || '---'}</td>
+                            <td class="p-3 mono-font font-bold text-emerald-600 truncate" style="width: 15%;" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</td>
+                            <td class="p-3 mono-font text-slate-500 truncate" style="width: 12%;" dir="ltr">${i.date || '---'}</td>
+                            <td class="p-3 truncate" style="width: 10%;">
+                                ${i.receiptImage ? `<button onclick="window.viewDocumentImage('${i.receiptImage}', '${i.title}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image"></i></button>` : '<span class="text-slate-400">-</span>'}
                             </td>
-                            <td class="p-3 text-center flex items-center justify-center gap-2">
+                            <td class="p-3 text-center truncate" style="width: 10%;">
                                 <button onclick="window.deleteFolderItem('${i.accountId}')" class="text-rose-500 hover:text-rose-700 text-xs p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
@@ -764,8 +764,7 @@
             }
 
             if (!rowsHtml) {
-                let colSpan = isClientsFolder ? 7 : 7;
-                rowsHtml = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
+                rowsHtml = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
             }
 
             if (thead) thead.innerHTML = headerHtml;
@@ -826,30 +825,30 @@
             clientAccounts.forEach(acc => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${acc.code || 'ACC'}</td>
-                        <td class="p-2.5">مدخل حساب (${acc.category}) - ${acc.title}</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(acc.amount || 0).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${acc.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 25%;" dir="ltr">${acc.code || 'ACC'}</td>
+                        <td class="p-2.5 truncate" style="width: 35%;">(${acc.category}) - ${acc.title}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 20%;" dir="ltr">+${Number(acc.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${acc.date || '---'}</td>
                     </tr>
                 `;
             });
             clientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
-                        <td class="p-2.5">فاتورة مبيعات سحابية</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 25%;" dir="ltr">${inv.id || 'INV'}</td>
+                        <td class="p-2.5 truncate" style="width: 35%;">فاتورة مبيعات سحابية</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 20%;" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${inv.date || '---'}</td>
                     </tr>
                 `;
             });
             clientPayments.forEach(pay => {
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
-                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
-                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد'})</td>
-                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600 truncate" style="width: 25%;" dir="ltr">${pay.id || 'PAY'}</td>
+                        <td class="p-2.5 truncate" style="width: 35%;">دفعة (${pay.method || 'سداد'})</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600 truncate" style="width: 20%;" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${pay.date || '---'}</td>
                     </tr>
                 `;
             });

@@ -63,7 +63,7 @@
         </div>
         <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
             <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
-                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة شجرة الحسابات والدليل المحاسبي سحابياً...</span>
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة شجرة الحسابات والدليل المحاسبي سحابياً (وضع توفير القراءات)...</span>
             </div>
         </div>
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
@@ -137,14 +137,19 @@
         <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
-                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
                         <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border"><i class="fa-solid fa-bars"></i></button>
-                        <h1 class="font-black text-slate-900 text-sm sm:text-base">شجرة الحسابات المالية (مستخرجة ومحدثة سحابياً)</h1>
+                        <h1 class="font-black text-slate-900 text-sm sm:text-base">شجرة الحسابات المالية (مستخرجة ومحدثة سحابياً - توفير القراءات)</h1>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> إضافة حساب فرعي</button>
-                        <button onclick="window.seedDefaultAccounts()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-2 rounded-xl text-xs font-bold transition">استيراد شجرة Excel الافتراضية</button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="window.refreshAccountsData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-rotate text-indigo-600"></i> تحديث يدوي
+                        </button>
+                        <button onclick="window.exportAccountsCSV()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-file-excel text-emerald-600"></i> تصدير إكسل CSV
+                        </button>
+                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> إضافة حساب</button>
                     </div>
                 </div>
             </header>
@@ -166,7 +171,7 @@
                     </div>
                 </div>
 
-                <!-- شريط البحث -->
+                <!-- شريط البحث الفوري -->
                 <div class="corporate-card p-4 flex items-center gap-3">
                     <i class="fa-solid fa-magnifying-glass text-indigo-600 mr-2"></i>
                     <input type="text" id="searchAccountInput" oninput="window.filterAccounts(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث في الحسابات برقم الحساب أو الاسم أو التصنيف...">
@@ -174,19 +179,23 @@
 
                 <!-- جدول شجرة الحسابات -->
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-folder-tree ml-2 text-indigo-600"></i> جدول الدليل المحاسبي وشجرة الحسابات (معزول سحابياً)</h3>
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-folder-tree ml-2 text-indigo-600"></i> جدول الدليل المحاسبي وشجرة الحسابات (وضع القراءة الموفرة)</h3>
+                        <span class="text-xs text-slate-400 font-mono" id="accountsCountIndicator">0 بند</span>
+                    </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">رقم الحساب (Code)</th>
                                     <th class="p-4">اسم الحساب الرئيسي / الفرعي</th>
+                                    <th class="p-4">العميل المرتبط</th>
                                     <th class="p-4">التصنيف المحاسبي</th>
                                     <th class="p-4 text-center">الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="accountsTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="4" class="p-4 text-center text-slate-400">جاري مزامنة شجرة الحسابات من السحابة...</td></tr>
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل شجرة الحسابات باستخدام `getDocs` للتوفير...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -210,6 +219,14 @@
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">رقم الحساب (الكود):</label>
                     <input type="text" id="accCodeInput" class="w-full bg-slate-50 border rounded-xl p-2.5 mono-font" placeholder="مثال: 100101">
+                </div>
+                <div>
+                    <label class="block font-bold text-indigo-950 font-bold mb-1">
+                        <i class="fa-solid fa-building-user ml-1"></i> ربط بالعميل المسجل (اختياري):
+                    </label>
+                    <select id="accClientSelect" class="w-full bg-white border border-indigo-200 rounded-xl p-2.5 font-bold text-indigo-900">
+                        <option value="">-- بدون ربط بعميل محدد --</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">التصنيف الرئيسي:</label>
@@ -259,10 +276,10 @@
         });
     </script>
 
-    <!-- سكربت Firebase المتصل بالمشروع الفعلي -->
+    <!-- سكربت Firebase المتصل بالمشروع الفعلي مع نظام توفير القراءات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, setDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -283,28 +300,60 @@
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let accountsList = [];
-        let rssNewsList = ["📊 نظام شجرة الحسابات المحاسبية نشط ومتزامن لحظياً."];
+        let clientsList = [];
+        let rssNewsList = ["📊 نظام شجرة الحسابات المحاسبية نشط ومتزامن (وضع توفير القراءات)."];
         let currentRssSpeedIndex = 0;
         const rssSpeeds = ['35s', '20s', '50s'];
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
-        signInAnonymously(auth).then(() => {
-            initAccountsTree();
+        async function fetchClients() {
+            try {
+                const clientsQuery = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
+                const snapshot = await getDocs(clientsQuery);
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
+                
+                let clientSelect = document.getElementById('accClientSelect');
+                if (clientSelect) {
+                    let optionsHtml = `<option value="">-- بدون ربط بعميل محدد --</option>`;
+                    clientsList.forEach(c => {
+                        let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
+                        optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
+                    });
+                    clientSelect.innerHTML = optionsHtml;
+                }
+            } catch(e) {
+                console.error("خطأ في جلب قائمة العملاء السحابية:", e);
+            }
+        }
+
+        signInAnonymously(auth).then(async () => {
+            await fetchClients();
+            await loadAccountsTreeOptimized();
         }).catch(err => console.error("Auth error:", err));
 
-        function initAccountsTree() {
-            const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
-            
-            onSnapshot(accountsRef, (snapshot) => {
+        // دالة جلب البيانات باستخدام getDocs لتوفير قراءات فايربيس
+        window.loadAccountsTreeOptimized = async function() {
+            try {
+                const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
+                const snapshot = await getDocs(accountsRef);
                 accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+
                 if (accountsList.length === 0) {
-                    window.seedDefaultAccounts();
+                    await window.seedDefaultAccounts();
                 } else {
                     renderAccountsTable(accountsList);
                     renderRssTicker();
                 }
-            });
-        }
+            } catch (err) {
+                console.error("خطأ في جلب شجرة الحسابات:", err);
+                document.getElementById('accountsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500">حدث خطأ أثناء جلب البيانات: ${err.message}</td></tr>`;
+            }
+        };
+
+        window.refreshAccountsData = async function() {
+            alert('🔄 جاري تحديث شجرة الحسابات من السحابة...');
+            await loadAccountsTreeOptimized();
+        };
 
         window.seedDefaultAccounts = async function() {
             const defaultAccounts = [
@@ -327,8 +376,9 @@
 
             for(let acc of defaultAccounts) {
                 let docId = currentCompanyId + '_' + acc.code;
-                await setDoc(doc(db, "accounts_tree", docId), { ...acc, companyId: currentCompanyId });
+                await setDoc(doc(db, "accounts_tree", docId), { ...acc, companyId: currentCompanyId, clientId: "", clientName: "" });
             }
+            await loadAccountsTreeOptimized();
             alert('✓ تم استيراد شجرة الحسابات الافتراضية بنجاح.');
         };
 
@@ -337,9 +387,10 @@
             document.getElementById('statTotalAccounts').innerText = list.length + ' حساب';
             document.getElementById('statAssets').innerText = list.filter(a => a.category.includes('أصول')).length + ' حساب';
             document.getElementById('statExpenses').innerText = list.filter(a => a.category.includes('مصروفات') || a.category.includes('إيرادات')).length + ' حساب';
+            document.getElementById('accountsCountIndicator').innerText = `${list.length} بند مسجل`;
 
             if(list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة</td></tr>`;
                 return;
             }
 
@@ -347,6 +398,7 @@
                 <tr class="hover:bg-slate-50">
                     <td class="p-4 mono-font text-indigo-600 font-bold">${a.code || '---'}</td>
                     <td class="p-4 font-bold text-slate-900">${a.name}</td>
+                    <td class="p-4 text-indigo-700 font-semibold">${a.clientName || '<span class="text-slate-400">---</span>'}</td>
                     <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-bold">${a.category}</span></td>
                     <td class="p-4 text-center">
                         <button onclick="window.deleteAccount('${a.docId}')" class="text-rose-500 hover:text-rose-700 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i> حذف</button>
@@ -387,27 +439,59 @@
             let name = document.getElementById('accNameInput').value.trim();
             let code = document.getElementById('accCodeInput').value.trim();
             let category = document.getElementById('accCategoryInput').value;
+            let clientSelect = document.getElementById('accClientSelect');
+            let clientId = clientSelect.value;
+            let clientName = clientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
 
             if(!name || !code) return alert('الرجاء إدخال اسم وكود الحساب');
             let docId = currentCompanyId + '_' + code;
             
-            await setDoc(doc(db, "accounts_tree", docId), { name, code, category, companyId: currentCompanyId });
+            await setDoc(doc(db, "accounts_tree", docId), { 
+                name, 
+                code, 
+                category, 
+                clientId: clientId || '', 
+                clientName: clientName || '', 
+                companyId: currentCompanyId 
+            });
+
             document.getElementById('accNameInput').value = '';
             document.getElementById('accCodeInput').value = '';
+            document.getElementById('accClientSelect').value = '';
             closeAddAccountModal();
-            alert('✓ تم إضافة الحساب بنجاح لشجرة الحسابات.');
+            await loadAccountsTreeOptimized();
+            alert('✓ تم إضافة الحساب وربطه بالعميل بنجاح لشجرة الحسابات.');
         };
 
         window.deleteAccount = async function(docId) {
             if(!confirm('هل أنت متأكد من حذف هذا الحساب من شجرة الحسابات؟')) return;
             await deleteDoc(doc(db, "accounts_tree", docId));
+            await loadAccountsTreeOptimized();
         };
 
         window.filterAccounts = function(query) {
             let q = query.trim().toLowerCase();
             if(!q) return renderAccountsTable(accountsList);
-            let filtered = accountsList.filter(a => a.name.toLowerCase().includes(q) || (a.code && a.code.includes(q)) || a.category.toLowerCase().includes(q));
+            let filtered = accountsList.filter(a => a.name.toLowerCase().includes(q) || (a.code && a.code.includes(q)) || a.category.toLowerCase().includes(q) || (a.clientName && a.clientName.toLowerCase().includes(q)));
             renderAccountsTable(filtered);
+        };
+
+        // ميزة تصدير شجرة الحسابات إلى ملف CSV (إكسل)
+        window.exportAccountsCSV = function() {
+            if (!accountsList.length) return alert('⚠️ لا توجد حسابات للتصدير.');
+            let csvContent = "\uFEFFرقم الحساب,اسم الحساب,العميل المرتبط,التصنيف المحاسبي\n";
+            accountsList.forEach(a => {
+                csvContent += `"${a.code || ''}","${a.name || ''}","${a.clientName || ''}","${a.category || ''}"\n`;
+            });
+            let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            let url = URL.createObjectURL(blob);
+            let link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `EIDCO_Accounts_Tree_${currentCompanyId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert('✓ تم تصدير شجرة الحسابات إلى ملف إكسل (CSV) بنجاح.');
         };
     </script>
 </body>

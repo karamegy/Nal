@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // شجرة الحسابات والدليل المحاسبي الشامل</title>
+    <title>EIDCO // شجرة الحسابات والدليل المحاسبي وحسابات العملاء</title>
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -154,8 +154,8 @@
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
-                                شجرة الحسابات المحاسبية والدليل المالي 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(الأصول، المصروفات، الالتزامات والأرصدة المسجلة)</span>
+                                شجرة الحسابات المحاسبية وحسابات العملاء 
+                                <span class="hidden sm:inline text-slate-500 font-normal">(الأصول، المصروفات، وحسابات العملاء والشركات السحابية)</span>
                             </h1>
                         </div>
                     </div>
@@ -220,6 +220,7 @@
                             <select id="accCategory" class="corporate-input">
                                 <option value="الأصول الثابتة">📁 الأصول الثابتة</option>
                                 <option value="الأصول المتداولة">📁 الأصول المتداولة</option>
+                                <option value="حسابات العملاء والشركات">👥 حسابات العملاء والشركات السحابية</option>
                                 <option value="المصروفات العمومية والادارية">📁 المصروفات العمومية والإدارية</option>
                                 <option value="المصروفات البيعية">📁 المصروفات البيعية</option>
                                 <option value="مصروفات صناعية (تشغيلية)">📁 مصروفات صناعية (تشغيلية)</option>
@@ -252,21 +253,21 @@
                 <div class="corporate-card p-4 flex gap-3 items-center bg-white shadow-sm">
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="searchAccountsInput" oninput="window.renderAccountsTree()" placeholder="بحث فوري شامل في الحسابات، الأكواد، أو التصنيفات..." class="corporate-input pr-10 text-xs">
+                        <input type="text" id="searchAccountsInput" oninput="window.renderAccountsTree()" placeholder="بحث فوري شامل في الحسابات، العملاء، الأكواد، أو التصنيفات..." class="corporate-input pr-10 text-xs">
                     </div>
                 </div>
 
-                <!-- جدول أو هيكل شجرة الحسابات المسجلة -->
+                <!-- جدول أو هيكل شجرة الحسابات وحسابات العملاء المسجلة -->
                 <div class="corporate-card p-6 space-y-4 bg-white shadow-sm">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-folder-tree text-indigo-600"></i> 
-                            الدليل المحاسبي وشجرة الحسابات المسجلة (مزامنة فورية)
+                            الدليل المحاسبي وحسابات العملاء السحابية (مزامنة فورية)
                         </h3>
                         <span class="text-xs text-slate-500 font-mono" id="totalAccountsCountCounter" dir="ltr">جاري العد...</span>
                     </div>
                     <div id="accountsTreeContainer" class="space-y-4 text-xs">
-                        <p class="text-slate-400 text-center py-8 font-bold">جاري تحميل شجرة الحسابات من سحابة Firebase...</p>
+                        <p class="text-slate-400 text-center py-8 font-bold">جاري تحميل شجرة الحسابات والعملاء من سحابة Firebase...</p>
                     </div>
                 </div>
 
@@ -317,7 +318,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase لإدارة شجرة الحسابات -->
+    <!-- سكربت Firebase لإدارة شجرة الحسابات والعملاء -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -350,12 +351,19 @@
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
 
         let accountsTreeList = [];
+        let clientsList = [];
 
         signInAnonymously(auth).then(async () => {
             const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
+            const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
 
             onSnapshot(accountsRef, (snapshot) => {
                 accountsTreeList = snapshot.docs.map(d => ({ accountId: d.id, ...d.data() }));
+                renderAccountsTree();
+            });
+
+            onSnapshot(clientsRef, (snapshot) => {
+                clientsList = snapshot.docs.map(d => ({ clientId: d.id, ...d.data() }));
                 renderAccountsTree();
             });
         }).catch(err => {
@@ -445,19 +453,32 @@
             }
         };
 
-        window.previewAccount = function(accountId) {
-            let acc = accountsTreeList.find(a => a.accountId === accountId);
-            if (!acc) return;
-
-            document.getElementById('previewTitle').innerText = `تفاصيل الحساب: ${acc.title}`;
-            let metaContainer = document.getElementById('previewDetailsMeta');
-            metaContainer.innerHTML = `
-                <div><span class="text-slate-500 font-bold">التصنيف المحاسبي:</span> <span class="text-indigo-900 font-bold">${acc.category}</span></div>
-                <div><span class="text-slate-500 font-bold">اسم الحساب:</span> <span class="text-slate-900 font-bold">${acc.title}</span></div>
-                <div><span class="text-slate-500 font-bold">رقم الحساب (الكود):</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${acc.code}</span></div>
-                <div><span class="text-slate-500 font-bold">تاريخ التسجيل:</span> <span class="mono-font" dir="ltr">${acc.date || '---'}</span></div>
-                <div><span class="text-slate-500 font-bold">بواسطة المسؤول:</span> <span class="text-slate-700">${acc.admin || '---'}</span></div>
-            `;
+        window.previewAccount = function(accountId, isClient = false) {
+            if (isClient) {
+                let client = clientsList.find(c => c.clientId === accountId);
+                if (!client) return;
+                document.getElementById('previewTitle').innerText = `تفاصيل حساب العميل: ${client.name || client.clientName || 'بدون اسم'}`;
+                let metaContainer = document.getElementById('previewDetailsMeta');
+                metaContainer.innerHTML = `
+                    <div><span class="text-slate-500 font-bold">التصنيف:</span> <span class="text-indigo-900 font-bold">حسابات العملاء والشركات</span></div>
+                    <div><span class="text-slate-500 font-bold">اسم العميل / الشركة:</span> <span class="text-slate-900 font-bold">${client.name || client.clientName || '---'}</span></div>
+                    <div><span class="text-slate-500 font-bold">رقم الهاتف:</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${client.phone || '---'}</span></div>
+                    <div><span class="text-slate-500 font-bold">العنوان:</span> <span class="text-slate-700 font-bold">${client.address || '---'}</span></div>
+                    <div><span class="text-slate-500 font-bold">إجمالي المشتريات:</span> <span class="mono-font text-emerald-600 font-black" dir="ltr">${Number(client.totalPurchases || client.balance || 0).toLocaleString()} ج.م</span></div>
+                `;
+            } else {
+                let acc = accountsTreeList.find(a => a.accountId === accountId);
+                if (!acc) return;
+                document.getElementById('previewTitle').innerText = `تفاصيل الحساب: ${acc.title}`;
+                let metaContainer = document.getElementById('previewDetailsMeta');
+                metaContainer.innerHTML = `
+                    <div><span class="text-slate-500 font-bold">التصنيف المحاسبي:</span> <span class="text-indigo-900 font-bold">${acc.category}</span></div>
+                    <div><span class="text-slate-500 font-bold">اسم الحساب:</span> <span class="text-slate-900 font-bold">${acc.title}</span></div>
+                    <div><span class="text-slate-500 font-bold">رقم الحساب (الكود):</span> <span class="mono-font text-indigo-700 font-bold" dir="ltr">${acc.code}</span></div>
+                    <div><span class="text-slate-500 font-bold">تاريخ التسجيل:</span> <span class="mono-font" dir="ltr">${acc.date || '---'}</span></div>
+                    <div><span class="text-slate-500 font-bold">بواسطة المسؤول:</span> <span class="text-slate-700">${acc.admin || '---'}</span></div>
+                `;
+            }
             document.getElementById('previewModal').classList.add('active');
         };
 
@@ -472,6 +493,7 @@
             let categories = [
                 "الأصول الثابتة",
                 "الأصول المتداولة",
+                "حسابات العملاء والشركات",
                 "المصروفات العمومية والادارية",
                 "المصروفات البيعية",
                 "مصروفات صناعية (تشغيلية)",
@@ -487,49 +509,95 @@
                 (a.code && a.code.toLowerCase().includes(search))
             );
 
-            let counterEl = document.getElementById('totalAccountsCountCounter');
-            if(counterEl) counterEl.innerText = `إجمالي الحسابات: ${accountsTreeList.length} (المعروض: ${filteredAccounts.length})`;
+            let filteredClients = clientsList.filter(c => {
+                let cName = (c.name || c.clientName || '').toLowerCase();
+                let cPhone = (c.phone || '').toLowerCase();
+                let cAddr = (c.address || '').toLowerCase();
+                return cName.includes(search) || cPhone.includes(search) || cAddr.includes(search);
+            });
 
-            if (!filteredAccounts.length) {
-                container.innerHTML = `<p class="text-slate-400 text-center py-8 font-bold">لا توجد حسابات مسجلة مطابقة للبحث أو الشجرة فارغة حالياً.</p>`;
+            let totalCount = accountsTreeList.length + clientsList.length;
+            let filteredCount = filteredAccounts.length + filteredClients.length;
+
+            let counterEl = document.getElementById('totalAccountsCountCounter');
+            if(counterEl) counterEl.innerText = `إجمالي الحسابات والعملاء: ${totalCount} (المعروض: ${filteredCount})`;
+
+            if (!filteredCount) {
+                container.innerHTML = `<p class="text-slate-400 text-center py-8 font-bold">لا توجد حسابات أو عملاء مسجلون مطابقة للبحث حالياً.</p>`;
                 return;
             }
 
             container.innerHTML = categories.map(cat => {
-                let items = filteredAccounts.filter(a => a.category === cat);
+                let isClientsCat = (cat === "حسابات العملاء والشركات");
+                let items = isClientsCat ? filteredClients : filteredAccounts.filter(a => a.category === cat);
+                
                 if (search && !items.length) return '';
                 
+                let catIcon = isClientsCat ? 'fa-building-user text-indigo-600' : 'fa-folder-open text-indigo-600';
+
                 return `
                     <div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
                         <div class="flex items-center gap-2 font-black text-indigo-700 text-sm">
-                            <i class="fa-solid fa-folder-open text-indigo-600"></i>
+                            <i class="fa-solid ${catIcon}"></i>
                             <span>${cat}</span>
-                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono" dir="ltr">${items.length} حسابات</span>
+                            <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono" dir="ltr">${items.length} عنصر</span>
                         </div>
                         <div class="tree-node space-y-2 pt-1">
-                            ${items.length ? items.map(i => `
-                                <div onclick="window.previewAccount('${i.accountId}')" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
-                                    <div class="flex items-center gap-3.5 flex-1 min-w-0">
-                                        <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                                            <i class="fa-solid fa-file-invoice"></i>
+                            ${items.length ? items.map(i => {
+                                if (isClientsCat) {
+                                    let cName = i.name || i.clientName || 'عميل بدون اسم';
+                                    let cPhone = i.phone || '---';
+                                    let cAddress = i.address || '---';
+                                    let cTotal = Number(i.totalPurchases || i.balance || 0).toLocaleString();
+                                    return `
+                                        <div onclick="window.previewAccount('${i.clientId}', true)" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
+                                            <div class="flex items-center gap-3.5 flex-1 min-w-0">
+                                                <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                                    <i class="fa-solid fa-user-tie"></i>
+                                                </div>
+                                                <div class="truncate">
+                                                    <span class="font-bold text-slate-900 block truncate">
+                                                        ${cName} <span class="text-indigo-600 font-semibold text-[11px]">(${cPhone})</span>
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-500 font-mono">العنوان: ${cAddress}</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2.5 shrink-0">
+                                                <span class="text-xs font-black text-indigo-700 mono-font bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-200" dir="ltr">
+                                                    ${cTotal} ج.م
+                                                </span>
+                                                <button onclick="window.previewAccount('${i.clientId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                                                    <i class="fa-solid fa-eye ml-1"></i> التفاصيل
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="truncate">
-                                            <span class="font-bold text-slate-900 block truncate">
-                                                ${i.title} <span class="text-indigo-600 font-mono font-bold text-[11px]" dir="ltr">(${i.code || '---'})</span>
-                                            </span>
-                                            <span class="text-[11px] text-slate-500 font-mono">تاريخ التسجيل: ${i.date || '---'}</span>
+                                    `;
+                                } else {
+                                    return `
+                                        <div onclick="window.previewAccount('${i.accountId}', false)" class="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm gap-3 cursor-pointer hover:bg-slate-50 transition">
+                                            <div class="flex items-center gap-3.5 flex-1 min-w-0">
+                                                <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                                    <i class="fa-solid fa-file-invoice"></i>
+                                                </div>
+                                                <div class="truncate">
+                                                    <span class="font-bold text-slate-900 block truncate">
+                                                        ${i.title} <span class="text-indigo-600 font-mono font-bold text-[11px]" dir="ltr">(${i.code || '---'})</span>
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-500 font-mono">تاريخ التسجيل: ${i.date || '---'}</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2.5 shrink-0">
+                                                <button onclick="window.previewAccount('${i.accountId}', false)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                                                    <i class="fa-solid fa-eye ml-1"></i> التفاصيل
+                                                </button>
+                                                <button onclick="window.deleteAccountNode('${i.accountId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف الحساب">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="flex items-center gap-2.5 shrink-0">
-                                        <button onclick="window.previewAccount('${i.accountId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
-                                            <i class="fa-solid fa-eye ml-1"></i> التفاصيل
-                                        </button>
-                                        <button onclick="window.deleteAccountNode('${i.accountId}', event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف الحساب">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('') : '<p class="text-slate-400 text-xs py-2">لا توجد حسابات مسجلة تحت هذا التصنيف.</p>'}
+                                    `;
+                                }
+                            }).join('') : '<p class="text-slate-400 text-xs py-2">لا توجد حسابات مسجلة تحت هذا التصنيف.</p>'}
                         </div>
                     </div>
                 `;

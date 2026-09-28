@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDCO // شجرة الحسابات المحاسبية السحابية</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; overflow-x: hidden; box-sizing: border-box; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
+        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); border-color: var(--primary); }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .custom-modal.active { display: flex !important; }
+        table th, table td { white-space: nowrap; }
+
+        .rss-ticker-wrapper { background: #0f172a; color: #f8fafc; border-bottom: 1px solid #1e293b; font-size: 0.8rem; position: relative; z-index: 50; overflow: hidden; }
+        .rss-ticker-content { display: inline-block; white-space: nowrap; padding-right: 100%; animation: tickerMarquee 35s linear infinite; }
+        .rss-ticker-content.paused { animation-play-state: paused !important; }
+        @keyframes tickerMarquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(100%, 0, 0); }
+        }
+        #floatingTvTrigger { position: fixed; bottom: 24px; left: 24px; z-index: 999; touch-action: none; user-select: none; }
+        .logo-3d-container { perspective: 1000px; display: inline-block; }
+        .logo-3d-badge {
+            background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
+            color: #ffffff; font-weight: 900; border-radius: 16px; display: flex; align-items: center; justify-content: center; position: relative; transform-style: preserve-3d;
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 0 0 15px rgba(99, 102, 241, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        #appSidebar.mobile-open { display: flex !important; position: fixed !important; top: 0 !important; right: 0 !important; height: 100vh !important; z-index: 100 !important; box-shadow: -10px 0 25px rgba(0,0,0,0.3); }
+    </style>
+
+    <script>
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            if (sidebar) sidebar.classList.toggle('mobile-open');
+        }
+    </script>
+</head>
+<body>
+
+    <!-- شريط الأنباء الحية RSS -->
+    <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800">
+        <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
+            <i class="fa-solid fa-rss text-amber-400 animate-pulse"></i>
+            <span>عاجل EIDCO RSS</span>
+        </div>
+        <div class="overflow-hidden flex-1 mx-3 relative flex items-center h-6">
+            <div id="rssTickerContent" class="rss-ticker-content text-slate-200 font-bold text-xs space-x-8 space-x-reverse">
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-bell text-indigo-400"></i> جاري مزامنة شجرة الحسابات والدليل المحاسبي سحابياً...</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
+            <button onclick="window.toggleRssSpeed()" class="text-slate-400 hover:text-amber-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="سرعة الشريط">
+                <i class="fa-solid fa-gauge-simple-high"></i> <span id="rssSpeedText">1x</span>
+            </button>
+            <button onclick="window.toggleRssPause()" id="rssPauseBtn" class="text-slate-400 hover:text-indigo-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="إيقاف / تشغيل الحركة">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- زر TV الطافي -->
+    <div id="floatingTvTrigger" class="cursor-grab active:cursor-grabbing select-none">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm group-hover:rotate-12 transition-transform"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+        </a>
+    </div>
+
+    <div class="flex min-h-screen">
+        <!-- القائمة الجانبية المتكاملة -->
+        <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
+            <div class="flex items-center justify-between mb-8 px-2">
+                <div class="flex items-center gap-3">
+                    <div class="logo-3d-container">
+                        <div class="logo-3d-badge w-11 h-11 text-lg">
+                            <i class="fa-solid fa-cube drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base tracking-wide">EIDCO <span class="text-indigo-600">//</span> عيدكو</h2>
+                        <span class="text-[10px] text-indigo-600 font-mono font-bold tracking-widest">3D BUSINESS OS</span>
+                    </div>
+                </div>
+                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link active"><i class="fa-solid fa-folder-tree text-indigo-600"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                
+                <!-- أزرار الإدارة والريموت الخاص بحساب المؤسس -->
+                <a href="remote.html" id="sidebarRemoteNavLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-gamepad text-indigo-600"></i> ريموت التحكم عن بُعد TV</a>
+                <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
+                <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link text-amber-700 bg-amber-50/60 font-black"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> إدارة الشكاوى والبلاغات</a>
+
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
+                <a href="auth.html" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border"><i class="fa-solid fa-bars"></i></button>
+                        <h1 class="font-black text-slate-900 text-sm sm:text-base">شجرة الحسابات المالية (مستخرجة ومحدثة سحابياً)</h1>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> إضافة حساب فرعي</button>
+                        <button onclick="window.seedDefaultAccounts()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-2 rounded-xl text-xs font-bold transition">استيراد شجرة Excel الافتراضية</button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- إحصائيات سريعة -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="corporate-card p-5 border-l-4 border-l-indigo-600">
+                        <span class="text-xs text-slate-500">إجمالي الحسابات المسجلة</span>
+                        <div class="text-2xl font-black text-slate-900 mono-font mt-1" id="statTotalAccounts">0 حساب</div>
+                    </div>
+                    <div class="corporate-card p-5 border-l-4 border-l-emerald-600">
+                        <span class="text-xs text-slate-500">الأصول والأرصدة المدينة</span>
+                        <div class="text-2xl font-black text-emerald-600 mono-font mt-1" id="statAssets">0 حساب</div>
+                    </div>
+                    <div class="corporate-card p-5 border-l-4 border-l-purple-600">
+                        <span class="text-xs text-slate-500">المصروفات والإيرادات</span>
+                        <div class="text-2xl font-black text-purple-600 mono-font mt-1" id="statExpenses">0 حساب</div>
+                    </div>
+                </div>
+
+                <!-- شريط البحث -->
+                <div class="corporate-card p-4 flex items-center gap-3">
+                    <i class="fa-solid fa-magnifying-glass text-indigo-600 mr-2"></i>
+                    <input type="text" id="searchAccountInput" oninput="window.filterAccounts(this.value)" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 mono-font" placeholder="بحث في الحسابات برقم الحساب أو الاسم أو التصنيف...">
+                </div>
+
+                <!-- جدول شجرة الحسابات -->
+                <div class="corporate-card p-6 space-y-4">
+                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-folder-tree ml-2 text-indigo-600"></i> جدول الدليل المحاسبي وشجرة الحسابات (معزول سحابياً)</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-mono border-b">
+                                    <th class="p-4">رقم الحساب (Code)</th>
+                                    <th class="p-4">اسم الحساب الرئيسي / الفرعي</th>
+                                    <th class="p-4">التصنيف المحاسبي</th>
+                                    <th class="p-4 text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountsTableBody" class="divide-y divide-slate-100 bg-white">
+                                <tr><td colspan="4" class="p-4 text-center text-slate-400">جاري مزامنة شجرة الحسابات من السحابة...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة حساب جديد -->
+    <div id="accountModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-black text-base text-indigo-600">إضافة حساب جديد لشجرة الحسابات</h3>
+                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">اسم الحساب:</label>
+                    <input type="text" id="accNameInput" class="w-full bg-slate-50 border rounded-xl p-2.5 focus:border-indigo-600" placeholder="مثال: أراضي / أجور ومرتبات / بنك مصر...">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">رقم الحساب (الكود):</label>
+                    <input type="text" id="accCodeInput" class="w-full bg-slate-50 border rounded-xl p-2.5 mono-font" placeholder="مثال: 100101">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">التصنيف الرئيسي:</label>
+                    <select id="accCategoryInput" class="w-full bg-slate-50 border rounded-xl p-2.5">
+                        <option value="أصول ثابتة">أصول ثابتة</option>
+                        <option value="أصول متداولة">أصول متداولة</option>
+                        <option value="مصروفات عمومية وإدارية">مصروفات عمومية وإدارية</option>
+                        <option value="مصروفات بيعية">مصروفات بيعية</option>
+                        <option value="مصروفات صناعية وتشغيلية">مصروفات صناعية وتشغيلية</option>
+                        <option value="أرصدة دائنة / التزامات">أرصدة دائنة / التزامات</option>
+                        <option value="إيرادات ومبيعات">إيرادات ومبيعات</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pt-3 border-t flex justify-end gap-2">
+                <button onclick="window.closeAddAccountModal()" class="bg-slate-100 px-4 py-2 rounded-xl text-xs font-bold">إلغاء</button>
+                <button onclick="window.saveNewAccount()" class="btn-primary text-xs py-2 px-5">حفظ الحساب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- سكربت صلاحيات القائمة الجانبية وتمرير الـ companyId -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+            
+            const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
+            const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+
+            if (currentAdminName !== FOUNDER_NAME) {
+                const hideIds = ['sidebarAuthNavLink', 'sidebarAdminAccountsLink', 'sidebarUsersLink', 'sidebarReportsLink', 'sidebarRemoteNavLink'];
+                hideIds.forEach(id => {
+                    let el = document.getElementById(id);
+                    if(el) el.style.display = 'none';
+                });
+            }
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
+    <!-- سكربت Firebase المتصل بالمشروع الفعلي -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
+          authDomain: "giti-68750.firebaseapp.com",
+          projectId: "giti-68750",
+          storageBucket: "giti-68750.firebasestorage.app",
+          messagingSenderId: "753885709520",
+          appId: "1:753885709520:web:eda57cd4efdb5c4ef48ad5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        let accountsList = [];
+        let rssNewsList = ["📊 نظام شجرة الحسابات المحاسبية نشط ومتزامن لحظياً."];
+        let currentRssSpeedIndex = 0;
+        const rssSpeeds = ['35s', '20s', '50s'];
+        const rssSpeedLabels = ['1x', '2x', '0.5x'];
+
+        signInAnonymously(auth).then(() => {
+            initAccountsTree();
+        }).catch(err => console.error("Auth error:", err));
+
+        function initAccountsTree() {
+            const accountsRef = query(collection(db, "accounts_tree"), where("companyId", "==", currentCompanyId));
+            
+            onSnapshot(accountsRef, (snapshot) => {
+                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                if (accountsList.length === 0) {
+                    window.seedDefaultAccounts();
+                } else {
+                    renderAccountsTable(accountsList);
+                    renderRssTicker();
+                }
+            });
+        }
+
+        window.seedDefaultAccounts = async function() {
+            const defaultAccounts = [
+                { name: "الأصول الثابتة - أراضي", code: "100101", category: "أصول ثابتة" },
+                { name: "الأصول الثابتة - مبانى وانشاءات ومرافق", code: "100102", category: "أصول ثابتة" },
+                { name: "الأصول الثابتة - اثاث وتجهيزات", code: "100103", category: "أصول ثابتة" },
+                { name: "الأصول الثابتة - وسائل نقل وسيارات", code: "100104", category: "أصول ثابتة" },
+                { name: "الأصول الثابتة - الات ومعدات", code: "100105", category: "أصول ثابتة" },
+                { name: "الأصول المتداولة - النقدية بالخزينة", code: "10021", category: "أصول متداولة" },
+                { name: "الأصول المتداولة - البنوك", code: "10022", category: "أصول متداولة" },
+                { name: "الأصول المتداولة - العملاء", code: "10023", category: "أصول متداولة" },
+                { name: "المصروفات العمومية والإدارية - أجور ومرتبات", code: "20001", category: "مصروفات عمومية وإدارية" },
+                { name: "المصروفات العمومية والإدارية - تأمينات اجتماعية", code: "20003", category: "مصروفات عمومية وإدارية" },
+                { name: "المصروفات العمومية والإدارية - كهرباء", code: "20014", category: "مصروفات عمومية وإدارية" },
+                { name: "المصروفات العمومية والإدارية - مياه", code: "20015", category: "مصروفات عمومية وإدارية" },
+                { name: "المصروفات البيعية - عمولات ونولون", code: "30009", category: "مصروفات بيعية" },
+                { name: "المصروفات الصناعية - إيجار كلارك وغاز", code: "40019", category: "مصروفات صناعية وتشغيلية" },
+                { name: "الإيرادات والمبيعات - مبيعات رئيسية", code: "50001", category: "إيرادات ومبيعات" }
+            ];
+
+            for(let acc of defaultAccounts) {
+                let docId = currentCompanyId + '_' + acc.code;
+                await setDoc(doc(db, "accounts_tree", docId), { ...acc, companyId: currentCompanyId });
+            }
+            alert('✓ تم استيراد شجرة الحسابات الافتراضية بنجاح.');
+        };
+
+        function renderAccountsTable(list) {
+            let tbody = document.getElementById('accountsTableBody');
+            document.getElementById('statTotalAccounts').innerText = list.length + ' حساب';
+            document.getElementById('statAssets').innerText = list.filter(a => a.category.includes('أصول')).length + ' حساب';
+            document.getElementById('statExpenses').innerText = list.filter(a => a.category.includes('مصروفات') || a.category.includes('إيرادات')).length + ' حساب';
+
+            if(list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(a => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 mono-font text-indigo-600 font-bold">${a.code || '---'}</td>
+                    <td class="p-4 font-bold text-slate-900">${a.name}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-bold">${a.category}</span></td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.deleteAccount('${a.docId}')" class="text-rose-500 hover:text-rose-700 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i> حذف</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderRssTicker() {
+            let container = document.getElementById('rssTickerContent');
+            if(!container) return;
+            container.innerHTML = rssNewsList.map(n => `<span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle text-[6px] text-amber-400"></i> ${n}</span>`).join('&nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp;');
+        }
+
+        window.toggleRssPause = function() {
+            let ticker = document.getElementById('rssTickerContent');
+            let btn = document.getElementById('rssPauseBtn');
+            if(ticker.classList.contains('paused')) {
+                ticker.classList.remove('paused');
+                btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+            } else {
+                ticker.classList.add('paused');
+                btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+            }
+        };
+
+        window.toggleRssSpeed = function() {
+            currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
+            let ticker = document.getElementById('rssTickerContent');
+            ticker.style.animationDuration = rssSpeeds[currentRssSpeedIndex];
+            document.getElementById('rssSpeedText').innerText = rssSpeedLabels[currentRssSpeedIndex];
+        };
+
+        window.openAddAccountModal = function() { document.getElementById('accountModal').classList.add('active'); };
+        window.closeAddAccountModal = function() { document.getElementById('accountModal').classList.remove('active'); };
+
+        window.saveNewAccount = async function() {
+            let name = document.getElementById('accNameInput').value.trim();
+            let code = document.getElementById('accCodeInput').value.trim();
+            let category = document.getElementById('accCategoryInput').value;
+
+            if(!name || !code) return alert('الرجاء إدخال اسم وكود الحساب');
+            let docId = currentCompanyId + '_' + code;
+            
+            await setDoc(doc(db, "accounts_tree", docId), { name, code, category, companyId: currentCompanyId });
+            document.getElementById('accNameInput').value = '';
+            document.getElementById('accCodeInput').value = '';
+            closeAddAccountModal();
+            alert('✓ تم إضافة الحساب بنجاح لشجرة الحسابات.');
+        };
+
+        window.deleteAccount = async function(docId) {
+            if(!confirm('هل أنت متأكد من حذف هذا الحساب من شجرة الحسابات؟')) return;
+            await deleteDoc(doc(db, "accounts_tree", docId));
+        };
+
+        window.filterAccounts = function(query) {
+            let q = query.trim().toLowerCase();
+            if(!q) return renderAccountsTable(accountsList);
+            let filtered = accountsList.filter(a => a.name.toLowerCase().includes(q) || (a.code && a.code.includes(q)) || a.category.toLowerCase().includes(q));
+            renderAccountsTable(filtered);
+        };
+    </script>
+</body>
+</html>

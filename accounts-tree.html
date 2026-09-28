@@ -151,7 +151,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(جداول مرتبة وثابتة الأعمدة تماماً)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(حقول إدخال تفاعلية وجداول مرتبة بالكامل)</span>
                             </h1>
                         </div>
                     </div>
@@ -203,17 +203,17 @@
             <!-- محتوى الصفحة الرئيسي -->
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <!-- نموذج إضافة حساب جديد أو مدخل جديد مع رفع صورة واختيار العميل المسجل والبحث -->
+                <!-- نموذج إضافة حساب جديد أو مدخل جديد (مع حقول تفاعلية تتغير بناءً على الملف المختار) -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <h3 class="font-bold text-sm text-slate-900 border-b pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i> 
-                        إضافة حساب/مدخل جديد (مع رفع صورة المستند وربط العميل)
+                        إضافة حساب أو مدخل جديد (تتغير الحقول تلقائياً حسب التصنيف المختار)
                     </h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">التصنيف المحاسبي الرئيسي (الملف)</label>
-                            <select id="accCategory" class="corporate-input">
+                            <select id="accCategory" onchange="handleCategoryChange()" class="corporate-input font-bold text-indigo-900 bg-indigo-50/50">
                                 <option value="الأصول الثابتة">📁 الأصول الثابتة</option>
                                 <option value="الأصول المتداولة">📁 الأصول المتداولة</option>
                                 <option value="حسابات العملاء والشركات">👥 حسابات العملاء والشركات السحابية</option>
@@ -222,19 +222,18 @@
                                 <option value="مصروفات صناعية (تشغيلية)">📁 مصروفات صناعية (تشغيلية)</option>
                                 <option value="الارصدة الدائنة">📁 الأرصدة الدائنة والتزامات</option>
                                 <option value="الارصدة المدينة">📁 الأرصدة المدينة والعهد</option>
-                                <option value="المخازن">📁 المخازن</option>
+                                <option value="المخازن">📁 المخازن والأصناف</option>
                                 <option value="مبيعات">📁 مبيعات وإيرادات</option>
                             </select>
                         </div>
 
-                        <div>
+                        <div id="clientSelectWrapper">
                             <label class="block mb-1 text-indigo-950 font-bold flex justify-between items-center">
-                                <span><i class="fa-solid fa-building-user ml-1"></i> اختر العميل المسجل</span>
-                                <span class="text-[10px] text-slate-400 font-normal">ابحث بالاسم أدناه</span>
+                                <span><i class="fa-solid fa-building-user ml-1"></i> العميل المرتبط</span>
+                                <span class="text-[10px] text-slate-400 font-normal">بحث سريع</span>
                             </label>
-                            <!-- حقل بحث لاختيار/تصفية العميل بسرعة -->
                             <div class="relative">
-                                <input type="text" id="clientSearchInput" oninput="filterClientDropdown()" placeholder="بحث عن اسم العميل..." class="corporate-input mb-1 bg-white text-xs" style="padding: 8px 12px;">
+                                <input type="text" id="clientSearchInput" oninput="filterClientDropdown()" placeholder="بحث باسم العميل..." class="corporate-input mb-1 bg-white text-xs" style="padding: 8px 12px;">
                                 <select id="accClientSelect" class="corporate-input bg-white font-bold text-indigo-900 border-indigo-200">
                                     <option value="">-- عام (بدون عميل محدد) --</option>
                                 </select>
@@ -242,21 +241,27 @@
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">اسم الحساب أو البيان</label>
-                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: فاتورة صيانة، أراضي، دفعة...">
+                            <label id="titleLabel" class="block mb-1 text-slate-700 font-bold">اسم الحساب أو البيان</label>
+                            <input type="text" id="accTitle" class="corporate-input" placeholder="مثال: فاتورة صيانة، أراضي...">
                         </div>
                     </div>
 
+                    <!-- حقول إضافية تتغير ديناميكياً حسب التصنيف المختأر -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">رقم الحساب أو الكود المحاسبي</label>
+                            <label id="codeLabel" class="block mb-1 text-slate-700 font-bold">رقم الحساب أو الكود المحاسبي</label>
                             <input type="text" id="accCode" class="corporate-input mono-font" placeholder="100101" dir="ltr">
                         </div>
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">المبلغ (إن وجد)</label>
+                            <label id="amountLabel" class="block mb-1 text-slate-700 font-bold">المبلغ (ج.م)</label>
                             <input type="number" id="accAmount" class="corporate-input mono-font font-bold text-indigo-700" placeholder="0.00" dir="ltr">
                         </div>
-                        <div>
+                        <!-- حقل ديناميكي يظهر خصيصاً للمخازن أو المصروفات -->
+                        <div id="dynamicExtraFieldWrapper" class="hidden">
+                            <label id="extraFieldLabel" class="block mb-1 text-indigo-700 font-bold">بيان إضافي (الكمية / النوع)</label>
+                            <input type="text" id="accExtraField" class="corporate-input" placeholder="أدخل تفاصيل إضافية...">
+                        </div>
+                        <div id="standardNotesWrapper">
                             <label class="block mb-1 text-slate-700 font-bold">ملاحظات إضافية</label>
                             <input type="text" id="accNotes" class="corporate-input" placeholder="ملاحظات الحساب...">
                         </div>
@@ -264,7 +269,7 @@
 
                     <!-- رفع صورة المستند أو الفاتورة لجميع المدخلات -->
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <label class="block mb-1 text-slate-700 font-bold"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> رفع صورة الفاتورة أو المستند (اختياري لجميع المدخلات)</label>
+                        <label class="block mb-1 text-slate-700 font-bold"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> رفع صورة الفاتورة أو المستند (اختياري)</label>
                         <input type="file" id="generalImageFileInput" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer">
                         <div id="generalImagePreviewContainer" class="mt-2 hidden">
                             <span class="text-[11px] text-emerald-600 font-bold block mb-1">✓ تم إرفاق الصورة بنجاح:</span>
@@ -274,7 +279,7 @@
 
                     <div class="pt-2">
                         <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md w-full">
-                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب ورفع الصورة وربطه بالعميل سحابياً
+                            <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب ورفع المستند وربطه بالملف سحابياً
                         </button>
                     </div>
                 </div>
@@ -292,7 +297,7 @@
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-folder-tree text-indigo-600"></i> 
-                            أرشيف الملفات والتصنيفات المحاسبية (انقر على أي كارت أو مجلد لفتح جدوله الخاص فوراً)
+                            أرشيف الملفات والتصنيفات المحاسبية (انقر على أي مجلد لفتح جدوله الخاص)
                         </h3>
                         <span class="text-xs text-slate-500 font-mono" id="totalAccountsCountCounter" dir="ltr">جاري العد...</span>
                     </div>
@@ -305,26 +310,26 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه (مع تمرير أفقي يمنع اختفاء أي عمود تماماً) -->
     <div id="folderTableModal" class="custom-modal">
-        <div class="corporate-card p-4 sm:p-6 max-w-4xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
+        <div class="corporate-card p-4 sm:p-6 max-w-5xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
                 <div>
                     <h3 id="folderModalTitle" class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
                         <i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف
                     </h3>
-                    <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض ومدخلات الملف المحدد مع المستندات والعملاء</span>
+                    <span id="folderModalSubtitle" class="text-[11px] text-indigo-600 font-bold">عرض كافة البيانات والمستندات والعملاء التابعة للملف المحدد</span>
                 </div>
                 <button onclick="window.closeFolderModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <!-- جدول محتويات الملف المختار مع تثبيت الأعمدة تماماً (table-layout: fixed) -->
+            <!-- جدول محتويات الملف المختار مع أمان التمرير الأفقي وعدم اختفاء الأعمدة -->
             <div class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
-                <table class="w-full min-w-[750px] text-right text-xs" style="table-layout: fixed;">
+                <table class="w-full min-w-[850px] text-right text-xs whitespace-nowrap">
                     <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b z-10">
-                        <!-- يتم تعبئة الرؤوس بدقة -->
+                        <!-- يتم تعبئة الرؤوس ديناميكياً بدقة -->
                     </thead>
                     <tbody id="folderTableBody" class="divide-y divide-slate-100">
                         <!-- يتم تعبئتها برمجياً بدقة -->
@@ -388,13 +393,13 @@
                 <div class="space-y-2">
                     <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات المرتبطة بالعميل:</span>
                     <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs" style="table-layout: fixed;">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                    <th class="p-2.5 truncate" style="width: 25%;">الرقم / المعاملة</th>
-                                    <th class="p-2.5 truncate" style="width: 35%;">التفاصيل / الطريقة</th>
-                                    <th class="p-2.5 truncate" style="width: 20%;">المبلغ</th>
-                                    <th class="p-2.5 truncate" style="width: 20%;">التاريخ</th>
+                                    <th class="p-2.5">الرقم / المعاملة</th>
+                                    <th class="p-2.5">التفاصيل / الطريقة</th>
+                                    <th class="p-2.5">المبلغ</th>
+                                    <th class="p-2.5">التاريخ</th>
                                 </tr>
                             </thead>
                             <tbody id="stmtTransactionsBody" class="divide-y divide-slate-100"></tbody>
@@ -440,6 +445,43 @@
             if (drawer) drawer.classList.toggle('hidden');
         }
 
+        // دالة تغيير حقول الإدخال تفاعلياً حسب الملف المختار
+        function handleCategoryChange() {
+            let cat = document.getElementById('accCategory').value;
+            let titleLabel = document.getElementById('titleLabel');
+            let titleInput = document.getElementById('accTitle');
+            let clientWrapper = document.getElementById('clientSelectWrapper');
+            let extraFieldWrapper = document.getElementById('dynamicExtraFieldWrapper');
+            let extraFieldLabel = document.getElementById('extraFieldLabel');
+            let extraFieldInput = document.getElementById('accExtraField');
+
+            if (cat === "حسابات العملاء والشركات") {
+                clientWrapper.style.display = "block";
+                titleLabel.innerText = "اسم الشركة أو اسم العميل الفرعي";
+                titleInput.placeholder = "مثال: شركة النور للتجارة...";
+                extraFieldWrapper.classList.add('hidden');
+            } else if (cat === "المخازن") {
+                clientWrapper.style.display = "none";
+                titleLabel.innerText = "اسم الصنف أو المنتج بالمخزن";
+                titleInput.placeholder = "مثال: حديد تسليح، أسمنت...";
+                extraFieldWrapper.classList.remove('hidden');
+                extraFieldLabel.innerText = "الكمية بالمخزن";
+                extraFieldInput.placeholder = "مثال: 100 طن / قطعة...";
+            } else if (cat.includes("المصروفات")) {
+                clientWrapper.style.display = "none";
+                titleLabel.innerText = "نوع وبند المصروف";
+                titleInput.placeholder = "مثال: فاتورة كهرباء، صيانة سيارة...";
+                extraFieldWrapper.classList.remove('hidden');
+                extraFieldLabel.innerText = "جهة الصرف / المستفيد";
+                extraFieldInput.placeholder = "مثال: شركة الكهرباء...";
+            } else {
+                clientWrapper.style.display = "block";
+                titleLabel.innerText = "اسم الحساب أو البيان";
+                titleInput.placeholder = "مثال: أراضي، مباني، عهدة...";
+                extraFieldWrapper.classList.add('hidden');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -455,6 +497,8 @@
                     link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
                 }
             });
+
+            handleCategoryChange();
 
             // معالجة اختيار ملف الصورة للنموذج الرئيسي
             const imgFileInput = document.getElementById('generalImageFileInput');
@@ -604,10 +648,11 @@
             let code = document.getElementById('accCode').value.trim();
             let amount = Number(document.getElementById('accAmount').value) || 0;
             let notes = document.getElementById('accNotes').value.trim();
+            let extraField = document.getElementById('accExtraField').value.trim();
             
             let clientSelect = document.getElementById('accClientSelect');
-            let selectedClientId = clientSelect.value;
-            let selectedClientName = selectedClientId ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
+            let selectedClientId = clientSelect ? clientSelect.value : '';
+            let selectedClientName = selectedClientId && clientSelect.selectedIndex >= 0 ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
             let receiptImage = window.generalUploadedImageBase64 || '';
             let today = new Date().toISOString().split('T')[0];
 
@@ -625,6 +670,7 @@
                     title,
                     code: code || ('ACC-' + Math.floor(1000 + Math.random() * 9000)),
                     amount,
+                    extraField: extraField || '',
                     clientId: selectedClientId || '',
                     clientName: selectedClientName || '',
                     notes: notes || '',
@@ -637,11 +683,12 @@
                 document.getElementById('accCode').value = '';
                 document.getElementById('accAmount').value = '';
                 document.getElementById('accNotes').value = '';
+                document.getElementById('accExtraField').value = '';
                 document.getElementById('generalImageFileInput').value = '';
                 document.getElementById('generalImagePreviewContainer').classList.add('hidden');
                 window.generalUploadedImageBase64 = '';
 
-                alert('✓ تم حفظ المدخل ورفع الصورة وربطه بالعميل سحابياً بنجاح.');
+                alert('✓ تم حفظ المدخل ورفع المستند وربطه بالملف سحابياً بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
@@ -670,6 +717,7 @@
                         title: acc.title,
                         code: acc.code,
                         amount: 0,
+                        extraField: '',
                         clientId: '',
                         clientName: '',
                         receiptImage: '',
@@ -699,13 +747,13 @@
             if (isClientsFolder) {
                 headerHtml = `
                     <tr>
-                        <th class="p-3 truncate" style="width: 12%;">كود العميل</th>
-                        <th class="p-3 truncate" style="width: 25%;">اسم العميل</th>
-                        <th class="p-3 truncate" style="width: 18%;">الهاتف</th>
-                        <th class="p-3 truncate" style="width: 12%;">الحالة</th>
-                        <th class="p-3 truncate" style="width: 13%;">التاريخ</th>
-                        <th class="p-3 truncate" style="width: 10%;">النوع</th>
-                        <th class="p-3 text-center truncate" style="width: 10%;">الإجراءات</th>
+                        <th class="p-3">كود العميل</th>
+                        <th class="p-3">اسم العميل</th>
+                        <th class="p-3">الهاتف</th>
+                        <th class="p-3">الحالة</th>
+                        <th class="p-3">التاريخ</th>
+                        <th class="p-3">النوع</th>
+                        <th class="p-3 text-center">الإجراءات</th>
                     </tr>
                 `;
                 items.forEach(c => {
@@ -713,15 +761,15 @@
                     let cPhone = c.phone || '---';
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="window.openClientStatement('${cName}')">
-                            <td class="p-3 mono-font font-bold text-indigo-600 truncate" style="width: 12%;" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
-                            <td class="p-3 font-bold text-slate-900 truncate" style="width: 25%;">${cName}</td>
-                            <td class="p-3 text-indigo-700 font-bold truncate" style="width: 18%;" dir="ltr">${cPhone}</td>
-                            <td class="p-3 font-bold text-emerald-600 truncate" style="width: 12%;">نشط</td>
-                            <td class="p-3 mono-font text-slate-500 truncate" style="width: 13%;" dir="ltr">${c.date || '---'}</td>
-                            <td class="p-3 text-slate-600 truncate" style="width: 10%;">عميل</td>
-                            <td class="p-3 text-center truncate" style="width: 10%;">
-                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg text-xs font-bold transition">
-                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف
+                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${c.clientId ? c.clientId.substring(0,6) : '---'}</td>
+                            <td class="p-3 font-bold text-slate-900">${cName}</td>
+                            <td class="p-3 text-indigo-700 font-bold" dir="ltr">${cPhone}</td>
+                            <td class="p-3 font-bold text-emerald-600">نشط</td>
+                            <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
+                            <td class="p-3 text-slate-600">عميل مسجل</td>
+                            <td class="p-3 text-center">
+                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                    <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                                 </button>
                             </td>
                         </tr>
@@ -730,30 +778,32 @@
             } else {
                 headerHtml = `
                     <tr>
-                        <th class="p-3 truncate" style="width: 12%;">الكود</th>
-                        <th class="p-3 truncate" style="width: 23%;">البيان / الحساب</th>
-                        <th class="p-3 truncate" style="width: 18%;">العميل</th>
-                        <th class="p-3 truncate" style="width: 15%;">المبلغ</th>
-                        <th class="p-3 truncate" style="width: 12%;">التاريخ</th>
-                        <th class="p-3 truncate" style="width: 10%;">المستند</th>
-                        <th class="p-3 text-center truncate" style="width: 10%;">الإجراءات</th>
+                        <th class="p-3">الكود / الرقم</th>
+                        <th class="p-3">البيان / الحساب</th>
+                        <th class="p-3">العميل المرتبط</th>
+                        <th class="p-3">المبلغ</th>
+                        <th class="p-3">تفاصيل إضافية</th>
+                        <th class="p-3">التاريخ</th>
+                        <th class="p-3">المستند / الصورة</th>
+                        <th class="p-3 text-center">الإجراءات</th>
                     </tr>
                 `;
                 items.forEach(i => {
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 mono-font font-bold text-indigo-600 truncate" style="width: 12%;" dir="ltr">${i.code || '---'}</td>
-                            <td class="p-3 font-bold text-slate-900 truncate" style="width: 23%;">
+                            <td class="p-3 mono-font font-bold text-indigo-600" dir="ltr">${i.code || '---'}</td>
+                            <td class="p-3 font-bold text-slate-900">
                                 ${i.title}
-                                ${i.notes ? '<span class="block text-[10px] text-slate-500 font-normal truncate">' + i.notes + '</span>' : ''}
+                                ${i.notes ? '<span class="block text-[11px] text-slate-500 font-normal">' + i.notes + '</span>' : ''}
                             </td>
-                            <td class="p-3 text-indigo-700 font-bold truncate" style="width: 18%;">${i.clientName || '---'}</td>
-                            <td class="p-3 mono-font font-bold text-emerald-600 truncate" style="width: 15%;" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</td>
-                            <td class="p-3 mono-font text-slate-500 truncate" style="width: 12%;" dir="ltr">${i.date || '---'}</td>
-                            <td class="p-3 truncate" style="width: 10%;">
-                                ${i.receiptImage ? `<button onclick="window.viewDocumentImage('${i.receiptImage}', '${i.title}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image"></i></button>` : '<span class="text-slate-400">-</span>'}
+                            <td class="p-3 text-indigo-700 font-bold">${i.clientName || '---'}</td>
+                            <td class="p-3 mono-font font-bold text-emerald-600" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</td>
+                            <td class="p-3 text-slate-600 font-bold">${i.extraField || '---'}</td>
+                            <td class="p-3 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
+                            <td class="p-3">
+                                ${i.receiptImage ? `<button onclick="window.viewDocumentImage('${i.receiptImage}', '${i.title}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image ml-1"></i> معاينة الصورة</button>` : '<span class="text-slate-400">بدون صورة</span>'}
                             </td>
-                            <td class="p-3 text-center truncate" style="width: 10%;">
+                            <td class="p-3 text-center flex items-center justify-center gap-2">
                                 <button onclick="window.deleteFolderItem('${i.accountId}')" class="text-rose-500 hover:text-rose-700 text-xs p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
@@ -764,7 +814,8 @@
             }
 
             if (!rowsHtml) {
-                rowsHtml = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
+                let colSpan = isClientsFolder ? 7 : 8;
+                rowsHtml = `<tr><td colspan="${colSpan}" class="p-6 text-center text-slate-400 font-bold">لا توجد مدخلات مسجلة تحت هذا الملف حالياً.</td></tr>`;
             }
 
             if (thead) thead.innerHTML = headerHtml;
@@ -825,30 +876,30 @@
             clientAccounts.forEach(acc => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 25%;" dir="ltr">${acc.code || 'ACC'}</td>
-                        <td class="p-2.5 truncate" style="width: 35%;">(${acc.category}) - ${acc.title}</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 20%;" dir="ltr">+${Number(acc.amount || 0).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${acc.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${acc.code || 'ACC'}</td>
+                        <td class="p-2.5">مدخل حساب (${acc.category}) - ${acc.title}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(acc.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${acc.date || '---'}</td>
                     </tr>
                 `;
             });
             clientInvoices.forEach(inv => {
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 25%;" dir="ltr">${inv.id || 'INV'}</td>
-                        <td class="p-2.5 truncate" style="width: 35%;">فاتورة مبيعات سحابية</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600 truncate" style="width: 20%;" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${inv.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
+                        <td class="p-2.5">فاتورة مبيعات سحابية</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                     </tr>
                 `;
             });
             clientPayments.forEach(pay => {
                 rowsHtml += `
                     <tr class="bg-emerald-50/50">
-                        <td class="p-2.5 mono-font font-bold text-emerald-600 truncate" style="width: 25%;" dir="ltr">${pay.id || 'PAY'}</td>
-                        <td class="p-2.5 truncate" style="width: 35%;">دفعة (${pay.method || 'سداد'})</td>
-                        <td class="p-2.5 mono-font font-bold text-emerald-600 truncate" style="width: 20%;" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
-                        <td class="p-2.5 mono-font text-slate-500 truncate" style="width: 20%;" dir="ltr">${pay.date || '---'}</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">${pay.id || 'PAY'}</td>
+                        <td class="p-2.5">دفعة نقدية (${pay.method || 'سداد'})</td>
+                        <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
                     </tr>
                 `;
             });

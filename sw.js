@@ -27,6 +27,9 @@ const assetsToCache = [
   './icon-new-192.png',
   './icon-new-512.png'
   './accounts-tree.html',
+  './sitemap.xml',
+  './robots.txt',
+  './googleeb8d677c7529419b.html',
 ];
 
 self.addEventListener('install', (e) => {

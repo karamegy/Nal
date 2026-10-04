@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v28-cache'; // تحديث الإصدار ليشمل كافة الصفحات والملفات الجديدة
+const CACHE_NAME = 'eidco-v29-cache'; // تم تحديث الإصدار لضمان سحب الملفات الجديدة
 const assetsToCache = [
   './index.html',
   './auth.html',
@@ -61,12 +61,13 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   let requestURL = new URL(e.request.url);
 
-  // 🛑 الاستثناء الأهم: السماح لطلبات Vercel أو طلبات POST بالمرور مباشرة عبر الشبكة دون أي اعتراض
+  // السماح لطلبات Vercel أو طلبات POST بالمرور مباشرة عبر الشبكة دون اعتراض
   if (requestURL.hostname.includes('vercel.app') || e.request.method !== 'GET') {
     return; 
   }
 
-  if (e.request.mode === 'navigate' || requestURL.pathname.endsWith('.html') || requestURL.pathname === '/') {
+  // تم تصحيح الشرط ليطابق مسار /Nal/ بدلاً من الجذر الرئيسي /
+  if (e.request.mode === 'navigate' || requestURL.pathname.endsWith('.html') || requestURL.pathname === '/Nal/' || requestURL.pathname === '/Nal') {
     e.respondWith(
       fetch(e.request)
         .then(networkResponse => {

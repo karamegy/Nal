@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidco-v29-cache'; // تم تحديث الإصدار لضمان سحب الملفات الجديدة
+const CACHE_NAME = 'eidco-v30-cache'; // تم تحديث الإصدار لضمان سحب الملفات الجديدة
 const assetsToCache = [
   './index.html',
   './auth.html',

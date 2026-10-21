@@ -19,6 +19,8 @@ jobs:
       BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout Repository
@@ -67,9 +69,9 @@ jobs:
             exit 1
           fi
 
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
 
-          "$SDKMANAGER" \
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
@@ -84,7 +86,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # تنظيف النص من المسافات والأعمدة قبل فك تشفير Base64
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/android.keystore"
 
           test -s "$RUNNER_TEMP/android.keystore"

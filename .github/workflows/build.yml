@@ -30,27 +30,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Complete Android SDK Environment
+      - name: Fix Android SDK Permissions & Licenses
         shell: bash
         run: |
           set -euo pipefail
-
-          # 1. إصلاح الصلاحيات وتجهيز المجلد
           sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
-
-          # 2. قبول جميع التراخيص
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-
-          # 3. تثبيت حزم Android API و Build-tools المطلوبة بواسطة Bubblewrap
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -61,17 +48,11 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
-
-          if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::error::Missing secret: KEYSTORE_BASE64"
-            exit 1
-          fi
-
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > android.keystore
           test -s android.keystore
           chmod 600 android.keystore
 
-      - name: Configure Bubblewrap & twa-manifest
+      - name: Configure Bubblewrap & Build Project Structure
         shell: bash
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -79,7 +60,6 @@ jobs:
           set -euo pipefail
 
           mkdir -p ~/.bubblewrap
-
           node -e '
             const fs = require("fs");
             const path = require("path");
@@ -89,13 +69,11 @@ jobs:
             const keystorePath = path.resolve("android.keystore");
             const alias = process.env.KEY_ALIAS || "my-key-alias";
 
-            // 1. كتابة config.json الخاص بـ Bubblewrap
             fs.writeFileSync(
               path.join(process.env.HOME, ".bubblewrap", "config.json"),
               JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
             );
 
-            // 2. تحديث twa-manifest.json بالمفتاح والمسارات المعتمدة
             const twaFile = "twa-manifest.json";
             let m = {};
             if (fs.existsSync(twaFile)) {
@@ -134,7 +112,10 @@ jobs:
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
 
-      - name: Build Signed APK and AAB via Gradle
+          # إنشاء مجلد مشروع Gradle بـ Bubblewrap
+          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+
+      - name: Build Signed APK & AAB with Gradle Directly
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -143,14 +124,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          # تحديث هيكل مشروع أندرويد
-          bubblewrap update --manifest=twa-manifest.json
+          KEYSTORE_PATH="$(pwd)/android.keystore"
 
-          # البناء المباشر للتطبيق المنسق لتجاوز فحص مسار CLI
-          bubblewrap build \
-            --manifest=twa-manifest.json \
-            --keyPassword="$KEY_PASSWORD" \
-            --storePassword="$KEYSTORE_PASSWORD"
+          # منح صلاحيات التنفيذ لـ gradlew
+          chmod +x gradlew
+
+          # البناء المباشر بـ Gradle مع تمرير مفاتيح التوقيع
+          ./gradlew bundleRelease assembleRelease \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+          # نقل الملفات الناتجة لجذر المشروع
+          find app/build/outputs -type f -name "*.aab" -exec cp {} ./EIDCO-OS-release.aab \;
+          find app/build/outputs -type f -name "*.apk" -exec cp {} ./EIDCO-OS-release.apk \;
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

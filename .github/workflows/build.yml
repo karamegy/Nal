@@ -55,29 +55,18 @@ jobs:
             fi
           done
 
-      - name: Setup Isolated Android SDK
+      - name: Fix Android SDK Permissions & Accept Licenses
         shell: bash
         run: |
           set -euo pipefail
 
-          CUSTOM_SDK="$HOME/android-sdk"
-          mkdir -p "$CUSTOM_SDK/cmdline-tools"
+          # 1. إعطاء الملكية الكاملة لمجلد Android SDK للمستخدم الحالي (الحل الجذري)
+          sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
 
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d "$CUSTOM_SDK/cmdline-tools"
-          mv "$CUSTOM_SDK/cmdline-tools/cmdline-tools" "$CUSTOM_SDK/cmdline-tools/latest"
-          rm cmdline-tools.zip
-
-          SDKMANAGER="$CUSTOM_SDK/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" --licenses >/dev/null || true
-
-          "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" \
-            "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
-
-          echo "ANDROID_HOME=$CUSTOM_SDK" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$CUSTOM_SDK" >> $GITHUB_ENV
+          # 2. قبول جميع التراخيص وتثبيت المكونات المطلوبة
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli

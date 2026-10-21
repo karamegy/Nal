@@ -20,11 +20,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Java JDK 17
+      - name: Install Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install Bubblewrap CLI
         run: |
@@ -38,10 +38,10 @@ jobs:
         env:
           CI: true
         run: |
-          # إنشاء مشروع التغليف بدون طلب إدخال يدوياً
+          # التغلب على الأسئلة التفاعلية بإرسال الإجابة الافتراضية آلياً
           yes no | npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --skipValidation || true
           
-          # بناء التطبيق وتوقيعه تلقائياً
+          # بناء وحزم الملفات وتوقيعها بمفاتيح الحساب المعتمدة
           npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts

@@ -28,10 +28,8 @@ jobs:
 
       - name: Install Android SDK Build Tools & Accept Licenses
         run: |
-          # 1. قبول كافة التراخيص الخاصة بـ Android SDK
+          sudo chown -R $USER:$USER $ANDROID_HOME
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          
-          # 2. تثبيت الحزم الأساسية التي تشترطها Bubblewrap للتحقق من صحة المسار
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
       - name: Install Bubblewrap CLI
@@ -57,30 +55,52 @@ jobs:
             const fs = require("fs");
             const path = require("path");
 
-            const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.ANDROID_HOME;
+            // 1. تحديد المسارات المباشرة مع وجود المسارات الافتراضية لـ GitHub Runner لمنع القيم الفارغة
+            const jdkPath = process.env.JAVA_HOME || "/usr/lib/jvm/temurin-17-jdk-amd64";
+            const androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "/usr/local/lib/android/sdk";
 
-            // 1. إنشاء ملف الإعدادات الخاص بـ Bubblewrap تلقائياً
-            const bubblewrapDir = path.join(process.env.HOME, ".bubblewrap");
+            console.log("Target JDK Path:", jdkPath);
+            console.log("Target Android SDK Path:", androidSdkPath);
+
+            // 2. إنشاء مجلد .bubblewrap وملف config.json بجميع المسميات المعتمدة
+            const bubblewrapDir = path.join(process.env.HOME || "/home/runner", ".bubblewrap");
             if (!fs.existsSync(bubblewrapDir)) {
               fs.mkdirSync(bubblewrapDir, { recursive: true });
             }
+            
+            const configData = {
+              jdkPath: jdkPath,
+              androidSdkPath: androidSdkPath,
+              androidSdk: androidSdkPath
+            };
+            
             fs.writeFileSync(
               path.join(bubblewrapDir, "config.json"),
-              JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
+              JSON.stringify(configData, null, 2)
             );
 
-            // 2. تحديث twa-manifest.json بالمسارات وحساب الـ Alias المعتمد
-            const manifest = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
-            manifest.appVersionName = "8.0.0.0";
-            manifest.appVersionCode = 24;
-            manifest.jdkPath = jdkPath;
-            manifest.androidSdkPath = androidSdkPath;
-            if (process.env.KEY_ALIAS) {
+            // 3. تحديث twa-manifest.json وتعيين مسار ملف المفتاح المفكوك
+            const manifestPath = "twa-manifest.json";
+            if (fs.existsSync(manifestPath)) {
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+              manifest.appVersionName = "8.0.0.0";
+              manifest.appVersionCode = 24;
+              manifest.jdkPath = jdkPath;
+              manifest.androidSdkPath = androidSdkPath;
+              manifest.androidSdk = androidSdkPath;
+              
               manifest.signingKey = manifest.signingKey || {};
-              manifest.signingKey.alias = process.env.KEY_ALIAS;
+              manifest.signingKey.path = "./android.keystore";
+              if (process.env.KEY_ALIAS) {
+                manifest.signingKey.alias = process.env.KEY_ALIAS;
+              }
+              
+              fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+              console.log("Manifest successfully updated.");
+            } else {
+              console.error("Error: twa-manifest.json does not exist in the root folder!");
+              process.exit(1);
             }
-            fs.writeFileSync("twa-manifest.json", JSON.stringify(manifest, null, 2));
           '
 
       - name: Package Web App into Android Artifacts

@@ -30,33 +30,42 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Fresh Clean Android SDK
+      - name: Setup Fresh Android SDK & Tools
         shell: bash
         run: |
           set -euo pipefail
 
-          # 1. إنشاء مجلد معزول للـ SDK الخاص بنا
-          export CUSTOM_SDK="$RUNNER_TEMP/custom-android-sdk"
-          mkdir -p "$CUSTOM_SDK/cmdline-tools"
+          # 1. تجهيز مجلد الـ SDK الخاص بنا
+          export MY_SDK="$RUNNER_TEMP/my-sdk"
+          mkdir -p "$MY_SDK/cmdline-tools"
 
-          # 2. تحميل cmdline-tools الرسمية من جوجل مباشرة
+          # 2. تنزيل أحدث أدوات Google مباشرة
           cd "$RUNNER_TEMP"
-          curl -sSLo commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools.zip -d "$CUSTOM_SDK/cmdline-tools"
-          mv "$CUSTOM_SDK/cmdline-tools/cmdline-tools" "$CUSTOM_SDK/cmdline-tools/latest"
+          curl -sSLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip -d "$MY_SDK/cmdline-tools"
+          mv "$MY_SDK/cmdline-tools/cmdline-tools" "$MY_SDK/cmdline-tools/latest"
 
-          # 3. تثبيت مكونات البناء وقبول التراخيص تلقائياً
-          SDKMANAGER="$CUSTOM_SDK/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" --licenses || true
-          "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          # 3. تثبيت المكونات وتخطي التراخيص بالكامل
+          SDKMANAGER="$MY_SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --sdk_root="$MY_SDK" --licenses || true
+          "$SDKMANAGER" --sdk_root="$MY_SDK" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-          # 4. حفظ المسار الجديد للخطوات التالية
-          echo "CUSTOM_ANDROID_HOME=$CUSTOM_SDK" >> $GITHUB_ENV
+          # 4. زرع التراخيص يدوياً للتأكيد
+          mkdir -p "$MY_SDK/licenses"
+          cat << 'EOF' > "$MY_SDK/licenses/android-sdk-license"
+          89330172225f4d81156c64d304d49d476119682d
+          d56f5187479451eabf01fb78af6dfcb131a6481e
+          24333f8a63718c303a650677591de6a4715842f8
+          EOF
+
+          # 5. أجبر نظام جيت هب كله يستخدم الـ SDK بتاعنا وبس!
+          echo "ANDROID_HOME=$MY_SDK" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$MY_SDK" >> $GITHUB_ENV
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Auto-Check & Restore Keystore
+      - name: Restore Signing Keystore
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -72,14 +81,13 @@ jobs:
           test -s android.keystore
           chmod 600 android.keystore
 
-      - name: Prepare Bubblewrap Config & TWA Manifest
+      - name: Setup TWA Project & Manifest
         shell: bash
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
 
-          # إنشاء manifest.json إذا لم يكن موجوداً
           if [ ! -f "manifest.json" ]; then
             cat << 'EOF' > manifest.json
           {
@@ -100,13 +108,12 @@ jobs:
           EOF
           fi
 
-          # كتابة الإعدادات بالمسار المعزول النظيف
           node -e '
             const fs = require("fs");
             const path = require("path");
 
             const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.CUSTOM_ANDROID_HOME;
+            const androidSdkPath = process.env.ANDROID_HOME;
             const keystorePath = path.resolve("android.keystore");
             const alias = process.env.KEY_ALIAS || "my-key-alias";
 
@@ -159,6 +166,8 @@ jobs:
       - name: Build Signed App (APK & AAB)
         shell: bash
         env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |

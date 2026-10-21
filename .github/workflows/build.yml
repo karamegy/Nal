@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
 
       - name: Setup Java JDK 17
         uses: actions/setup-java@v4
@@ -26,19 +26,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android SDK Packages Needed by Bubblewrap
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34"
-
       - name: Install Bubblewrap CLI
         run: |
           npm install -g @bubblewrap/cli
-
-      - name: Configure Global Bubblewrap Environment
-        run: |
-          mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
 
       - name: Decode Signing Keystore
         run: |
@@ -51,21 +41,21 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Inject Paths & Version into twa-manifest
+      - name: Update Version in twa-manifest
         run: |
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
-            file.jdkPath = process.env.JAVA_HOME;
-            file.androidSdkPath = process.env.ANDROID_HOME;
+            delete file.jdkPath;
+            delete file.androidSdkPath;
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 
       - name: Package Web App into Android Artifacts
         run: |
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}" --skip-jdk-check
+          echo "n" | npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

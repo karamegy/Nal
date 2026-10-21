@@ -20,11 +20,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Java JDK 21
+      - name: Install Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Install Bubblewrap CLI
         run: |
@@ -34,20 +34,15 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
 
-      - name: Build Web Assets (If needed)
-        run: |
-          if [ -f package.json ]; then
-            npm install
-            npm run build --if-present
-          fi
-
       - name: Generate TWA Project & Build Android Bundle
+        env:
+          CI: true
         run: |
-          # إنشاء مشروع أندرويد تلقائياً مع ضبط إصدار Java 21 و Target SDK الحديث
-          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --skipValidation
+          # إنشاء مشروع التغليف بدون طلب إدخال يدوياً
+          yes no | npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --skipValidation || true
           
-          # بناء التطبيق وتوقيعه تلقائياً بالمفاتيح المعتمدة من Secrets
-          npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}"
+          # بناء التطبيق وتوقيعه تلقائياً
+          npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

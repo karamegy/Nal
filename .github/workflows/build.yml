@@ -66,6 +66,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          # مسح أي ملفات بناء سابقة لضمان توليد كود جافا نظيف
+          rm -rf app
+
           mkdir -p ~/.bubblewrap
           node -e '
             const fs = require("fs");
@@ -105,7 +108,6 @@ jobs:
                 fallbackType: "customtabs",
                 features: {},
                 alphaDependencies: { enabled: false },
-                enableNotifications: true,
                 scimitar: { enabled: false }
               };
             }
@@ -116,6 +118,9 @@ jobs:
             m.signingKey.path = keystorePath;
             m.signingKey.alias = alias;
             m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
+            
+            // تعطيل إشعارات النظام المباشرة لمنع أخطاء التجميع
+            m.enableNotifications = false;
 
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
@@ -134,14 +139,14 @@ jobs:
           KEYSTORE_PATH="$(pwd)/android.keystore"
           chmod +x gradlew
 
-          # بناء APK التوقيع أولاً
+          # بناء APK التوقيع
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # بناء AAB التوقيع ثانياً
+          # بناء AAB التوقيع
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \

@@ -30,37 +30,27 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Fresh Android SDK & Tools
+      - name: Setup Complete Android SDK Environment
         shell: bash
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الـ SDK الخاص بنا
-          export MY_SDK="$RUNNER_TEMP/my-sdk"
-          mkdir -p "$MY_SDK/cmdline-tools"
+          # 1. إصلاح الصلاحيات وتجهيز المجلد
+          sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
 
-          # 2. تنزيل أحدث أدوات Google مباشرة
-          cd "$RUNNER_TEMP"
-          curl -sSLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q tools.zip -d "$MY_SDK/cmdline-tools"
-          mv "$MY_SDK/cmdline-tools/cmdline-tools" "$MY_SDK/cmdline-tools/latest"
+          # 2. قبول جميع التراخيص
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
 
-          # 3. تثبيت المكونات وتخطي التراخيص بالكامل
-          SDKMANAGER="$MY_SDK/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --sdk_root="$MY_SDK" --licenses || true
-          "$SDKMANAGER" --sdk_root="$MY_SDK" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-          # 4. زرع التراخيص يدوياً للتأكيد
-          mkdir -p "$MY_SDK/licenses"
-          cat << 'EOF' > "$MY_SDK/licenses/android-sdk-license"
-          89330172225f4d81156c64d304d49d476119682d
-          d56f5187479451eabf01fb78af6dfcb131a6481e
-          24333f8a63718c303a650677591de6a4715842f8
-          EOF
-
-          # 5. أجبر نظام جيت هب كله يستخدم الـ SDK بتاعنا وبس!
-          echo "ANDROID_HOME=$MY_SDK" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$MY_SDK" >> $GITHUB_ENV
+          # 3. تثبيت حزم Android API و Build-tools المطلوبة بواسطة Bubblewrap
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -73,7 +63,7 @@ jobs:
           set -euo pipefail
 
           if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::error::سر KEYSTORE_BASE64 غير موجود!"
+            echo "::error::Missing secret: KEYSTORE_BASE64"
             exit 1
           fi
 
@@ -81,32 +71,14 @@ jobs:
           test -s android.keystore
           chmod 600 android.keystore
 
-      - name: Setup TWA Project & Manifest
+      - name: Configure Bubblewrap & twa-manifest
         shell: bash
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
 
-          if [ ! -f "manifest.json" ]; then
-            cat << 'EOF' > manifest.json
-          {
-            "name": "EIDCO Business OS",
-            "short_name": "EIDCO OS",
-            "start_url": "https://karamegy.github.io/Na2la/",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#000000",
-            "icons": [
-              {
-                "src": "https://karamegy.github.io/Na2la/icon.png",
-                "sizes": "512x512",
-                "type": "image/png"
-              }
-            ]
-          }
-          EOF
-          fi
+          mkdir -p ~/.bubblewrap
 
           node -e '
             const fs = require("fs");
@@ -117,14 +89,13 @@ jobs:
             const keystorePath = path.resolve("android.keystore");
             const alias = process.env.KEY_ALIAS || "my-key-alias";
 
-            const bwDir = path.join(process.env.HOME, ".bubblewrap");
-            if (!fs.existsSync(bwDir)) fs.mkdirSync(bwDir, { recursive: true });
-
+            // 1. كتابة config.json الخاص بـ Bubblewrap
             fs.writeFileSync(
-              path.join(bwDir, "config.json"),
+              path.join(process.env.HOME, ".bubblewrap", "config.json"),
               JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
             );
 
+            // 2. تحديث twa-manifest.json بالمفتاح والمسارات المعتمدة
             const twaFile = "twa-manifest.json";
             let m = {};
             if (fs.existsSync(twaFile)) {
@@ -163,18 +134,19 @@ jobs:
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
 
-      - name: Build Signed App (APK & AAB)
+      - name: Build Signed APK and AAB via Gradle
         shell: bash
         env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
 
-          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+          # تحديث هيكل مشروع أندرويد
+          bubblewrap update --manifest=twa-manifest.json
 
+          # البناء المباشر للتطبيق المنسق لتجاوز فحص مسار CLI
           bubblewrap build \
             --manifest=twa-manifest.json \
             --keyPassword="$KEY_PASSWORD" \

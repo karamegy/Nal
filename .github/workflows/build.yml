@@ -1,4 +1,4 @@
-name: Build EIDCO Business OS App
+Name: Build EIDCO Business OS App
 
 on:
   push:
@@ -44,30 +44,16 @@ jobs:
       - name: Setup Environment & Fix twa-manifest
         env:
           TARGET_JDK: ${{ env.JAVA_HOME }}
-          TARGET_SDK: /usr/local/lib/android/sdk
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          # قبول التراخيص وإنشاء المجلدات المطلوبة
-          mkdir -p "$TARGET_SDK/licenses"
-          yes | $TARGET_SDK/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-          # إنشاء ملف إعدادات Bubblewrap العام بالمسارات الحقيقية
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "$TARGET_JDK",
-            "androidSdkPath": "$TARGET_SDK"
-          }
-          EOF
-
-          # تحديث ملف twa-manifest ديناميكياً بمسار الجافا الحي والـ Alias الخاص بك
+          # تحديث ملف twa-manifest ديناميكياً لتجنب مشاكل المسارات الصلبة وجعل Bubblewrap يتكفل بالباقي
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
             file.jdkPath = process.env.TARGET_JDK;
-            file.androidSdkPath = process.env.TARGET_SDK;
+            delete file.androidSdkPath; // حذف المسار اليدوي لكي يقوم Bubblewrap بتحميله واكتشافه تلقائياً
             if (process.env.KEY_ALIAS) {
               file.signingKey.alias = process.env.KEY_ALIAS;
             }
@@ -76,7 +62,7 @@ jobs:
 
       - name: Package Web App into Android Artifacts
         run: |
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
+          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}" --skip-sdk-install=false
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

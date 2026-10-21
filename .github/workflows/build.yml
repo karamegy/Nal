@@ -26,9 +26,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK Tools
-        uses: android-actions/setup-android@v3
-
       - name: Install Bubblewrap CLI (TWA Builder)
         run: |
           npm install -g @bubblewrap/cli
@@ -36,7 +33,7 @@ jobs:
       - name: Configure Global Bubblewrap Environment
         run: |
           mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"/usr/local/lib/android/sdk\"}" > ~/.bubblewrap/config.json
 
       - name: Decode Signing Keystore
         run: |
@@ -57,7 +54,7 @@ jobs:
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
             file.jdkPath = process.env.JAVA_HOME;
-            file.androidSdkPath = process.env.ANDROID_HOME;
+            file.androidSdkPath = "/usr/local/lib/android/sdk";
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 

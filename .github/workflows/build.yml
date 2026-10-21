@@ -30,18 +30,27 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Auto-Setup Android SDK & Licenses
+      - name: Inject Android Licenses & Fix SDK Path
         shell: bash
         run: |
           set -euo pipefail
 
-          # 1. إعطاء الملكية للمستخدم الحالي لتفادي أخطاء الصلاحيات
+          # 1. إعطاء الملكية وإنشاء مجلد التراخيص
           sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
+          mkdir -p "$ANDROID_HOME/licenses"
 
-          # 2. قبول التراخيص وتثبيت مكونات SDK في مكانها الصحيح تماماً
+          # 2. زرع التراخيص المعتمدة مباشرة ليرضاها Bubblewrap
+          cat << 'EOF' > "$ANDROID_HOME/licenses/android-sdk-license"
+          89330172225f4d81156c64d304d49d476119682d
+          d56f5187479451eabf01fb78af6dfcb131a6481e
+          24333f8a63718c303a650677591de6a4715842f8
+          EOF
+
+          # 3. التأكد من قبول باقي التراخيص
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          if [ -f "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
+          fi
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -54,7 +63,7 @@ jobs:
           set -euo pipefail
 
           if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::error::سر KEYSTORE_BASE64 غير موجود في GitHub Secrets!"
+            echo "::error::سر KEYSTORE_BASE64 غير موجود!"
             exit 1
           fi
 
@@ -62,16 +71,15 @@ jobs:
           test -s android.keystore
           chmod 600 android.keystore
 
-      - name: Auto-Detect & Build Missing Config Files
+      - name: Prepare Bubblewrap Config & TWA Manifest
         shell: bash
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
 
-          # 1. إنشاء manifest.json افتراضي لو مش موجود
+          # إنشاء manifest.json إذا لم يكن موجوداً
           if [ ! -f "manifest.json" ]; then
-            echo "manifest.json غير موجود.. جاري إنشاؤه تلقائياً..."
             cat << 'EOF' > manifest.json
           {
             "name": "EIDCO Business OS",
@@ -91,7 +99,7 @@ jobs:
           EOF
           fi
 
-          # 2. تهيئة بيئة Bubblewrap وإنشاء twa-manifest.json تلقائياً لو مفيش ملفات
+          # كتابة الإعدادات الرسمية بالمسارات المطلقة
           node -e '
             const fs = require("fs");
             const path = require("path");
@@ -101,24 +109,19 @@ jobs:
             const keystorePath = path.resolve("android.keystore");
             const alias = process.env.KEY_ALIAS || "my-key-alias";
 
-            // إنشاء مجلد وإعدادات bubblewrap الداخلية
-            const bwConfigDir = path.join(process.env.HOME, ".bubblewrap");
-            if (!fs.existsSync(bwConfigDir)) fs.mkdirSync(bwConfigDir, { recursive: true });
+            const bwDir = path.join(process.env.HOME, ".bubblewrap");
+            if (!fs.existsSync(bwDir)) fs.mkdirSync(bwDir, { recursive: true });
 
             fs.writeFileSync(
-              path.join(bwConfigDir, "config.json"),
+              path.join(bwDir, "config.json"),
               JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
             );
 
-            // إعداد أو إنعاش twa-manifest.json
             const twaFile = "twa-manifest.json";
             let m = {};
-
             if (fs.existsSync(twaFile)) {
-              console.log("تم العثور على twa-manifest.json، جاري تحديث المسارات...");
               m = JSON.parse(fs.readFileSync(twaFile, "utf8"));
             } else {
-              console.log("twa-manifest.json غير موجود! جاري إنشاؤه تلقائياً من الصفر...");
               m = {
                 packageId: "io.github.karamegy.twa",
                 host: "karamegy.github.io",
@@ -150,10 +153,9 @@ jobs:
             m.signingKey.alias = alias;
 
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
-            console.log("تم تجهيز ملف التكوين بنجاح 100%");
           '
 
-      - name: Update & Build Project
+      - name: Build Signed App (APK & AAB)
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -161,10 +163,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # تحديث المشروع بناءً على الملفات المنشأة
           bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
 
-          # إخراج البناء النهائي
           bubblewrap build \
             --manifest=twa-manifest.json \
             --keyPassword="$KEY_PASSWORD" \

@@ -20,6 +20,12 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Install Bubblewrap CLI (TWA Builder)
         run: |
           npm install -g @bubblewrap/cli
@@ -48,8 +54,8 @@ jobs:
 
       - name: Package Web App into Android Artifacts
         run: |
-          echo "Building Android Package (v8.0.0.0, Code 24) non-interactively..."
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}" --non-interactive
+          echo "Building Android Package (v8.0.0.0, Code 24) automatically..."
+          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}" --skip-jdk-check --non-interactive
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

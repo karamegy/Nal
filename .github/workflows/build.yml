@@ -26,14 +26,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Bubblewrap CLI
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Configure Bubblewrap Paths
+      - name: Configure Bubblewrap & Accept Licenses
         run: |
           mkdir -p ~/.bubblewrap
           cat <<EOF > ~/.bubblewrap/config.json
@@ -42,9 +39,6 @@ jobs:
             "androidSdkPath": "${ANDROID_HOME}"
           }
           EOF
-
-      - name: Accept Android SDK Licenses
-        run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Decode Signing Keystore
@@ -58,13 +52,15 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update Version in twa-manifest
+      - name: Update Manifest Dynamic Paths & Version
         run: |
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
+            file.jdkPath = process.env.JAVA_HOME;
+            file.androidSdkPath = process.env.ANDROID_HOME;
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 

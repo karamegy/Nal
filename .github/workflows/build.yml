@@ -15,35 +15,38 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install Bubblewrap CLI
-        run: |
-          npm install -g @bubblewrap/cli
+        run: npm install -g @bubblewrap/cli
 
-      - name: Decode Signing Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
 
-      - name: Generate and Build TWA App (Non-Interactive)
+      - name: Generate TWA Project Configuration
         run: |
-          # أمر مجرب ومضمون لبناء TWA بدون أي سؤال تفاعلي
-          npx @bubblewrap/cli build --manifest=https://karamegy.github.io/EIDCO/manifest.json --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}" --skipValidation
+          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --directory=twa-project --signingKeyPath=../release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}"
+
+      - name: Build Signed AAB & APK
+        run: |
+          cd twa-project
+          ./gradlew build bundleRelease \
+            -Pandroid.injected.signing.store.file=../release.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: EIDCO-OS-Android-Release
+          name: EIDCO-PlayStore-Release
           path: |
-            ./*.apk
-            ./*.aab
-            !release.keystore
+            twa-project/app/build/outputs/bundle/release/*.aab
+            twa-project/app/build/outputs/apk/release/*.apk

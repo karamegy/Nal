@@ -1,4 +1,5 @@
-name: Build EIDCO Business OS App
+
+name: Build EIDCO Business OS
 
 on:
   push:
@@ -7,86 +8,158 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Environment
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Setup Java JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK & Accept Licenses
-        run: |
-          # 1. إعطاء الملكية الكاملة لمجلد Android SDK الافتراضي
-          sudo chown -R $USER:$USER $ANDROID_HOME
-
-          # 2. تثبيت الحزم المطلوبة وتأكيد التراخيص
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
-
-          # 3. نسخ التراخيص إلى مجلد SDK ومجلد المستخدم لضمان تعرّف Bubblewrap عليها
-          mkdir -p $ANDROID_HOME/licenses
-          mkdir -p ~/.android/licenses
-          cp -r ~/.android/licenses/* $ANDROID_HOME/licenses/ 2>/dev/null || true
-          cp -r $ANDROID_HOME/licenses/* ~/.android/licenses/ 2>/dev/null || true
-
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Decode Signing Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
-
-      - name: Configure Bubblewrap & Update Manifest
+      - name: Check Required Files and Secrets
+        shell: bash
         env:
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          # 1. إنشاء ملف config.json المعتمد لأداة Bubblewrap
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_HOME}"
+          set -euo pipefail
+
+          test -f manifest.json
+          test -f twa-manifest.json
+
+          for name in KEYSTORE_BASE64 \
+                      BUBBLEWRAP_KEYSTORE_PASSWORD \
+                      BUBBLEWRAP_KEY_PASSWORD \
+                      KEY_ALIAS; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Install Android SDK Packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found: $SDKMANAGER"
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Install Bubblewrap
+        run: npm install --global @bubblewrap/cli
+
+      - name: Restore Signing Keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          printf '%s' "$KEYSTORE_BASE64" |
+            base64 --decode > "$RUNNER_TEMP/android.keystore"
+
+          test -s "$RUNNER_TEMP/android.keystore"
+          chmod 600 "$RUNNER_TEMP/android.keystore"
+
+          keytool -list \
+            -keystore "$RUNNER_TEMP/android.keystore" \
+            -storepass "$BUBBLEWRAP_KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" >/dev/null
+
+      - name: Configure Bubblewrap
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$HOME/.bubblewrap"
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          fs.writeFileSync(
+            process.env.HOME + '/.bubblewrap/config.json',
+            JSON.stringify({
+              jdkPath: process.env.JAVA_HOME,
+              androidSdkPath: process.env.ANDROID_HOME
+            }, null, 2)
+          );
+
+          const file = 'twa-manifest.json';
+          const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+          if (m.host !== 'karamegy.github.io') {
+            throw new Error('Unexpected host in twa-manifest.json');
           }
-          EOF
 
-          # 2. تحديث twa-manifest.json بالمسارات الفعلية
-          node -e '
-            const fs = require("fs");
-            const manifest = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
-            
-            manifest.jdkPath = process.env.JAVA_HOME;
-            manifest.androidSdkPath = process.env.ANDROID_HOME;
-            manifest.signingKey = manifest.signingKey || {};
-            manifest.signingKey.path = "./android.keystore";
-            if (process.env.KEY_ALIAS) {
-              manifest.signingKey.alias = process.env.KEY_ALIAS;
-            }
-            
-            fs.writeFileSync("twa-manifest.json", JSON.stringify(manifest, null, 2));
-          '
+          m.signingKey = m.signingKey || {};
+          m.signingKey.path =
+            process.env.RUNNER_TEMP + '/android.keystore';
+          m.signingKey.alias = process.env.KEY_ALIAS;
+          m.jdkPath = process.env.JAVA_HOME;
+          m.androidSdkPath = process.env.ANDROID_HOME;
 
-      - name: Package Web App into Android Artifacts
+          fs.writeFileSync(file, JSON.stringify(m, null, 2) + '\n');
+          NODE
+
+      - name: Generate Android Project
         run: |
-          bubblewrap build --manifest=twa-manifest.json --keyPassword="${{ secrets.KEY_PASSWORD }}" --storePassword="${{ secrets.KEYSTORE_PASSWORD }}" --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
+          bubblewrap update \
+            --manifest=./twa-manifest.json \
+            --skipVersionUpgrade
 
-      - name: Upload Build Artifacts
+      - name: Build Signed APK and AAB
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bubblewrap build \
+            --manifest=./twa-manifest.json \
+            --signingKeyPath="$RUNNER_TEMP/android.keystore" \
+            --signingKeyAlias="$KEY_ALIAS"
+
+          test -s app-release-signed.apk
+          test -s app-release-bundle.aab
+
+      - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
         with:
           name: EIDCO-OS-Android-Release
           path: |
-            ./*.apk
-            ./*.aab
-            ./manifest.json
-            ./sw.js
-            !android.keystore
+            app-release-signed.apk
+            app-release-bundle.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Clean Up Signing Key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android.keystore"

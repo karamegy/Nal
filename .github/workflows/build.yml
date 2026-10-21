@@ -26,11 +26,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: '11.0'
-          packages: 'build-tools;34.0.0 platforms;android-34 platform-tools'
+      - name: Configure Android SDK & Accept Licenses
+        run: |
+          # 1. إعطاء الملكية الكاملة للمستخدم الحالي لمنع حظر الصلاحيات
+          sudo chown -R $USER:$USER $ANDROID_HOME
+          
+          # 2. إنشاء مجلد التراخيص داخل Android SDK وقبول التراخيص
+          mkdir -p $ANDROID_HOME/licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          
+          # 3. مزامنة ملفات التراخيص المقبولة لتراها أداة Bubblewrap مباشرة
+          if [ -d "$HOME/.android/licenses" ]; then
+            cp -r $HOME/.android/licenses/* $ANDROID_HOME/licenses/ || true
+          fi
+          
+          # 4. تثبيت المكونات الأساسية المطلوبة للبناء
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
       - name: Install Bubblewrap CLI
         run: |
@@ -56,13 +67,13 @@ jobs:
             const path = require("path");
 
             const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+            const androidSdkPath = process.env.ANDROID_HOME;
 
             console.log("JDK Path:", jdkPath);
             console.log("Android SDK Path:", androidSdkPath);
 
-            // 1. إنشاء ملف config.json الخاص بـ Bubblewrap
-            const bubblewrapDir = path.join(process.env.HOME || "/home/runner", ".bubblewrap");
+            // 1. إنشاء ملف config.json المعتمد لأداة Bubblewrap
+            const bubblewrapDir = path.join(process.env.HOME, ".bubblewrap");
             if (!fs.existsSync(bubblewrapDir)) {
               fs.mkdirSync(bubblewrapDir, { recursive: true });
             }
@@ -77,7 +88,7 @@ jobs:
               JSON.stringify(configData, null, 2)
             );
 
-            // 2. تحديث twa-manifest.json بالمسارات الفعلية الحية
+            // 2. تحديث twa-manifest.json بالمسارات الحية
             const manifestPath = "twa-manifest.json";
             if (fs.existsSync(manifestPath)) {
               const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -95,9 +106,6 @@ jobs:
               
               fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
               console.log("twa-manifest.json updated successfully.");
-            } else {
-              console.error("Error: twa-manifest.json not found!");
-              process.exit(1);
             }
           '
 

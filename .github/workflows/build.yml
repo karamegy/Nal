@@ -30,6 +30,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Fix Android SDK Permissions & Install Build Tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 1. إعطاء ملكية المجلد للمستخدم الحالي لتفادي أخطاء الصلاحيات
+          sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
+
+          # 2. قبول التراخيص وتثبيت مكونات Android SDK المطلوبة لـ Bubblewrap
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
@@ -41,6 +54,7 @@ jobs:
           set -euo pipefail
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > android.keystore
           test -s android.keystore
+          chmod 600 android.keystore
 
       - name: Configure Bubblewrap & twa-manifest
         shell: bash
@@ -49,10 +63,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. قبول تراخيص Android SDK المدمج تلقائياً
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true
-
-          # 2. إنشاء إعدادات Bubblewrap
+          # 1. إنشاء إعدادات Bubblewrap
           mkdir -p ~/.bubblewrap
           node -e '
             const fs = require("fs");
@@ -65,7 +76,7 @@ jobs:
             );
           '
 
-          # 3. ربط المسارات والمفتاح داخل twa-manifest.json
+          # 2. ربط المسارات والمفتاح داخل twa-manifest.json
           node -e '
             const fs = require("fs");
             const m = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
@@ -76,6 +87,10 @@ jobs:
             m.signingKey.alias = process.env.KEY_ALIAS;
             fs.writeFileSync("twa-manifest.json", JSON.stringify(m, null, 2));
           '
+
+      - name: Update Android Project
+        run: |
+          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
 
       - name: Build Signed APK and AAB
         shell: bash

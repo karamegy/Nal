@@ -30,27 +30,28 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Inject Android Licenses & Fix SDK Path
+      - name: Install Fresh Clean Android SDK
         shell: bash
         run: |
           set -euo pipefail
 
-          # 1. إعطاء الملكية وإنشاء مجلد التراخيص
-          sudo chown -R $(whoami):$(id -gn) "$ANDROID_HOME"
-          mkdir -p "$ANDROID_HOME/licenses"
+          # 1. إنشاء مجلد معزول للـ SDK الخاص بنا
+          export CUSTOM_SDK="$RUNNER_TEMP/custom-android-sdk"
+          mkdir -p "$CUSTOM_SDK/cmdline-tools"
 
-          # 2. زرع التراخيص المعتمدة مباشرة ليرضاها Bubblewrap
-          cat << 'EOF' > "$ANDROID_HOME/licenses/android-sdk-license"
-          89330172225f4d81156c64d304d49d476119682d
-          d56f5187479451eabf01fb78af6dfcb131a6481e
-          24333f8a63718c303a650677591de6a4715842f8
-          EOF
+          # 2. تحميل cmdline-tools الرسمية من جوجل مباشرة
+          cd "$RUNNER_TEMP"
+          curl -sSLo commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools.zip -d "$CUSTOM_SDK/cmdline-tools"
+          mv "$CUSTOM_SDK/cmdline-tools/cmdline-tools" "$CUSTOM_SDK/cmdline-tools/latest"
 
-          # 3. التأكد من قبول باقي التراخيص
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          if [ -f "$SDKMANAGER" ]; then
-            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-          fi
+          # 3. تثبيت مكونات البناء وقبول التراخيص تلقائياً
+          SDKMANAGER="$CUSTOM_SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" --licenses || true
+          "$SDKMANAGER" --sdk_root="$CUSTOM_SDK" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+          # 4. حفظ المسار الجديد للخطوات التالية
+          echo "CUSTOM_ANDROID_HOME=$CUSTOM_SDK" >> $GITHUB_ENV
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -99,13 +100,13 @@ jobs:
           EOF
           fi
 
-          # كتابة الإعدادات الرسمية بالمسارات المطلقة
+          # كتابة الإعدادات بالمسار المعزول النظيف
           node -e '
             const fs = require("fs");
             const path = require("path");
 
             const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.ANDROID_HOME;
+            const androidSdkPath = process.env.CUSTOM_ANDROID_HOME;
             const keystorePath = path.resolve("android.keystore");
             const alias = process.env.KEY_ALIAS || "my-key-alias";
 

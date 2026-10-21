@@ -26,20 +26,26 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Bubblewrap CLI
         run: |
           npm install -g @bubblewrap/cli
 
-      # خطوة حل المشكلة: إنشاء ملف إعدادات Bubblewrap مسبقاً لتفادي الأسئلة التفاعلية
       - name: Configure Bubblewrap Paths
         run: |
           mkdir -p ~/.bubblewrap
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
+            "androidSdkPath": "${ANDROID_HOME}"
           }
           EOF
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Decode Signing Keystore
         run: |

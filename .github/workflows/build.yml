@@ -1,4 +1,4 @@
-Name: Build EIDCO Business OS
+name: Build EIDCO Business OS
 
 on:
   push:
@@ -84,13 +84,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # تنظيف النص من الأسطر الجديدة والمسافات قبل فك تشفير Base64
           echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/android.keystore"
 
           test -s "$RUNNER_TEMP/android.keystore"
           chmod 600 "$RUNNER_TEMP/android.keystore"
 
-          # تم إلغاء >/dev/null لإظهار أي خطأ في كلمة السر أو Alias بوضوح
           keytool -list \
             -keystore "$RUNNER_TEMP/android.keystore" \
             -storepass "$BUBBLEWRAP_KEYSTORE_PASSWORD" \

@@ -30,17 +30,6 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Configure Bubblewrap Paths & Accept Licenses
-        run: |
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_HOME}"
-          }
-          EOF
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
       - name: Decode Signing Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
@@ -52,15 +41,36 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update Manifest Dynamic Paths & Version
+      - name: Setup Environment & Fix twa-manifest
+        env:
+          TARGET_JDK: ${{ env.JAVA_HOME }}
+          TARGET_SDK: /usr/local/lib/android/sdk
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
+          # قبول التراخيص وإنشاء المجلدات المطلوبة
+          mkdir -p "$TARGET_SDK/licenses"
+          yes | $TARGET_SDK/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+          # إنشاء ملف إعدادات Bubblewrap العام بالمسارات الحقيقية
+          mkdir -p ~/.bubblewrap
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "$TARGET_JDK",
+            "androidSdkPath": "$TARGET_SDK"
+          }
+          EOF
+
+          # تحديث ملف twa-manifest ديناميكياً بمسار الجافا الحي والـ Alias الخاص بك
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
-            file.jdkPath = process.env.JAVA_HOME || "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.12-7/x64";
-            file.androidSdkPath = process.env.ANDROID_HOME || "/usr/local/lib/android/sdk";
+            file.jdkPath = process.env.TARGET_JDK;
+            file.androidSdkPath = process.env.TARGET_SDK;
+            if (process.env.KEY_ALIAS) {
+              file.signingKey.alias = process.env.KEY_ALIAS;
+            }
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 

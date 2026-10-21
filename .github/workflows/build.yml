@@ -26,20 +26,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Isolated Android SDK
+      - name: Setup Android SDK & Accept Licenses
         run: |
-          # 1. إنشاء مجلد SDK محلي جديد وتنزيل أدوات cmdline المعتمدة من جوجل
-          export CUSTOM_SDK=$HOME/android-sdk
-          mkdir -p $CUSTOM_SDK/cmdline-tools
-          
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $CUSTOM_SDK/cmdline-tools
-          mv $CUSTOM_SDK/cmdline-tools/cmdline-tools $CUSTOM_SDK/cmdline-tools/latest
-          rm cmdline-tools.zip
+          # 1. إعطاء الملكية الكاملة لمجلد Android SDK الافتراضي
+          sudo chown -R $USER:$USER $ANDROID_HOME
 
-          # 2. قبول جميع التراخيص وتثبيت المكونات المطلوبة داخل المجلد المحلي
-          yes | $CUSTOM_SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$CUSTOM_SDK --licenses
-          $CUSTOM_SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$CUSTOM_SDK "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          # 2. تثبيت الحزم المطلوبة وتأكيد التراخيص
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+
+          # 3. نسخ التراخيص إلى مجلد SDK ومجلد المستخدم لضمان تعرّف Bubblewrap عليها
+          mkdir -p $ANDROID_HOME/licenses
+          mkdir -p ~/.android/licenses
+          cp -r ~/.android/licenses/* $ANDROID_HOME/licenses/ 2>/dev/null || true
+          cp -r $ANDROID_HOME/licenses/* ~/.android/licenses/ 2>/dev/null || true
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -51,39 +51,34 @@ jobs:
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          # 1. إنشاء config.json لتوجيه Bubblewrap للـ SDK المحلي
+          # 1. إنشاء ملف config.json المعتمد لأداة Bubblewrap
           mkdir -p ~/.bubblewrap
-          node -e "
-            const fs = require('fs');
-            const path = require('path');
-            const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.HOME + '/android-sdk';
-            
-            fs.writeFileSync(
-              path.join(process.env.HOME, '.bubblewrap', 'config.json'),
-              JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
-            );
-          "
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_HOME}"
+          }
+          EOF
 
-          # 2. تحديث twa-manifest.json بالمسار المحلي ومفتاح التوقيع
-          node -e "
-            const fs = require('fs');
-            const manifest = JSON.parse(fs.readFileSync('twa-manifest.json', 'utf8'));
+          # 2. تحديث twa-manifest.json بالمسارات الفعلية
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             
             manifest.jdkPath = process.env.JAVA_HOME;
-            manifest.androidSdkPath = process.env.HOME + '/android-sdk';
+            manifest.androidSdkPath = process.env.ANDROID_HOME;
             manifest.signingKey = manifest.signingKey || {};
-            manifest.signingKey.path = './android.keystore';
+            manifest.signingKey.path = "./android.keystore";
             if (process.env.KEY_ALIAS) {
               manifest.signingKey.alias = process.env.KEY_ALIAS;
             }
             
-            fs.writeFileSync('twa-manifest.json', JSON.stringify(manifest, null, 2));
-          "
+            fs.writeFileSync("twa-manifest.json", JSON.stringify(manifest, null, 2));
+          '
 
       - name: Package Web App into Android Artifacts
         run: |
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --keyPassword="${{ secrets.KEY_PASSWORD }}" --storePassword="${{ secrets.KEYSTORE_PASSWORD }}" --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
+          bubblewrap build --manifest=twa-manifest.json --keyPassword="${{ secrets.KEY_PASSWORD }}" --storePassword="${{ secrets.KEYSTORE_PASSWORD }}" --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

@@ -26,27 +26,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK Environment
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android Build Tools & Accept Licenses
+      - name: Install Android SDK Build Tools & Accept Licenses
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          # 1. قبول كافة التراخيص الخاصة بـ Android SDK
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          
+          # 2. تثبيت الحزم الأساسية التي تشترطها Bubblewrap للتحقق من صحة المسار
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
       - name: Install Bubblewrap CLI
         run: |
           npm install -g @bubblewrap/cli
-
-      - name: Configure Bubblewrap Environment
-        run: |
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_HOME}"
-          }
-          EOF
 
       - name: Decode Signing Keystore
         run: |
@@ -59,21 +49,38 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update Manifest Dynamic Paths, Alias & Version
+      - name: Configure Bubblewrap & Update Manifest
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           node -e '
             const fs = require("fs");
-            const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
-            file.appVersionName = "8.0.0.0";
-            file.appVersionCode = 24;
-            file.jdkPath = process.env.JAVA_HOME;
-            file.androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
-            if (process.env.KEY_ALIAS) {
-              file.signingKey.alias = process.env.KEY_ALIAS;
+            const path = require("path");
+
+            const jdkPath = process.env.JAVA_HOME;
+            const androidSdkPath = process.env.ANDROID_HOME;
+
+            // 1. إنشاء ملف الإعدادات الخاص بـ Bubblewrap تلقائياً
+            const bubblewrapDir = path.join(process.env.HOME, ".bubblewrap");
+            if (!fs.existsSync(bubblewrapDir)) {
+              fs.mkdirSync(bubblewrapDir, { recursive: true });
             }
-            fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
+            fs.writeFileSync(
+              path.join(bubblewrapDir, "config.json"),
+              JSON.stringify({ jdkPath, androidSdkPath }, null, 2)
+            );
+
+            // 2. تحديث twa-manifest.json بالمسارات وحساب الـ Alias المعتمد
+            const manifest = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
+            manifest.appVersionName = "8.0.0.0";
+            manifest.appVersionCode = 24;
+            manifest.jdkPath = jdkPath;
+            manifest.androidSdkPath = androidSdkPath;
+            if (process.env.KEY_ALIAS) {
+              manifest.signingKey = manifest.signingKey || {};
+              manifest.signingKey.alias = process.env.KEY_ALIAS;
+            }
+            fs.writeFileSync("twa-manifest.json", JSON.stringify(manifest, null, 2));
           '
 
       - name: Package Web App into Android Artifacts

@@ -41,7 +41,7 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update Version and Paths in twa-manifest
+      - name: Inject Paths & Version into twa-manifest
         run: |
           node -e '
             const fs = require("fs");
@@ -55,7 +55,6 @@ jobs:
 
       - name: Package Web App into Android Artifacts
         run: |
-          echo "Building Android Package (v8.0.0.0, Code 24) silently..."
           npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts

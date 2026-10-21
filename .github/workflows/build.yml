@@ -30,6 +30,17 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
+      # خطوة حل المشكلة: إنشاء ملف إعدادات Bubblewrap مسبقاً لتفادي الأسئلة التفاعلية
+      - name: Configure Bubblewrap Paths
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "/usr/local/lib/android/sdk"
+          }
+          EOF
+
       - name: Decode Signing Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
@@ -41,15 +52,13 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update twa-manifest and set paths
+      - name: Update Version in twa-manifest
         run: |
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
-            file.jdkPath = process.env.JAVA_HOME;
-            file.androidSdkPath = "/usr/local/lib/android/sdk";
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 

@@ -26,22 +26,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android SDK Build Tools & Accept Licenses
-        run: |
-          sudo chown -R $USER:$USER $ANDROID_HOME
-          
-          # اكتشاف مسار sdkmanager تلقائياً لضمان عدم الفشل
-          SDKMANAGER=""
-          if [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
-            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          elif [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
-            SDKMANAGER="$ANDROID_HOME/tools/bin/sdkmanager"
-          else
-            SDKMANAGER="sdkmanager"
-          fi
-          
-          yes | $SDKMANAGER --licenses || true
-          $SDKMANAGER "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '11.0'
+          packages: 'build-tools;34.0.0 platforms;android-34 platform-tools'
 
       - name: Install Bubblewrap CLI
         run: |
@@ -66,14 +55,13 @@ jobs:
             const fs = require("fs");
             const path = require("path");
 
-            // جلب المسارات الفعلية الحالية من بيئة تشغيل GitHub Runner
             const jdkPath = process.env.JAVA_HOME;
-            const androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "/usr/local/lib/android/sdk";
+            const androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 
-            console.log("Dynamic JDK Path:", jdkPath);
-            console.log("Dynamic Android SDK Path:", androidSdkPath);
+            console.log("JDK Path:", jdkPath);
+            console.log("Android SDK Path:", androidSdkPath);
 
-            // 1. إنشاء ملف config.json الخاص بـ Bubblewrap بالمسارات الحية
+            // 1. إنشاء ملف config.json الخاص بـ Bubblewrap
             const bubblewrapDir = path.join(process.env.HOME || "/home/runner", ".bubblewrap");
             if (!fs.existsSync(bubblewrapDir)) {
               fs.mkdirSync(bubblewrapDir, { recursive: true });
@@ -89,7 +77,7 @@ jobs:
               JSON.stringify(configData, null, 2)
             );
 
-            // 2. استبدال المسارات القديمة داخل twa-manifest.json ديناميكياً
+            // 2. تحديث twa-manifest.json بالمسارات الفعلية الحية
             const manifestPath = "twa-manifest.json";
             if (fs.existsSync(manifestPath)) {
               const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -115,7 +103,7 @@ jobs:
 
       - name: Package Web App into Android Artifacts
         run: |
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --keyPassword="${{ secrets.KEY_PASSWORD }}" --storePassword="${{ secrets.KEYSTORE_PASSWORD }}"
+          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

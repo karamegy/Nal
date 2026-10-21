@@ -20,11 +20,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Java JDK 21
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Install Bubblewrap CLI
         run: |
@@ -34,13 +34,10 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
 
-      - name: Generate TWA Project & Build App
+      - name: Generate and Build TWA App (Non-Interactive)
         run: |
-          # تهيئة المشروع بدون أسئلة تفاعلية باستخدام الخيار التلقائي
-          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --skipValidation
-          
-          # إتمام بناء الـ APK والـ AAB مباشرة
-          npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}"
+          # أمر مجرب ومضمون لبناء TWA بدون أي سؤال تفاعلي
+          npx @bubblewrap/cli build --manifest=https://karamegy.github.io/EIDCO/manifest.json --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}" --skipValidation
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

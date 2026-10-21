@@ -20,11 +20,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Java JDK 17
+      - name: Install Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install Bubblewrap CLI
         run: |
@@ -43,10 +43,10 @@ jobs:
 
       - name: Generate TWA Project & Build Android Bundle
         run: |
-          # إنشاء مشروع أندرويد تلقائياً من المانفيست
+          # إنشاء مشروع أندرويد تلقائياً مع ضبط إصدار Java 21 و Target SDK الحديث
           npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --skipValidation
           
-          # بناء التطبيق وتوقيعه باستخدام المفتاح من Secrets
+          # بناء التطبيق وتوقيعه تلقائياً بالمفاتيح المعتمدة من Secrets
           npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}"
 
       - name: Upload Build Artifacts

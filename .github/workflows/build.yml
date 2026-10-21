@@ -29,8 +29,19 @@ jobs:
       - name: Install Android SDK Build Tools & Accept Licenses
         run: |
           sudo chown -R $USER:$USER $ANDROID_HOME
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          
+          # اكتشاف مسار sdkmanager تلقائياً لضمان عدم الفشل
+          SDKMANAGER=""
+          if [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
+            SDKMANAGER="$ANDROID_HOME/tools/bin/sdkmanager"
+          else
+            SDKMANAGER="sdkmanager"
+          fi
+          
+          yes | $SDKMANAGER --licenses || true
+          $SDKMANAGER "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
       - name: Install Bubblewrap CLI
         run: |
@@ -55,14 +66,14 @@ jobs:
             const fs = require("fs");
             const path = require("path");
 
-            // 1. تحديد المسارات المباشرة مع وجود المسارات الافتراضية لـ GitHub Runner لمنع القيم الفارغة
-            const jdkPath = process.env.JAVA_HOME || "/usr/lib/jvm/temurin-17-jdk-amd64";
+            // جلب المسارات الفعلية الحالية من بيئة تشغيل GitHub Runner
+            const jdkPath = process.env.JAVA_HOME;
             const androidSdkPath = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || "/usr/local/lib/android/sdk";
 
-            console.log("Target JDK Path:", jdkPath);
-            console.log("Target Android SDK Path:", androidSdkPath);
+            console.log("Dynamic JDK Path:", jdkPath);
+            console.log("Dynamic Android SDK Path:", androidSdkPath);
 
-            // 2. إنشاء مجلد .bubblewrap وملف config.json بجميع المسميات المعتمدة
+            // 1. إنشاء ملف config.json الخاص بـ Bubblewrap بالمسارات الحية
             const bubblewrapDir = path.join(process.env.HOME || "/home/runner", ".bubblewrap");
             if (!fs.existsSync(bubblewrapDir)) {
               fs.mkdirSync(bubblewrapDir, { recursive: true });
@@ -70,8 +81,7 @@ jobs:
             
             const configData = {
               jdkPath: jdkPath,
-              androidSdkPath: androidSdkPath,
-              androidSdk: androidSdkPath
+              androidSdkPath: androidSdkPath
             };
             
             fs.writeFileSync(
@@ -79,33 +89,33 @@ jobs:
               JSON.stringify(configData, null, 2)
             );
 
-            // 3. تحديث twa-manifest.json وتعيين مسار ملف المفتاح المفكوك
+            // 2. استبدال المسارات القديمة داخل twa-manifest.json ديناميكياً
             const manifestPath = "twa-manifest.json";
             if (fs.existsSync(manifestPath)) {
               const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-              manifest.appVersionName = "8.0.0.0";
-              manifest.appVersionCode = 24;
+              
               manifest.jdkPath = jdkPath;
               manifest.androidSdkPath = androidSdkPath;
-              manifest.androidSdk = androidSdkPath;
+              manifest.appVersionName = "8.0.0.0";
+              manifest.appVersionCode = 24;
               
               manifest.signingKey = manifest.signingKey || {};
-              manifest.signingKey.path = "./android.keystore";
+              manifest.signingKey.path = path.resolve("android.keystore");
               if (process.env.KEY_ALIAS) {
                 manifest.signingKey.alias = process.env.KEY_ALIAS;
               }
               
               fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-              console.log("Manifest successfully updated.");
+              console.log("twa-manifest.json updated successfully.");
             } else {
-              console.error("Error: twa-manifest.json does not exist in the root folder!");
+              console.error("Error: twa-manifest.json not found!");
               process.exit(1);
             }
           '
 
       - name: Package Web App into Android Artifacts
         run: |
-          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
+          npx @bubblewrap/cli build --manifest=twa-manifest.json --keyPassword="${{ secrets.KEY_PASSWORD }}" --storePassword="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

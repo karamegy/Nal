@@ -1,0 +1,53 @@
+name: Build EIDCO Business OS App
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap CLI (TWA Builder)
+        run: |
+          npm install -g @bubblewrap/cli
+
+      - name: Decode Signing Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+
+      - name: Build Web Assets (If needed)
+        run: |
+          if [ -f package.json ]; then
+            npm install
+            npm run build --if-present
+          fi
+
+      - name: Package Web App into Android Artifacts
+        run: |
+          echo "Building Android Package from PWA Manifest..."
+          # إعداد البناء الآلي اعتماداً على manifest.json المرفوع
+          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json || true
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: EIDCO-OS-Android-Release
+          path: |
+            ./*.apk
+            ./*.aab
+            ./manifest.json
+            ./sw.js
+            !android.keystore

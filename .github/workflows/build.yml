@@ -30,12 +30,7 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Install Android SDK Components & Accept Licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
-
-      - name: Configure Bubblewrap Paths
+      - name: Configure Bubblewrap Paths & Accept Licenses
         run: |
           mkdir -p ~/.bubblewrap
           cat <<EOF > ~/.bubblewrap/config.json
@@ -44,6 +39,7 @@ jobs:
             "androidSdkPath": "${ANDROID_HOME}"
           }
           EOF
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Decode Signing Keystore
         run: |
@@ -56,18 +52,15 @@ jobs:
             npm run build --if-present
           fi
 
-      - name: Update Version & Paths in twa-manifest
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+      - name: Update Manifest Dynamic Paths & Version
         run: |
           node -e '
             const fs = require("fs");
             const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
             file.appVersionName = "8.0.0.0";
             file.appVersionCode = 24;
-            file.jdkPath = process.env.JAVA_HOME;
-            file.androidSdkPath = process.env.ANDROID_HOME;
+            file.jdkPath = process.env.JAVA_HOME || "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.12-7/x64";
+            file.androidSdkPath = process.env.ANDROID_HOME || "/usr/local/lib/android/sdk";
             fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
           '
 

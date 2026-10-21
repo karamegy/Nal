@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Java JDK 21
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -34,14 +34,12 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
 
-      - name: Generate TWA Project & Build Android Bundle
-        env:
-          CI: true
+      - name: Generate TWA Project & Build App
         run: |
-          # التغلب على الأسئلة التفاعلية بإرسال الإجابة الافتراضية آلياً
-          yes no | npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --skipValidation || true
+          # تهيئة المشروع بدون أسئلة تفاعلية باستخدام الخيار التلقائي
+          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/EIDCO/manifest.json --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --skipValidation
           
-          # بناء وحزم الملفات وتوقيعها بمفاتيح الحساب المعتمدة
+          # إتمام بناء الـ APK والـ AAB مباشرة
           npx @bubblewrap/cli build --signingKeyPath=release.keystore --signingKeyAlias="${{ secrets.KEY_ALIAS }}" --signingKeyPassword="${{ secrets.KEY_PASSWORD }}" --keyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts

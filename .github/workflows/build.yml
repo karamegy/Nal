@@ -35,11 +35,21 @@ jobs:
             npm run build --if-present
           fi
 
+      - name: Update Version in twa-manifest
+        run: |
+          # تحديث رقم الإصدار (Version Name & Code) تلقائياً قبل البناء
+          node -e '
+            const fs = require("fs");
+            const file = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
+            file.appVersionName = "8.0.0.0";
+            file.appVersionCode = 24;
+            fs.writeFileSync("twa-manifest.json", JSON.stringify(file, null, 2));
+          '
+
       - name: Package Web App into Android Artifacts
         run: |
-          echo "Building Android Package from PWA Manifest..."
-          # إعداد البناء الآلي اعتماداً على manifest.json المرفوع
-          npx @bubblewrap/cli init --manifest=https://karamegy.github.io/Nal/manifest.json || true
+          echo "Building Android Package (v8.0.0.0, Code 24) from twa-manifest.json..."
+          npx @bubblewrap/cli build --manifest=twa-manifest.json --key-password="${{ secrets.KEY_PASSWORD }}" --store-password="${{ secrets.KEYSTORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

@@ -42,12 +42,10 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Restore & Validate Signing Keystore
+      - name: Restore Signing Keystore
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
           if [ -z "$KEYSTORE_BASE64" ]; then
@@ -61,18 +59,15 @@ jobs:
           fi
           chmod 600 android.keystore
 
-          # فحص صحة بيانات المفتاح والرمز السري قبل بدء البناء
-          keytool -list -v -keystore android.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1 || {
-            echo "خطأ: كلمة مرور Keystore أو الـ KEY_ALIAS غير صحيحة في GitHub Secrets!"
-            exit 1
-          }
-
       - name: Configure Bubblewrap & Build Project Structure
         shell: bash
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
+
+          # حذف أي مجلدات بناء سابقة لتجديد الملفات
+          rm -rf app
 
           mkdir -p ~/.bubblewrap
           node -e '
@@ -92,52 +87,46 @@ jobs:
             const twaFile = "twa-manifest.json";
             let m = {};
             if (fs.existsSync(twaFile)) {
-              try { m = JSON.parse(fs.readFileSync(twaFile, "utf8")); } catch(e) { m = {}; }
+              m = JSON.parse(fs.readFileSync(twaFile, "utf8"));
+            } else {
+              m = {
+                packageId: "io.github.karamegy.twa",
+                host: "karamegy.github.io",
+                name: "EIDCO Business OS & Logistics",
+                launcherName: "EIDCO OS",
+                display: "standalone",
+                themeColor: "#4f46e5",
+                navigationColor: "#0f172a",
+                startUrl: "/Nal/auth.html?pwa=eidco",
+                iconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                maskableIconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                appVersionName: "8.0.0.0",
+                appVersionCode: 24,
+                shortcuts: [],
+                generatorApp: "bubblewrap-cli",
+                webManifestUrl: "https://karamegy.github.io/Nal/manifest.json",
+                fallbackType: "customtabs",
+                splashScreenFadeOutDuration: 300,
+                features: {},
+                alphaDependencies: { enabled: false }
+              };
             }
-
-            m.packageId = m.packageId || "io.github.karamegy.twa";
-            m.host = "karamegy.github.io";
-            m.name = m.name || "EIDCO Business OS & Logistics";
-            m.launcherName = m.launcherName || "EIDCO OS";
-            m.display = "standalone";
-            m.themeColor = m.themeColor || "#4f46e5";
-            m.navigationColor = m.navigationColor || "#0f172a";
-            m.startUrl = m.startUrl || "/Nal/auth.html?pwa=eidco";
-            m.startUrlPath = m.startUrlPath || "/Nal/auth.html?pwa=eidco";
-            m.iconUrl = m.iconUrl || "https://karamegy.github.io/Nal/icon-new-512.png";
-            m.maskableIconUrl = m.maskableIconUrl || "https://karamegy.github.io/Nal/icon-new-512.png";
-            m.appVersionName = m.appVersionName || "8.0.0.0";
-            m.appVersionCode = m.appVersionCode || 24;
-            m.webManifestUrl = "https://karamegy.github.io/Nal/manifest.json";
-            m.generatorApp = "bubblewrap-cli";
 
             m.jdkPath = jdkPath;
             m.androidSdkPath = androidSdkPath;
-            m.signingKey = { path: keystorePath, alias: alias };
+            m.signingKey = m.signingKey || {};
+            m.signingKey.path = keystorePath;
+            m.signingKey.alias = alias;
             m.enableNotifications = false;
             m.fallbackType = "customtabs";
-            m.minSdkVersion = 21;
-            m.splashScreenFadeOutDuration = 300;
+            m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
 
             delete m.shareTarget;
 
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
 
-          # إنشاء مشروع جديد إذا لم يكن مجلد app موجوداً، أو تحديثه إن كان موجوداً
-          if [ -d "app" ]; then
-            bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
-          else
-            bubblewrap init --manifest=twa-manifest.json
-          fi
-
-          # إجبار ضبط minSdkVersion لمنع تعارض المانفيست
-          if [ -f "app/build.gradle" ]; then
-            sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' app/build.gradle
-          fi
-
-          # نسخ ملف المفتاح داخل مجلد التطبيق لضمان الوصول إليه
-          cp android.keystore app/android.keystore || true
+          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
 
       - name: Build Signed APK & AAB with Gradle Directly
         shell: bash
@@ -153,29 +142,21 @@ jobs:
 
           ./gradlew clean || true
 
-          # بناء ملف APK
+          # بناء ملف APK أولاً
           ./gradlew assembleRelease \
-            -PsigningKeyStorePath="$KEYSTORE_PATH" \
-            -PsigningKeyStorePassword="$KEYSTORE_PASSWORD" \
-            -PsigningKeyAlias="$KEY_ALIAS" \
-            -PsigningKeyPassword="$KEY_PASSWORD" \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # بناء ملف AAB
+          # بناء ملف AAB ثانياً
           ./gradlew bundleRelease \
-            -PsigningKeyStorePath="$KEYSTORE_PATH" \
-            -PsigningKeyStorePassword="$KEYSTORE_PASSWORD" \
-            -PsigningKeyAlias="$KEY_ALIAS" \
-            -PsigningKeyPassword="$KEY_PASSWORD" \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # نقل المخرجات لصفحة Artifacts
+          # نقل المخرجات إلى المجلد الرئيسي
           find app/build/outputs -type f -name "*.apk" -exec cp {} ./EIDCO-OS-release.apk \;
           find app/build/outputs -type f -name "*.aab" -exec cp {} ./EIDCO-OS-release.aab \;
 
@@ -191,4 +172,4 @@ jobs:
 
       - name: Clean Up Signing Key
         if: always()
-        run: rm -f android.keystore app/android.keystore
+        run: rm -f android.keystore

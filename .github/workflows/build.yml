@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # حذف أي مجلدات بناء سابقة لتجنب تعارض الملفات القديمة
+          # حذف أي مجلدات بناء سابقة لتجديد الملفات
           rm -rf app
 
           mkdir -p ~/.bubblewrap
@@ -105,7 +105,8 @@ jobs:
                 shortcuts: [],
                 generatorApp: "bubblewrap-cli",
                 webManifestUrl: "https://karamegy.github.io/Nal/manifest.json",
-                fallbackType: "customtab",
+                fallbackType: "customtabs",
+                splashScreenFadeOutDuration: 300,
                 features: {},
                 alphaDependencies: { enabled: false }
               };
@@ -117,6 +118,10 @@ jobs:
             m.signingKey.path = keystorePath;
             m.signingKey.alias = alias;
             m.enableNotifications = false;
+            m.fallbackType = "customtabs";
+            m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
+
+            delete m.shareTarget;
 
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
@@ -134,6 +139,8 @@ jobs:
 
           KEYSTORE_PATH="$(pwd)/android.keystore"
           chmod +x gradlew
+
+          ./gradlew clean || true
 
           # بناء ملف APK أولاً
           ./gradlew assembleRelease \

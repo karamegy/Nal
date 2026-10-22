@@ -42,10 +42,12 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Restore Signing Keystore
+      - name: Restore & Validate Signing Keystore
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
           if [ -z "$KEYSTORE_BASE64" ]; then
@@ -58,6 +60,12 @@ jobs:
             exit 1
           fi
           chmod 600 android.keystore
+
+          # فحص صحة بيانات المفتاح والرمز السري قبل بدء البناء
+          keytool -list -v -keystore android.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1 || {
+            echo "خطأ: كلمة مرور Keystore أو الـ KEY_ALIAS غير صحيحة في GitHub Secrets!"
+            exit 1
+          }
 
       - name: Configure Bubblewrap & Build Project Structure
         shell: bash
@@ -84,14 +92,28 @@ jobs:
             const twaFile = "twa-manifest.json";
             let m = {};
             if (fs.existsSync(twaFile)) {
-              m = JSON.parse(fs.readFileSync(twaFile, "utf8"));
+              try { m = JSON.parse(fs.readFileSync(twaFile, "utf8")); } catch(e) { m = {}; }
             }
+
+            m.packageId = m.packageId || "io.github.karamegy.twa";
+            m.host = "karamegy.github.io";
+            m.name = m.name || "EIDCO Business OS & Logistics";
+            m.launcherName = m.launcherName || "EIDCO OS";
+            m.display = "standalone";
+            m.themeColor = m.themeColor || "#4f46e5";
+            m.navigationColor = m.navigationColor || "#0f172a";
+            m.startUrl = m.startUrl || "/Nal/auth.html?pwa=eidco";
+            m.startUrlPath = m.startUrlPath || "/Nal/auth.html?pwa=eidco";
+            m.iconUrl = m.iconUrl || "https://karamegy.github.io/Nal/icon-new-512.png";
+            m.maskableIconUrl = m.maskableIconUrl || "https://karamegy.github.io/Nal/icon-new-512.png";
+            m.appVersionName = m.appVersionName || "8.0.0.0";
+            m.appVersionCode = m.appVersionCode || 24;
+            m.webManifestUrl = "https://karamegy.github.io/Nal/manifest.json";
+            m.generatorApp = "bubblewrap-cli";
 
             m.jdkPath = jdkPath;
             m.androidSdkPath = androidSdkPath;
-            m.signingKey = m.signingKey || {};
-            m.signingKey.path = keystorePath;
-            m.signingKey.alias = alias;
+            m.signingKey = { path: keystorePath, alias: alias };
             m.enableNotifications = false;
             m.fallbackType = "customtabs";
             m.minSdkVersion = 21;
@@ -102,13 +124,20 @@ jobs:
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
           '
 
-          # تحديث هيكل مشروع أندرويد
-          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+          # إنشاء مشروع جديد إذا لم يكن مجلد app موجوداً، أو تحديثه إن كان موجوداً
+          if [ -d "app" ]; then
+            bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+          else
+            bubblewrap init --manifest=twa-manifest.json
+          fi
 
-          # ضبط minSdkVersion لتجنب أخطاء الدمج
+          # إجبار ضبط minSdkVersion لمنع تعارض المانفيست
           if [ -f "app/build.gradle" ]; then
             sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' app/build.gradle
           fi
+
+          # نسخ ملف المفتاح داخل مجلد التطبيق لضمان الوصول إليه
+          cp android.keystore app/android.keystore || true
 
       - name: Build Signed APK & AAB with Gradle Directly
         shell: bash
@@ -121,6 +150,8 @@ jobs:
 
           KEYSTORE_PATH="$(pwd)/android.keystore"
           chmod +x gradlew
+
+          ./gradlew clean || true
 
           # بناء ملف APK
           ./gradlew assembleRelease \
@@ -144,7 +175,7 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # نقل الملفات الناتجة لصفحة Artifacts
+          # نقل المخرجات لصفحة Artifacts
           find app/build/outputs -type f -name "*.apk" -exec cp {} ./EIDCO-OS-release.apk \;
           find app/build/outputs -type f -name "*.aab" -exec cp {} ./EIDCO-OS-release.aab \;
 
@@ -160,4 +191,4 @@ jobs:
 
       - name: Clean Up Signing Key
         if: always()
-        run: rm -f android.keystore
+        run: rm -f android.keystore app/android.keystore

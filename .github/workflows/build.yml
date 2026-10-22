@@ -62,7 +62,7 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. تثبيت أدوات الكاباسيتور الأساسية بما فيها حزمة @capacitor/android
+          # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد نظيفة
@@ -91,7 +91,7 @@ jobs:
             cp google-services.json android/app/
           fi
 
-          # 6. تجهيز مسارات موفر الملفات والـ AndroidManifest الخاص بـ EIDCO OS
+          # 6. تجهيز مسارات موفر الملفات والـ AndroidManifest
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -137,7 +137,7 @@ jobs:
                   android:supportsRtl="true"
                   android:usesCleartextTraffic="true"
                   android:theme="@style/AppTheme"
-                  tools:overrideLibrary="com.getcapacitor.android">
+                  tools:overrideLibrary="com.getcapacitor.android, com.capacitorjs.plugins.filesystem, com.capacitorjs.plugins.share">
 
                   <activity
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -193,13 +193,13 @@ jobs:
             cp signing.keystore android/app/
           fi
 
-          # 9. إعداد Gradle للتوقيع وضبط الإصدارات
+          # 9. إعداد Gradle للتوقيع وضبط الإصدارات (minSdk 24 لمنع التعارض)
           cat << EOF >> android/app/build.gradle
 
           android {
               defaultConfig {
                   applicationId "io.github.karamegy.twa"
-                  minSdk 21
+                  minSdk 24
                   targetSdk 34
                   versionCode 24
                   versionName "8.0.0.0"

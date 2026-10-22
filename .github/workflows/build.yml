@@ -66,6 +66,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          # مسح مجلد app القديم لضمان إنشاء هيكل بَبْل وراب متوافق ونظيف
+          rm -rf app
+
           mkdir -p ~/.bubblewrap
           node -e '
             const fs = require("fs");
@@ -85,6 +88,28 @@ jobs:
             let m = {};
             if (fs.existsSync(twaFile)) {
               m = JSON.parse(fs.readFileSync(twaFile, "utf8"));
+            } else {
+              m = {
+                packageId: "io.github.karamegy.twa",
+                host: "karamegy.github.io",
+                name: "EIDCO Business OS & Logistics",
+                launcherName: "EIDCO OS",
+                display: "standalone",
+                themeColor: "#4f46e5",
+                navigationColor: "#0f172a",
+                startUrl: "/Nal/auth.html?pwa=eidco",
+                iconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                maskableIconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                appVersionName: "8.0.0.0",
+                appVersionCode: 24,
+                shortcuts: [],
+                generatorApp: "bubblewrap-cli",
+                webManifestUrl: "https://karamegy.github.io/Nal/manifest.json",
+                fallbackType: "customtabs",
+                splashScreenFadeOutDuration: 300,
+                features: {},
+                alphaDependencies: { enabled: false }
+              };
             }
 
             m.jdkPath = jdkPath;
@@ -95,7 +120,7 @@ jobs:
             m.enableNotifications = false;
             m.fallbackType = "customtabs";
             m.minSdkVersion = 21;
-            m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
+            m.splashScreenFadeOutDuration = 300;
 
             delete m.shareTarget;
 
@@ -104,7 +129,6 @@ jobs:
 
           bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
 
-          # تصحيح minSdkVersion داخل ملف build.gradle لمنع تعارض دمج المانفيست
           if [ -f "app/build.gradle" ]; then
             sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' app/build.gradle
           fi
@@ -123,15 +147,22 @@ jobs:
 
           ./gradlew clean || true
 
-          # بناء ملف APK
-          ./gradlew assembleRelease \
+          # تمرير متغيرات التوقيع الخاصة بـ Bubblewrap و Gradle معاً
+          ./gradlew assembleRelease --stacktrace \
+            -PsigningKeyStorePath="$KEYSTORE_PATH" \
+            -PsigningKeyStorePassword="$KEYSTORE_PASSWORD" \
+            -PsigningKeyAlias="$KEY_ALIAS" \
+            -PsigningKeyPassword="$KEY_PASSWORD" \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # بناء ملف AAB
-          ./gradlew bundleRelease \
+          ./gradlew bundleRelease --stacktrace \
+            -PsigningKeyStorePath="$KEYSTORE_PATH" \
+            -PsigningKeyStorePassword="$KEYSTORE_PASSWORD" \
+            -PsigningKeyAlias="$KEY_ALIAS" \
+            -PsigningKeyPassword="$KEY_PASSWORD" \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \

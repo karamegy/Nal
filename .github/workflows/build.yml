@@ -66,9 +66,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # حذف أي مجلدات بناء سابقة لتجديد الملفات
-          rm -rf app
-
           mkdir -p ~/.bubblewrap
           node -e '
             const fs = require("fs");
@@ -88,28 +85,6 @@ jobs:
             let m = {};
             if (fs.existsSync(twaFile)) {
               m = JSON.parse(fs.readFileSync(twaFile, "utf8"));
-            } else {
-              m = {
-                packageId: "io.github.karamegy.twa",
-                host: "karamegy.github.io",
-                name: "EIDCO Business OS & Logistics",
-                launcherName: "EIDCO OS",
-                display: "standalone",
-                themeColor: "#4f46e5",
-                navigationColor: "#0f172a",
-                startUrl: "/Nal/auth.html?pwa=eidco",
-                iconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
-                maskableIconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
-                appVersionName: "8.0.0.0",
-                appVersionCode: 24,
-                shortcuts: [],
-                generatorApp: "bubblewrap-cli",
-                webManifestUrl: "https://karamegy.github.io/Nal/manifest.json",
-                fallbackType: "customtabs",
-                splashScreenFadeOutDuration: 300,
-                features: {},
-                alphaDependencies: { enabled: false }
-              };
             }
 
             m.jdkPath = jdkPath;
@@ -119,6 +94,7 @@ jobs:
             m.signingKey.alias = alias;
             m.enableNotifications = false;
             m.fallbackType = "customtabs";
+            m.minSdkVersion = 21;
             m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
 
             delete m.shareTarget;
@@ -127,6 +103,11 @@ jobs:
           '
 
           bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+
+          # تصحيح minSdkVersion داخل ملف build.gradle لمنع تعارض دمج المانفيست
+          if [ -f "app/build.gradle" ]; then
+            sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' app/build.gradle
+          fi
 
       - name: Build Signed APK & AAB with Gradle Directly
         shell: bash
@@ -142,21 +123,21 @@ jobs:
 
           ./gradlew clean || true
 
-          # بناء ملف APK أولاً
+          # بناء ملف APK
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # بناء ملف AAB ثانياً
+          # بناء ملف AAB
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # نقل المخرجات إلى المجلد الرئيسي
+          # نقل المخرجات لجذر المستودع
           find app/build/outputs -type f -name "*.apk" -exec cp {} ./EIDCO-OS-release.apk \;
           find app/build/outputs -type f -name "*.aab" -exec cp {} ./EIDCO-OS-release.aab \;
 

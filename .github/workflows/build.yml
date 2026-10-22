@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # مسح أي ملفات بناء سابقة لضمان توليد كود جافا نظيف
+          # حذف أي مجلدات بناء سابقة لتجنب تعارض الملفات القديمة
           rm -rf app
 
           mkdir -p ~/.bubblewrap
@@ -92,23 +92,22 @@ jobs:
               m = {
                 packageId: "io.github.karamegy.twa",
                 host: "karamegy.github.io",
-                name: "EIDCO Business OS",
+                name: "EIDCO Business OS & Logistics",
                 launcherName: "EIDCO OS",
                 display: "standalone",
-                themeColor: "#000000",
-                navigationColor: "#000000",
-                startUrl: "/Nal/",
-                iconUrl: "https://karamegy.github.io/Nal/icon.png",
-                maskableIconUrl: "https://karamegy.github.io/Nal/icon.png",
-                appVersionName: "1.0.0",
-                appVersionCode: 1,
+                themeColor: "#4f46e5",
+                navigationColor: "#0f172a",
+                startUrl: "/Nal/auth.html?pwa=eidco",
+                iconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                maskableIconUrl: "https://karamegy.github.io/Nal/icon-new-512.png",
+                appVersionName: "8.0.0.0",
+                appVersionCode: 24,
                 shortcuts: [],
                 generatorApp: "bubblewrap-cli",
                 webManifestUrl: "https://karamegy.github.io/Nal/manifest.json",
-                fallbackType: "customtabs",
+                fallbackType: "customtab",
                 features: {},
-                alphaDependencies: { enabled: false },
-                scimitar: { enabled: false }
+                alphaDependencies: { enabled: false }
               };
             }
 
@@ -117,9 +116,6 @@ jobs:
             m.signingKey = m.signingKey || {};
             m.signingKey.path = keystorePath;
             m.signingKey.alias = alias;
-            m.splashScreenFadeOutDuration = m.splashScreenFadeOutDuration || 300;
-            
-            // تعطيل إشعارات النظام المباشرة لمنع أخطاء التجميع
             m.enableNotifications = false;
 
             fs.writeFileSync(twaFile, JSON.stringify(m, null, 2));
@@ -139,21 +135,21 @@ jobs:
           KEYSTORE_PATH="$(pwd)/android.keystore"
           chmod +x gradlew
 
-          # بناء APK التوقيع
+          # بناء ملف APK أولاً
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # بناء AAB التوقيع
+          # بناء ملف AAB ثانياً
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-          # نقل المخرجات إلى مجلد العمل الرئيسي
+          # نقل المخرجات إلى المجلد الرئيسي
           find app/build/outputs -type f -name "*.apk" -exec cp {} ./EIDCO-OS-release.apk \;
           find app/build/outputs -type f -name "*.aab" -exec cp {} ./EIDCO-OS-release.aab \;
 

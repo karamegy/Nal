@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // شجرة الحسابات والدليل المحاسبي وحسابات العملاء والمصروفات</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -32,16 +36,26 @@
             --text-main: #0f172a; 
             --text-muted: #64748b; 
         }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
         body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
             min-height: 100vh; 
             margin: 0; 
-            padding-bottom: 5rem; 
-            box-sizing: border-box; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
         }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
         .corporate-card { 
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
@@ -50,6 +64,7 @@
             width: 100%; 
             box-sizing: border-box; 
         }
+
         .corporate-input { 
             background: #f1f5f9; 
             border: 1px solid var(--border-color); 
@@ -65,6 +80,7 @@
             background-color: #ffffff;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
+
         .btn-primary { 
             background-color: var(--primary); 
             color: #fff; 
@@ -77,7 +93,8 @@
             width: 100%; 
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
         .nav-link { 
             display: flex; 
             align-items: center; 
@@ -91,8 +108,12 @@
             transition: all 0.2s; 
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        
         .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 0.75rem; backdrop-filter: blur(4px); overflow-y: auto; }
         .custom-modal.active { display: flex !important; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
             body * { visibility: hidden !important; }
@@ -146,7 +167,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
@@ -156,7 +177,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <button onclick="window.seedDefaultAccountsTree()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <button onclick="window.seedDefaultAccountsTree()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-file-excel text-indigo-600"></i> استيراد شجرة الحسابات الافتراضية
                         </button>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[220px] sm:max-w-none">
@@ -203,7 +224,7 @@
             <!-- محتوى الصفحة الرئيسي -->
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <!-- نموذج إضافة حساب جديد أو مدخل جديد (مع حقول تفاعلية تتغير بناءً على الملف المختار) -->
+                <!-- نموذج إضافة حساب جديد أو مدخل جديد -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <h3 class="font-bold text-sm text-slate-900 border-b pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i> 
@@ -256,7 +277,6 @@
                             <label id="amountLabel" class="block mb-1 text-slate-700 font-bold">المبلغ (ج.م)</label>
                             <input type="number" id="accAmount" class="corporate-input mono-font font-bold text-indigo-700" placeholder="0.00" dir="ltr">
                         </div>
-                        <!-- حقل ديناميكي يظهر خصيصاً للمخازن أو المصروفات -->
                         <div id="dynamicExtraFieldWrapper" class="hidden">
                             <label id="extraFieldLabel" class="block mb-1 text-indigo-700 font-bold">بيان إضافي (الكمية / النوع)</label>
                             <input type="text" id="accExtraField" class="corporate-input" placeholder="أدخل تفاصيل إضافية...">
@@ -310,7 +330,7 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه (مع تمرير أفقي يمنع اختفاء أي عمود تماماً) -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
     <div id="folderTableModal" class="custom-modal">
         <div class="corporate-card p-4 sm:p-6 max-w-5xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
@@ -325,15 +345,11 @@
                 </button>
             </div>
 
-            <!-- جدول محتويات الملف المختار مع أمان التمرير الأفقي وعدم اختفاء الأعمدة -->
+            <!-- جدول محتويات الملف المختار مع أمان التمرير الأفقي -->
             <div class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
                 <table class="w-full min-w-[850px] text-right text-xs whitespace-nowrap">
-                    <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b z-10">
-                        <!-- يتم تعبئة الرؤوس ديناميكياً بدقة -->
-                    </thead>
-                    <tbody id="folderTableBody" class="divide-y divide-slate-100">
-                        <!-- يتم تعبئتها برمجياً بدقة -->
-                    </tbody>
+                    <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b z-10"></thead>
+                    <tbody id="folderTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
 
@@ -424,13 +440,13 @@
             </div>
 
             <div class="no-print grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
-                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-file-pdf text-sm"></i> حفظ كـ PDF
                 </button>
-                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> تصدير صورة
                 </button>
-                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-brands fa-whatsapp text-sm"></i> واتساب
                 </button>
                 <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
@@ -438,14 +454,13 @@
         </div>
     </div>
 
-    <!-- نصوص البرمجة العامة -->
+    <!-- دوال القائمة الجانبية ومراقبة الأحداث -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
 
-        // دالة تغيير حقول الإدخال تفاعلياً حسب الملف المختار
         function handleCategoryChange() {
             let cat = document.getElementById('accCategory').value;
             let titleLabel = document.getElementById('titleLabel');
@@ -500,7 +515,6 @@
 
             handleCategoryChange();
 
-            // معالجة اختيار ملف الصورة للنموذج الرئيسي
             const imgFileInput = document.getElementById('generalImageFileInput');
             if (imgFileInput) {
                 imgFileInput.addEventListener('change', function(e) {
@@ -519,7 +533,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase لإدارة شجرة الملفات والمصروفات والعملاء -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence وتحديثات شجرة الحسابات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -531,7 +545,8 @@
             onSnapshot,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -547,6 +562,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للتخزين المحلي اللحظي دون إنترنت في التطبيق الأهلي Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -638,9 +662,7 @@
                 transactionsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             });
 
-        }).catch(err => {
-            console.error("خطأ المصادقة السحابية في Firebase:", err);
-        });
+        }).catch(err => console.error("خطأ المصادقة السحابية في Firebase:", err));
 
         window.saveAccountNode = async function() {
             let category = document.getElementById('accCategory').value;
@@ -768,7 +790,7 @@
                             <td class="p-3 mono-font text-slate-500" dir="ltr">${c.date || '---'}</td>
                             <td class="p-3 text-slate-600">عميل مسجل</td>
                             <td class="p-3 text-center">
-                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                <button onclick="event.stopPropagation(); window.openClientStatement('${cName}')" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
                                     <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                                 </button>
                             </td>
@@ -1000,7 +1022,7 @@
                 let catIcon = isClientsCat ? 'fa-building-user text-indigo-600' : 'fa-folder-open text-indigo-600';
 
                 return `
-                    <div onclick="window.openFolderTable('${cat}')" class="corporate-card p-4 bg-white hover:border-indigo-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-3">
+                    <div onclick="window.openFolderTable('${cat}')" class="corporate-card p-4 bg-white hover:border-indigo-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-3 active:scale-95">
                         <div class="flex items-center justify-between pointer-events-none">
                             <div class="flex items-center gap-2 font-black text-indigo-900 text-sm truncate">
                                 <i class="fa-solid ${catIcon} text-base"></i>
@@ -1016,6 +1038,49 @@
                 `;
             }).join('');
         }
+    </script>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+        </a>
+    </div>
+
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+            }
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
     </script>
 </body>
 </html>

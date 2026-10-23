@@ -22,10 +22,11 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         :root { 
@@ -74,6 +75,7 @@
             width: 100%; 
             font-size: 14px; 
             box-sizing: border-box; 
+            transition: all 0.2s;
         }
         .corporate-input:focus {
             outline: none;
@@ -131,6 +133,10 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
             body * { visibility: hidden !important; }
             #previewCardContent, #previewCardContent * { visibility: visible !important; }
             #previewCardContent {
@@ -142,10 +148,12 @@
                 background: white !important;
                 border: none !important;
                 box-shadow: none !important;
-                padding: 10px !important;
+                padding: 0 !important;
+                margin: 0 !important;
                 display: block !important;
             }
             .no-print, button, input, select, #floatingTvTrigger { display: none !important; }
+            .print-header { display: flex !important; }
         }
     </style>
 </head>
@@ -169,6 +177,7 @@
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -224,6 +233,7 @@
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                         <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -352,7 +362,19 @@
     <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة -->
     <div id="previewModal" class="custom-modal">
         <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative box-border">
-            <div class="flex justify-between items-center border-b pb-3">
+            
+            <!-- هيدر معتمد للطباعة والتصدير المعياري A4 -->
+            <div class="hidden print-header flex justify-between items-center border-b pb-3">
+                <div>
+                    <h2 class="font-black text-slate-900 text-base">EIDCO // تفاصيل المستند والمعاينة الرسمية المعتمده</h2>
+                    <span id="printDocCompanyTag" class="text-xs text-indigo-700 font-mono font-bold block mt-0.5"></span>
+                </div>
+                <div class="text-left text-xs text-slate-600 font-mono">
+                    <div>التاريخ: <span id="printDocDate" dir="ltr" class="font-bold"></span></div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center border-b pb-3 no-print">
                 <h3 id="previewTitle" class="font-bold text-sm text-indigo-600">تفاصيل المستند والمعاينة الشاملة</h3>
                 <button onclick="window.closePreviewModal()" class="no-print text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer p-1">
                     <i class="fa-solid fa-xmark"></i>
@@ -375,7 +397,7 @@
                     <i class="fa-solid fa-file-pdf"></i> حفظ PDF (معيار A4)
                 </button>
                 <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> إرسال عبر واتساب
+                    <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد / واتساب)
                 </button>
             </div>
 
@@ -658,6 +680,9 @@
             if (!i) return;
             activePreviewItem = i;
 
+            document.getElementById('printDocCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printDocDate').innerText = new Date().toISOString().split('T')[0];
+
             document.getElementById('previewTitle').innerText = `معاينة وتفاصيل: ${i.title}`;
             let metaContainer = document.getElementById('previewDetailsMeta');
             let isPaymentCat = (i.category === 'المدفوعات والتحويلات البنكية');
@@ -710,7 +735,6 @@
                 link.download = `${activePreviewItem.title || 'document'}_full.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-                alert('✓ تم حفظ المستند بالكامل كصورة (PNG) بنجاح.');
             }).catch(err => {
                 alert('خطأ أثناء حفظ الصورة: ' + err.message);
             });
@@ -720,7 +744,8 @@
             window.print();
         };
 
-        window.sendDocWhatsApp = function() {
+        // مشاركة مباشرة عبر أندرويد وواتساب
+        window.sendDocWhatsApp = async function() {
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let i = activePreviewItem;
             let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢\n\n` +
@@ -740,8 +765,20 @@
 
             msg += `\n_تم الإرسال عبر نظام EIDCO Business OS_`;
 
-            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-            window.open(whatsappUrl, '_blank');
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: i.title,
+                        text: msg
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+                window.open(whatsappUrl, '_blank');
+            }
         };
 
         window.renderTree = function() {

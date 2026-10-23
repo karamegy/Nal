@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // لوحة التحكم الشاملة للمنصة السحابية</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -22,16 +26,82 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        /* تحسينات الشاشات اللمسية وتطبيقات WebView */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        html, body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem);
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; }
-        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            transition: transform 0.2s ease, box-shadow 0.2s ease; 
+        }
+        .corporate-card:active, .corporate-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            transition: all 0.2s; 
+            border: none; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            transition: all 0.2s; 
+            text-decoration: none; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         table th, table td { white-space: nowrap; }
+
+        /* شريط التمرير الناعم للتطبيقات الأهلية */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -64,8 +134,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز القيادة والتحكم الشامل للمنصة <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن سحابياً)</span></h1>
@@ -76,7 +145,7 @@
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[220px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
                         <div class="flex items-center gap-2">
-                            <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm" title="إصلاح وتصفير الأرقام الوهمية بالسحابة">
+                            <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">إصلاح</span> الأرقام
                             </button>
                             <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-3 sm:px-4 flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">فاتورة مجمعة</span> سريعة</a>
@@ -85,7 +154,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل (تفتح عند الضغط على زر القائمة) -->
+            <!-- القائمة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -122,7 +191,7 @@
                         <h2 class="text-xl font-black" id="dashAdminName">جاري التحميل...</h2>
                         <p class="text-xs text-slate-300">مراقبة حية سحابياً لجميع التدفقات المالية، الأرصدة المخزنية، وأنشطة العمليات.</p>
                     </div>
-                    <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold">
+                    <div class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-mono font-bold flex items-center">
                         <i class="fa-solid fa-shield-halved ml-1.5"></i> النظام مؤمن ومستقر سحابياً (معزول لحظياً)
                     </div>
                 </div>
@@ -186,7 +255,7 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
+    <!-- دوال القائمة الجانبية وتزامن الرابط -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
@@ -212,10 +281,24 @@
                     link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
                 }
             });
+
+            // استعادة الكاش المحلي فوراً لتسريع التحميل النيتف (Instant Load)
+            try {
+                const cachedState = localStorage.getItem('eidco_cache_' + currentCompanyId);
+                if (cachedState) {
+                    const parsed = JSON.parse(cachedState);
+                    if (parsed && parsed.sales) {
+                        document.getElementById('dashVault').innerText = parsed.vault || '0 ج.م';
+                        document.getElementById('dashSales').innerText = parsed.sales || '0 ج.م';
+                        document.getElementById('dashProfits').innerText = parsed.profits || '0 ج.م';
+                        document.getElementById('dashProductsCount').innerText = parsed.products || '0 صنف';
+                    }
+                }
+            } catch(e){}
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والتوافق مع Native WebViews -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -226,7 +309,8 @@
             updateDoc, 
             getDocs,
             query, 
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -242,6 +326,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل التخزين المؤقت في IndexedDB لسرعة التحميل بدون إنترنت في الـ Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -279,7 +372,6 @@
             const productsRef = query(productsCollection, where("companyId", "==", companyId));
             const accountsRef = query(accountsCollection, where("companyId", "==", companyId));
 
-            // جلب أولي فوري باستخدام getDocs لضمان توفر البيانات مباشرة دون انتظار الـ snapshot
             try {
                 const [accountsSnap, invoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
                     getDocs(accountsRef),
@@ -302,36 +394,27 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            // الاستماع للتغييرات اللحظية سحابياً
             unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 let accountDoc = state.accounts.find(acc => acc.companyId === companyId) || state.accounts[0] || {};
                 let adminName = localStorage.getItem('eidco_admin_' + companyId) || accountDoc.name || companyId;
                 document.getElementById('dashAdminName').innerText = adminName;
-            }, (error) => {
-                console.error("خطأ في جلب الحسابات سحابياً:", error);
-            }));
+            }, (error) => console.error("خطأ في جلب الحسابات:", error)));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
-            }, (error) => {
-                console.error("خطأ في جلب الفواتير سحابياً:", error);
-            }));
+            }, (error) => console.error("خطأ في جلب الفواتير:", error)));
 
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
-            }, (error) => {
-                console.error("خطأ في جلب المعاملات سحابياً:", error);
-            }));
+            }, (error) => console.error("خطأ في جلب المعاملات:", error)));
 
             unsubscribers.push(onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
-            }, (error) => {
-                console.error("خطأ في جلب المنتجات سحابياً:", error);
-            }));
+            }, (error) => console.error("خطأ في جلب المنتجات:", error)));
         }
 
         function updateDashboard() {
@@ -344,10 +427,25 @@
             let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
             let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
 
-            document.getElementById('dashVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
-            document.getElementById('dashSales').innerText = totalSales.toLocaleString() + ' ج.م';
-            document.getElementById('dashProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
-            document.getElementById('dashProductsCount').innerText = state.products.length + ' صنف';
+            const vaultText = (totalInc - totalExp).toLocaleString() + ' ج.م';
+            const salesText = totalSales.toLocaleString() + ' ج.م';
+            const profitsText = totalProfits.toLocaleString() + ' ج.م';
+            const productsText = state.products.length + ' صنف';
+
+            document.getElementById('dashVault').innerText = vaultText;
+            document.getElementById('dashSales').innerText = salesText;
+            document.getElementById('dashProfits').innerText = profitsText;
+            document.getElementById('dashProductsCount').innerText = productsText;
+
+            // حفظ حالة الكاش للفتح السريع مستقبلاً
+            try {
+                localStorage.setItem('eidco_cache_' + currentCompanyId, JSON.stringify({
+                    vault: vaultText,
+                    sales: salesText,
+                    profits: profitsText,
+                    products: productsText
+                }));
+            } catch(e){}
 
             let logsTable = document.getElementById('dashLogsTable');
             let recentTxs = [...state.transactions].reverse().slice(0, 8);
@@ -430,7 +528,7 @@
         };
     </script>
     
-    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
@@ -472,6 +570,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // الفواتير المجمعة والمتقدمة المعزولة</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -33,17 +37,96 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; -webkit-tap-highlight-color: transparent; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; user-select: none; }
-        .btn-primary:active { transform: scale(0.98); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+        
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            font-size: 13px; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 12px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            user-select: none; 
+        }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; box-sizing: border-box; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.75); 
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
         @media print {
             body * { visibility: hidden; }
             #invoicePrintArea, #invoicePrintArea * { visibility: visible; }
@@ -82,7 +165,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الفواتير المجمعة والتحليلات <span class="hidden sm:inline text-slate-500 font-normal">(معزولة ومزامنة لحظياً)</span></h1>
@@ -96,7 +179,7 @@
                             <span id="syncStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1">
                                 <i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">متزامن سحابياً</span>
                             </span>
-                            <button type="button" onclick="triggerCloudSync()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <button type="button" onclick="triggerCloudSync()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-rotate"></i>
                             </button>
                         </div>
@@ -151,7 +234,7 @@
                     <div class="flex justify-between items-center border-b pb-3">
                         <h2 id="formTitle" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة</h2>
                         <div class="flex gap-2">
-                            <button type="button" onclick="openBarcodeScannerModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                            <button type="button" onclick="openBarcodeScannerModal()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
                                 <i class="fa-solid fa-barcode"></i> مسح باركود بالكاميرا
                             </button>
                             <button type="button" onclick="resetBatchForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إغلاق التعديل</button>
@@ -184,7 +267,7 @@
                     <div class="space-y-3 pt-2">
                         <div class="flex justify-between items-center">
                             <span class="text-xs font-bold text-slate-700">أصناف الفاتورة:</span>
-                            <button type="button" onclick="addBatchItemRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <button type="button" onclick="addBatchItemRow()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-plus ml-1"></i> إضافة صنف جديد
                             </button>
                         </div>
@@ -293,7 +376,7 @@
             
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
-                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-image"></i> صورة</button>
+                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-image"></i> صورة</button>
                 <button type="button" onclick="closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
             </div>
         </div>
@@ -336,7 +419,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دمج getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والمزامنة اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -350,7 +433,8 @@
             deleteDoc, 
             updateDoc,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -366,6 +450,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للعمل الشامل أوفلاين في التطبيقات الأهلية Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -387,7 +480,6 @@
         let analyticsChartInstance = null;
         let html5QrCode = null;
 
-        // الاتصال اللحظي المباشر بالسحابة مع عزل التخزين لكل شركة على حدة
         signInAnonymously(auth).then(() => {
             const clientsCollection = collection(db, "clients");
             const productsCollection = collection(db, "products");
@@ -402,31 +494,23 @@
             onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 populateClientsDropdown();
-            }, (error) => {
-                console.error("خطأ في جلب العملاء سحابياً:", error);
-            });
+            }, (error) => console.error("خطأ في جلب العملاء:", error));
 
             onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            }, (error) => {
-                console.error("خطأ في جلب المنتجات سحابياً:", error);
-            });
+            }, (error) => console.error("خطأ في جلب المنتجات:", error));
 
             onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderBatchInvoicesList();
                 renderAnalyticsChart();
                 updateClientLedgerInfo();
-            }, (error) => {
-                console.error("خطأ في جلب الفواتير سحابياً:", error);
-            });
+            }, (error) => console.error("خطأ في جلب الفواتير:", error));
 
             onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
             });
-        }).catch((error) => {
-            console.error("فشل المصادقة سحابياً:", error);
-        });
+        }).catch((error) => console.error("فشل المصادقة سحابياً:", error));
 
         function populateClientsDropdown() {
             let clientSel = document.getElementById('batchClient');
@@ -533,7 +617,6 @@
             }
         };
 
-        // حفظ الفاتورة المجمعة مع مزامنة كشف حساب العملاء والخزنة والمخزن سحابياً
         window.saveBatchInvoice = async function() {
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار العميل');
@@ -636,7 +719,6 @@
                     await deleteDoc(doc(db, "transactions", existingTx.id));
                 }
 
-                // تسجيل الحركة في الخزنة إذا كانت نقدي لتتزامن مع حسابات الخزنة
                 if(paymentType === 'نقدي') {
                     await addDoc(transactionsCollection, {
                         companyId: currentCompanyId,
@@ -646,7 +728,6 @@
                         date: today
                     });
                 } else {
-                    // إذا كانت آجل، نسجلها كحركة مديونية في المعاملات لترتبط بكشف حساب العميل
                     await addDoc(transactionsCollection, {
                         companyId: currentCompanyId,
                         type: 'آجل',
@@ -735,7 +816,6 @@
             `).join('');
         }
 
-        // دالة إرسال الفاتورة المجمعة إلى مصلحة الضرائب الآمنة والمحصنة ضد أخطاء الاتصال
         window.sendBatchToETA = async function(batchId) {
             let inv = state.invoices.find(i => i.id === batchId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');

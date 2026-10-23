@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // المخزن والأصناف السحابية المعزولة</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -17,21 +21,125 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; -webkit-tap-highlight-color: transparent; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; width: 100%; font-size: 14px; box-sizing: border-box; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 12px 14px; 
+            width: 100%; 
+            font-size: 14px; 
+            box-sizing: border-box; 
+            transition: all 0.2s;
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
         .corporate-input:read-only { background: #e2e8f0; color: var(--text-muted); cursor: not-allowed; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 14px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; width: 100%; }
-        .btn-primary:active { transform: scale(0.98); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 14px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            width: 100%; 
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        table th, table td { white-space: nowrap; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            body * { visibility: hidden !important; }
+            #inventoryPrintArea, #inventoryPrintArea * { visibility: visible !important; }
+            #inventoryPrintArea {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+            }
+            .no-print, button, input, select, #floatingTvTrigger { display: none !important; }
+            .print-header { display: flex !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
+        }
     </style>
 </head>
 <body>
@@ -42,14 +150,16 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link active"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -66,7 +176,7 @@
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
                             <!-- زر القائمة الجانبية للموبايل -->
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة المخزن والأصناف والباركود <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
@@ -74,7 +184,6 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
-                        <!-- معرف الشركة مع ضبط العرض والتجاوب -->
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
@@ -99,7 +208,9 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link active"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -123,7 +234,7 @@
                 </div>
 
                 <!-- نموذج إضافة / تعديل صنف -->
-                <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
+                <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm no-print">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h3 id="formTitleText" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إضافة صنف جديد للمخزن السحابي</h3>
                         <button type="button" onclick="window.resetProductForm()" id="cancelEditBtn" class="hidden text-xs text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg cursor-pointer">إلغاء التعديل</button>
@@ -171,7 +282,7 @@
                         </div>
 
                         <div class="pt-2">
-                            <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5">
+                            <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 active:scale-95">
                                 <i class="fa-solid fa-floppy-disk text-base"></i> حفظ الصنف وتحديث المخزن سحابياً
                             </button>
                         </div>
@@ -179,32 +290,68 @@
                 </div>
 
                 <!-- شريط البحث والباركود -->
-                <div class="corporate-card p-4 flex gap-3 items-center">
+                <div class="corporate-card p-4 flex gap-3 items-center no-print">
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
                         <input type="text" id="searchInput" oninput="window.renderProducts()" placeholder="البحث باسم الصنف، الكود، أو باركود..." class="corporate-input pr-10 text-xs">
                     </div>
                 </div>
 
-                <!-- جدول الأصناف -->
-                <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن السحابي الحالية</h3>
+                <!-- منطقة طباعة وتصدير تقرير المخزن المعياري A4 -->
+                <div id="inventoryPrintArea" class="corporate-card p-6 space-y-4 bg-white">
+                    <!-- الهيدر الخاص بالتقرير عند التصدير والطباعة فقط -->
+                    <div class="hidden print-header flex justify-between items-center border-b pb-4">
+                        <div>
+                            <h2 class="font-black text-lg text-slate-900">EIDCO // تقرير جرد وقيمة المخزون السحابي المعزول</h2>
+                            <span id="printCompanyIdTag" class="text-xs text-indigo-700 font-mono font-bold block mt-1"></span>
+                        </div>
+                        <div class="text-left text-xs text-slate-600 font-mono">
+                            <div>تاريخ التقرير: <span id="printCurrentDate" dir="ltr" class="font-bold"></span></div>
+                            <div>إجمالي الأصناف: <span id="printTotalItemsCount" class="font-bold text-indigo-700"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print border-b pb-3">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-boxes-stacked ml-2 text-indigo-600"></i> أرصدة وحركات المخزن السحابي الحالية</h3>
+                        
+                        <!-- أزرار التصدير والمشاركة الموحدة A4 -->
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <button onclick="window.downloadInventoryPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
+                            </button>
+                            <button onclick="window.downloadInventoryImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-image"></i> تصدير صورة
+                            </button>
+                            <button onclick="window.shareInventoryReport()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد / واتساب)
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                    <th class="p-4">كود / باركود الصنف</th>
-                                    <th class="p-4">اسم الصنف</th>
-                                    <th class="p-4">سعر الشراء</th>
-                                    <th class="p-4">سعر البيع</th>
-                                    <th class="p-4">الكمية المتاحة سحابياً</th>
-                                    <th class="p-4">الحد الأدنى للتنبيه</th>
-                                    <th class="p-4 text-center">إجراءات</th>
+                                    <th class="p-3.5">كود / باركود الصنف</th>
+                                    <th class="p-3.5">اسم الصنف</th>
+                                    <th class="p-3.5">سعر الشراء</th>
+                                    <th class="p-3.5">سعر البيع</th>
+                                    <th class="p-3.5">الكمية المتاحة</th>
+                                    <th class="p-3.5">إجمالي قيمة البيع</th>
+                                    <th class="p-3.5 text-center no-print">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="productsTableBody" class="divide-y divide-slate-100 bg-white">
                                 <tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">جاري تحميل أصناف المخزن من سحابة Firebase...</td></tr>
                             </tbody>
+                            <tfoot class="bg-indigo-50/70 font-bold text-slate-900 border-t">
+                                <tr>
+                                    <td colspan="4" class="p-3.5 text-left">إجمالي القيمة التقديرية للمخزون:</td>
+                                    <td id="totalInventoryQty" class="p-3.5 mono-font text-indigo-700">0</td>
+                                    <td id="totalInventoryValue" class="p-3.5 mono-font text-emerald-700">0 ج.م</td>
+                                    <td class="no-print"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -236,7 +383,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules مع دعم التخزين المحلى والعمل أوفلاين -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -249,7 +396,8 @@
             onSnapshot,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -265,6 +413,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للتخزين أوفلاين داخل تطبيق WebView / Native App
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -282,7 +439,6 @@
             const productsCollection = collection(db, "products");
             const productsRef = query(productsCollection, where("companyId", "==", currentCompanyId));
 
-            // جلب أولي فوري باستخدام getDocs
             try {
                 const snapshot = await getDocs(productsRef);
                 productsList = snapshot.docs.map(doc => ({
@@ -294,7 +450,6 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            // الاستماع للتغييرات اللحظية سحابياً
             unsubscriber = onSnapshot(productsRef, (snapshot) => {
                 productsList = snapshot.docs.map(doc => ({
                     docId: doc.id,
@@ -330,6 +485,12 @@
                 }
             }
 
+            let totalQty = filtered.reduce((sum, p) => sum + Number(p.qty || 0), 0);
+            let totalVal = filtered.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.sellPrice || 0)), 0);
+
+            document.getElementById('totalInventoryQty').innerText = totalQty.toLocaleString();
+            document.getElementById('totalInventoryValue').innerText = totalVal.toLocaleString() + ' ج.م';
+
             if(!filtered.length) {
                 tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-bold">لا توجد أصناف مطابقة للبحث أو المخزن سحابياً فارغ لهذا الحساب.</td></tr>`;
                 return;
@@ -337,21 +498,23 @@
 
             tbody.innerHTML = filtered.map(p => {
                 let isLow = Number(p.qty) <= Number(p.minQty || 3);
+                let itemTotalValue = Number(p.qty || 0) * Number(p.sellPrice || 0);
+
                 return `
                     <tr class="hover:bg-slate-50 ${isLow ? 'bg-rose-50/40' : ''}">
-                        <td class="p-4 mono-font text-indigo-600 font-bold">
+                        <td class="p-3.5 mono-font text-indigo-600 font-bold">
                             ${p.code} ${p.barcode ? `<span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-barcode"></i> ${p.barcode}</span>` : ''}
                         </td>
-                        <td class="p-4 font-bold text-slate-900">${p.name}</td>
-                        <td class="p-4 mono-font text-slate-600">${Number(p.buyPrice || 0).toLocaleString()} ج.م</td>
-                        <td class="p-4 mono-font text-emerald-600 font-bold">${Number(p.sellPrice || 0).toLocaleString()} ج.م</td>
-                        <td class="p-4 mono-font font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}">
+                        <td class="p-3.5 font-bold text-slate-900">${p.name}</td>
+                        <td class="p-3.5 mono-font text-slate-600" dir="ltr">${Number(p.buyPrice || 0).toLocaleString()} ج.م</td>
+                        <td class="p-3.5 mono-font text-emerald-600 font-bold" dir="ltr">${Number(p.sellPrice || 0).toLocaleString()} ج.م</td>
+                        <td class="p-3.5 mono-font font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}" dir="ltr">
                             ${p.qty} ${isLow ? '<i class="fa-solid fa-triangle-exclamation ml-1 text-rose-500" title="كمية منخفضة!"></i>' : ''}
                         </td>
-                        <td class="p-4 mono-font text-slate-500">${p.minQty || 3}</td>
-                        <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button type="button" onclick="window.editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-                            <button type="button" onclick="window.deleteProduct('${p.code}', '${p.docId || ''}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>
+                        <td class="p-3.5 mono-font text-indigo-700 font-bold" dir="ltr">${itemTotalValue.toLocaleString()} ج.م</td>
+                        <td class="p-3.5 text-center space-x-2 space-x-reverse no-print">
+                            <button type="button" onclick="window.editProduct('${p.code}')" class="text-indigo-600 hover:text-indigo-800 active:scale-95 cursor-pointer text-xs font-bold px-1.5 py-1" title="تعديل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                            <button type="button" onclick="window.deleteProduct('${p.code}', '${p.docId || ''}')" class="text-rose-500 hover:text-rose-700 active:scale-95 cursor-pointer text-xs font-bold px-1.5 py-1" title="حذف"><i class="fa-solid fa-trash"></i> حذف</button>
                         </td>
                     </tr>
                 `;
@@ -474,13 +637,60 @@
             }
         };
 
+        // تصدير PDF بمعيار A4
+        window.downloadInventoryPDF = function() {
+            document.getElementById('printCompanyIdTag').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printCurrentDate').innerText = new Date().toISOString().split('T')[0];
+            document.getElementById('printTotalItemsCount').innerText = `${productsList.length} أصناف`;
+            window.print();
+        };
+
+        // تصدير TReport كصورة عالية الدقة PNG
+        window.downloadInventoryImage = function() {
+            let element = document.getElementById('inventoryPrintArea');
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `EIDCO-Inventory-${currentCompanyId}-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        // المشاركة المباشرة عبر متصفحات أندرويد وواتساب
+        window.shareInventoryReport = async function() {
+            let totalQty = productsList.reduce((sum, p) => sum + Number(p.qty || 0), 0);
+            let totalVal = productsList.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.sellPrice || 0)), 0);
+
+            let text = `📦 *EIDCO // تقرير المخزون الحالي*\n`;
+            text += `🏢 معرف الشركة: *${currentCompanyId}*\n`;
+            text += `📊 عدد الأصناف: *${productsList.length}*\n`;
+            text += `🔢 إجمالي الكميات: *${totalQty.toLocaleString()}*\n`;
+            text += `💰 إجمالي القيمة: *${totalVal.toLocaleString()} ج.م*\n\n`;
+            text += `_تم توليد التقرير عبر EIDCO Business OS_`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // تقرير المخزون',
+                        text: text
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        };
+
         window.addEventListener('DOMContentLoaded', () => {
             window.resetProductForm();
         });
     </script>
     
-    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -521,6 +731,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

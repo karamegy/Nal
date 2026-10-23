@@ -74,6 +74,7 @@
             width: 100%; 
             font-size: 13px; 
             box-sizing: border-box; 
+            transition: all 0.2s;
         }
         .corporate-input:focus {
             outline: none;
@@ -129,9 +130,15 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
             body * { visibility: hidden !important; }
-            #statementModal, #statementModal * { visibility: visible !important; }
-            #statementModal {
+            #statementPrintArea, #statementPrintArea *,
+            #singleInvoicePrintArea, #singleInvoicePrintArea * { visibility: visible !important; }
+            
+            #statementPrintArea, #singleInvoicePrintArea {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
@@ -139,6 +146,9 @@
                 height: auto !important;
                 background: white !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
                 display: block !important;
             }
             .corporate-card {
@@ -150,14 +160,15 @@
             .no-print, button, input, select, #floatingTvTrigger {
                 display: none !important;
             }
-            #statementPrintArea {
-                border: none !important;
-                padding: 0 !important;
+            .print-header {
+                display: flex !important;
             }
             .max-h-48 {
                 max-height: none !important;
                 overflow: visible !important;
             }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
 </head>
@@ -178,6 +189,7 @@
                 <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                 <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -231,6 +243,7 @@
                         <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
                         <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -290,11 +303,23 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي -->
+    <!-- نافذة كشف حساب العميل التفصيلي A4 -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
-                <div class="flex justify-between items-center border-b pb-3">
+                
+                <!-- هيدر معتمد للطباعة والتصدير المعياري A4 -->
+                <div class="hidden print-header flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base">EIDCO // كشف حساب وتفاصيل مديونية العميل</h2>
+                        <span id="printStmtCompanyTag" class="text-xs text-indigo-700 font-mono font-bold block mt-0.5"></span>
+                    </div>
+                    <div class="text-left text-xs text-slate-600 font-mono">
+                        <div>التاريخ: <span id="printStmtDate" dir="ltr" class="font-bold"></span></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b pb-3 no-print">
                     <div>
                         <h3 id="stmtClientName" class="font-black text-slate-900 text-base"></h3>
                         <span class="text-[11px] text-slate-500">EIDCO // كشف حساب وتفاصيل المديونية المعتمد</span>
@@ -352,16 +377,16 @@
                 </button>
             </div>
 
-            <!-- أزرار التصدير -->
+            <!-- أزرار التصدير والمشاركة A4 -->
             <div class="no-print grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
                 <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
-                    <i class="fa-solid fa-file-pdf text-sm"></i> حفظ كـ PDF
+                    <i class="fa-solid fa-file-pdf text-sm"></i> حفظ A4 (PDF)
                 </button>
                 <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> تصدير صورة
                 </button>
                 <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> واتساب
+                    <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد/واتساب)
                 </button>
                 <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
             </div>
@@ -617,6 +642,8 @@
             if(!currentActiveClient) return;
 
             document.getElementById('stmtClientName').innerText = currentActiveClient.name;
+            document.getElementById('printStmtCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printStmtDate').innerText = new Date().toISOString().split('T')[0];
 
             let clientInvoices = state.invoices.filter(i => i.client === clientName);
             let clientPayments = state.payments.filter(p => p.clientName === clientName);
@@ -638,7 +665,7 @@
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center no-print">
-                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs flex items-center justify-center gap-1 mx-auto" title="معاينة الفاتورة">
+                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs flex items-center justify-center gap-1 mx-auto active:scale-95" title="معاينة الفاتورة">
                                 <i class="fa-solid fa-eye"></i> معاينة
                             </button>
                         </td>
@@ -654,10 +681,10 @@
                         <td class="p-2.5 mono-font font-bold text-emerald-600" dir="ltr">-${Number(pay.amount).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${pay.date || '---'}</td>
                         <td class="p-2.5 text-center space-x-1 space-x-reverse no-print">
-                            <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1" title="تعديل">
+                            <button onclick="window.editPayment('${pay.docId}', ${pay.amount})" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs px-1.5 py-1 active:scale-95" title="تعديل">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1" title="حذف">
+                            <button onclick="window.deletePayment('${pay.docId}')" class="text-rose-500 hover:text-rose-700 font-bold cursor-pointer text-xs px-1.5 py-1 active:scale-95" title="حذف">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
@@ -793,7 +820,7 @@
 
         window.downloadSingleInvoiceImage = function() {
             let element = document.getElementById('singleInvoicePrintArea');
-            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
                 link.download = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
                 link.href = canvas.toDataURL('image/png');
@@ -803,7 +830,7 @@
 
         window.downloadStatementImage = function() {
             let element = document.getElementById('statementPrintArea');
-            html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
                 link.download = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
                 link.href = canvas.toDataURL('image/png');
@@ -815,7 +842,8 @@
             window.print();
         };
 
-        window.sendStatementWhatsApp = function() {
+        // مشاركة مباشرة عبر أندرويد وواتساب
+        window.sendStatementWhatsApp = async function() {
             if(!currentActiveClient) return;
             let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
             let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
@@ -825,15 +853,29 @@
             let dueBalance = totalPurchases - totalPaid;
 
             let text = `📊 *EIDCO // كشف حساب العميل*\n`;
-            text += `👤 العميل: *${currentActiveClient.name}*\n\n`;
+            text += `👤 العميل: *${currentActiveClient.name}*\n`;
+            text += `🏢 معرف الشركة: *${currentCompanyId}*\n\n`;
             text += `💰 إجمالي المشتريات: ${totalPurchases.toLocaleString()} ج.م\n`;
             text += `✅ إجمالي المدفوعات: ${totalPaid.toLocaleString()} ج.م\n`;
             text += `📌 *الرصيد المتبقي (المديونية): ${dueBalance.toLocaleString()} ج.م*\n\n`;
             text += `شكراً لتعاملكم المستمر معنا! 🙏`;
 
-            let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
-            let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
-            window.open(whatsappUrl, '_blank');
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `كشف حساب ${currentActiveClient.name}`,
+                        text: text
+                    });
+                } catch (err) {
+                    let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+                    let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+                let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
         };
     </script>
     

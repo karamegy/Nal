@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // لوحة التحكم الرئيسية  </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EIDCO // لوحة التحكم الرئيسية</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -17,31 +21,115 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; overflow-x: hidden; box-sizing: border-box; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
-        .corporate-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); border-color: var(--primary); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden; 
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            transition: all 0.2s ease; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        .corporate-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.12); 
+            border-color: var(--primary); 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            transition: all 0.2s; 
+            border: none; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            transition: all 0.2s; 
+            text-decoration: none; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(8px); 
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
         table th, table td { white-space: nowrap; }
 
         .rss-ticker-wrapper { background: #0f172a; color: #f8fafc; border-bottom: 1px solid #1e293b; font-size: 0.8rem; position: relative; z-index: 50; overflow: hidden; }
         .rss-ticker-content { display: inline-block; white-space: nowrap; padding-right: 100%; animation: tickerMarquee 35s linear infinite; }
         .rss-ticker-content.paused { animation-play-state: paused !important; }
+        
         @keyframes tickerMarquee {
             0% { transform: translate3d(0, 0, 0); }
             100% { transform: translate3d(100%, 0, 0); }
         }
+
         #floatingTvTrigger { position: fixed; bottom: 24px; left: 24px; z-index: 999; touch-action: none; user-select: none; }
         .logo-3d-container { perspective: 1000px; display: inline-block; }
         .logo-3d-badge {
@@ -50,6 +138,7 @@
             box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 0 0 15px rgba(99, 102, 241, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
             animation: neonPulse 3s infinite alternate; border: 1px solid rgba(255, 255, 255, 0.3);
         }
+
         @keyframes neonPulse {
             0% { box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4), 0 0 10px rgba(99, 102, 241, 0.4); transform: rotateX(5deg) rotateY(-5deg); }
             100% { box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9); transform: rotateX(-5deg) rotateY(5deg); }
@@ -63,6 +152,39 @@
             height: 100vh !important;
             z-index: 100 !important;
             box-shadow: -10px 0 25px rgba(0,0,0,0.3);
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            body * { visibility: hidden !important; }
+            #indexReportPrintArea, #indexReportPrintArea * { visibility: visible !important; }
+            #indexReportPrintArea {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: block !important;
+            }
+            .no-print, button, input, select, #floatingTvTrigger, .rss-ticker-wrapper {
+                display: none !important;
+            }
+            .print-header {
+                display: flex !important;
+            }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
 
@@ -82,7 +204,7 @@
 </head>
 <body>
 
-    <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800">
+    <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800 no-print">
         <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
             <i class="fa-solid fa-rss text-amber-400 animate-pulse"></i>
             <span>عاجل EIDCO RSS</span>
@@ -105,8 +227,8 @@
         </div>
     </div>
 
-    <!-- زر TV الطافي المحدث لفتح الصفحة داخلياً دون ظهور الرابط -->
-    <div id="floatingTvTrigger" class="cursor-grab active:cursor-grabbing select-none">
+    <!-- زر TV الطافي المحدث -->
+    <div id="floatingTvTrigger" class="no-print cursor-grab active:cursor-grabbing select-none">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -137,23 +259,19 @@
                 </button>
             </div>
 
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                
-                <!-- زر شجرة الحسابات المضاف حديثاً في القائمة الجانبية -->
                 <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-
-                <!-- شجرة المستندات -->
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 
-                <!-- أزرار الإدارة والريموت الخاص بحساب المؤسس -->
                 <a href="remote.html" id="sidebarRemoteNavLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-gamepad text-indigo-600"></i> ريموت التحكم عن بُعد TV</a>
                 <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
                 <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
@@ -182,22 +300,25 @@
                         <h1 class="font-black text-slate-900 text-xs sm:text-sm">لوحة المؤشرات الرئيسية (معزولة ومزامنة لحظياً)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                        <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة سحابياً
+                        <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                            <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة
                         </button>
-                        <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:opacity-90 cursor-pointer">
-                            <i class="fa-solid fa-tv text-amber-300"></i> فتح EIDCO TV
+                        <button onclick="window.downloadReportPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                            <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
                         </button>
-                        <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-print text-indigo-600"></i> طباعة
+                        <button onclick="window.downloadReportImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                            <i class="fa-solid fa-image"></i> تصدير صورة
                         </button>
-                        <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                        <button onclick="window.shareReport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                            <i class="fa-solid fa-share-nodes"></i> مشاركة
+                        </button>
+                        <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <button onclick="lockSession()" id="headerAuthLockBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="قفل الجلسة والعودة للبصمة">
+                        <button onclick="lockSession()" id="headerAuthLockBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95" title="قفل الجلسة والعودة للبصمة">
                             <i class="fa-solid fa-lock text-indigo-600"></i> قفل
                         </button>
-                        <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
+                        <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2 active:scale-95"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
                     </div>
                 </div>
             </header>
@@ -216,7 +337,7 @@
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1 truncate max-w-[220px] sm:max-w-none" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
-                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer">
+                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95">
                         <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> فتح شاشة التلفزيون بصفحة جديدة
                     </button>
                 </div>
@@ -229,33 +350,44 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div onclick="window.showSummaryModal('vault')" class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">رصيد الخزنة الصافي سحابياً</span><i class="fa-solid fa-vault text-indigo-600 text-sm"></i></div>
-                        <div class="text-2xl font-black text-slate-900 mono-font" id="statVault">0 ج.م</div>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="statVault" dir="ltr">0 ج.م</div>
                         <span class="text-[10px] text-indigo-600 font-bold block">انقر لعرض الحركات والتفاصيل ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('sales')" class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">إجمالي المبيعات السحابية</span><i class="fa-solid fa-cart-shopping text-cyan-500 text-sm"></i></div>
-                        <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales">0 ج.م</div>
+                        <div class="text-2xl font-black text-cyan-600 mono-font" id="statSales" dir="ltr">0 ج.م</div>
                         <span class="text-[10px] text-cyan-600 font-bold block">انقر لعرض تفاصيل المبيعات ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('profits')" class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">صافي الأرباح المحققة</span><i class="fa-solid fa-chart-line text-emerald-500 text-sm"></i></div>
-                        <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits">0 ج.م</div>
+                        <div class="text-2xl font-black text-emerald-600 mono-font" id="statProfits" dir="ltr">0 ج.م</div>
                         <span class="text-[10px] text-emerald-600 font-bold block">انقر لعرض تفاصيل الأرباح ←</span>
                     </div>
                     <div onclick="window.showSummaryModal('clients')" class="corporate-card p-5 space-y-2 border-l-4 border-l-purple-500 cursor-pointer">
                         <div class="flex justify-between items-center"><span class="text-xs text-slate-500">العملاء والشركات السحابية</span><i class="fa-solid fa-building-user text-purple-500 text-sm"></i></div>
-                        <div class="text-2xl font-black text-purple-600 mono-font" id="statClients">0 جهة</div>
+                        <div class="text-2xl font-black text-purple-600 mono-font" id="statClients" dir="ltr">0 جهة</div>
                         <span class="text-[10px] text-purple-600 font-bold block">انقر لعرض قائمة العملاء ←</span>
                     </div>
                 </div>
 
-                <div class="corporate-card p-6 space-y-4">
-                    <div class="flex justify-between items-center">
+                <!-- منطقة تقرير الطباعة الشامل والتصدير والمعاينة A4 -->
+                <div id="indexReportPrintArea" class="corporate-card p-6 space-y-4 bg-white">
+                    <div class="hidden print-header flex justify-between items-center border-b pb-4">
+                        <div>
+                            <h2 class="font-black text-lg text-slate-900">EIDCO // تقرير لوحة المؤشرات الرئيسية والعمليات</h2>
+                            <span id="printIndexCompanyTag" class="text-xs text-indigo-700 font-mono font-bold block mt-1"></span>
+                        </div>
+                        <div class="text-left text-xs text-slate-600 font-mono">
+                            <div>تاريخ التقرير: <span id="printIndexDate" dir="ltr" class="font-bold"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-b pb-3 no-print">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-lines ml-2 text-indigo-600"></i> الفواتير المجمعة النشطة سحابياً (معزولة)</h3>
                         <a href="batch-invoices.html" class="text-xs text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-plus ml-1"></i> إضافة فاتورة جديدة</a>
                     </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">رقم الفاتورة</th>
@@ -264,17 +396,17 @@
                                     <th class="p-4">الإجمالي الكلي</th>
                                     <th class="p-4">صافي الربح</th>
                                     <th class="p-4">التاريخ</th>
-                                    <th class="p-4 text-center">إجراءات</th>
+                                    <th class="p-4 text-center no-print">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody id="dashboardBatchTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري مزامنة البيانات السحابية المعزولة...</td></tr>
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400 font-bold">جاري مزامنة البيانات السحابية المعزولة...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-3 no-print">
                     <h3 class="font-bold text-sm text-slate-900 px-1"><i class="fa-solid fa-compass ml-2 text-indigo-600"></i> القائمة الرئيسية وأقسام المنظومة السحابية</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <a href="dashboard.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
@@ -302,13 +434,11 @@
                             <div><h4 class="font-bold text-sm text-slate-900">حسابات العملاء</h4><span class="text-[11px] text-slate-500">إدارة الشركات والجهات</span></div>
                         </a>
                         
-                        <!-- كرت شجرة الحسابات المضاف في شبكة القوائم الرئيسية -->
                         <a href="accounts-tree.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-sitemap"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">شجرة الحسابات</h4><span class="text-[11px] text-slate-500">الدليل المحاسبي والبنود</span></div>
                         </a>
 
-                        <!-- كرت شجرة المستندات -->
                         <a href="documents.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
                             <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-folder-tree"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">شجرة المستندات</h4><span class="text-[11px] text-slate-500">الأرشيف والعقود والتنبيهات</span></div>
@@ -317,12 +447,15 @@
                             <div class="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-cyan-600 group-hover:text-white transition"><i class="fa-solid fa-comments"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">الشات والاتصالات</h4><span class="text-[11px] text-slate-500">مراسلات واتصال صوت وفيديو</span></div>
                         </a>
+                        <a href="intelligence.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
+                            <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-brain"></i></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">مركز الذكاء والتعلم</h4><span class="text-[11px] text-slate-500">تحليلات الأداء والتنبؤ الذكي</span></div>
+                        </a>
                         <a href="profile.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-500">
                             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-id-badge"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">الملف الشخصي</h4><span class="text-[11px] text-slate-500">بيانات الحساب والإعدادات</span></div>
                         </a>
 
-                        <!-- كرت الريموت الخاص بحساب كرم حمدي عبدالعظيم -->
                         <a href="remote.html" id="gridRemoteCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
                             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-gamepad"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">ريموت التحكم عن بُعد</h4><span class="text-[11px] text-slate-500">التحكم بالشاشة الذكية TV</span></div>
@@ -362,7 +495,7 @@
                     </div>
                 </div>
 
-                <div class="corporate-card p-6 space-y-4">
+                <div class="corporate-card p-6 space-y-4 no-print">
                     <h3 class="font-bold text-sm text-slate-900">تحليلات الأداء المالي (Firebase المعزول لحظياً)</h3>
                     <div class="h-72 relative"><canvas id="analyticsChart"></canvas></div>
                 </div>
@@ -475,7 +608,8 @@
             updateDoc,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -491,6 +625,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل Tالتخزين المؤقت IndexedDB للعمل أوفلاين في التطبيق الأهلي Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -731,20 +874,20 @@
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 font-bold">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = targetInvoices.map(i => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id || 'BATCH'}</td>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id || 'BATCH'}</td>
                     <td class="p-4 font-bold text-slate-900">${i.client || 'عميل'}</td>
-                    <td class="p-4 mono-font">${i.items ? i.items.length : 1} أصناف</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-slate-500">${i.date || '---'}</td>
-                    <td class="p-4 text-center space-x-2 space-x-reverse">
-                        <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1" title="حذف الفاتورة سحابياً">
+                    <td class="p-4 mono-font" dir="ltr">${i.items ? i.items.length : 1} أصناف</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
+                    <td class="p-4 text-center space-x-2 space-x-reverse no-print">
+                        <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i> حذف
                         </button>
                     </td>
@@ -761,63 +904,63 @@
                 let exp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
                 modalTitle.innerText = 'ملخص الخزنة النقدية السحابية المعزولة';
                 modalBody.innerHTML = `
-                    <div class="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-xl mb-3">
-                        <div><span class="text-[10px] text-slate-500 block">إيرادات</span><span class="font-bold text-cyan-600 mono-font">${inc.toLocaleString()} ج.م</span></div>
-                        <div><span class="text-[10px] text-slate-500 block">مصروفات</span><span class="font-bold text-purple-600 mono-font">${exp.toLocaleString()} ج.م</span></div>
-                        <div><span class="text-[10px] text-slate-500 block">الصافي</span><span class="font-bold text-emerald-600 mono-font">${(inc-exp).toLocaleString()} ج.م</span></div>
+                    <div class="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-xl mb-3 border">
+                        <div><span class="text-[10px] text-slate-500 block font-bold">إيرادات</span><span class="font-bold text-cyan-600 mono-font" dir="ltr">${inc.toLocaleString()} ج.م</span></div>
+                        <div><span class="text-[10px] text-slate-500 block font-bold">مصروفات</span><span class="font-bold text-purple-600 mono-font" dir="ltr">${exp.toLocaleString()} ج.م</span></div>
+                        <div><span class="text-[10px] text-slate-500 block font-bold">الصافي</span><span class="font-bold text-emerald-600 mono-font" dir="ltr">${(inc-exp).toLocaleString()} ج.م</span></div>
                     </div>
                     <h4 class="font-bold text-slate-700 mb-2">آخر الحركات النقدية السحابية المسجلة:</h4>
                     <div class="space-y-2">
                         ${state.transactions.slice(-5).reverse().map(t => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
-                                <div><span class="font-bold text-slate-900 block">${t.desc || 'معاملة'}</span><span class="text-[10px] text-slate-400 font-mono">${t.date || '---'}</span></div>
-                                <span class="font-bold mono-font ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type === 'إيراد' ? '+' : '-'}${Number(t.amount || 0).toLocaleString()} ج.م</span>
+                                <div><span class="font-bold text-slate-900 block">${t.desc || 'معاملة'}</span><span class="text-[10px] text-slate-400 font-mono" dir="ltr">${t.date || '---'}</span></div>
+                                <span class="font-bold mono-font ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}" dir="ltr">${t.type === 'إيراد' ? '+' : '-'}${Number(t.amount || 0).toLocaleString()} ج.م</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد حركات سحابية مسجلة</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد حركات سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'sales') {
                 let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
                 modalTitle.innerText = 'ملخص إجمالي المبيعات السحابية المعزولة';
                 modalBody.innerHTML = `
-                    <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي مبيعات الفواتير السحابية</span>
-                        <span class="text-xl font-black text-cyan-600 mono-font">${totalSales.toLocaleString()} ج.م</span>
+                    <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3 border border-cyan-100">
+                        <span class="text-xs text-slate-500 block font-bold">إجمالي مبيعات الفواتير السحابية</span>
+                        <span class="text-xl font-black text-cyan-600 mono-font" dir="ltr">${totalSales.toLocaleString()} ج.م</span>
                     </div>
                     <h4 class="font-bold text-slate-700 mb-2">أحدث الفواتير المسجلة سحابياً:</h4>
                     <div class="space-y-2">
                         ${state.invoices.slice(-5).reverse().map(i => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
-                                <div><span class="font-bold text-indigo-600 mono-font">${i.id || 'INV'}</span> <span class="text-slate-600">(${i.client || 'عميل'})</span></div>
-                                <span class="font-bold mono-font text-slate-900">${Number(i.total || 0).toLocaleString()} ج.م</span>
+                                <div><span class="font-bold text-indigo-600 mono-font" dir="ltr">${i.id || 'INV'}</span> <span class="text-slate-600">(${i.client || 'عميل'})</span></div>
+                                <span class="font-bold mono-font text-slate-900" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد فواتير سحابية مسجلة</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد فواتير سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'profits') {
                 let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
                 modalTitle.innerText = 'ملخص صافي الأرباح السحابية المعزولة';
                 modalBody.innerHTML = `
-                    <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي صافي الأرباح السحابية</span>
-                        <span class="text-xl font-black text-emerald-600 mono-font">${totalProfits.toLocaleString()} ج.م</span>
+                    <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3 border border-emerald-100">
+                        <span class="text-xs text-slate-500 block font-bold">إجمالي صافي الأرباح السحابية</span>
+                        <span class="text-xl font-black text-emerald-600 mono-font" dir="ltr">${totalProfits.toLocaleString()} ج.م</span>
                     </div>
-                    <p class="text-slate-600 text-center">الأرباح تُحسب سحابياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف داخل حسابك الخاص.</p>
+                    <p class="text-slate-600 text-center text-xs leading-relaxed">الأرباح تُحسب سحابياً بناءً على فرق سعر البيع وسعر التكلفة لكل صنف داخل حسابك الخاص.</p>
                 `;
             } else if (type === 'clients') {
                 modalTitle.innerText = 'ملخص العملاء والشركات السحابية المعزولة';
                 modalBody.innerHTML = `
-                    <div class="p-3 bg-purple-50 rounded-xl text-center mb-3">
-                        <span class="text-xs text-slate-500 block">إجمالي الجهات المسجلة سحابياً</span>
-                        <span class="text-xl font-black text-purple-600 mono-font">${state.clients.length} جهة</span>
+                    <div class="p-3 bg-purple-50 rounded-xl text-center mb-3 border border-purple-100">
+                        <span class="text-xs text-slate-500 block font-bold">إجمالي الجهات المسجلة سحابياً</span>
+                        <span class="text-xl font-black text-purple-600 mono-font" dir="ltr">${state.clients.length} جهة</span>
                     </div>
                     <div class="space-y-2">
                         ${state.clients.map(c => `
                             <div class="p-2.5 bg-slate-50 rounded-xl border flex justify-between items-center">
                                 <span class="font-bold text-slate-900">${c.name}</span>
-                                <span class="text-slate-500 mono-font text-[11px]">${c.phone || 'جهة مسجلة سحابياً'}</span>
+                                <span class="text-slate-500 mono-font text-[11px]" dir="ltr">${c.phone || 'جهة مسجلة سحابياً'}</span>
                             </div>
-                        `).join('') || '<p class="text-slate-400 text-center">لا توجد جهات مسجلة سحابياً</p>'}
+                        `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد جهات مسجلة سحابياً</p>'}
                     </div>
                 `;
             }
@@ -884,6 +1027,55 @@
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
+
+        // تصدير PDF بمعيار A4
+        window.downloadReportPDF = function() {
+            document.getElementById('printIndexCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printIndexDate').innerText = new Date().toISOString().split('T')[0];
+            window.print();
+        };
+
+        // تصدير التقرير كصورة عالية الدقة PNG
+        window.downloadReportImage = function() {
+            let element = document.getElementById('indexReportPrintArea');
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        // مشاركة التقرير محلياً على أندرويد وواتساب
+        window.shareReport = async function() {
+            let vaultVal = document.getElementById('statVault').innerText;
+            let salesVal = document.getElementById('statSales').innerText;
+            let profitsVal = document.getElementById('statProfits').innerText;
+            let clientsVal = document.getElementById('statClients').innerText;
+
+            let text = `📊 *EIDCO // تقرير لوحة المؤشرات الرئيسية*\n`;
+            text += `🏢 معرف الشركة: *${currentCompanyId}*\n`;
+            text += `💰 رصيد الخزنة: *${vaultVal}*\n`;
+            text += `🛍️ إجمالي المبيعات: *${salesVal}*\n`;
+            text += `📈 صافي الأرباح: *${profitsVal}*\n`;
+            text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
+            text += `_تم توليد التقرير عبر EIDCO Business OS_`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // ملخص مؤشرات الأداء',
+                        text: text
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        };
     </script>
 </body>
 </html>

@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // إدارة الشكاوى وبلاغات الحسابات المخالفة</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -21,15 +25,80 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; overflow-x: hidden; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            transition: all 0.2s; 
+            border: none; 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            text-decoration: none; 
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            transition: all 0.2s; 
+            text-decoration: none; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        
         table th, table td { white-space: nowrap; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         /* تنسيق القائمة الجانبية للجوال عند الفتح */
         #appSidebar.mobile-open {
@@ -88,7 +157,7 @@
                 <div class="max-w-7xl mx-auto flex justify-between items-center gap-3">
                     <div class="flex items-center gap-3">
                         <!-- زر القائمة للجوال -->
-                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 shrink-0">
+                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 active:scale-95 shrink-0">
                             <i class="fa-solid fa-bars text-lg"></i>
                         </button>
                         <h1 class="font-black text-slate-900 text-xs sm:text-sm">إدارة الشكاوى والبلاغات وضبط الحسابات المخالفة</h1>
@@ -115,7 +184,7 @@
                         <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
@@ -138,7 +207,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -148,7 +217,7 @@
             doc, 
             deleteDoc, 
             updateDoc,
-            getDocs 
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -165,11 +234,21 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // تفعيل التخزين المؤقت IndexedDB لدعم التحميل في تطبيقات Native WebView أوفلاين
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        document.getElementById('companyBadgeDisplay').innerText = `معرف الشركة: ${currentCompanyId}`;
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if (badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
         // تمرير معرف الشركة للروابط
         document.querySelectorAll('a[href]').forEach(link => {
@@ -204,14 +283,12 @@
         };
 
         signInAnonymously(auth).then(() => {
-            // الاستماع المباشر لمجموعة messages حيث يتم تخزين شكاوى النظام والدعم
             const messagesRef = collection(db, "messages");
             
             onSnapshot(messagesRef, (snapshot) => {
                 let tbody = document.getElementById('reportsTableBody');
                 let allDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // تصفية الرسائل لتظهر الشكاوى والبلاغات فقط
                 let complaintsList = allDocs.filter(m => m.type === 'شكوى نظام' || m.message);
 
                 document.getElementById('reportsCountBadge').innerText = complaintsList.length + ' بلاغ نشط';
@@ -230,10 +307,10 @@
                             <td class="p-3 text-slate-700 max-w-xs truncate" title="${r.message || r.reason || ''}">${r.message || r.reason || 'بدون تفاصيل'}</td>
                             <td class="p-3 mono-font text-slate-500">${r.date || 'اليوم'}</td>
                             <td class="p-3 text-center space-x-1 space-x-reverse">
-                                <button onclick="window.banReportedUser('${r.id}', '${r.senderName || ''}')" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer">
+                                <button onclick="window.banReportedUser('${r.id}', '${r.senderName || ''}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 rounded-lg font-bold transition cursor-pointer">
                                     <i class="fa-solid fa-ban ml-1"></i> حظر المُشتكي
                                 </button>
-                                <button onclick="window.dismissReport('${r.id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition cursor-pointer">
+                                <button onclick="window.dismissReport('${r.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg font-bold transition cursor-pointer">
                                     إغلاق / حذف
                                 </button>
                             </td>
@@ -241,10 +318,55 @@
                     `;
                 });
                 tbody.innerHTML = html;
+            }, (err) => {
+                console.error("خطأ المزامنة اللحظية:", err);
             });
         }).catch(err => {
             console.error("خطأ بالمصادقة في صفحة الشكاوى:", err);
         });
+    </script>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+        </a>
+    </div>
+
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+            }
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
     </script>
 </body>
 </html>

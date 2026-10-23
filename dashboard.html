@@ -21,6 +21,8 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,7 +56,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         
         .corporate-card { 
             background: var(--card-bg); 
@@ -62,6 +64,8 @@
             border-radius: 20px; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
             transition: transform 0.2s ease, box-shadow 0.2s ease; 
+            width: 100%;
+            box-sizing: border-box;
         }
         .corporate-card:active, .corporate-card:hover { 
             transform: translateY(-2px); 
@@ -102,6 +106,42 @@
         /* شريط التمرير الناعم للتطبيقات الأهلية */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            body * { visibility: hidden !important; }
+            #dashboardPrintArea, #dashboardPrintArea * { visibility: visible !important; }
+            #dashboardPrintArea {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: block !important;
+            }
+            .corporate-card {
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .no-print, button, input, select, #floatingTvTrigger {
+                display: none !important;
+            }
+            .print-header {
+                display: flex !important;
+            }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
+        }
     </style>
 </head>
 <body>
@@ -112,14 +152,16 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -148,7 +190,7 @@
                             <button onclick="fixCorruptedData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">إصلاح</span> الأرقام
                             </button>
-                            <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-3 sm:px-4 flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">فاتورة مجمعة</span> سريعة</a>
+                            <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-3 sm:px-4 flex items-center gap-1.5 active:scale-95"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">فاتورة مجمعة</span> سريعة</a>
                         </div>
                     </div>
                 </div>
@@ -173,7 +215,9 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -217,7 +261,7 @@
                 </div>
 
                 <!-- رسوم بيانية تحليلية مقارنة -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
                     <div class="corporate-card p-6 space-y-4">
                         <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-chart-line ml-2 text-indigo-600"></i> حركة الإيرادات والمبيعات السحابية</h3>
                         <div class="h-64 relative"><canvas id="dashSalesChart"></canvas></div>
@@ -228,21 +272,45 @@
                     </div>
                 </div>
 
-                <!-- جدول العمليات الحديثة الشاملة -->
-                <div class="corporate-card p-6 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-clock-rotate-left ml-2 text-indigo-600"></i> أحدث الحركات والعمليات المسجلة سحابياً</h3>
-                        <span class="text-xs text-slate-400 font-mono">محدث فوراً عبر سحابة Firebase</span>
+                <!-- منطقة طباعة وتصدير التقرير الشامل A4 -->
+                <div id="dashboardPrintArea" class="corporate-card p-6 space-y-4 bg-white">
+                    <!-- هيدر مخصص للطباعة والتصدير المعياري A4 -->
+                    <div class="hidden print-header flex justify-between items-center border-b pb-4">
+                        <div>
+                            <h2 class="font-black text-lg text-slate-900">EIDCO // تقرير الأداء الشامل والعمليات السحابية</h2>
+                            <span id="printDashCompanyTag" class="text-xs text-indigo-700 font-mono font-bold block mt-1"></span>
+                        </div>
+                        <div class="text-left text-xs text-slate-600 font-mono">
+                            <div>تاريخ التقرير: <span id="printDashCurrentDate" dir="ltr" class="font-bold"></span></div>
+                        </div>
                     </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print border-b pb-3">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-clock-rotate-left ml-2 text-indigo-600"></i> أحدث الحركات والعمليات المسجلة سحابياً</h3>
+                        
+                        <!-- أزرار التصدير والمشاركة الموحدة A4 -->
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <button onclick="downloadDashboardPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
+                            </button>
+                            <button onclick="downloadDashboardImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-image"></i> تصدير صورة
+                            </button>
+                            <button onclick="shareDashboardReport()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد / واتساب)
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
-                                    <th class="p-3">رقم العملية</th>
-                                    <th class="p-3">نوع النشاط</th>
-                                    <th class="p-3">القيمة / المبلغ</th>
-                                    <th class="p-3">البيان والتفاصيل</th>
-                                    <th class="p-3">التاريخ</th>
+                                    <th class="p-3.5">رقم العملية</th>
+                                    <th class="p-3.5">نوع النشاط</th>
+                                    <th class="p-3.5">القيمة / المبلغ</th>
+                                    <th class="p-3.5">البيان والتفاصيل</th>
+                                    <th class="p-3.5">التاريخ</th>
                                 </tr>
                             </thead>
                             <tbody id="dashLogsTable" class="divide-y divide-slate-100 bg-white">
@@ -282,7 +350,6 @@
                 }
             });
 
-            // استعادة الكاش المحلي فوراً لتسريع التحميل النيتف (Instant Load)
             try {
                 const cachedState = localStorage.getItem('eidco_cache_' + currentCompanyId);
                 if (cachedState) {
@@ -437,7 +504,6 @@
             document.getElementById('dashProfits').innerText = profitsText;
             document.getElementById('dashProductsCount').innerText = productsText;
 
-            // حفظ حالة الكاش للفتح السريع مستقبلاً
             try {
                 localStorage.setItem('eidco_cache_' + currentCompanyId, JSON.stringify({
                     vault: vaultText,
@@ -450,15 +516,15 @@
             let logsTable = document.getElementById('dashLogsTable');
             let recentTxs = [...state.transactions].reverse().slice(0, 8);
             if(!recentTxs.length) {
-                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد عمليات سحابية مسجلة لهذا الحساب المعزول.</td></tr>`;
+                logsTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد عمليات سحابية مسجلة لهذا الحساب المعزول.</td></tr>`;
             } else {
                 logsTable.innerHTML = recentTxs.map(t => `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-3 mono-font text-indigo-600 font-bold" dir="ltr">${t.id || 'TX'}</td>
-                        <td class="p-3 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type || 'إيراد'}</td>
-                        <td class="p-3 mono-font font-bold" dir="ltr">${Number(t.amount || 0).toLocaleString()} ج.م</td>
-                        <td class="p-3 text-slate-600">${t.desc || '---'}</td>
-                        <td class="p-3 mono-font text-slate-500" dir="ltr">${t.date || 'اليوم'}</td>
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3.5 mono-font text-indigo-600 font-bold" dir="ltr">${t.id || 'TX'}</td>
+                        <td class="p-3.5 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type || 'إيراد'}</td>
+                        <td class="p-3.5 mono-font font-bold" dir="ltr">${Number(t.amount || 0).toLocaleString()} ج.م</td>
+                        <td class="p-3.5 text-slate-600">${t.desc || '---'}</td>
+                        <td class="p-3.5 mono-font text-slate-500" dir="ltr">${t.date || 'اليوم'}</td>
                     </tr>
                 `).join('');
             }
@@ -489,7 +555,7 @@
             let vaultCtx = document.getElementById('dashVaultChart').getContext('2d');
             if (vaultChartInstance) vaultChartInstance.destroy();
 
-            vaultChartInstance = new Chart(vaultCtx, {
+            vaultCtx = new Chart(vaultCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['الإيرادات', 'المصروفات'],
@@ -526,10 +592,59 @@
                 alert('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
             }
         };
+
+        // تصدير PDF بمعيار A4
+        window.downloadDashboardPDF = function() {
+            document.getElementById('printDashCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printDashCurrentDate').innerText = new Date().toISOString().split('T')[0];
+            window.print();
+        };
+
+        // تصدير التقرير كصورة عالي الدقة PNG
+        window.downloadDashboardImage = function() {
+            let element = document.getElementById('dashboardPrintArea');
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `EIDCO-Dashboard-${currentCompanyId}-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        // مشاركة مباشرة عبر أندرويد وواتساب
+        window.shareDashboardReport = async function() {
+            let vaultVal = document.getElementById('dashVault').innerText;
+            let salesVal = document.getElementById('dashSales').innerText;
+            let profitsVal = document.getElementById('dashProfits').innerText;
+            let productsVal = document.getElementById('dashProductsCount').innerText;
+
+            let text = `📊 *EIDCO // تقرير لوحة التحكم الشاملة*\n`;
+            text += `🏢 معرف الشركة: *${currentCompanyId}*\n`;
+            text += `💰 رصيد الخزنة: *${vaultVal}*\n`;
+            text += `🛍️ إجمالي المبيعات: *${salesVal}*\n`;
+            text += `📈 صافي الأرباح: *${profitsVal}*\n`;
+            text += `📦 الأصناف بالمخزن: *${productsVal}*\n\n`;
+            text += `_تم توليد التقرير عبر EIDCO Business OS_`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // ملخص لوحة التحكم',
+                        text: text
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        };
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>

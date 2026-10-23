@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // شجرة المستندات والأرشيف المالي والمدفوعات</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -33,16 +37,26 @@
             --text-main: #0f172a; 
             --text-muted: #64748b; 
         }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
         body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
             min-height: 100vh; 
             margin: 0; 
-            padding-bottom: 5rem; 
-            box-sizing: border-box; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
         }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
         .corporate-card { 
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
@@ -51,6 +65,7 @@
             width: 100%; 
             box-sizing: border-box; 
         }
+
         .corporate-input { 
             background: #f1f5f9; 
             border: 1px solid var(--border-color); 
@@ -66,6 +81,7 @@
             background-color: #ffffff;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
+
         .btn-primary { 
             background-color: var(--primary); 
             color: #fff; 
@@ -78,7 +94,8 @@
             width: 100%; 
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
         .nav-link { 
             display: flex; 
             align-items: center; 
@@ -92,9 +109,26 @@
             transition: all 0.2s; 
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+
         .tree-node { border-right: 2px dashed #cbd5e1; margin-right: 1rem; padding-right: 1.25rem; position: relative; }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); overflow-y: auto; }
+        
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(4px);
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
             body * { visibility: hidden !important; }
@@ -111,7 +145,7 @@
                 padding: 10px !important;
                 display: block !important;
             }
-            .no-print, button, input, select { display: none !important; }
+            .no-print, button, input, select, #floatingTvTrigger { display: none !important; }
         }
     </style>
 </head>
@@ -149,7 +183,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
@@ -283,7 +317,7 @@
                     </div>
 
                     <div class="pt-2">
-                        <button onclick="window.saveDocument()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md">
+                        <button onclick="window.saveDocument()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md active:scale-95">
                             <i class="fa-solid fa-cloud-arrow-up text-base"></i> حفظ وربط السجل بمعرف الشركة سحابياً في الأرشيف وكشف العميل
                         </button>
                     </div>
@@ -334,13 +368,13 @@
             
             <!-- أزرار الإجراءات الإضافية -->
             <div class="no-print grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t">
-                <button onclick="window.downloadDocAsImage()" class="bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                <button onclick="window.downloadDocAsImage()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> حفظ كصورة كاملة (PNG)
                 </button>
-                <button onclick="window.downloadDocAsPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                <button onclick="window.downloadDocAsPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-file-pdf"></i> حفظ PDF (معيار A4)
                 </button>
-                <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                <button onclick="window.sendDocWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-brands fa-whatsapp text-sm"></i> إرسال عبر واتساب
                 </button>
             </div>
@@ -352,7 +386,7 @@
         </div>
     </div>
 
-    <!-- نصوص البرمجة العامة -->
+    <!-- دوال القائمة الجانبية وتجهيز الصفحة -->
     <script>
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
@@ -386,7 +420,7 @@
         });
     </script>
 
-    <!-- سكربت Firebase وإدارة الأرشيف -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والتفاعل اللحظي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -398,7 +432,8 @@
             onSnapshot,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -414,6 +449,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للعمل السريع والتخزين أوفلاين في التطبيق الأهلي Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -672,7 +716,6 @@
             });
         };
 
-        // دالة الطباعة وتصدير PDF بمعيار A4 تماماً مثل صفحة العملاء
         window.downloadDocAsPDF = function() {
             window.print();
         };
@@ -789,10 +832,10 @@
                                                 <span class="text-xs font-black text-emerald-600 mono-font bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200" dir="ltr">
                                                     +${Number(i.amount || 0).toLocaleString()} ج.م
                                                 </span>
-                                                <button onclick="window.previewDocument('${i.docId}', true)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                                                <button onclick="window.previewDocument('${i.docId}', true)" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
                                                     <i class="fa-solid fa-eye ml-1"></i> التفاصيل
                                                 </button>
-                                                <button onclick="window.deleteDocument('${i.docId}', true, event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف الدفعة">
+                                                <button onclick="window.deleteDocument('${i.docId}', true, event)" class="text-rose-500 hover:text-rose-700 active:scale-95 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف الدفعة">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </div>
@@ -820,10 +863,10 @@
                                             </div>
                                             <div class="flex items-center gap-2.5 shrink-0">
                                                 <span class="text-[10px] px-2.5 py-1 rounded-md font-bold ${tagColor}">${i.tag}</span>
-                                                <button onclick="window.previewDocument('${i.docId}', false)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                                                <button onclick="window.previewDocument('${i.docId}', false)" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
                                                     <i class="fa-solid fa-eye ml-1"></i> التفاصيل
                                                 </button>
-                                                <button onclick="window.deleteDocument('${i.docId}', false, event)" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف المستند">
+                                                <button onclick="window.deleteDocument('${i.docId}', false, event)" class="text-rose-500 hover:text-rose-700 active:scale-95 text-xs cursor-pointer p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف المستند">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </div>
@@ -836,6 +879,49 @@
                 `;
             }).join('');
         }
+    </script>
+    
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <i class="fa-solid fa-tv text-amber-300 text-sm"></i>
+            <span class="tracking-wide">بث EIDCO TV 4K</span>
+        </a>
+    </div>
+
+    <script>
+        (function setupDraggableFloatingBtn() {
+            const dragEl = document.getElementById('floatingTvTrigger');
+            if (!dragEl) return;
+            let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: false});
+            dragEl.addEventListener('touchend', dragEnd, {passive: false});
+            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+            }
+            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                    xOffset = currentX; yOffset = currentY;
+                    dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+            }
+        })();
     </script>
 </body>
 </html>

@@ -2,13 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات السحابية</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+    <link rel="manifest" href="manifest.json">
+
+    <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
@@ -28,13 +32,72 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: all 0.2s; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            transition: all 0.2s; 
+            border: none; 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); transition: all 0.2s; text-decoration: none; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            transition: all 0.2s; 
+            text-decoration: none; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         
         #leafletMap { 
@@ -47,15 +110,74 @@
             touch-action: pan-x pan-y pinch-zoom;
         }
 
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            font-size: 13px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            transition: all 0.2s;
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
         
-        .touch-control-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; max-width: 260px; transition: all 0.3s ease; }
+        .touch-control-panel { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            z-index: 1000; 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(8px); 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            padding: 12px; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            max-width: 260px; 
+            transition: all 0.3s ease; 
+        }
         .touch-control-panel.collapsed { width: 44px; height: 44px; overflow: hidden; padding: 8px; }
         .touch-control-panel.collapsed .panel-content { display: none; }
-        .touch-btn { background: #f1f5f9; color: #0f172a; border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; width: 100%; text-align: right; box-sizing: border-box; }
+        .touch-btn { 
+            background: #f1f5f9; 
+            color: #0f172a; 
+            border: 1px solid var(--border-color); 
+            border-radius: 10px; 
+            padding: 8px 12px; 
+            font-size: 11px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: all 0.2s; 
+            width: 100%; 
+            text-align: right; 
+            box-sizing: border-box; 
+        }
         .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
         
-        #geofenceAlertBanner { display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between; animation: pulseAlert 1.5s infinite; }
+        #geofenceAlertBanner { 
+            display: none; 
+            background: #fee2e2; 
+            border: 1px solid #ef4444; 
+            color: #991b1b; 
+            padding: 10px 16px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 12px; 
+            align-items: center; 
+            justify-content: space-between; 
+            animation: pulseAlert 1.5s infinite; 
+        }
         @keyframes pulseAlert { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
         .custom-map-icon {
@@ -76,6 +198,9 @@
         .leaflet-routing-container {
             display: none !important;
         }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 
     <script>
@@ -137,19 +262,22 @@
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -163,7 +291,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">نظام الملاحة وتتبع الأسطول والشحنات الحية <span class="hidden sm:inline text-slate-500 font-normal">(GPS - سحابياً بالكامل)</span></h1>
@@ -197,7 +325,10 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -243,12 +374,12 @@
                     </div>
                 </div>
 
-                <div class="corporate-card p-4 space-y-3 text-xs">
+                <div class="corporate-card p-4 space-y-3 text-xs bg-white">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-2 flex-1 min-w-[260px]">
                             <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث الجغرافي:</span>
                             <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو مدينة..." class="corporate-input flex-1" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
-                            <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer">بحث</button>
+                            <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer active:scale-95">بحث</button>
                         </div>
                         <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
                             <span class="font-bold text-slate-700 whitespace-nowrap">طبقات الخريطة:</span>
@@ -262,16 +393,16 @@
                         <span class="font-bold text-indigo-600 whitespace-nowrap"><i class="fa-solid fa-route ml-1"></i> ملاحة المسارات:</span>
                         <input type="text" id="routeStartInput" placeholder="نقطة البداية (أو اتركها فارغة لموقعك GPS)" class="corporate-input flex-1 min-w-[180px]">
                         <input type="text" id="routeEndInput" placeholder="نقطة الوصول (مثال: مدينة نصر، القاهرة)" class="corporate-input flex-1 min-w-[180px]">
-                        <button onclick="window.searchAndCalculateRoute()" class="btn-primary py-2 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                        <button onclick="window.searchAndCalculateRoute()" class="btn-primary py-2 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 cursor-pointer active:scale-95">
                             <i class="fa-solid fa-location-arrow ml-1"></i> رسم المسار
                         </button>
-                        <button id="clearRouteBtn" onclick="window.clearActiveRoute()" class="hidden px-3 py-2 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 border border-red-200 cursor-pointer">
+                        <button id="clearRouteBtn" onclick="window.clearActiveRoute()" class="hidden px-3 py-2 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 border border-red-200 cursor-pointer transition">
                             <i class="fa-solid fa-xmark ml-1"></i> إلغاء المسار
                         </button>
                     </div>
                 </div>
 
-                <div class="corporate-card p-4 relative overflow-hidden">
+                <div class="corporate-card p-4 relative overflow-hidden bg-white">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
                             <span class="text-[11px] font-bold text-indigo-600 font-mono">التدوير الحر وإعدادات العرض</span>
@@ -294,59 +425,59 @@
                     <div id="leafletMap"></div>
                 </div>
 
-                <div class="corporate-card p-5 space-y-4">
+                <div class="corporate-card p-5 space-y-4 bg-white">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
                             <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً</h3>
                             <p class="text-xs text-slate-500">سجل الشحنات الحالية ومواقع تسليمها لتظهر مباشرة على خريطة الملاحة.</p>
                         </div>
-                        <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
+                        <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right text-xs">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                    <th class="p-3 font-bold">كود الشحنة</th>
-                                    <th class="p-3 font-bold">المستلم / العنوان</th>
-                                    <th class="p-3 font-bold">حالة الشحنة</th>
-                                    <th class="p-3 font-bold">الإحداثيات (Lat, Lng)</th>
-                                    <th class="p-3 font-bold text-center">الإجراءات والتحكم</th>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                                    <th class="p-3">كود الشحنة</th>
+                                    <th class="p-3">المستلم / العنوان</th>
+                                    <th class="p-3">حالة الشحنة</th>
+                                    <th class="p-3">الإحداثيات (Lat, Lng)</th>
+                                    <th class="p-3 text-center">الإجراءات والتحكم</th>
                                 </tr>
                             </thead>
-                            <tbody id="shipmentsTableBody" class="divide-y divide-slate-100">
+                            <tbody id="shipmentsTableBody" class="divide-y divide-slate-100 bg-white">
                                 <tr>
-                                    <td colspan="5" class="p-4 text-center text-slate-400">جاري قراءة بيانات الشحنات من السحابة...</td>
+                                    <td colspan="5" class="p-4 text-center text-slate-400 font-bold">جاري قراءة بيانات الشحنات من السحابة...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <div class="corporate-card p-5 space-y-4">
+                <div class="corporate-card p-5 space-y-4 bg-white">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
                             <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
-                        <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
+                        <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer active:scale-95"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right text-xs">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                    <th class="p-3 font-bold">اسم المركبة / الكود</th>
-                                    <th class="p-3 font-bold">رقم اللوحة</th>
-                                    <th class="p-3 font-bold">خط العرض (Lat)</th>
-                                    <th class="p-3 font-bold">خط الطول (Lng)</th>
-                                    <th class="p-3 font-bold">آخر تحديث</th>
-                                    <th class="p-3 font-bold text-center">الإجراءات والتحكم</th>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                                    <th class="p-3">اسم المركبة / الكود</th>
+                                    <th class="p-3">رقم اللوحة</th>
+                                    <th class="p-3">خط العرض (Lat)</th>
+                                    <th class="p-3">خط الطول (Lng)</th>
+                                    <th class="p-3">آخر تحديث</th>
+                                    <th class="p-3 text-center">الإجراءات والتحكم</th>
                                 </tr>
                             </thead>
-                            <tbody id="fleetTableBody" class="divide-y divide-slate-100">
+                            <tbody id="fleetTableBody" class="divide-y divide-slate-100 bg-white">
                                 <tr>
-                                    <td colspan="6" class="p-4 text-center text-slate-400">جاري قراءة البيانات من السحابة...</td>
+                                    <td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري قراءة البيانات من السحابة...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -398,7 +529,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
                     <button type="button" onclick="window.closeVehicleModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
-                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer">حفظ المركبة سحابياً</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer active:scale-95">حفظ المركبة سحابياً</button>
                 </div>
             </form>
         </div>
@@ -454,7 +585,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
                     <button type="button" onclick="window.closeShipmentModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
-                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700">حفظ الشحنة سحابياً</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95">حفظ الشحنة سحابياً</button>
                 </div>
             </form>
         </div>
@@ -482,7 +613,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules ونظام التدوير الحر -->
+    <!-- Firebase SDK Modules وتفعيل التخزين المحلى للخرائط -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -496,7 +627,8 @@
             getDocs,
             updateDoc,
             query,
-            where
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -513,6 +645,15 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // تفعيل التخزين المحلّي لاسترجاع بيانات الأسطول أوفلاين
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
@@ -528,7 +669,6 @@
         let activeRoutingControl = null;
 
         try {
-            // تهيئة الخريطة بمحرك التدوير الحر الأصلي (تدوير بأصبعين في الموبايل بالكامل مع بقاء الكلمات عدلة)
             map = L.map('leafletMap', { 
                 zoomControl: false,
                 rotate: true,
@@ -586,7 +726,7 @@
                     .setContent(`
                         <div style="font-family:'Cairo',sans-serif; text-align:right; font-size:12px; padding:4px;">
                             <div style="font-weight:bold; color:#0f172a; margin-bottom:6px;">
-                                <i class="fa-solid fa-location-dot text-indigo-600"></i> الإحداثيات: <span class="mono-font text-indigo-700">${lat}, ${lng}</span>
+                                <i class="fa-solid fa-location-dot text-indigo-600"></i> الإحداثيات: <span class="mono-font text-indigo-700" dir="ltr">${lat}, ${lng}</span>
                             </div>
                             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
                                 <button onclick="window.openAddVehicleModal('${lat}', '${lng}')" style="background:#4f46e5; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11px;">
@@ -604,7 +744,6 @@
                     .openOn(map);
             });
 
-            // تحديث البوصلة تلقائياً عند الدوران الحر بالإصبع
             map.on('rotate', function() {
                 const bearing = map.getBearing ? map.getBearing() : 0;
                 const compass = document.getElementById('compassNeedle');
@@ -617,9 +756,6 @@
             console.warn("Leaflet Map setup warning:", e);
         }
 
-        // ==========================================
-        // 🔄 وظائف التدوير الأصلي بالبوصلة والأزرار
-        // ==========================================
         window.rotateMap = function(degDelta) {
             if (!map) return;
             let currentBearing = map.getBearing ? map.getBearing() : 0;
@@ -1004,7 +1140,7 @@
                 currentFleetDocs = [];
                 if (snapshot.empty) {
                     document.getElementById('mapFleetCount').innerText = '0 مركبة';
-                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد مركبات مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                    document.getElementById('fleetTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد مركبات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
@@ -1058,14 +1194,14 @@
                     tableHtml += `
                         <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
                             <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
-                            <td class="p-3 font-mono text-indigo-600 font-bold">${v.plate || 'غير متوفر'}</td>
-                            <td class="p-3 mono-font text-slate-600">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
-                            <td class="p-3 mono-font text-slate-600">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
+                            <td class="p-3 font-mono text-indigo-600 font-bold" dir="ltr">${v.plate || 'غير متوفر'}</td>
+                            <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
+                            <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
-                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                                <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer active:scale-95" title="حذف"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
@@ -1087,7 +1223,7 @@
                 currentShipmentDocs = [];
                 if (snapshot.empty) {
                     document.getElementById('mapShipmentsCount').innerText = '0 شحنة';
-                    document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شحنات مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                    document.getElementById('shipmentsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد شحنات مسجلة سحابياً لهذا الحساب.</td></tr>`;
                     return;
                 }
 
@@ -1143,13 +1279,13 @@
 
                     tableHtml += `
                         <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                            <td class="p-3 font-mono text-emerald-600 font-bold">${s.code || 'بدون كود'}</td>
+                            <td class="p-3 font-mono text-emerald-600 font-bold" dir="ltr">${s.code || 'بدون كود'}</td>
                             <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
                             <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
-                            <td class="p-3 mono-font text-slate-600">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
+                            <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
-                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer active:scale-95" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
@@ -1217,8 +1353,9 @@
             }
         };
     </script>
-        <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -1259,6 +1396,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

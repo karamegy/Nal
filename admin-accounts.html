@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // إدارة الحسابات والشركات المعزولة (المدير الرئيسي)</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -28,17 +32,90 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding: 2rem 1rem; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #0f172a; 
+            --card-bg: #1e293b; 
+            --border-color: #334155; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem calc(2rem + env(safe-area-inset-bottom, 0px)) 1rem;
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
-        .corporate-input { background: #0f172a; border: 1px solid var(--border-color); color: #fff; border-radius: 12px; padding: 10px 14px; transition: all 0.2s; }
-        .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); 
+        }
+
+        .corporate-input { 
+            background: #0f172a; 
+            border: 1px solid var(--border-color); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            transition: all 0.2s; 
+        }
+        .corporate-input:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            text-decoration: none; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.85); 
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            backdrop-filter: blur(4px); 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
         table th, table td { white-space: nowrap; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
@@ -58,13 +135,13 @@
             </div>
             
             <div class="flex items-center gap-2 flex-wrap">
-                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                     <i class="fa-solid fa-arrow-right"></i> الرئيسية
                 </a>
                 <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-user-plus"></i> إضافة حساب
                 </button>
-                <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 active:scale-95 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-rotate-right"></i> إعادة ضبط الافتراضي
                 </button>
             </div>
@@ -172,12 +249,12 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer">حفظ الحساب بالسحابة</button>
-                <button onclick="window.closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button onclick="window.closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 active:scale-95 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والتفاعل اللحظي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -188,7 +265,8 @@
             doc, 
             updateDoc,
             getDocs,
-            onSnapshot 
+            onSnapshot,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -204,6 +282,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للعمل السريع والتخزين المحلي في التطبيق الأهلي Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
+
         const accountsRef = collection(db, "accounts");
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
@@ -276,10 +364,10 @@
                         </td>
                         <td class="p-4 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
                         <td class="p-4 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
+                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'فك الحظر' : 'حظر'}
                             </button>
-                            <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف نهائي">
+                            <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف نهائي">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
@@ -307,10 +395,10 @@
                     <td class="p-4 text-slate-200 max-w-xs truncate" title="${comp.message}">${comp.message}</td>
                     <td class="p-4 mono-font text-slate-500 text-[11px]">${comp.date || '---'}</td>
                     <td class="p-4 text-center space-x-1 space-x-reverse">
-                        <button onclick="window.resolveComplaint('${comp.docId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer">
+                        <button onclick="window.resolveComplaint('${comp.docId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
                             <i class="fa-solid fa-check ml-1"></i> تم الحل
                         </button>
-                        <button onclick="window.deleteComplaint('${comp.docId}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer" title="حذف الشكوى">
+                        <button onclick="window.deleteComplaint('${comp.docId}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف الشكوى">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -399,7 +487,6 @@
             }
 
             try {
-                // إرسال companyId مع التحديث لتتوافق مع القاعدة الأمنية دون الحاجة لتعديل قواعد البيانات
                 await updateDoc(doc(db, "accounts", docId), { 
                     isBanned: !currentStatus,
                     companyId: FOUNDER_COMPANY
@@ -418,7 +505,6 @@
             }
 
             try {
-                // تحديث المعرف أولاً لضمان نجاح قاعدة الحذف
                 try {
                     await updateDoc(doc(db, "accounts", docId), { companyId: FOUNDER_COMPANY });
                 } catch(e) {}

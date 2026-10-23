@@ -2,13 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // الفواتير الفردية السحابية المعزولة</title>
     
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -28,44 +31,159 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 16px; 
+            width: 100%;
+            font-size: 13px;
+            box-sizing: border-box; 
+            transition: all 0.2s;
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; overflow-y: auto; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(8px);
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+            overflow-y: auto; 
+        }
         .custom-modal.active { display: flex !important; }
+
         table th, table td { white-space: nowrap; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
         @media print {
-            body * { visibility: hidden; }
-            #invoicePrintArea, #invoicePrintArea * { visibility: visible; }
-            #invoicePrintArea { position: absolute; inset: 0; width: 100%; margin: 0; padding: 20px; border: none; box-shadow: none; }
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            body * { visibility: hidden !important; }
+            #invoicePrintArea, #invoicePrintArea * { visibility: visible !important; }
+            #invoicePrintArea { 
+                position: absolute !important; 
+                inset: 0 !important; 
+                width: 100% !important; 
+                max-width: 100% !important;
+                margin: 0 !important; 
+                padding: 10mm !important; 
+                border: none !important; 
+                box-shadow: none !important; 
+                background: white !important;
+            }
+            .no-print, button { display: none !important; }
         }
     </style>
 </head>
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -80,17 +198,17 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الفواتير والمبيعات <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الفواتير والمبيعات الفردية <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
                         </div>
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
-                        <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-1.5 cursor-pointer py-2 px-3 sm:px-4">
+                        <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-1.5 cursor-pointer py-2 px-3 sm:px-4 active:scale-95">
                             <i class="fa-solid fa-plus"></i> إصدار فاتورة
                         </button>
                     </div>
@@ -116,7 +234,10 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -126,10 +247,10 @@
                 </div>
             </div>
 
-            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6">
-                <div class="corporate-card p-6 space-y-5">
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <div class="corporate-card p-6 space-y-5 bg-white">
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b border-slate-200">
                                     <th class="p-4">رقم الفاتورة</th>
@@ -143,7 +264,7 @@
                                 </tr>
                             </thead>
                             <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="8" class="p-4 text-center text-slate-400">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
+                                <tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -154,20 +275,27 @@
 
     <!-- نافذة إصدار فاتورة جديدة -->
     <div id="invoiceModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl">
-            <h3 class="font-bold text-sm text-slate-900">إصدار فاتورة مبيعات جديدة سحابياً</h3>
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-circle-plus text-indigo-600 ml-1"></i> إصدار فاتورة مبيعات جديدة سحابياً</h3>
+                <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
             <div class="space-y-3 text-xs">
-                <div><label class="block mb-1 text-slate-600">اختر العميل</label><select id="invClient" class="corporate-input w-full"></select></div>
-                <div><label class="block mb-1 text-slate-600">اختر الصنف</label><select id="invProduct" class="corporate-input w-full" onchange="window.updateInvPrice()"></select></div>
+                <div><label class="block mb-1 text-slate-600 font-bold">اختر العميل</label><select id="invClient" class="corporate-input w-full cursor-pointer"></select></div>
+                <div><label class="block mb-1 text-slate-600 font-bold">اختر الصنف</label><select id="invProduct" class="corporate-input w-full cursor-pointer" onchange="window.updateInvPrice()"></select></div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block mb-1 text-slate-600">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="window.calcInvTotal()"></div>
-                    <div><label class="block mb-1 text-slate-600">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100" readonly></div>
+                    <div><label class="block mb-1 text-slate-600 font-bold">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="window.calcInvTotal()"></div>
+                    <div><label class="block mb-1 text-slate-600 font-bold">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100 cursor-not-allowed" readonly></div>
                 </div>
                 <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex justify-between font-bold">
-                    <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono">0.00 ج.م</span>
+                    <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono" dir="ltr">0.00 ج.م</span>
                 </div>
             </div>
-            <div class="flex gap-2 pt-2"><button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ وتحديث المخزن سحابياً</button><button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button></div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer active:scale-95">حفظ وتحديث المخزن سحابياً</button>
+                <button onclick="window.closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إلغاء</button>
+            </div>
         </div>
     </div>
 
@@ -209,10 +337,10 @@
                 </div>
             </div>
             
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
-                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-image"></i> صورة</button>
-                <button type="button" onclick="closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button type="button" onclick="printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
+                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"><i class="fa-solid fa-image"></i> صورة</button>
+                <button type="button" onclick="closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
             </div>
         </div>
     </div>
@@ -241,7 +369,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules مع التخزين المحلي والمزامنة اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -254,7 +382,8 @@
             onSnapshot,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -270,6 +399,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للعمل السريع أوفلاين
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -335,18 +473,18 @@
             let tbody = document.getElementById('invoicesTableBody');
             
             if(!singleInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = singleInvoices.map(i => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${i.id || 'INV'}</td>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id || 'INV'}</td>
                     <td class="p-4 font-bold text-slate-900">${i.client || 'عميل'}</td>
                     <td class="p-4 text-slate-700">${i.productName || 'صنف'}</td>
-                    <td class="p-4 mono-font">${i.qty || 1}</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold">${Number(i.total || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font" dir="ltr">${i.qty || 1}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 text-center">
                         <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${i.etaSubmitted ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
                             ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
@@ -354,13 +492,13 @@
                     </td>
                     <td class="p-4 text-center space-x-1.5 space-x-reverse flex items-center justify-center">
                         ${!i.etaSubmitted ? `
-                            <button onclick="window.sendToETA('${i.id}', '${i.docId || ''}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200" title="إرسال لمصلحة الضرائب">
+                            <button onclick="window.sendToETA('${i.id}', '${i.docId || ''}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200 active:scale-95" title="إرسال لمصلحة الضرائب">
                                 <i class="fa-solid fa-file-arrow-up"></i>
                             </button>
                         ` : ''}
-                        <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
-                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
-                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200" title="حذف الفاتورة">
+                        <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200 active:scale-95" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200 active:scale-95" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200 active:scale-95" title="حذف الفاتورة">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -482,7 +620,7 @@
 
         window.downloadInvoiceImage = function() {
             let element = document.getElementById('invoicePrintArea');
-            html2canvas(element, { scale: 2 }).then(canvas => {
+            html2canvas(element, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
                 link.download = 'EIDCO-Invoice-' + Date.now() + '.png';
                 link.href = canvas.toDataURL('image/png');
@@ -542,7 +680,6 @@
             }
         };
 
-        // دالة إرسال الفاتورة الفردية المحصنة بالكامل ضد أخطاء الاتصال
         window.sendToETA = async function(invoiceId, docId) {
             let inv = state.invoices.find(i => i.id === invoiceId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
@@ -591,7 +728,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>

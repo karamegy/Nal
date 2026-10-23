@@ -15,15 +15,6 @@
     <script src="./eidco-core.js"></script>
 
     <script>
-        // إلغاء تفعيل أي Service Worker قديم لمنع التخزين المؤقت العنيف على الموبايل
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-            });
-        }
-
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -31,6 +22,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -64,13 +56,15 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         
         .corporate-card { 
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
             border-radius: 20px; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .corporate-input { 
@@ -81,6 +75,13 @@
             font-size: 13px; 
             width: 100%; 
             box-sizing: border-box; 
+            transition: all 0.2s;
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
         .btn-primary { 
@@ -93,7 +94,9 @@
             cursor: pointer; 
             transition: all 0.2s; 
             user-select: none; 
+            width: 100%;
         }
+        .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
 
         .nav-link { 
@@ -115,6 +118,7 @@
             position: fixed; 
             inset: 0; 
             background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(4px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
@@ -128,9 +132,28 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
-            body * { visibility: hidden; }
-            #invoicePrintArea, #invoicePrintArea * { visibility: visible; }
-            #invoicePrintArea { position: absolute; inset: 0; width: 100%; margin: 0; padding: 20px; border: none; box-shadow: none; }
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            body * { visibility: hidden !important; }
+            #invoicePrintArea, #invoicePrintArea * { visibility: visible !important; }
+            #invoicePrintArea { 
+                position: absolute !important; 
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                border: none !important; 
+                box-shadow: none !important; 
+                background: white !important;
+                display: block !important;
+            }
+            .no-print, button, input, select, #floatingTvTrigger { display: none !important; }
+            .print-header { display: flex !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
 </head>
@@ -142,13 +165,14 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -160,7 +184,7 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- الهيدر المحدث والمتجاوب مع الشاشات الصغيرة -->
+            <!-- الهيدر المحدث والمتجاوب -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
@@ -206,6 +230,7 @@
                         <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -230,7 +255,7 @@
                 </div>
 
                 <!-- نموذج إنشاء أو تعديل فاتورة مجمعة مع ماسح الباركود -->
-                <div class="corporate-card p-6 space-y-5 bg-white shadow-sm border border-indigo-100">
+                <div class="corporate-card p-6 space-y-5 bg-white shadow-sm border border-indigo-100 no-print">
                     <div class="flex justify-between items-center border-b pb-3">
                         <h2 id="formTitle" class="font-bold text-sm text-slate-900"><i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة</h2>
                         <div class="flex gap-2">
@@ -256,7 +281,7 @@
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">خصم إضافي (ج.م)</label>
-                            <input type="number" id="batchDiscount" class="corporate-input mono-font" value="0" min="0" oninput="calculateBatchTotals()">
+                            <input type="number" id="batchDiscount" class="corporate-input mono-font" value="0" min="0" oninput="calculateBatchTotals()" dir="ltr">
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">بحث سريع عن صنف للإضافة</label>
@@ -273,7 +298,7 @@
                         </div>
 
                         <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full text-right text-xs">
+                            <table class="w-full text-right text-xs whitespace-nowrap">
                                <thead>
                                     <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                         <th class="p-3">الصنف</th>
@@ -294,7 +319,7 @@
                             <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font" dir="ltr">0.00 ج.م</strong></span>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
-                            <button type="button" id="saveBtn" onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 flex-1 sm:flex-initial flex items-center justify-center gap-2 cursor-pointer">
+                            <button type="button" id="saveBtn" onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 flex-1 sm:flex-initial flex items-center justify-center gap-2 cursor-pointer active:scale-95">
                                 <i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة وتحديث المخزن سحابياً
                             </button>
                         </div>
@@ -302,10 +327,10 @@
                 </div>
 
                 <!-- سجل الفواتير المجمعة السابقة -->
-                <div class="corporate-card p-6 space-y-4">
+                <div class="corporate-card p-6 space-y-4 no-print">
                     <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> سجل الفواتير المجمعة السابقة (معزول سحابياً)</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">رقم الفاتورة</th>
@@ -327,11 +352,24 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة الفاتورة للتصدير PDF أو صورة -->
+    <!-- نافذة معاينة الفاتورة للتصدير A4 (PDF / صورة / مشاركة أندرويد) -->
     <div id="previewModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative">
-            <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4">
-                <div class="flex justify-between items-center border-b pb-3">
+        <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative box-border">
+            <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4 w-full box-border">
+                
+                <!-- هيدر معتمد خصيصاً للطباعة والـ A4 -->
+                <div class="hidden print-header flex justify-between items-center border-b pb-3">
+                    <div>
+                        <h2 class="font-black text-slate-900 text-base">EIDCO // فاتورة مبيعات مجمعة معتمدة</h2>
+                        <span id="printCompanyBadge" class="text-xs text-indigo-600 font-mono font-bold block mt-0.5"></span>
+                    </div>
+                    <div class="text-left text-xs text-slate-600 font-mono">
+                        <div>التاريخ: <span id="printDateTag" dir="ltr" class="font-bold"></span></div>
+                        <div>النوع: <span id="printPaymentTypeTag" class="font-bold text-indigo-600"></span></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b pb-3 no-print">
                     <div>
                         <h2 class="font-black text-slate-900 text-base">EIDCO // فواتير المبيعات المجمعة</h2>
                         <span id="prevInvId" class="text-xs text-indigo-600 font-mono font-bold" dir="ltr"></span>
@@ -341,12 +379,14 @@
                         <div class="mt-0.5">الدفع: <span id="prevPaymentType" class="font-bold text-indigo-600"></span></div>
                     </div>
                 </div>
+
                 <div>
-                    <span class="text-xs text-slate-500">العميل:</span>
+                    <span class="text-xs text-slate-500 block">العميل / الشركة:</span>
                     <h3 id="prevClient" class="font-bold text-sm text-slate-900"></h3>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right text-xs border rounded-lg">
+
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-right text-xs whitespace-nowrap">
                         <thead>
                             <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                 <th class="p-2.5">الصنف</th>
@@ -358,7 +398,8 @@
                         <tbody id="prevItemsBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-                <div class="space-y-1 pt-2 border-t text-xs">
+
+                <div class="space-y-1.5 pt-2 border-t text-xs">
                     <div class="flex justify-between text-slate-600">
                         <span>إجمالي الأصناف:</span>
                         <span id="prevSubtotal" class="mono-font font-bold" dir="ltr">0.00 ج.م</span>
@@ -367,17 +408,24 @@
                         <span>الخصم:</span>
                         <span id="prevDiscount" class="mono-font text-rose-600 font-bold" dir="ltr">0.00 ج.م</span>
                     </div>
-                    <div class="flex justify-between items-center pt-1 border-t font-bold text-sm text-slate-900">
+                    <div class="flex justify-between items-center pt-2 border-t font-bold text-sm text-slate-900">
                         <span>الإجمالي النهائي:</span>
                         <span id="prevTotal" class="text-indigo-600 mono-font text-base font-black" dir="ltr"></span>
                     </div>
                 </div>
             </div>
             
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
-                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"><i class="fa-solid fa-image"></i> صورة</button>
-                <button type="button" onclick="closePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 no-print">
+                <button type="button" onclick="printInvoicePDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
+                </button>
+                <button type="button" onclick="downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-image"></i> تصدير صورة
+                </button>
+                <button type="button" onclick="shareBatchInvoiceNative()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد / واتساب)
+                </button>
+                <button type="button" onclick="closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
             </div>
         </div>
     </div>
@@ -419,7 +467,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم Offline Persistence والمزامنة اللحظية -->
+    <!-- Firebase SDK Modules مع التخزين أوفلاين والمزامنة اللحظية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -477,6 +525,7 @@
         };
 
         let editingBatchId = null;
+        let activePreviewInv = null;
         let analyticsChartInstance = null;
         let html5QrCode = null;
 
@@ -558,7 +607,7 @@
                 <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="${qtyVal}" min="1" oninput="window.calculateBatchTotals()" dir="ltr"></td>
                 <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="${priceVal}" oninput="window.calculateBatchTotals()" dir="ltr"></td>
                 <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal" dir="ltr">0.00 ج.م</td>
-                <td class="p-3 text-center"><button type="button" onclick="document.getElementById('${rowId}').remove(); window.calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>
+                <td class="p-3 text-center"><button type="button" onclick="document.getElementById('${rowId}').remove(); window.calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer p-1"><i class="fa-solid fa-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
             if(!productCode) {
@@ -783,12 +832,12 @@
             let batchInvs = state.invoices.filter(i => i.isBatch);
 
             if(!batchInvs.length) {
-                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400 font-bold">لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = batchInvs.map(i => `
-                <tr class="hover:bg-slate-50">
+                <tr class="hover:bg-slate-50 transition">
                     <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id}</td>
                     <td class="p-4 font-bold text-slate-900">${i.client}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${i.paymentType === 'آجل' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}">${i.paymentType || 'نقدي'}</span></td>
@@ -803,14 +852,14 @@
                     </td>
                     <td class="p-4 text-center space-x-2 space-x-reverse">
                         ${!i.etaSubmitted ? `
-                            <button type="button" onclick="window.sendBatchToETA('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-indigo-50 rounded-lg border border-indigo-200" title="إرسال لمصلحة الضرائب">
+                            <button type="button" onclick="window.sendBatchToETA('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-indigo-50 rounded-lg border border-indigo-200 active:scale-95" title="إرسال لمصلحة الضرائب">
                                 <i class="fa-solid fa-file-arrow-up"></i>
                             </button>
                         ` : ''}
-                        <button type="button" onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
-                        <button type="button" onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
-                        <button type="button" onclick="window.editBatchInvoice('${i.id}')" class="text-amber-600 hover:text-amber-800 cursor-pointer text-xs font-bold" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button type="button" onclick="window.deleteBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold" title="حذف سحابي"><i class="fa-solid fa-trash"></i></button>
+                        <button type="button" onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1 active:scale-95" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
+                        <button type="button" onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1 active:scale-95" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button type="button" onclick="window.editBatchInvoice('${i.id}')" class="text-amber-600 hover:text-amber-800 cursor-pointer text-xs font-bold p-1 active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button type="button" onclick="window.deleteBatchInvoice('${i.id}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold p-1 active:scale-95" title="حذف سحابي"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -900,6 +949,12 @@
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
+            activePreviewInv = inv;
+
+            document.getElementById('printCompanyBadge').innerText = `معرف الشركة: ${currentCompanyId}`;
+            document.getElementById('printDateTag').innerText = inv.date || '---';
+            document.getElementById('printPaymentTypeTag').innerText = inv.paymentType || 'نقدي';
+
             document.getElementById('prevInvId').innerText = inv.id;
             document.getElementById('prevDate').innerText = inv.date || '---';
             document.getElementById('prevClient').innerText = inv.client;
@@ -911,9 +966,9 @@
             let itemsHtml = (inv.items || []).map(it => `
                 <tr>
                     <td class="p-2.5 font-bold text-slate-900">${it.prodName}</td>
-                    <td class="p-2.5 text-center"><span class="mono-font" dir="ltr">${it.qty}</span></td>
-                    <td class="p-2.5 text-center"><span class="mono-font" dir="ltr">${Number(it.unitPrice).toLocaleString()}</span></td>
-                    <td class="p-2.5 text-left"><span class="mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal).toLocaleString()}</span></td>
+                    <td class="p-2.5 text-center mono-font" dir="ltr">${it.qty}</td>
+                    <td class="p-2.5 text-center mono-font" dir="ltr">${Number(it.unitPrice).toLocaleString()}</td>
+                    <td class="p-2.5 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal).toLocaleString()}</td>
                 </tr>
             `).join('');
 
@@ -923,6 +978,7 @@
 
         window.closePreviewModal = function() {
             document.getElementById('previewModal').classList.remove('active');
+            activePreviewInv = null;
         };
 
         window.printInvoicePDF = function() {
@@ -931,17 +987,18 @@
 
         window.downloadInvoiceImage = function() {
             let element = document.getElementById('invoicePrintArea');
-            html2canvas(element, { scale: 2 }).then(canvas => {
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
-                link.download = 'EIDCO-Invoice-' + Date.now() + '.png';
+                link.download = `EIDCO-BatchInvoice-${activePreviewInv ? activePreviewInv.id : Date.now()}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
         };
 
-        window.sendInvoiceWhatsApp = function(id) {
-            let inv = state.invoices.find(i => i.id === id);
-            if(!inv) return;
+        // مشاركة التقرير والفاتورة المباشرة عبر متصفح أندرويد وتطبيق واتساب
+        window.shareBatchInvoiceNative = async function() {
+            if(!activePreviewInv) return;
+            let inv = activePreviewInv;
 
             let text = `📄 *EIDCO // فاتورة مبيعات مجمعة*\n`;
             text += `🆔 رقم الفاتورة: *${inv.id}*\n`;
@@ -961,8 +1018,27 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا! 🙏`;
 
-            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-            window.open(whatsappUrl, '_blank');
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `فاتورة ${inv.id}`,
+                        text: text
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
+        };
+
+        window.sendInvoiceWhatsApp = function(id) {
+            let inv = state.invoices.find(i => i.id === id);
+            if(!inv) return;
+            activePreviewInv = inv;
+            window.shareBatchInvoiceNative();
         };
 
         window.triggerCloudSync = function() {
@@ -1048,7 +1124,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>

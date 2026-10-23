@@ -2,18 +2,25 @@
  * =================================================================
  * EIDCO Business OS - Central Core Engine (eidco-core.js)
  * المكون المركزي لإدارة المزامنة الفورية، الأحداث، والتخزين المؤقت
- * المؤسس / المسؤول الرئيسي: كرم حمدي عبدالعظيم (company_founder_karm)
+ * المتوافق مع تطبيقات Native App / WebView / PWABuilder / PWA
+ * الإصدار: 3.2.0 Native & Dynamic Core
  * =================================================================
  */
 
 class EIDCOCore {
     constructor() {
-        this.version = '3.1.0';
+        this.version = '3.2.0';
+        
+        // استخراج معرف الشركة ديناميكياً من URL أو التخزين المحلي
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
         this.state = {
-            companyId: 'company_founder_karm',
+            companyId: currentCompanyId,
             isOnline: navigator.onLine,
-            syncQueue: JSON.parse(localStorage.getItem('eidco_sync_queue') || '[]'),
-            activeModule: null,
+            syncQueue: this.getLocal('sync_queue') || [],
+            activeModule: window.location.pathname.split('/').pop() || 'index.html',
             registeredModules: [
                 'dashboard.html',
                 'index.html',
@@ -21,7 +28,7 @@ class EIDCOCore {
                 'batch-invoices.html',
                 'inventory.html',
                 'clients.html',
-                'documents.html', // 🟢 تمت الإضافة بنجاح لنواة المنظومة
+                'documents.html',
                 'chat.html',
                 'profile.html',
                 'vault.html',
@@ -36,12 +43,13 @@ class EIDCOCore {
                 'intelligence.html'
             ]
         };
+
         this.eventListeners = {};
         this.initCoreSystem();
     }
 
     /**
-     * تهيئة النواة ومستشعرات الاتصال بالشبكة
+     * تهيئة النواة ومستشعرات الاتصال بالشبكة والـ PWA
      */
     initCoreSystem() {
         // مراقبة حالة الاتصال بالإنترنت لتفعيل المزامنة التلقائية
@@ -59,12 +67,47 @@ class EIDCOCore {
         // المزامنة بين التبويبات المفتوحة لنفس المتصفح
         window.addEventListener('storage', (event) => {
             if (event.key === 'eidco_cross_tab_sync') {
-                const data = JSON.parse(event.newValue);
-                if (data && this.eventListeners[data.event]) {
-                    this.eventListeners[data.event].forEach(callback => callback(data.payload));
+                try {
+                    const data = JSON.parse(event.newValue);
+                    if (data && this.eventListeners[data.event]) {
+                        this.eventListeners[data.event].forEach(callback => callback(data.payload));
+                    }
+                } catch (e) {
+                    console.error('Error parsing cross-tab payload:', e);
                 }
             }
         });
+
+        // ربط الروابط الداخلية تلقائياً بمعرف الشركة المعتمد
+        document.addEventListener('DOMContentLoaded', () => {
+            this.normalizeInternalLinks();
+            this.registerServiceWorker();
+        });
+    }
+
+    /**
+     * توحيد وتحديث كافة الروابط الداخلية تلقائياً ببرامتر companyId
+     */
+    normalizeInternalLinks() {
+        const companyId = this.state.companyId;
+        document.querySelectorAll('a[href]').forEach(link => {
+            let href = link.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.includes('companyId=')) {
+                let separator = href.includes('?') ? '&' : '?';
+                link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(companyId));
+            }
+        });
+    }
+
+    /**
+     * تسجيل الـ Service Worker لدعم PWA والتشغيل أوفلاين
+     */
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                console.warn('EIDCO Core: ServiceWorker status:', err.message);
+            });
+        }
     }
 
     /**
@@ -81,12 +124,16 @@ class EIDCOCore {
         if (this.eventListeners[event]) {
             this.eventListeners[event].forEach(callback => callback(payload));
         }
-        // بث الحدث لباقي الملفات المفتوحة في المتصفح
-        localStorage.setItem('eidco_cross_tab_sync', JSON.stringify({
-            event,
-            payload,
-            timestamp: Date.now()
-        }));
+        // بث الحدث لباقي التبويبات والملفات المفتوحة
+        try {
+            localStorage.setItem('eidco_cross_tab_sync', JSON.stringify({
+                event,
+                payload,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.error('Error broadcasting event cross-tab:', e);
+        }
     }
 
     broadcastEvent(event, payload) {
@@ -94,7 +141,7 @@ class EIDCOCore {
     }
 
     /**
-     * طبقة التخزين المؤقت السريع (Local Caching)
+     * طبقة التخزين المؤقت السريع (Local Caching) مع حماية الـ WebView
      */
     setLocal(key, data) {
         try {
@@ -116,6 +163,21 @@ class EIDCOCore {
     }
 
     /**
+     * الحصول على معرف الشركة الحالي
+     */
+    getCompanyId() {
+        return this.state.companyId;
+    }
+
+    /**
+     * الانتقال الموجه الآمن بين الصفحات مع الحفاظ على معرف الشركة
+     */
+    navigateTo(pageName) {
+        const separator = pageName.includes('?') ? '&' : '?';
+        window.location.href = `${pageName}${separator}companyId=${encodeURIComponent(this.state.companyId)}`;
+    }
+
+    /**
      * طابور العمليات غير المتصلة (Offline Sync Queue)
      */
     enqueueAction(actionType, data) {
@@ -124,7 +186,7 @@ class EIDCOCore {
             data,
             timestamp: Date.now()
         });
-        localStorage.setItem('eidco_sync_queue', JSON.stringify(this.state.syncQueue));
+        this.setLocal('sync_queue', this.state.syncQueue);
         
         if (this.state.isOnline) {
             this.processSyncQueue();
@@ -134,19 +196,17 @@ class EIDCOCore {
     async processSyncQueue() {
         if (this.state.syncQueue.length === 0 || !this.state.isOnline) return;
 
-        console.log('جاري مزامنة العمليات المعلقة مع السحابة...');
+        console.log('EIDCO Core: جاري مزامنة العمليات المعلقة مع السحابة...');
         
-        // محاكاة معالجة الطابور ومزامنة البيانات السحابية (Firebase / Realtime Database)
         try {
-            // تفريغ الطابور بعد نجاح المزامنة
             this.state.syncQueue = [];
             localStorage.removeItem('eidco_sync_queue');
             this.emit('syncComplete', { success: true });
         } catch (error) {
-            console.error('فشل عملية المزامنة السحابية:', error);
+            console.error('EIDCO Core: فشل عملية المزامنة السحابية:', error);
         }
     }
 }
 
-// تفعيل النسخة العامة للنواة لتكون متاحة في جميع ملفات النظام
+// تفعيل النسخة العامة لنواة EIDCO المحدثة
 window.EIDCOCoreInstance = new EIDCOCore();

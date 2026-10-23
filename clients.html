@@ -2,12 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // حسابات العملاء والمديونيات السحابية المعزولة</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -24,17 +28,105 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 13px; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; width: 100%; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            width: 100%; 
+            font-size: 13px; 
+            box-sizing: border-box; 
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            width: 100%; 
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; box-sizing: border-box; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.65); 
+            backdrop-filter: blur(4px);
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
             body * { visibility: hidden !important; }
@@ -77,7 +169,7 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
@@ -101,7 +193,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة حسابات العملاء والمديونيات <span class="hidden sm:inline text-slate-500 font-normal">(معزولة ومزامنة لحظياً)</span></h1>
@@ -111,7 +203,7 @@
                     <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
-                        <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2 !w-auto cursor-pointer py-2 px-3 sm:px-4">
+                        <button onclick="openClientModal()" class="btn-primary text-xs flex items-center gap-2 !w-auto cursor-pointer py-2 px-3 sm:px-4 active:scale-95">
                             <i class="fa-solid fa-user-plus"></i> إضافة عميل
                         </button>
                     </div>
@@ -152,7 +244,7 @@
                 <div class="corporate-card p-6 space-y-4">
                     <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة العملاء والشركات السحابية المعزولة</h3>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-4">اسم العميل / الشركة</th>
@@ -179,21 +271,21 @@
             <h3 class="font-bold text-sm text-slate-900">إضافة عميل / شركة جديدة سحابياً</h3>
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block mb-1 text-slate-600">اسم العميل / الشركة</label>
+                    <label class="block mb-1 text-slate-600 font-bold">اسم العميل / الشركة</label>
                     <input type="text" id="clientNameInput" class="corporate-input" placeholder="مثال: شركة النور للتجارة">
                 </div>
                 <div>
-                    <label class="block mb-1 text-slate-600">رقم الهاتف (للواتساب)</label>
+                    <label class="block mb-1 text-slate-600 font-bold">رقم الهاتف (للواتساب)</label>
                     <input type="text" id="clientPhoneInput" class="corporate-input mono-font" placeholder="010xxxxxxxx" dir="ltr">
                 </div>
                 <div>
-                    <label class="block mb-1 text-slate-600">العنوان</label>
+                    <label class="block mb-1 text-slate-600 font-bold">العنوان</label>
                     <input type="text" id="clientAddressInput" class="corporate-input" placeholder="المدينة - الشارع">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveClient()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ العميل بالسحابة</button>
-                <button onclick="closeClientModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+                <button onclick="saveClient()" class="btn-primary flex-1 py-2 text-xs cursor-pointer active:scale-95">حفظ العميل بالسحابة</button>
+                <button onclick="closeClientModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
             </div>
         </div>
     </div>
@@ -228,7 +320,7 @@
                 <div class="space-y-2">
                     <span class="text-xs font-bold text-slate-700">سجل الفواتير والمعاملات والتحويلات السحابية:</span>
                     <div class="max-h-48 overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                     <th class="p-2.5">الرقم / المعاملة</th>
@@ -244,7 +336,7 @@
                 </div>
             </div>
 
-            <!-- تسجيل طريقة الدفع والسداد (حصرياً في client_payments والخزنة دون ازدواجية بالشجرة) -->
+            <!-- تسجيل طريقة الدفع والسداد -->
             <div class="no-print p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 w-full box-border">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="number" id="paymentAmountInput" placeholder="أدخل مبلغ السداد (ج.م)" class="corporate-input w-full mono-font text-xs bg-white" dir="ltr">
@@ -255,20 +347,20 @@
                         <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
                     </select>
                 </div>
-                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
                     <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية وإضافتها للخزنة وكشف الحساب
                 </button>
             </div>
 
-            <!-- أزرار التصدير بما فيها حفظ كشف الحساب PDF بالنظام المباشر -->
+            <!-- أزرار التصدير -->
             <div class="no-print grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 w-full">
-                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="downloadStatementPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-file-pdf text-sm"></i> حفظ كـ PDF
                 </button>
-                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="downloadStatementImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-image"></i> تصدير صورة
                 </button>
-                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <button onclick="sendStatementWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
                     <i class="fa-brands fa-whatsapp text-sm"></i> واتساب
                 </button>
                 <button onclick="closeStatementModal()" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
@@ -294,7 +386,7 @@
                     <h4 id="prevSingleClient" class="font-black text-sm text-slate-900"></h4>
                 </div>
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
-                    <table class="w-full text-right text-xs">
+                    <table class="w-full text-right text-xs whitespace-nowrap">
                         <thead>
                             <tr class="bg-slate-100 text-slate-700 font-mono border-b">
                                 <th class="p-2.5">الصنف</th>
@@ -313,10 +405,10 @@
             </div>
             
             <div class="flex gap-2 pt-2 w-full no-print">
-                <button onclick="downloadSingleInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                <button onclick="downloadSingleInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-image"></i> تحميل الفاتورة صورة
                 </button>
-                <button onclick="closeInvoicePreviewModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق المعاينة</button>
+                <button onclick="closeInvoicePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق المعاينة</button>
             </div>
         </div>
     </div>
@@ -345,7 +437,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules بدون ازدواجية الحفظ -->
+    <!-- Firebase SDK Modules مع التخزين أوفلاين IndexedDB Persistence -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -358,7 +450,8 @@
             getDocs,
             onSnapshot,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -374,6 +467,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل IndexedDB للتخزين المحلي أوفلاين للعمل اللحظي في Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -435,7 +537,7 @@
         function renderClients() {
             let tbody = document.getElementById('clientsTableBody');
             if(!state.clients.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">لا توجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</td></tr>`;
                 return;
             }
 
@@ -449,17 +551,17 @@
                 let dueBalance = totalPurchases - totalPaid;
 
                 return `
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-slate-50 transition">
                         <td class="p-4 font-bold text-slate-900">${c.name}</td>
-                        <td class="p-4 mono-font text-slate-600" dir="ltr">${c.phone || '---'}</td>
+                        <td class="p-4 mono-font text-indigo-700 font-bold" dir="ltr">${c.phone || '---'}</td>
                         <td class="p-4 text-slate-600">${c.address || '---'}</td>
                         <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${totalPurchases.toLocaleString()} ج.م</td>
                         <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}" dir="ltr">${dueBalance.toLocaleString()} ج.م</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="window.openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <button onclick="window.openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                             </button>
-                            <button onclick="window.deleteClient('${c.docId}', '${c.name}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs" title="حذف العميل سحابياً"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="window.deleteClient('${c.docId}', '${c.name}')" class="text-rose-500 hover:text-rose-700 active:scale-95 cursor-pointer text-xs p-1" title="حذف العميل سحابياً"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
@@ -536,7 +638,7 @@
                         <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center no-print">
-                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs" title="معاينة الفاتورة">
+                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs flex items-center justify-center gap-1 mx-auto" title="معاينة الفاتورة">
                                 <i class="fa-solid fa-eye"></i> معاينة
                             </button>
                         </td>
@@ -564,7 +666,7 @@
             });
 
             if(!rowsHtml) {
-                rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد معاملات سحابية مسجلة بعد.</td></tr>`;
+                rowsHtml = `<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">لا توجد معاملات سحابية مسجلة بعد.</td></tr>`;
             }
 
             document.getElementById('stmtTransactionsBody').innerHTML = rowsHtml;
@@ -590,7 +692,6 @@
 
                 let payId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
-                // حفظ الدفعة في client_payments و transactions فقط دون تكرار في documents_tree
                 await addDoc(paymentsCollection, {
                     companyId: currentCompanyId,
                     id: payId,

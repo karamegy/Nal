@@ -2,13 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // الشات العام والاتصالات المعزولة</title>
     
+    <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-   <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+
+    <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
@@ -21,24 +25,128 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 16px; 
+            box-sizing: border-box; 
+        }
+        .corporate-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(6px); 
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+        }
         .custom-modal.active { display: flex !important; }
+
         .story-bubble { transition: all 0.2s ease; cursor: pointer; flex-shrink: 0; }
         .story-bubble:hover { transform: scale(1.05); }
+        .story-bubble:active { transform: scale(0.95); }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        #emojiPickerPopup { display: none; position: absolute; bottom: 70px; right: 15px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 10px 25px -3px rgba(0,0,0,0.15); padding: 12px; z-index: 50; width: 280px; max-height: 220px; overflow-y: auto; grid-template-columns: repeat(6, 1fr); gap: 8px; text-align: center; }
+        #emojiPickerPopup { 
+            display: none; 
+            position: absolute; 
+            bottom: 70px; 
+            right: 15px; 
+            background: #ffffff; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px -3px rgba(0,0,0,0.15); 
+            padding: 12px; 
+            z-index: 50; 
+            width: 280px; 
+            max-height: 220px; 
+            overflow-y: auto; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            text-align: center; 
+        }
         #emojiPickerPopup.active { display: grid; }
         .emoji-item { font-size: 1.35rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: transform 0.1s, background 0.1s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -49,7 +157,7 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
@@ -71,7 +179,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والاتصالات المباشرة <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن)</span></h1>
@@ -119,7 +227,7 @@
                 <div class="corporate-card p-4 bg-white space-y-3">
                     <div class="flex justify-between items-center border-b pb-2">
                         <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users ml-1 text-indigo-600"></i> حسابات الشركة والستوري (انقر لعرض الحالة لمدة 24 ساعة، أو عرض فواتير العميل)</h3>
-                        <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
+                        <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
                             <i class="fa-solid fa-plus text-[10px]"></i> نشر ستوري (صورة/فيديو/نص)
                         </button>
                     </div>
@@ -148,7 +256,7 @@
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md overflow-hidden" id="activeChatAvatarBox">
                                 <span id="activeChatAvatarText">ع</span>
-                                <img id="activeChatAvatarImg" src="" class="w-full h-full object-cover hidden">
+                                <img id="activeChatAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Avatar">
                             </div>
                             <div>
                                 <h4 class="font-bold text-xs sm:text-sm text-slate-900" id="activeChatName">الشات العام (البث المباشر للشركة)</h4>
@@ -165,7 +273,7 @@
 
                     <!-- صندوق الإدخال مع زر إيموجي التعبير -->
                     <div class="p-3 border-t border-slate-200 bg-white flex gap-2 items-center relative">
-                        <button onclick="toggleEmojiPicker()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0" title="إدراج إيموجي">
+                        <button onclick="toggleEmojiPicker()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0 active:scale-95" title="إدراج إيموجي">
                             <i class="fa-regular fa-face-laugh-squint text-lg text-amber-500"></i>
                         </button>
                         
@@ -235,7 +343,7 @@
                 </div>
             </div>
             <div class="pt-3 border-t flex justify-end gap-2">
-                <button onclick="closeAddStoryModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
+                <button onclick="closeAddStoryModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
                 <button onclick="submitNewStory()" class="btn-primary text-xs py-2 px-5 cursor-pointer">ضغط ونشر الحالة</button>
             </div>
         </div>
@@ -318,7 +426,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع التعديل لتصحيح خطأ العنصر المفقود -->
+    <!-- Firebase SDK Modules مع التخزين المحلي واللحظي Offline Persistence -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -328,7 +436,8 @@
             getDocs,
             onSnapshot, 
             query, 
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -345,11 +454,21 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // تفعيل IndexedDB للعمل السريع والتخزين أوفلاين في التطبيق الأهلي Native WebView
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Persistence browser not supported');
+            }
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
-        document.getElementById('companyBadgeDisplay').innerText = `معرف الشركة: ${currentCompanyId}`;
+        const badgeEl = document.getElementById('companyBadgeDisplay');
+        if (badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
         let currentChatMode = 'global'; 
         let messagesList = [];
@@ -389,7 +508,7 @@
 
                 const globalMsgQuery = query(collection(db, "messages"), where("companyId", "==", currentCompanyId), where("chatType", "==", "global"));
                 const msgSnap = await getDocs(globalMsgQuery);
-                let alreadyHasSummary = msgSnap.docs.some(d => d.data().text.includes('ملخص العمليات والفواتير'));
+                let alreadyHasSummary = msgSnap.docs.some(d => d.data().text && d.data().text.includes('ملخص العمليات والفواتير'));
 
                 if (!alreadyHasSummary) {
                     await addDoc(collection(db, "messages"), {
@@ -705,7 +824,8 @@
             }
         };
     </script>
-        <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+
+    <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">

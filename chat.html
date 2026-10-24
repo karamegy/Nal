@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // الشات العام والاتصالات المعزولة</title>
+    <title>EIDCO // الشات العام والاتصالات المعزولة Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -11,12 +11,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
+        }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
+            });
         }
     </script>
 
@@ -59,6 +66,7 @@
             border: 1px solid var(--border-color); 
             border-radius: 20px; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%;
         }
 
         .corporate-input { 
@@ -67,6 +75,7 @@
             border-radius: 12px; 
             padding: 10px 16px; 
             box-sizing: border-box; 
+            transition: all 0.2s;
         }
         .corporate-input:focus {
             outline: none;
@@ -84,6 +93,7 @@
             border: none; 
             cursor: pointer; 
             transition: all 0.2s;
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -148,6 +158,31 @@
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
+
+    <script>
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        // توست نيتف للتطبيق الأهلي
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Native Toast:", message);
+            }
+        }
+
+        // اهتزاز لمسي نيتف
+        function triggerHaptic(duration = 30) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -184,7 +219,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والاتصالات المباشرة <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الشات العام والاتصالات المباشرة <span class="hidden sm:inline text-slate-500 font-normal">(Native Android Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -231,7 +266,7 @@
                 <div class="corporate-card p-4 bg-white space-y-3">
                     <div class="flex justify-between items-center border-b pb-2">
                         <h3 class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users ml-1 text-indigo-600"></i> حسابات الشركة والستوري (انقر لعرض الحالة لمدة 24 ساعة، أو عرض فواتير العميل)</h3>
-                        <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer">
+                        <button onclick="openAddStoryModal()" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-[11px] font-bold px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1">
                             <i class="fa-solid fa-plus text-[10px]"></i> نشر ستوري (صورة/فيديو/نص)
                         </button>
                     </div>
@@ -269,13 +304,16 @@
                                 </span>
                             </div>
                         </div>
+                        <button onclick="shareActiveChatNative()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95" title="مشاركة المحادثة أندرويد">
+                            <i class="fa-solid fa-share-nodes"></i>
+                        </button>
                     </div>
                     
                     <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 text-xs" id="chatMessagesArea">
                         <div class="text-center text-slate-400 py-24">جاري مزامنة الرسائل...</div>
                     </div>
 
-                    <!-- صندوق الإدخال مع زر إيموجي التعبير -->
+                    <!-- صندوق الإدخال مع زر إيموجي التعبير والمرفقات -->
                     <div class="p-3 border-t border-slate-200 bg-white flex gap-2 items-center relative">
                         <button onclick="toggleEmojiPicker()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0 active:scale-95" title="إدراج إيموجي">
                             <i class="fa-regular fa-face-laugh-squint text-lg text-amber-500"></i>
@@ -303,7 +341,7 @@
                         </div>
 
                         <input type="text" id="chatMessageInput" onkeypress="if(event.key==='Enter')sendChatMessage()" placeholder="اكتب رسالتك المعزولة هنا..." class="corporate-input flex-1 text-xs py-2.5">
-                        <button onclick="sendChatMessage()" class="btn-primary px-5 text-xs py-2.5 flex items-center gap-1.5 shadow-sm cursor-pointer">
+                        <button onclick="sendChatMessage()" class="btn-primary px-5 text-xs py-2.5 flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95">
                             <span>إرسال</span> <i class="fa-solid fa-paper-plane text-[10px]"></i>
                         </button>
                     </div>
@@ -348,23 +386,20 @@
             </div>
             <div class="pt-3 border-t flex justify-end gap-2">
                 <button onclick="closeAddStoryModal()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
-                <button onclick="submitNewStory()" class="btn-primary text-xs py-2 px-5 cursor-pointer">ضغط ونشر الحالة</button>
+                <button onclick="submitNewStory()" class="btn-primary text-xs py-2 px-5 cursor-pointer active:scale-95">ضغط ونشر الحالة</button>
             </div>
         </div>
     </div>
 
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
-        }
-
         function toggleEmojiPicker() {
+            triggerHaptic(15);
             const picker = document.getElementById('emojiPickerPopup');
             picker.classList.toggle('active');
         }
 
         function insertEmoji(emoji) {
+            triggerHaptic(15);
             const input = document.getElementById('chatMessageInput');
             input.value += emoji;
             input.focus();
@@ -379,6 +414,7 @@
 
         let storyTimer = null;
         function openStoryViewer(author, storyData) {
+            triggerHaptic(30);
             document.getElementById('storyAuthorTitle').innerText = author;
             let mediaContainer = document.getElementById('storyMediaContainer');
             
@@ -408,12 +444,19 @@
         }
 
         function closeStoryViewer() {
+            triggerHaptic(20);
             if (storyTimer) clearTimeout(storyTimer);
             document.getElementById('storyViewerModal').classList.remove('active');
         }
 
-        function openAddStoryModal() { document.getElementById('addStoryModal').classList.add('active'); }
-        function closeAddStoryModal() { document.getElementById('addStoryModal').classList.remove('active'); }
+        function openAddStoryModal() { 
+            triggerHaptic(25);
+            document.getElementById('addStoryModal').classList.add('active'); 
+        }
+        function closeAddStoryModal() { 
+            triggerHaptic(20);
+            document.getElementById('addStoryModal').classList.remove('active'); 
+        }
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -503,12 +546,12 @@
             try {
                 const [invSnap, batchInvSnap, clientsSnap, productsSnap] = await Promise.all([
                     getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId))),
-                    getDocs(query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId))),
+                    getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId), where("isBatch", "==", true))),
                     getDocs(query(collection(db, "clients"), where("companyId", "==", currentCompanyId))),
                     getDocs(query(collection(db, "products"), where("companyId", "==", currentCompanyId)))
                 ]);
 
-                let totalIndInvoices = invSnap.size;
+                let totalIndInvoices = invSnap.docs.filter(d => !d.data().isBatch).length;
                 let totalBatchInvoices = batchInvSnap.size;
                 let totalClients = clientsSnap.size;
                 let totalProducts = productsSnap.size;
@@ -601,30 +644,15 @@
         }
 
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
+            triggerHaptic(25);
             window.selectChatMode(clientId, `فواتير العميل: ${clientName}`, clientName.charAt(0));
 
             try {
-                const [invSnap, batchSnap] = await Promise.all([
-                    getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId))),
-                    getDocs(query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId)))
-                ]);
+                const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId)));
+                let allInvoices = invoicesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                let allIndInvoices = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                let allBatchInvoices = batchSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                let indInvoices = allIndInvoices.filter(inv => {
-                    let cName = (inv.clientName || inv.client || inv.name || '').trim().toLowerCase();
-                    let cId = String(inv.clientId || '').trim();
-                    let targetName = clientName.trim().toLowerCase();
-                    return cName === targetName || cId === String(clientId);
-                });
-
-                let batchInvoices = allBatchInvoices.filter(b => {
-                    let bName = (b.clientName || b.client || b.name || '').trim().toLowerCase();
-                    let bId = String(b.clientId || '').trim();
-                    let targetName = clientName.trim().toLowerCase();
-                    return bName === targetName || bId === String(clientId);
-                });
+                let indInvoices = allInvoices.filter(inv => !inv.isBatch && ((inv.clientName || inv.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() || String(inv.clientId) === String(clientId)));
+                let batchInvoices = allInvoices.filter(inv => inv.isBatch && ((inv.clientName || inv.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() || String(inv.clientId) === String(clientId)));
 
                 let reportContent = `📄 *تقرير فواتير وحساب العميل: ${clientName}* 🏢\n`;
                 
@@ -671,15 +699,18 @@
         }
 
         window.checkAndOpenLatestStory = function(authorName) {
+            triggerHaptic(20);
             let storyData = activeStoriesMap[authorName];
             if (storyData) {
                 openStoryViewer(authorName, storyData);
             } else {
+                showNativeToast(`لا توجد حالات نشطة لـ (${authorName})`);
                 alert(`لا توجد حالات نشطة خلال الـ 24 ساعة الأخيرة لـ (${authorName}).`);
             }
         };
 
         window.selectChatMode = function(mode, name, initial) {
+            triggerHaptic(20);
             currentChatMode = mode;
             pendingClientReport = null;
             document.getElementById('activeChatName').innerText = name;
@@ -751,6 +782,7 @@
         }
 
         window.sendChatMessage = async function() {
+            triggerHaptic(30);
             let inputEl = document.getElementById('chatMessageInput');
             let txt = inputEl.value.trim();
             if (!txt) return;
@@ -769,8 +801,39 @@
                     createdAt: Date.now()
                 });
                 inputEl.value = '';
+                showNativeToast("✓ تم إرسال الرسالة");
             } catch (err) {
                 alert('خطأ أثناء إرسال الرسالة: ' + err.message);
+            }
+        };
+
+        window.shareActiveChatNative = async function() {
+            triggerHaptic(30);
+            let activeName = document.getElementById('activeChatName').innerText;
+            let exportText = `💬 *EIDCO // سِجل المحادثة: ${activeName}*\n\n`;
+
+            if(pendingClientReport) {
+                exportText += `${pendingClientReport}\n\n`;
+            }
+
+            messagesList.forEach((m, idx) => {
+                let senderTag = m.sender === 'me' ? 'أنا' : (m.sender === 'system' ? 'النظام' : 'الطرف الآخر');
+                exportText += `${idx+1}. [${senderTag} - ${m.time || ''}]: ${m.text}\n`;
+            });
+
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(exportText);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `محادثة EIDCO - ${activeName}`,
+                        text: exportText
+                    });
+                } catch (err) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
             }
         };
 
@@ -810,9 +873,8 @@
                     };
                     reader.readAsDataURL(file);
                 } else {
-                    // فحص حجم الفيديو لتفادي تجاوز حد الـ 1MB في Firestore
                     if (file.size > 900 * 1024) {
-                        alert('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة. يرجى اختيار فيديو أقصر أو بحجم أقل من 900KB.');
+                        alert('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة. يرجى اختيار فيديو بحجم أقل من 900KB.');
                         return reject(new Error('File size exceeds Firestore limit'));
                     }
                     let reader = new FileReader();
@@ -825,6 +887,7 @@
         }
 
         window.submitNewStory = async function() {
+            triggerHaptic(40);
             let txt = document.getElementById('newStoryTextInput').value.trim();
             let fileInput = document.getElementById('storyMediaInput');
             let adminName = adminAccountData.name || localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
@@ -834,6 +897,7 @@
                 let mediaPayload = txt;
 
                 if (fileInput.files && fileInput.files[0]) {
+                    showNativeToast("⏳ جاري ضغط الملف المرفق...");
                     let compressed = await compressMediaFile(fileInput.files[0]);
                     mediaPayload = compressed;
                 }
@@ -848,6 +912,7 @@
                 document.getElementById('newStoryTextInput').value = '';
                 document.getElementById('storyMediaInput').value = '';
                 closeAddStoryModal();
+                showNativeToast("✓ تم نشر الستوري بنجاح");
                 alert('✓ تم ضغط ونشر الستوري بنجاح.');
             } catch (e) {
                 if (e.message !== 'File size exceeds Firestore limit') {
@@ -899,6 +964,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

@@ -9,12 +9,56 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
     <script src="./eidco-core.js"></script>
 
     <script>
+        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي (Native Bridge Helper)
+        window.NativeBridge = {
+            vibrate: function(ms = 40) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                    window.AndroidBridge.vibrate(ms);
+                } else if (navigator.vibrate) {
+                    navigator.vibrate(ms);
+                }
+            },
+            showToast: function(msg) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                    window.AndroidBridge.showToast(msg);
+                } else {
+                    console.log("[Toast]: " + msg);
+                }
+            },
+            keepScreenOn: function(enable = true) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.keepScreenOn === 'function') {
+                    window.AndroidBridge.keepScreenOn(enable);
+                }
+            },
+            shareText: function(text) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                    window.AndroidBridge.shareText(text);
+                } else if (navigator.share) {
+                    navigator.share({ text: text }).catch(() => {});
+                } else {
+                    alert(text);
+                }
+            },
+            downloadFile: function(filename, base64Data) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                    window.AndroidBridge.downloadFile(filename, base64Data);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        };
+
         // التثبيت التلقائي لمعرف الشركة وصلاحيات المؤسس كرم حمدي عبدالعظيم
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
@@ -25,6 +69,11 @@
         if (!localStorage.getItem('eidco_v14_admin')) {
             localStorage.setItem('eidco_v14_admin', FOUNDER_NAME);
         }
+
+        // إبقاء الشاشة مضاءة أثناء مراقبة اللوحة
+        window.addEventListener('DOMContentLoaded', () => {
+            window.NativeBridge.keepScreenOn(true);
+        });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,25 +84,34 @@
         :root { 
             --primary: #4f46e5; 
             --primary-hover: #4338ca; 
-            --bg-main: #0f172a; 
-            --card-bg: #1e293b; 
-            --border-color: #334155; 
+            --bg-main: #020617; 
+            --card-bg: #0f172a; 
+            --border-color: #1e293b; 
             --text-main: #f8fafc; 
             --text-muted: #94a3b8; 
         }
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
-        body { 
+        /* السماح بالتفاعل الكامل مع حقول الكتابة */
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        html, body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100vh;
+            min-height: 100dvh; 
             margin: 0; 
-            padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem calc(2rem + env(safe-area-inset-bottom, 0px)) 1rem;
+            padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0.75rem;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -64,16 +122,17 @@
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
             border-radius: 20px; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); 
         }
 
         .corporate-input { 
-            background: #0f172a; 
-            border: 1px solid var(--border-color); 
+            background: #020617; 
+            border: 1px solid #334155; 
             color: #fff; 
             border-radius: 12px; 
             padding: 10px 14px; 
             transition: all 0.2s; 
+            font-size: 14px; /* يمنع التكبير التلقائي في آيفون وأندرويد عند الكتابة */
         }
         .corporate-input:focus { 
             outline: none; 
@@ -96,21 +155,33 @@
             justify-content: center; 
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
+        /* إصلاح النافذة المنبثقة للتوافق مع لوحة المفاتيح */
         .custom-modal { 
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.85); 
+            background: rgba(2, 6, 23, 0.9); 
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
-            backdrop-filter: blur(4px); 
-            box-sizing: border-box; 
+            backdrop-filter: blur(8px); 
+            box-sizing: border-box;
+            overflow-y: auto; /* يسمح بالتمرير عند فتح الكيبورد */
+            -webkit-overflow-scrolling: touch;
         }
         .custom-modal.active { display: flex !important; }
+
+        /* تقييد ارتفاع الكارت داخل المودال لمنع اختفائه خلف الكيبورد */
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         table th, table td { white-space: nowrap; }
 
@@ -123,67 +194,86 @@
     <div class="max-w-6xl mx-auto space-y-6">
         
         <!-- رأس الصفحة والإجراءات الإدارية الأساسية -->
-        <div class="corporate-card p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/30">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <i class="fa-solid fa-shield-halved text-xl text-white"></i>
+        <div class="corporate-card p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-950 border-indigo-500/40">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+                    <i class="fa-solid fa-shield-halved text-2xl text-white"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-black text-white">لوحة تحكم المدير المؤسس // المراقبة المركزية للشركات</h1>
-                    <p class="text-[10px] text-indigo-300 font-mono">الرقابة والسيطرة الآمنة على كافة الحسابات المسجلة بقاعدة البيانات</p>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base sm:text-lg font-black text-white">لوحة تحكم المدير المؤسس</h1>
+                        <span id="nativeStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <i class="fa-solid fa-mobile-screen ml-1"></i> Native Active
+                        </span>
+                    </div>
+                    <p class="text-[10px] sm:text-xs text-indigo-300 font-mono">الرقابة والسيطرة الآمنة على كافة الحسابات المسجلة بقاعدة البيانات</p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="index.html" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
+                <a href="index.html" onclick="window.NativeBridge.vibrate(20)" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                     <i class="fa-solid fa-arrow-right"></i> الرئيسية
                 </a>
+                <button onclick="window.exportAccountsData()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-cyan-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-file-export"></i> تصدير البيانات
+                </button>
                 <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-user-plus"></i> إضافة حساب
                 </button>
                 <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 active:scale-95 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط الافتراضي
+                    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
                 </button>
             </div>
         </div>
 
         <!-- عدادات وإحصائيات سريعة -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="corporate-card p-5 border-l-4 border-l-indigo-500">
-                <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات المسجلة</span>
-                <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-indigo-500 flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات</span>
+                    <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
+                </div>
+                <i class="fa-solid fa-users text-2xl text-indigo-500/30"></i>
             </div>
-            <div class="corporate-card p-5 border-l-4 border-l-emerald-500">
-                <span class="text-xs text-slate-400 block mb-1">حسابات نشطة ومصرحة</span>
-                <span class="text-2xl font-black text-emerald-400 mono-font" id="activeAccountsCount">0</span>
+            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-emerald-500 flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">حسابات نشطة ومصرحة</span>
+                    <span class="text-2xl font-black text-emerald-400 mono-font" id="activeAccountsCount">0</span>
+                </div>
+                <i class="fa-solid fa-user-check text-2xl text-emerald-500/30"></i>
             </div>
-            <div class="corporate-card p-5 border-l-4 border-l-cyan-500">
-                <span class="text-xs text-slate-400 block mb-1">المدير الحالي للجلسة</span>
-                <span class="text-base font-black text-cyan-400" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
+            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-cyan-500 flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">المدير الحالي للجلسة</span>
+                    <span class="text-sm font-black text-cyan-400 block truncate max-w-[180px]" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
+                </div>
+                <i class="fa-solid fa-user-gear text-2xl text-cyan-500/30"></i>
             </div>
         </div>
 
         <!-- جدول الحسابات السحابية بالكامل -->
-        <div class="corporate-card p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-users-gear ml-2 text-indigo-400"></i> قائمة كافة الحسابات والشركات في مجموعة accounts (Firebase)</h3>
-                <span class="text-xs text-slate-400 mono-font" id="syncStatusText">جاري جلب كافة السجلات لحظياً...</span>
+        <div class="corporate-card p-4 sm:p-6 space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-indigo-400"></i> قائمة الحسابات والشركات (Firebase)
+                </h3>
+                <span class="text-[11px] text-slate-400 mono-font" id="syncStatusText">جاري جلب السجلات...</span>
             </div>
 
             <div class="overflow-x-auto rounded-xl border border-slate-800">
                 <table class="w-full text-right text-xs">
                     <thead>
-                        <tr class="bg-slate-900 text-slate-300 font-mono border-b border-slate-800">
-                            <th class="p-4">اسم المستخدم / الجهة</th>
-                            <th class="p-4">الصلاحية / الدور</th>
-                            <th class="p-4">معرف الشركة (Company ID)</th>
-                            <th class="p-4">البريد الإلكتروني / الهاتف</th>
-                            <th class="p-4 text-center">حالة الحظر</th>
-                            <th class="p-4">تاريخ الإنشاء</th>
-                            <th class="p-4 text-center">إجراءات المراقبة والسيطرة</th>
+                        <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
+                            <th class="p-3.5">اسم المستخدم / الجهة</th>
+                            <th class="p-3.5">الصلاحية / الدور</th>
+                            <th class="p-3.5">معرف الشركة (Company ID)</th>
+                            <th class="p-3.5">البريد الإلكتروني / الهاتف</th>
+                            <th class="p-3.5 text-center">حالة الحظر</th>
+                            <th class="p-3.5">تاريخ الإنشاء</th>
+                            <th class="p-3.5 text-center">الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
+                    <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
                         <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
                     </tbody>
                 </table>
@@ -191,24 +281,26 @@
         </div>
 
         <!-- جدول الشكاوى والبلاغات الواردة -->
-        <div class="corporate-card p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-triangle-exclamation ml-2 text-amber-400"></i> قائمة الشكاوى والبلاغات الواردة (مجموعة messages)</h3>
-                <span class="text-xs text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
+        <div class="corporate-card p-4 sm:p-6 space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> الشكاوى والبلاغات الواردة (messages)
+                </h3>
+                <span class="text-[11px] text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
             </div>
 
             <div class="overflow-x-auto rounded-xl border border-slate-800">
                 <table class="w-full text-right text-xs">
                     <thead>
-                        <tr class="bg-slate-900 text-slate-300 font-mono border-b border-slate-800">
-                            <th class="p-4">اسم المُشتكي / الجهة</th>
-                            <th class="p-4">وسيلة التواصل</th>
-                            <th class="p-4">نص الشكوى / البلاغ</th>
-                            <th class="p-4">تاريخ الإرسال</th>
-                            <th class="p-4 text-center">إجراءات الإدارة والقرار</th>
+                        <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
+                            <th class="p-3.5">اسم المُشتكي</th>
+                            <th class="p-3.5">وسيلة التواصل</th>
+                            <th class="p-3.5">نص الشكوى / البلاغ</th>
+                            <th class="p-3.5">تاريخ الإرسال</th>
+                            <th class="p-3.5 text-center">القرار والإجراء</th>
                         </tr>
                     </thead>
-                    <tbody id="adminComplaintsTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
+                    <tbody id="adminComplaintsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
                         <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل الشكاوى...</td></tr>
                     </tbody>
                 </table>
@@ -217,12 +309,16 @@
 
     </div>
 
-    <!-- نافذة إضافة حساب جديد من لوحة المدير -->
+    <!-- نافذة إضافة حساب جديد -->
     <div id="adminAddModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 border border-slate-700 shadow-2xl">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 border border-slate-700 shadow-2xl custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-user-plus ml-2 text-indigo-400"></i> إضافة حساب ومعرف شركة جديد</h3>
-                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-indigo-400"></i> إضافة حساب ومعرف شركة جديد
+                </h3>
+                <button onclick="window.closeAddAccountModal()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
@@ -248,13 +344,35 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer">حفظ الحساب بالسحابة</button>
+                <button onclick="window.saveAdminAccount()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer">حفظ بالسحابة</button>
                 <button onclick="window.closeAddAccountModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 active:scale-95 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم Offline Persistence والتفاعل اللحظي -->
+    <!-- معالج محاذاة الكيبورد التلقائي (Keyboard Viewport Handler) -->
+    <script>
+        // إظهار حقل الإدخال فوق لوحة المفاتيح فور التركيز عليه
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        // التعامل الديناميكي مع تغير حجم الشاشة عند ظهور الكيبورد في أندرويد WebView
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const activeModal = document.querySelector('.custom-modal.active');
+                if (activeModal) {
+                    activeModal.style.height = `${window.visualViewport.height}px`;
+                }
+            });
+        }
+    </script>
+
+    <!-- Firebase SDK Modules مع التخزين المحلي والجسر الأهلي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -283,13 +401,15 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل IndexedDB للعمل السريع والتخزين المحلي في التطبيق الأهلي Native WebView
+        // التحقق من وجود الجسر البرمجي للأندرويد
+        if (window.AndroidBridge) {
+            const badge = document.getElementById('nativeStatusBadge');
+            if (badge) badge.classList.remove('hidden');
+        }
+
+        // تفعيل التخزين المحلي IndexedDB للعمل السريع في WebView
         enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
+            console.warn('Persistence check:', err.code);
         });
 
         const accountsRef = collection(db, "accounts");
@@ -297,7 +417,7 @@
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
 
-        let accountsList = [];
+        let globalAccountsList = [];
         let isInitialized = false;
 
         onAuthStateChanged(auth, (user) => {
@@ -309,27 +429,26 @@
             } else {
                 signInAnonymously(auth).catch(err => {
                     document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة سحابية";
-                    console.error("Auth error:", err);
                 });
             }
         });
 
         function startListeners() {
             onSnapshot(accountsRef, (snapshot) => {
-                accountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderAccountsTable(accountsList);
-                document.getElementById('syncStatusText').innerText = "✓ تم جلب وعرض كافة الحسابات سحابياً بنجاح";
+                globalAccountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderAccountsTable(globalAccountsList);
+                document.getElementById('syncStatusText').innerText = "✓ متزامن سحابياً";
             }, (err) => {
-                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في مزامنة السحابة: " + err.message;
+                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في المزامنة";
             });
 
             onSnapshot(messagesRef, (snapshot) => {
                 let allMessages = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 let complaintsList = allMessages.filter(m => m.type === 'شكوى نظام' || m.message);
                 renderComplaintsTable(complaintsList);
-                document.getElementById('complaintsSyncStatus').innerText = `✓ تم تحديث الشكاوى (${complaintsList.length})`;
+                document.getElementById('complaintsSyncStatus').innerText = `✓ المزامنة (${complaintsList.length})`;
             }, (err) => {
-                document.getElementById('complaintsSyncStatus').innerText = "⚠️ خطأ في مزامنة الشكاوى";
+                document.getElementById('complaintsSyncStatus').innerText = "⚠️ خطأ الشكاوى";
             });
         }
 
@@ -339,7 +458,7 @@
 
             let tbody = document.getElementById('adminAccountsTableBody');
             if(!data.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة في مجموعة accounts حالياً.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة حالياً.</td></tr>`;
                 return;
             }
 
@@ -347,24 +466,24 @@
                 let isBanned = acc.isBanned === true;
                 let compId = acc.companyId || FOUNDER_COMPANY;
                 return `
-                    <tr class="hover:bg-slate-800/40 transition ${isBanned ? 'bg-rose-950/20' : ''}">
-                        <td class="p-4 font-bold text-white flex items-center gap-2">
+                    <tr class="hover:bg-slate-900/60 transition ${isBanned ? 'bg-rose-950/20' : ''}">
+                        <td class="p-3.5 font-bold text-white flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30 overflow-hidden shrink-0">
                                 ${acc.avatar ? `<img src="${acc.avatar}" class="w-full h-full object-cover">` : (acc.name ? acc.name.charAt(0) : 'م')}
                             </div>
-                            <span class="truncate max-w-[150px]">${acc.name || 'بدون اسم'}</span>
+                            <span class="truncate max-w-[140px]">${acc.name || 'بدون اسم'}</span>
                         </td>
-                        <td class="p-4 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
-                        <td class="p-4 mono-font text-indigo-400 font-bold">${compId}</td>
-                        <td class="p-4 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي'}</td>
-                        <td class="p-4 text-center">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isBanned ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                        <td class="p-3.5 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
+                        <td class="p-3.5 mono-font text-indigo-400 font-bold">${compId}</td>
+                        <td class="p-3.5 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي'}</td>
+                        <td class="p-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isBanned ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
                                 ${isBanned ? 'محظور ⛔' : 'نشط ✓'}
                             </span>
                         </td>
-                        <td class="p-4 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
-                        <td class="p-4 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
+                        <td class="p-3.5 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
+                        <td class="p-3.5 text-center space-x-1 space-x-reverse">
+                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'فك الحظر' : 'حظر'}
                             </button>
                             <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف نهائي">
@@ -379,22 +498,22 @@
         function renderComplaintsTable(data) {
             let tbody = document.getElementById('adminComplaintsTableBody');
             if(!data.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد أي شكاوى أو بلاغات جديدة حالياً.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شكاوى أو بلاغات مسجلة.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = data.map(comp => `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="p-4 font-bold text-white flex items-center gap-2">
+                <tr class="hover:bg-slate-900/60 transition">
+                    <td class="p-3.5 font-bold text-white flex items-center gap-2">
                         <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30 shrink-0">
                             ${comp.senderName ? comp.senderName.charAt(0) : 'ش'}
                         </div>
-                        <span class="truncate max-w-[150px]">${comp.senderName || 'جهة غير معروفة'}</span>
+                        <span class="truncate max-w-[140px]">${comp.senderName || 'جهة غير معروفة'}</span>
                     </td>
-                    <td class="p-4 mono-font text-indigo-300 text-[11px]">${comp.contactInfo || '---'}</td>
-                    <td class="p-4 text-slate-200 max-w-xs truncate" title="${comp.message}">${comp.message}</td>
-                    <td class="p-4 mono-font text-slate-500 text-[11px]">${comp.date || '---'}</td>
-                    <td class="p-4 text-center space-x-1 space-x-reverse">
+                    <td class="p-3.5 mono-font text-indigo-300 text-[11px]">${comp.contactInfo || '---'}</td>
+                    <td class="p-3.5 text-slate-200 max-w-xs truncate" title="${comp.message}">${comp.message}</td>
+                    <td class="p-3.5 mono-font text-slate-500 text-[11px]">${comp.date || '---'}</td>
+                    <td class="p-3.5 text-center space-x-1 space-x-reverse">
                         <button onclick="window.resolveComplaint('${comp.docId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
                             <i class="fa-solid fa-check ml-1"></i> تم الحل
                         </button>
@@ -407,23 +526,36 @@
         }
 
         window.openAddAccountModal = function() {
+            window.NativeBridge.vibrate(30);
             document.getElementById('modalAccountName').value = '';
             document.getElementById('modalAccountCompanyId').value = FOUNDER_COMPANY;
             document.getElementById('modalAccountPin').value = '1234';
-            document.getElementById('adminAddModal').classList.add('active');
+            
+            const modal = document.getElementById('adminAddModal');
+            modal.classList.add('active');
+            
+            // ضبط ارتفاع المودال وفقاً للرؤية الفعلية للشاشة
+            if (window.visualViewport) {
+                modal.style.height = `${window.visualViewport.height}px`;
+            }
         };
 
         window.closeAddAccountModal = function() {
+            window.NativeBridge.vibrate(20);
             document.getElementById('adminAddModal').classList.remove('active');
         };
 
         window.saveAdminAccount = async function() {
+            window.NativeBridge.vibrate(40);
             let name = document.getElementById('modalAccountName').value.trim();
             let companyIdInput = document.getElementById('modalAccountCompanyId').value.trim() || FOUNDER_COMPANY;
             let pin = document.getElementById('modalAccountPin').value.trim() || "1234";
             let role = document.getElementById('modalAccountRole').value;
 
-            if(!name) return alert('الرجاء إدخال اسم المسؤول.');
+            if(!name) {
+                window.NativeBridge.showToast('الرجاء إدخال اسم المسؤول');
+                return;
+            }
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -441,15 +573,30 @@
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 });
-                alert(`✓ تم إنشاء الحساب ومعرف الشركة (${companyIdInput}) بالسحابة بنجاح!`);
+                
+                window.NativeBridge.vibrate(80);
+                window.NativeBridge.showToast(`تم حفظ الحساب (${name}) بالسحابة بنجاح`);
                 window.closeAddAccountModal();
             } catch(err) {
-                alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحفظ: ' + err.message);
             }
         };
 
+        window.exportAccountsData = function() {
+            window.NativeBridge.vibrate(30);
+            if (!globalAccountsList.length) {
+                window.NativeBridge.showToast('لا توجد بيانات لتصديرها');
+                return;
+            }
+            const jsonStr = JSON.stringify(globalAccountsList, null, 2);
+            const fileName = `EIDCO_Accounts_${new Date().toISOString().split('T')[0]}.json`;
+            window.NativeBridge.downloadFile(fileName, jsonStr);
+            window.NativeBridge.showToast('تم تصدير سجل الحسابات بنجاح');
+        };
+
         window.resetDefaultAccounts = async function() {
-            if (!confirm('هل تريد إعادة تعيين الحسابات وحذف كل الحسابات الأخرى من السحابة والابقاء على حساب المدير فقط؟')) return;
+            window.NativeBridge.vibrate(50);
+            if (!confirm('هل تريد إعادة تعيين الحسابات وحذف الحسابات الأخرى مع الإبقاء على المدير فقط؟')) return;
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -458,10 +605,7 @@
             try {
                 const querySnapshot = await getDocs(accountsRef);
                 for (let d of querySnapshot.docs) {
-                    try {
-                        await updateDoc(doc(db, "accounts", d.id), { companyId: FOUNDER_COMPANY });
-                    } catch(e) {}
-                    await deleteDoc(doc(db, "accounts", d.id));
+                    await deleteDoc(doc(db, "accounts", d.id)).catch(() => {});
                 }
                 await setDoc(doc(db, "accounts", FOUNDER_COMPANY), {
                     name: FOUNDER_NAME,
@@ -472,14 +616,17 @@
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
-                alert('تمت إعادة ضبط الحسابات سحابياً بنجاح.');
+
+                window.NativeBridge.vibrate(100);
+                window.NativeBridge.showToast('تمت إعادة ضبط الحسابات بالسحابة بنجاح');
             } catch (err) {
-                alert('حدث خطأ أثناء إعادة الضبط: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
         };
 
         window.toggleAccountBan = async function(docId, currentStatus) {
-            let actionName = currentStatus ? 'إلغاء الحظر عن' : 'حظر';
+            window.NativeBridge.vibrate(40);
+            let actionName = currentStatus ? 'فك حظر' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
 
             if (!auth.currentUser) {
@@ -491,31 +638,32 @@
                     isBanned: !currentStatus,
                     companyId: FOUNDER_COMPANY
                 });
-                alert(`✓ تم تنفيذ إجراء ${actionName} بنجاح.`);
+                window.NativeBridge.vibrate(60);
+                window.NativeBridge.showToast(`تم ${actionName} الحساب بنجاح`);
             } catch(err) {
-                alert('خطأ أثناء تحديث حالة الحظر: ' + err.message);
+                window.NativeBridge.showToast('خطأ: ' + err.message);
             }
         };
 
         window.deleteCloudAccount = async function(docId, name) {
-            if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
+            window.NativeBridge.vibrate(50);
+            if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً؟`)) return;
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
-                try {
-                    await updateDoc(doc(db, "accounts", docId), { companyId: FOUNDER_COMPANY });
-                } catch(e) {}
                 await deleteDoc(doc(db, "accounts", docId));
-                alert('✓ تم حذف الحساب من السحابة بنجاح.');
+                window.NativeBridge.vibrate(70);
+                window.NativeBridge.showToast('تم حذف الحساب من السحابة');
             } catch(err) {
-                alert('خطأ أثناء الحذف: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.deleteComplaint = async function(docId) {
+            window.NativeBridge.vibrate(40);
             if(!confirm('هل أنت متأكد من حذف هذه الشكوى؟')) return;
 
             if (!auth.currentUser) {
@@ -524,22 +672,25 @@
 
             try {
                 await deleteDoc(doc(db, "messages", docId));
-                alert('✓ تم حذف الشكوى بنجاح.');
+                window.NativeBridge.vibrate(50);
+                window.NativeBridge.showToast('تم حذف الشكوى بنجاح');
             } catch(err) {
-                alert('خطأ أثناء حذف الشكوى: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.resolveComplaint = async function(docId) {
+            window.NativeBridge.vibrate(40);
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
                 await deleteDoc(doc(db, "messages", docId));
-                alert('✓ تم إغلاق الشكوى ومعالجتها بنجاح.');
+                window.NativeBridge.vibrate(60);
+                window.NativeBridge.showToast('تم إغلاق الشكوى ومعالجتها بنجاح');
             } catch(err) {
-                alert('خطأ: ' + err.message);
+                window.NativeBridge.showToast('خطأ: ' + err.message);
             }
         };
     </script>

@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // إدارة الخزنة النقدية والتدفقات المالية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // إدارة الخزنة النقدية والتدفقات المالية Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -44,16 +44,24 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            flex-shrink: 0;
+        }
+
+        input, select, textarea {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -94,6 +102,7 @@
             cursor: pointer; 
             transition: all 0.2s; 
             width: 100%; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -156,16 +165,39 @@
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-cube"></i></div>
                 <div>
                     <h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2>
-                    <span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS & VAULT</span>
+                    <span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span>
                 </div>
             </div>
             <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
@@ -175,11 +207,12 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
                 <a href="vault.html" class="nav-link active"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
@@ -198,7 +231,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 إدارة الخزنة النقدية والتدفقات المالية 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(مزامنة لحظية مع الحسابات والأرشيف)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span>
                             </h1>
                         </div>
                     </div>
@@ -232,11 +265,12 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                        <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
                         <a href="vault.html" class="nav-link active"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                         <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
@@ -250,19 +284,19 @@
                 
                 <!-- إحصائيات الخزنة الأربعة -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600 bg-white shadow-sm">
                         <span class="text-xs text-slate-500 font-medium">صافي رصيد الخزنة النقدية</span>
                         <div class="text-2xl font-black text-slate-900 mono-font" id="vaultNetBalance" dir="ltr">0 ج.م</div>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500 bg-white shadow-sm">
                         <span class="text-xs text-slate-500 font-medium">إجمالي المقبوضات والإيرادات</span>
                         <div class="text-2xl font-black text-emerald-600 mono-font" id="vaultTotalIncomes" dir="ltr">0 ج.م</div>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-rose-500">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-rose-500 bg-white shadow-sm">
                         <span class="text-xs text-slate-500 font-medium">إجمالي المدفوعات والمصروفات</span>
                         <div class="text-2xl font-black text-rose-600 mono-font" id="vaultTotalExpenses" dir="ltr">0 ج.م</div>
                     </div>
-                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-amber-500">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-amber-500 bg-white shadow-sm">
                         <span class="text-xs text-slate-500 font-medium">عدد حركات الخزنة المسجلة</span>
                         <div class="text-2xl font-black text-amber-600 mono-font" id="vaultTxCount" dir="ltr">0 حركة</div>
                     </div>
@@ -278,7 +312,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">نوع الحركة المالية</label>
-                            <select id="txType" class="corporate-input font-bold" onchange="window.updateCategoryOptions(this.value)">
+                            <select id="txType" class="corporate-input font-bold text-slate-800" onchange="window.updateCategoryOptions(this.value)">
                                 <option value="إيراد" class="text-emerald-700">🟢 إيراد / تحصيل نقدي (+)</option>
                                 <option value="مصروف" class="text-rose-700">🔴 مصروف / سداد نقدي (-)</option>
                             </select>
@@ -286,12 +320,12 @@
 
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">قيمة المبلغ (ج.م)</label>
-                            <input type="number" id="txAmount" class="corporate-input mono-font bg-white font-bold" placeholder="0.00" dir="ltr">
+                            <input type="number" id="txAmount" class="corporate-input mono-font bg-white font-bold text-slate-800" placeholder="0.00" dir="ltr">
                         </div>
 
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">طريقة الدفع / التحويل</label>
-                            <select id="txMethod" class="corporate-input bg-white">
+                            <select id="txMethod" class="corporate-input bg-white font-bold text-slate-800">
                                 <option value="كاش">💵 دفع نقدي (كاش الخزنة)</option>
                                 <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
                                 <option value="انستا باي">⚡ تحويل إنستا باي (InstaPay)</option>
@@ -311,19 +345,19 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">تصنيف / تبويب الحركة الحسابية</label>
-                            <select id="txCategory" class="corporate-input bg-white">
+                            <select id="txCategory" class="corporate-input bg-white font-bold text-slate-800">
                                 <!-- يتم التعبئة ديناميكياً -->
                             </select>
                         </div>
 
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">تاريخ الحركة</label>
-                            <input type="date" id="txDate" class="corporate-input mono-font" dir="ltr">
+                            <input type="date" id="txDate" class="corporate-input mono-font font-bold text-slate-800" dir="ltr">
                         </div>
 
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">البيان والتفاصيل الإضافية</label>
-                            <input type="text" id="txDesc" class="corporate-input" placeholder="مثال: تحصيل فاتورة، إيجار، وقود الأسطول، صيانة...">
+                            <input type="text" id="txDesc" class="corporate-input font-bold text-slate-800" placeholder="مثال: تحصيل فاتورة، إيجار، وقود الأسطول، صيانة...">
                         </div>
                     </div>
 
@@ -338,10 +372,10 @@
                 <div class="corporate-card p-4 flex flex-col sm:flex-row gap-3 items-center bg-white shadow-sm">
                     <div class="flex-1 relative w-full">
                         <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="searchTxInput" oninput="window.renderTransactions()" placeholder="بحث فوري في المعاملات، البيان، المبالغ، أو العملاء..." class="corporate-input pr-10 text-xs">
+                        <input type="text" id="searchTxInput" oninput="window.renderTransactions()" placeholder="بحث فوري في المعاملات، البيان، المبالغ، أو العملاء..." class="corporate-input pr-10 text-xs font-bold text-slate-800">
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <select id="filterTxType" onchange="window.renderTransactions()" class="corporate-input text-xs sm:w-40 bg-slate-50">
+                        <select id="filterTxType" onchange="window.renderTransactions()" class="corporate-input text-xs sm:w-40 bg-slate-50 font-bold text-slate-800">
                             <option value="الكل">🔍 جميع الحركات</option>
                             <option value="إيراد">🟢 الإيرادات فقط</option>
                             <option value="مصروف">🔴 المصروفات فقط</option>
@@ -409,11 +443,6 @@
 
     <!-- دوال تجهيز الواجهة والقوائم -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
-        }
-
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -547,6 +576,7 @@
         });
 
         window.saveTransaction = async function() {
+            triggerHaptic(30);
             let type = document.getElementById('txType').value;
             let amount = Number(document.getElementById('txAmount').value);
             let method = document.getElementById('txMethod').value;
@@ -588,7 +618,6 @@
                     admin: localStorage.getItem('eidco_v14_admin') || 'مسؤول الخزنة'
                 });
 
-                // إذا كانت الحركة إيراد تحصيل لعميل معين، أضف السجل لجدول payments تلقائياً
                 if (type === 'إيراد' && selectedClientName) {
                     await addDoc(collection(db, "client_payments"), {
                         companyId: currentCompanyId,
@@ -604,6 +633,7 @@
                 document.getElementById('txAmount').value = '';
                 document.getElementById('txDesc').value = '';
                 document.getElementById('txClientSelect').value = '';
+                showNativeToast("✓ تم تسجيل الحركة سحابياً بنجاح");
                 alert('✓ تم تسجيل حركة الخزنة واعتمادها سحابياً بنجاح.');
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الحركة بالسحابة: ' + err.message);
@@ -611,9 +641,11 @@
         };
 
         window.deleteTransaction = async function(docId) {
+            triggerHaptic(50);
             if (!confirm('هل أنت متأكد من حذف هذه الحركة من الخزنة سحابياً؟')) return;
             try {
                 await deleteDoc(doc(db, "transactions", docId));
+                showNativeToast("✓ تم حذف الحركة من الخزنة");
                 alert('✓ تم حذف الحركة من الخزنة بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء الحذف: ' + err.message);
@@ -621,6 +653,7 @@
         };
 
         window.editTransaction = async function(docId, oldAmount) {
+            triggerHaptic(30);
             let newAmountStr = prompt('أدخل المبلغ الجديد للحركة (ج.م):', oldAmount);
             if (newAmountStr === null) return;
             let newAmount = Number(newAmountStr);
@@ -628,6 +661,7 @@
 
             try {
                 await updateDoc(doc(db, "transactions", docId), { amount: newAmount });
+                showNativeToast("✓ تم تعديل المبلغ بنجاح");
                 alert('✓ تم تعديل المبلغ بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء التعديل: ' + err.message);
@@ -650,7 +684,6 @@
                 return matchType && matchSearch;
             });
 
-            // حساب الإحصائيات الصافية
             let totalInc = transactionsList.filter(t => t.type === 'إيراد').reduce((s, t) => s + Number(t.amount || 0), 0);
             let totalExp = transactionsList.filter(t => t.type === 'مصروف').reduce((s, t) => s + Number(t.amount || 0), 0);
             let netVal = totalInc - totalExp;
@@ -665,7 +698,6 @@
                 return;
             }
 
-            // ترتيب الحركات أحدثها أولاً
             filtered.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
             tbody.innerHTML = filtered.map(t => {
@@ -703,22 +735,32 @@
         };
 
         window.downloadVaultPDF = function() {
+            triggerHaptic(20);
             document.getElementById('printVaultCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printVaultDate').innerText = new Date().toISOString().split('T')[0];
             window.print();
         };
 
         window.downloadVaultImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('vaultPrintArea');
+            showNativeToast("⏳ جاري توليد صورة التقرير...");
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let imgData = canvas.toDataURL('image/png');
+                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                    window.AndroidBridge.downloadFile(`EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`, imgData);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = `EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`;
+                    link.href = imgData;
+                    link.click();
+                }
+                showNativeToast("✓ تم تصدير صورة التقرير بنجاح");
             });
         };
 
         window.shareVaultReport = async function() {
+            triggerHaptic(25);
             let net = document.getElementById('vaultNetBalance').innerText;
             let inc = document.getElementById('vaultTotalIncomes').innerText;
             let exp = document.getElementById('vaultTotalExpenses').innerText;
@@ -732,7 +774,9 @@
                       `• *إجمالي الحركات:* ${cnt}\n\n` +
                       `_تم الصدور عبر EIDCO Business OS_`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(msg);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: 'EIDCO // ملخص الخزنة',

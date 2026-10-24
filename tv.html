@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO السحابية المعزولة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO السحابية المعزولة Native</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
@@ -32,22 +32,29 @@
     
     <style>
         :root { --primary: #4f46e5; }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        body {
+        
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            box-sizing: border-box; 
+        }
+
+        html, body {
             font-family: 'Cairo', sans-serif;
-            background-color: #020617;
+            background-color: #020617 !important;
             color: #f8fafc;
-            min-height: 100vh;
+            min-height: 100dvh;
             margin: 0;
+            padding-bottom: env(safe-area-inset-bottom, 1.5rem);
+            padding-top: env(safe-area-inset-top, 0px);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             overflow-x: hidden;
-            box-sizing: border-box;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
 
         .real-tv-bezel {
@@ -57,12 +64,14 @@
             width: 100%;
             box-sizing: border-box;
         }
+
         .tv-screen-container {
             background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
             box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.95);
             position: relative;
             touch-action: pan-y;
         }
+
         .tv-glass-glare {
             position: absolute;
             inset: 0;
@@ -70,6 +79,7 @@
             pointer-events: none;
             z-index: 30;
         }
+
         .tv-scanlines {
             position: absolute;
             inset: 0;
@@ -79,10 +89,12 @@
             z-index: 25;
             opacity: 0.5;
         }
+
         @keyframes tvMarquee {
             0% { transform: translate3d(0, 0, 0); }
             100% { transform: translate3d(-50%, 0, 0); }
         }
+
         .animate-tv-marquee {
             display: inline-flex;
             animation: tvMarquee 26s linear infinite;
@@ -90,21 +102,37 @@
         .animate-tv-marquee:hover {
             animation-play-state: paused;
         }
+
         .tv-power-off {
             filter: brightness(0) grayscale(100%);
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: #64748b; text-decoration: none; transition: all 0.2s; }
-        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: #4f46e5; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: #94a3b8; 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
+        .nav-link:hover, .nav-link.active { background-color: #312e81; color: #818cf8; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 
     <script>
         function toggleMobileMenu() {
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
 
-        // إشعار توست نيتف
         function showNativeToast(message) {
             if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
                 window.AndroidBridge.showToast(message);
@@ -113,7 +141,6 @@
             }
         }
 
-        // اهتزاز لمسي نيتف للريموت
         function triggerHaptic(duration = 35) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
             if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
@@ -121,7 +148,6 @@
             }
         }
 
-        // إبقاء الشاشة مضاءة نيتف طوال فترة البث
         async function enableTvWakeLock() {
             try {
                 if (window.AndroidBridge && typeof window.AndroidBridge.keepScreenOn === 'function') {
@@ -155,7 +181,10 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-400"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -234,19 +263,19 @@
 
                     <!-- أزرار التحكم بالشاشة -->
                     <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-end">
-                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-indigo-700 flex items-center gap-1.5 cursor-pointer active:scale-95" title="نطق معلومات الشاشة الحالية بصوت واضح">
+                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-indigo-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="نطق معلومات الشاشة الحالية بصوت واضح">
                             <i class="fa-solid fa-microphone-lines text-cyan-400"></i> <span class="hidden md:inline">انطق الشاشة</span>
                         </button>
-                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95" title="تفعيل/إيقاف الإعلان الصوتي الفوري">
+                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="تفعيل/إيقاف الإعلان الصوتي الفوري">
                             <i class="fa-solid fa-bullhorn text-amber-400" id="tvSpeechIcon"></i> <span class="hidden md:inline">الناطق الفوري</span>
                         </button>
-                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95" title="كتم / تشغيل أصوات التنبيه">
+                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="كتم / تشغيل أصوات التنبيه">
                             <i class="fa-solid fa-volume-high text-emerald-400" id="tvMuteIcon"></i>
                         </button>
-                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95" title="ملء الشاشة">
+                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="ملء الشاشة">
                             <i class="fa-solid fa-expand"></i>
                         </button>
-                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95" title="تشغيل / إطفاء">
+                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95 shadow-sm" title="تشغيل / إطفاء">
                             <i class="fa-solid fa-power-off"></i>
                         </button>
                     </div>
@@ -335,6 +364,28 @@
         </div>
     </div>
 
+    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+            const badgeEl = document.getElementById('companyBadgeDisplay');
+            if(badgeEl) {
+                badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+            }
+
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
+    </script>
+
     <!-- Firebase SDK Modules مع دعم الجلب والريموت الذكي وأوفلاين -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -378,11 +429,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
-        const badgeEl = document.getElementById('companyBadgeDisplay');
-        if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
-        }
 
         let state = { invoices: [], batch_invoices: [], transactions: [], clients: [], products: [], fleet: [], account: {} };
         let currentTvChannel = 'metrics';
@@ -563,6 +609,11 @@
                         window.toggleTvAudio();
                     } else if (cmd.action === 'speech') {
                         window.speakCurrentScreenInfo();
+                    } else if (cmd.action === 'broadcast_ticker' && cmd.message) {
+                        let ticker = document.getElementById('tvLowerTicker');
+                        if (ticker) {
+                            ticker.innerHTML = `<span>🚨 خبر عاجل: ${cmd.message}</span> ✦ ` + ticker.innerHTML;
+                        }
                     }
                 }
             });
@@ -919,7 +970,7 @@
                 `;
             } else if (currentTvChannel === 'profile') {
                 let acc = state.account || {};
-                let name = acc.name || localStorage.getItem('eidco_v14_admin') || 'كرم حمدي عبدالعظيم';
+                let name = acc.name || localStorage.getItem('eidco_v14_admin') || 'إدارة النظام';
                 let avatar = acc.avatar || '';
                 let role = acc.role || 'مدير النظام التنفيذي';
                 let phone = acc.phone || 'غير مسجل';

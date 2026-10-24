@@ -9,9 +9,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -42,6 +45,8 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -49,10 +54,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -62,6 +69,8 @@
         }
 
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -213,19 +222,14 @@
     </style>
 
     <script>
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         // دالة موحدة ومضمونة للحصول على الموقع الجغرافي مع الدعم الأهلي للأندرويد
@@ -236,7 +240,6 @@
                         if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
-                        // محاولة ثانية بدقة متوازنة في حالة فشل الدقة العالية
                         navigator.geolocation.getCurrentPosition(
                             pos => {
                                 if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
@@ -274,7 +277,7 @@
         window.addEventListener('DOMContentLoaded', requestAllAppPermissions);
 
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -282,7 +285,7 @@
         }
 
         window.openAddVehicleModal = function(defaultLat = '', defaultLng = '') {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
@@ -297,12 +300,12 @@
         };
 
         window.closeVehicleModal = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('vehicleModal').classList.add('hidden');
         };
 
         window.openAddShipmentModal = function(defaultLat = '', defaultLng = '') {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
@@ -318,12 +321,12 @@
         };
 
         window.closeShipmentModal = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('shipmentModal').classList.add('hidden');
         };
 
         window.toggleTouchPanel = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             const panel = document.getElementById('touchControlPanel');
             const icon = document.getElementById('panelToggleIcon');
             if(panel && icon) {
@@ -334,7 +337,7 @@
         };
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -389,7 +392,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -564,10 +567,10 @@
 
     <!-- Modal إضافة / تعديل مركبة -->
     <div id="vehicleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl max-h-[90dvh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 id="modalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً</h3>
-                <button type="button" onclick="window.closeVehicleModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="window.closeVehicleModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="vehicleForm" onsubmit="window.saveVehicle(event)" class="space-y-3 text-xs">
                 <input type="hidden" id="vehicleId">
@@ -612,10 +615,10 @@
 
     <!-- Modal إضافة / تعديل شحنة -->
     <div id="shipmentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 corporate-card shadow-2xl max-h-[90dvh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 id="shipmentModalTitle" class="font-black text-slate-900 text-sm"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً</h3>
-                <button type="button" onclick="window.closeShipmentModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="window.closeShipmentModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="shipmentForm" onsubmit="window.saveShipment(event)" class="space-y-3 text-xs">
                 <input type="hidden" id="shipmentId">
@@ -675,7 +678,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -720,17 +723,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل التخزين المحلّي لاسترجاع بيانات الأسطول أوفلاين
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -762,12 +758,11 @@
 
             streetLayer.addTo(map);
 
-            // جلب الموقع عند فتح الخريطة مع استجابة مرئية
             getUserGpsPosition(
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 13);
-                        showNativeToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
+                        window.NativeBridge.showToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
                     }
                 },
                 err => {
@@ -776,7 +771,7 @@
             );
 
             window.switchLayer = function(type) {
-                triggerHaptic(15);
+                window.NativeBridge.vibrate(15);
                 map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
                 if(type === 'street') streetLayer.addTo(map);
                 if(type === 'topo') topoLayer.addTo(map);
@@ -788,21 +783,21 @@
                 const lng = e.latlng.lng.toFixed(6);
 
                 if (pickingMode === 'vehicle') {
-                    triggerHaptic(25);
+                    window.NativeBridge.vibrate(25);
                     document.getElementById('vehicleLat').value = lat;
                     document.getElementById('vehicleLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    showNativeToast(`✓ تم التقاط موقع المركبة: (${lat}, ${lng})`);
+                    window.NativeBridge.showToast(`✓ تم التقاط موقع المركبة: (${lat}, ${lng})`);
                     return;
                 }
                 if (pickingMode === 'shipment') {
-                    triggerHaptic(25);
+                    window.NativeBridge.vibrate(25);
                     document.getElementById('shipmentLat').value = lat;
                     document.getElementById('shipmentLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    showNativeToast(`✓ تم التقاط موقع الشحنة: (${lat}, ${lng})`);
+                    window.NativeBridge.showToast(`✓ تم التقاط موقع الشحنة: (${lat}, ${lng})`);
                     return;
                 }
 
@@ -846,7 +841,7 @@
         }
 
         window.rotateMap = function(degDelta) {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             if (!map) return;
             let currentBearing = map.getBearing ? map.getBearing() : 0;
             let newBearing = (currentBearing + degDelta) % 360;
@@ -856,7 +851,7 @@
         };
 
         window.resetMapRotation = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             if (!map) return;
             if (map.setBearing) {
                 map.setBearing(0);
@@ -867,7 +862,7 @@
         let currentShipmentDocs = [];
 
         window.resetMapView = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             if (!map) return;
             let bounds = [];
             currentFleetDocs.forEach(v => {
@@ -889,14 +884,14 @@
                         map.setView([lat, lng], 14);
                     },
                     err => {
-                        showNativeToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
+                        window.NativeBridge.showToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
                     }
                 );
             }
         };
 
         window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
-            triggerHaptic(25);
+            window.NativeBridge.vibrate(25);
             if (!map) return;
             if (activeRoutingControl) {
                 map.removeControl(activeRoutingControl);
@@ -938,13 +933,12 @@
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.remove('hidden');
 
-                showNativeToast(`🧭 المسافة: ${distanceKm} كم | الوقت: ${timeMin} دقيقة`);
-                alert(`🧭 تم رسم مسار الملاحة إلى [ ${destName} ]\n• المسافة: ${distanceKm} كم\n• الوقت المتوقع: ${timeMin} دقيقة`);
+                window.NativeBridge.showToast(`🧭 المسافة: ${distanceKm} كم | الوقت: ${timeMin} دقيقة`);
             });
         };
 
         window.navigateRouteTo = function(destLat, destLng, destName) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             getUserGpsPosition(
                 (lat, lng) => {
                     window.calculateRoute(lat, lng, destLat, destLng, destName);
@@ -956,7 +950,7 @@
         };
 
         window.searchAndCalculateRoute = async function() {
-            triggerHaptic(25);
+            window.NativeBridge.vibrate(25);
             const startQuery = document.getElementById('routeStartInput').value.trim();
             const endQuery = document.getElementById('routeEndInput').value.trim();
 
@@ -978,13 +972,11 @@
                         return;
                     }
                 } else {
-                    let gpsSuccess = false;
                     await new Promise(resolve => {
                         getUserGpsPosition(
                             (lat, lng) => {
                                 startLat = lat;
                                 startLng = lng;
-                                gpsSuccess = true;
                                 resolve();
                             },
                             err => {
@@ -1012,7 +1004,7 @@
         };
 
         window.clearActiveRoute = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             if (activeRoutingControl && map) {
                 map.removeControl(activeRoutingControl);
                 activeRoutingControl = null;
@@ -1020,13 +1012,13 @@
                 if(etaEl) etaEl.innerText = '-- دقيقة';
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.add('hidden');
-                showNativeToast("✓ تم إلغاء المسار الحالي");
+                window.NativeBridge.showToast("✓ تم إلغاء المسار الحالي");
             }
         };
 
         window.fetchGpsForModal = function(target) {
-            triggerHaptic(30);
-            showNativeToast("⏳ جاري الاتصال بحساسات الـ GPS...");
+            window.NativeBridge.vibrate(30);
+            window.NativeBridge.showToast("⏳ جاري الاتصال بحساسات الـ GPS...");
             getUserGpsPosition(
                 (lat, lng) => {
                     let latFixed = lat.toFixed(6);
@@ -1039,7 +1031,7 @@
                         document.getElementById('shipmentLng').value = lngFixed;
                     }
                     if (map) map.setView([lat, lng], 15);
-                    showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
+                    window.NativeBridge.showToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
                 },
                 err => {
                     alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى التين من تفعيل الـ GPS والسمح بالأذونات.");
@@ -1048,32 +1040,32 @@
         };
 
         window.pickFromMap = function(target) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             pickingMode = target;
             if (map) {
                 map.getContainer().style.cursor = 'crosshair';
-                showNativeToast("💡 انقر الآن على أي مكان داخل الخريطة");
+                window.NativeBridge.showToast("💡 انقر الآن على أي مكان داخل الخريطة");
             }
         };
 
         window.focusOnMap = function(lat, lng, label) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             if (map && !isNaN(lat) && !isNaN(lng)) {
                 map.setView([lat, lng], 16, { animate: true });
                 L.popup()
                     .setLatLng([lat, lng])
-                    .setContent(`<div style="font-family:'Cairo',sans-serif; text-align:right; font-weight:bold;">📍 ${label}</div>`)
+                    .setContent(`<div style="font-family:'Cairo',sans-serif; text-align:right; font-weight:bold;">📍 ${escapeHTML(label)}</div>`)
                     .openOn(map);
             }
         };
 
         window.searchCustomLocation = async function() {
-            triggerHaptic(25);
+            window.NativeBridge.vibrate(25);
             const queryText = document.getElementById('customSearchInput').value.trim();
             if(!queryText) return;
 
             try {
-                showNativeToast("🔍 جاري البحث الميداني...");
+                window.NativeBridge.showToast("🔍 جاري البحث الميداني...");
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}`);
                 const data = await res.json();
 
@@ -1086,8 +1078,8 @@
                             .setLatLng([lat, lon])
                             .setContent(`
                                 <div style="font-family:'Cairo',sans-serif; text-align:right;">
-                                    <b>🔍 نتيجة البحث:</b><br>${data[0].display_name}<br>
-                                    <button onclick="window.navigateRouteTo(${lat}, ${lon}, '${data[0].display_name.split(',')[0]}')" style="background:#4f46e5; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; margin-top:6px; cursor:pointer;">
+                                    <b>🔍 نتيجة البحث:</b><br>${escapeHTML(data[0].display_name)}<br>
+                                    <button onclick="window.navigateRouteTo(${lat}, ${lon}, '${escapeHTML(data[0].display_name.split(',')[0])}')" style="background:#4f46e5; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; margin-top:6px; cursor:pointer;">
                                         <i class="fa-solid fa-route"></i> رسم مسار لهذا المكان
                                     </button>
                                 </div>
@@ -1103,7 +1095,7 @@
         };
 
         window.saveVehicle = async function(e) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
             let name = document.getElementById('vehicleName').value;
@@ -1138,15 +1130,14 @@
                     await addDoc(fleetCollection, vehicleData);
                 }
                 window.closeVehicleModal();
-                showNativeToast("✓ تم حفظ بيانات المركبة بنجاح");
-                alert("✓ تم حفظ بيانات المركبة سحابياً بنجاح.");
+                window.NativeBridge.showToast("✓ تم حفظ بيانات المركبة بنجاح");
             } catch (err) {
-                alert("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
+                window.NativeBridge.showToast("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
             }
         };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة سحابياً';
             document.getElementById('vehicleId').value = id;
             document.getElementById('vehicleName').value = name;
@@ -1157,23 +1148,22 @@
         };
 
         window.deleteVehicle = async function(id) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول السحابي؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
-                    showNativeToast("✓ تم حذف المركبة بنجاح");
-                    alert("✓ تم حذف المركبة سحابياً بنجاح.");
+                    window.NativeBridge.showToast("✓ تم حذف المركبة بنجاح");
                 } catch (err) {
-                    alert("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
+                    window.NativeBridge.showToast("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
                 }
             }
         };
 
         window.saveShipment = async function(e) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if (e && e.preventDefault) e.preventDefault();
             let code = document.getElementById('shipmentCode').value;
             let receiver = document.getElementById('shipmentReceiver').value;
@@ -1202,41 +1192,38 @@
                     createdAt: new Date().toISOString()
                 });
                 window.closeShipmentModal();
-                showNativeToast("✓ تم إضافة الشحنة بنجاح");
-                alert("✓ تم إضافة الشحنة سحابياً بنجاح.");
+                window.NativeBridge.showToast("✓ تم إضافة الشحنة بنجاح");
             } catch (err) {
-                alert("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
+                window.NativeBridge.showToast("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
             }
         };
 
         window.deleteShipment = async function(id) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if(confirm("هل أنت متأكد من حذف هذه الشحنة سحابياً؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "shipments", id));
-                    showNativeToast("✓ تم حذف الشحنة بنجاح");
-                    alert("✓ تم حذف الشحنة سحابياً بنجاح.");
+                    window.NativeBridge.showToast("✓ تم حذف الشحنة بنجاح");
                 } catch (err) {
-                    alert("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
+                    window.NativeBridge.showToast("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
                 }
             }
         };
 
         window.toggleShipmentStatusOnMap = async function(id, currentStatus) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const nextStatus = currentStatus === 'تم التسليم' ? 'قيد التوصيل' : 'تم التسليم';
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
                 await updateDoc(doc(db, "shipments", id), { status: nextStatus });
-                showNativeToast(`✓ تم تغيير حالة الشحنة إلى (${nextStatus})`);
-                alert(`✓ تم تحديث حالة الشحنة إلى: (${nextStatus}) بنجاح.`);
+                window.NativeBridge.showToast(`✓ تم تغيير حالة الشحنة إلى (${nextStatus})`);
             } catch(e) {
-                alert("فشل تحديث حالة الشحنة: " + e.message);
+                window.NativeBridge.showToast("فشل تحديث حالة الشحنة: " + e.message);
             }
         };
 
@@ -1294,16 +1281,16 @@
                         }).addTo(map).bindPopup(`
                             <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:190px;">
                                 <div style="display:flex; align-items:center; gap:6px; font-weight:bold; color:#0f172a; margin-bottom:4px;">
-                                    <i class="fa-solid fa-truck text-indigo-600"></i> ${v.name || 'مركبة أسطول'}
+                                    <i class="fa-solid fa-truck text-indigo-600"></i> ${escapeHTML(v.name || 'مركبة أسطول')}
                                 </div>
-                                <div style="font-size:12px; color:#64748b;">لوحة: <b>${v.plate || 'بدون'}</b></div>
+                                <div style="font-size:12px; color:#64748b;">لوحة: <b>${escapeHTML(v.plate || 'بدون')}</b></div>
                                 <div style="font-size:12px; color:#64748b;">السرعة الحالية: <b style="color:#10b981;">${v.speed || 0} كم/س</b></div>
                                 <hr style="margin:8px 0; border-color:#e2e8f0;">
                                 <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
-                                    <button onclick="window.navigateRouteTo(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                    <button onclick="window.navigateRouteTo(${vLat}, ${vLng}, '${escapeHTML(v.name || 'المركبة')}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-route"></i> رسم مسار
                                     </button>
-                                    <button onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" style="background:#e0e7ff; color:#4338ca; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                    <button onclick="window.editVehicle('${id}', '${escapeHTML(v.name || '')}', '${escapeHTML(v.plate || '')}', ${vLat}, ${vLng})" style="background:#e0e7ff; color:#4338ca; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-pen-to-square"></i> تعديل
                                     </button>
                                     <button onclick="window.deleteVehicle('${id}')" style="background:#fee2e2; color:#991b1b; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
@@ -1318,14 +1305,14 @@
 
                     tableHtml += `
                         <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                            <td class="p-3 font-bold text-slate-900">${v.name || 'بدون اسم'}</td>
-                            <td class="p-3 font-mono text-indigo-600 font-bold" dir="ltr">${v.plate || 'غير متوفر'}</td>
+                            <td class="p-3 font-bold text-slate-900">${escapeHTML(v.name || 'بدون اسم')}</td>
+                            <td class="p-3 font-mono text-indigo-600 font-bold" dir="ltr">${escapeHTML(v.plate || 'غير متوفر')}</td>
                             <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(vLat) ? vLat.toFixed(4) : '--'}</td>
                             <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(vLng) ? vLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-slate-500">${v.updatedAt ? new Date(v.updatedAt).toLocaleTimeString('ar-EG') : 'الآن'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${vLat}, ${vLng}, '${v.name || 'المركبة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
-                                <button type="button" onclick="window.editVehicle('${id}', '${v.name || ''}', '${v.plate || ''}', ${vLat}, ${vLng})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${vLat}, ${vLng}, '${escapeHTML(v.name || 'المركبة')}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.editVehicle('${id}', '${escapeHTML(v.name || '')}', '${escapeHTML(v.plate || '')}', ${vLat}, ${vLng})" class="p-1.5 px-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 ml-1 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button type="button" onclick="window.deleteVehicle('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer active:scale-95" title="حذف"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
@@ -1380,16 +1367,16 @@
                         }).addTo(map).bindPopup(`
                             <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:200px;">
                                 <div style="display:flex; justify-between; align-items:center;">
-                                    <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${s.code || id}</b>
+                                    <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${escapeHTML(s.code || id)}</b>
                                 </div>
                                 <hr style="margin:6px 0; border-color:#e2e8f0;">
-                                <div style="font-size:12px; color:#475569;">المستلم: <b>${s.receiver || 'غير محدد'}</b></div>
-                                <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${s.status || 'قيد التوصيل'}</span></div>
+                                <div style="font-size:12px; color:#475569;">المستلم: <b>${escapeHTML(s.receiver || 'غير محدد')}</b></div>
+                                <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${escapeHTML(s.status || 'قيد التوصيل')}</span></div>
                                 <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-flex-end;">
-                                    <button onclick="window.navigateRouteTo(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                    <button onclick="window.navigateRouteTo(${sLat}, ${sLng}, '${escapeHTML(s.code || 'الشحنة')}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-route"></i> رسم مسار
                                     </button>
-                                    <button onclick="window.toggleShipmentStatusOnMap('${id}', '${s.status}')" style="background:#d1fae5; color:#047857; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                    <button onclick="window.toggleShipmentStatusOnMap('${id}', '${escapeHTML(s.status)}')" style="background:#d1fae5; color:#047857; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-arrows-rotate"></i> تبديل الحالة
                                     </button>
                                     <button onclick="window.deleteShipment('${id}')" style="background:#fee2e2; color:#991b1b; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
@@ -1404,12 +1391,12 @@
 
                     tableHtml += `
                         <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                            <td class="p-3 font-mono text-emerald-600 font-bold" dir="ltr">${s.code || 'بدون كود'}</td>
-                            <td class="p-3 font-bold text-slate-900">${s.receiver || 'غير محدد'}</td>
-                            <td class="p-3 font-bold text-emerald-600">${s.status || 'قيد التوصيل'}</td>
+                            <td class="p-3 font-mono text-emerald-600 font-bold" dir="ltr">${escapeHTML(s.code || 'بدون كود')}</td>
+                            <td class="p-3 font-bold text-slate-900">${escapeHTML(s.receiver || 'غير محدد')}</td>
+                            <td class="p-3 font-bold text-emerald-600">${escapeHTML(s.status || 'قيد التوصيل')}</td>
                             <td class="p-3 mono-font text-slate-600" dir="ltr">${!isNaN(sLat) ? sLat.toFixed(4) : '--'}, ${!isNaN(sLng) ? sLng.toFixed(4) : '--'}</td>
                             <td class="p-3 text-center">
-                                <button type="button" onclick="window.focusOnMap(${sLat}, ${sLng}, '${s.code || 'الشحنة'}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
+                                <button type="button" onclick="window.focusOnMap(${sLat}, ${sLng}, '${escapeHTML(s.code || 'الشحنة')}')" class="p-1.5 px-2 bg-emerald-50 text-emerald-700 rounded-lg font-bold hover:bg-emerald-100 ml-1 transition cursor-pointer active:scale-95" title="عرض بالخريطة"><i class="fa-solid fa-crosshairs"></i></button>
                                 <button type="button" onclick="window.deleteShipment('${id}')" class="p-1.5 px-2 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition cursor-pointer active:scale-95" title="حذف الشحنة سحابياً"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
@@ -1450,10 +1437,10 @@
                             })
                         }).addTo(map).bindPopup(`
                             <div style="font-family:'Cairo',sans-serif; text-align:right;">
-                                <b><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${c.name}</b><br>
-                                <span style="font-size:12px; color:#64748b;">هاتف: ${phone}</span><br>
-                                <span style="font-size:12px; color:#10b981; font-weight:bold;">الرصيد: ${balance} ج.م</span><br>
-                                <button onclick="window.navigateRouteTo(${lat}, ${lng}, '${c.name}')" style="background:#fef3c7; color:#b45309; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; margin-top:6px; cursor:pointer;">
+                                <b><i class="fa-solid fa-building text-amber-500 ml-1"></i> ${escapeHTML(c.name)}</b><br>
+                                <span style="font-size:12px; color:#64748b;">هاتف: ${escapeHTML(phone)}</span><br>
+                                <span style="font-size:12px; color:#10b981; font-weight:bold;">الرصيد: ${Number(balance).toLocaleString()} ج.م</span><br>
+                                <button onclick="window.navigateRouteTo(${lat}, ${lng}, '${escapeHTML(c.name)}')" style="background:#fef3c7; color:#b45309; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; margin-top:6px; cursor:pointer;">
                                     <i class="fa-solid fa-route"></i> رسم مسار للعميل
                                 </button>
                             </div>
@@ -1469,13 +1456,13 @@
 
         window.panToFleet = function() { window.resetMapView(); };
         window.panToUser = function() { 
-            triggerHaptic(20);
-            showNativeToast("⏳ جاري تحديد موقعك الجغرافي الحقيقي...");
+            window.NativeBridge.vibrate(20);
+            window.NativeBridge.showToast("⏳ جاري تحديد موقعك الجغرافي الحقيقي...");
             getUserGpsPosition(
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 16, { animate: true });
-                        showNativeToast("✓ تم التمركز عند موقعك الحالي");
+                        window.NativeBridge.showToast("✓ تم التمركز عند موقعك الحالي");
                     }
                 },
                 err => {
@@ -1487,7 +1474,7 @@
 
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

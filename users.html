@@ -13,13 +13,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
-        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
-        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
-        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
-
         // التحقق الأمني الذكي للمدير المؤسس ومعرف الشركة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
@@ -29,10 +26,8 @@
             localStorage.setItem('eidco_current_company_id', FOUNDER_COMPANY);
         }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
         }
     </script>
 
@@ -60,10 +55,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain; 
             -webkit-font-smoothing: antialiased; 
         }
@@ -76,7 +73,7 @@
             scroll-margin-bottom: 120px;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
 
         .corporate-card { 
             background: var(--card-bg); 
@@ -157,7 +154,7 @@
 
     <script>
         function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
@@ -177,6 +174,16 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
@@ -184,7 +191,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -199,16 +206,15 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="users.html" class="nav-link active"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
-                <a href="admin-reports.html" class="nav-link"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
+                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -245,7 +251,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -256,16 +262,15 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="users.html" class="nav-link active"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
-                        <a href="admin-reports.html" class="nav-link"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> الأمان والبصمة</a>
+                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
                         <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
                     </nav>
                 </div>
@@ -421,6 +426,7 @@
 
         window.renderUsersTable = function() {
             let tbody = document.getElementById('usersTableBody');
+            if (!tbody) return;
             
             if(!accountsList.length) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد حسابات مسجلة سحابياً.</td></tr>`;
@@ -433,21 +439,27 @@
                 let isBanned = acc.isBanned === true;
                 let compId = acc.companyId || currentCompId;
                 let pinCode = acc.pin || '1234';
+                let safeName = escapeHTML(acc.name || 'مسؤول');
+                let safeRole = escapeHTML(acc.role || 'مدير نظام');
+                let safeCompId = escapeHTML(compId);
+                let safePin = escapeHTML(pinCode);
+                let safeDocId = escapeHTML(acc.docId);
+
                 return `
                     <tr class="hover:bg-slate-50 transition ${isBanned ? 'bg-rose-50/40' : ''}">
-                        <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
-                        <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
-                        <td class="p-4 mono-font text-indigo-600 font-bold">${compId}</td>
-                        <td class="p-4 mono-font text-slate-700 tracking-widest">${pinCode}</td>
+                        <td class="p-4 font-bold text-slate-900">${safeName}</td>
+                        <td class="p-4 font-semibold text-slate-600">${safeRole}</td>
+                        <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${safeCompId}</td>
+                        <td class="p-4 mono-font text-slate-700 tracking-widest font-bold">${safePin}</td>
                         <td class="p-4">
                             ${isBanned ? '<span class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
                         </td>
                         <td class="p-4 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition active:scale-95 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}">
+                            <button onclick="window.toggleUserBan('${safeDocId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition active:scale-95 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
                             </button>
-                            <button onclick="window.editUser('${acc.docId}')" class="p-1.5 px-2.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square ml-1"></i> تعديل</button>
-                            <button onclick="window.deleteUser('${acc.docId}', '${acc.name || 'الحساب'}')" class="p-1.5 px-2.5 bg-rose-50 text-rose-600 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer active:scale-95" title="حذف نهائي"><i class="fa-solid fa-trash ml-1"></i> حذف</button>
+                            <button onclick="window.editUser('${safeDocId}')" class="p-1.5 px-2.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square ml-1"></i> تعديل</button>
+                            <button onclick="window.deleteUser('${safeDocId}', '${safeName}')" class="p-1.5 px-2.5 bg-rose-50 text-rose-600 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer active:scale-95" title="حذف نهائي"><i class="fa-solid fa-trash ml-1"></i> حذف</button>
                         </td>
                     </tr>
                 `;
@@ -478,7 +490,7 @@
 
             let currentCompId = localStorage.getItem('eidco_current_company_id') || FOUNDER_COMPANY;
 
-            document.getElementById('userModalTitle').innerText = `تعديل بيانات الحساب (${acc.name})`;
+            document.getElementById('userModalTitle').innerText = `تعديل بيانات الحساب (${escapeHTML(acc.name)})`;
             document.getElementById('editDocId').value = acc.docId;
             document.getElementById('userName').value = acc.name || '';
             document.getElementById('userCompanyIdInput').value = acc.companyId || currentCompId;

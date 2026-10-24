@@ -555,45 +555,147 @@
         </div>
     </div>
 
+    <!-- تعريف الدوال العامة مباشرة خارج نطاق الـ Module لضمان عمل الأزرار 100% -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
-            localStorage.setItem('eidco_current_company_id', currentCompanyId);
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        let rssNewsList = [
+            "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
+            "💡 تم تفعيل العزل التام والتزامن اللحظي تماماً بين الحسابات."
+        ];
+
+        let currentRssSpeedIndex = 0;
+        const rssSpeeds = ['35s', '20s', '50s'];
+        const rssSpeedLabels = ['1x', '2x', '0.5x'];
+
+        window.toggleRssPause = function() {
+            let ticker = document.getElementById('rssTickerContent');
+            let btn = document.getElementById('rssPauseBtn');
+            if(ticker && btn) {
+                if(ticker.classList.contains('paused')) {
+                    ticker.classList.remove('paused');
+                    btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+                    btn.classList.remove('text-emerald-400');
+                } else {
+                    ticker.classList.add('paused');
+                    btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                    btn.classList.add('text-emerald-400');
+                }
+            }
+        };
+
+        window.toggleRssSpeed = function() {
+            currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
+            let ticker = document.getElementById('rssTickerContent');
+            if(ticker) {
+                ticker.style.animationDuration = rssSpeeds[currentRssSpeedIndex];
+                document.getElementById('rssSpeedText').innerText = rssSpeedLabels[currentRssSpeedIndex];
+            }
+        };
+
+        window.openAddNewsModal = function() { 
+            let m = document.getElementById('addNewsModal');
+            if(m) m.classList.add('active'); 
+        };
+        
+        window.closeAddNewsModal = function() { 
+            let m = document.getElementById('addNewsModal');
+            if(m) m.classList.remove('active'); 
+        };
+
+        window.submitCustomNews = function() {
+            let textInput = document.getElementById('newRssTextInput');
+            let catInput = document.getElementById('newRssCategoryInput');
+            if(!textInput) return;
+            let text = textInput.value.trim();
+            let cat = catInput ? catInput.value : 'تحديث';
+            if(!text) return alert('الرجاء كتابة نص الخبر أولاً');
+            rssNewsList.unshift(`📌 [${cat}] ${text}`);
+            textInput.value = '';
+            window.closeAddNewsModal();
+            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار الخاص بهذا الحساب.');
+        };
+
+        window.closeSummaryModal = function() { 
+            let m = document.getElementById('summaryModal');
+            if(m) m.classList.remove('active'); 
+        };
+
+        // دالة الطباعة وحفظ PDF
+        window.downloadReportPDF = function() {
+            let tag = document.getElementById('printIndexCompanyTag');
+            let dateEl = document.getElementById('printIndexDate');
+            if(tag) tag.innerText = `معرف الشركة: ${currentCompanyId}`;
+            if(dateEl) dateEl.innerText = new Date().toISOString().split('T')[0];
+            window.print();
+        };
+
+        // تصدير التقارير كصورة PNG عبر html2canvas
+        window.downloadReportImage = function() {
+            let element = document.getElementById('indexReportPrintArea');
+            if (!element) return alert('منطقة التقرير غير متوفرة');
             
+            if (typeof html2canvas === 'undefined') {
+                let script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                script.onload = () => executeImageCapture(element);
+                document.head.appendChild(script);
+            } else {
+                executeImageCapture(element);
+            }
+        };
+
+        function executeImageCapture(element) {
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                alert('فشل تصدير الصورة: ' + err.message);
+            });
+        }
+
+        // مشاركة التقرير
+        window.shareReport = async function() {
+            let vaultVal = document.getElementById('statVault')?.innerText || '0 ج.م';
+            let salesVal = document.getElementById('statSales')?.innerText || '0 ج.م';
+            let profitsVal = document.getElementById('statProfits')?.innerText || '0 ج.م';
+            let clientsVal = document.getElementById('statClients')?.innerText || '0 جهة';
+
+            let text = `📊 *EIDCO // تقرير لوحة المؤشرات الرئيسية*\n`;
+            text += `🏢 معرف الشركة: *${currentCompanyId}*\n`;
+            text += `💰 رصيد الخزنة: *${vaultVal}*\n`;
+            text += `🛍️ إجمالي المبيعات: *${salesVal}*\n`;
+            text += `📈 صافي الأرباح: *${profitsVal}*\n`;
+            text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
+            text += `_تم توليد التقرير عبر EIDCO Business OS_`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // ملخص مؤشرات الأداء',
+                        text: text
+                    });
+                } catch (err) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
             if (currentAdminName !== FOUNDER_NAME) {
-                const sidebarAuth = document.getElementById('sidebarAuthNavLink');
-                if (sidebarAuth) sidebarAuth.style.display = 'none';
-
-                const gridAuth = document.getElementById('gridAuthCard');
-                if (gridAuth) gridAuth.style.display = 'none';
-
-                const adminAccountsLink = document.getElementById('sidebarAdminAccountsLink');
-                if (adminAccountsLink) adminAccountsLink.style.display = 'none';
-
-                const gridAdminAccounts = document.getElementById('gridAdminAccountsCard');
-                if (gridAdminAccounts) gridAdminAccounts.style.display = 'none';
-
-                const sidebarUsers = document.getElementById('sidebarUsersLink');
-                if (sidebarUsers) sidebarUsers.style.display = 'none';
-
-                const gridUsers = document.getElementById('gridUsersCard');
-                if (gridUsers) gridUsers.style.display = 'none';
-
-                const sidebarReports = document.getElementById('sidebarReportsLink');
-                if (sidebarReports) sidebarReports.style.display = 'none';
-
-                const gridReports = document.getElementById('gridReportsCard');
-                if (gridReports) gridReports.style.display = 'none';
-
-                const sidebarRemote = document.getElementById('sidebarRemoteNavLink');
-                if (sidebarRemote) sidebarRemote.style.display = 'none';
-
-                const gridRemote = document.getElementById('gridRemoteCard');
-                if (gridRemote) gridRemote.style.display = 'none';
+                ['sidebarAuthNavLink', 'gridAuthCard', 'sidebarAdminAccountsLink', 'gridAdminAccountsCard', 'sidebarUsersLink', 'gridUsersCard', 'sidebarReportsLink', 'gridReportsCard', 'sidebarRemoteNavLink', 'gridRemoteCard'].forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
             }
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -635,18 +737,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل التخزين المؤقت IndexedDB للعمل أوفلاين في التطبيق الأهلي Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
-
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
-        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+        enableIndexedDbPersistence(db).catch((err) => {});
 
         let state = {
             accounts: [],
@@ -656,15 +747,6 @@
             batchInvoices: [],
             transactions: []
         };
-
-        let rssNewsList = [
-            "🚀 مرحباً بكم في منصة EIDCO 3D Business OS النسخة السحابية المعزولة.",
-            "💡 تم تفعيل العزل التام والتزامن اللحظي تماماً بين الحسابات."
-        ];
-
-        let currentRssSpeedIndex = 0;
-        const rssSpeeds = ['35s', '20s', '50s'];
-        const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
         let analyticsChartInstance = null;
         let unsubscribers = [];
@@ -695,7 +777,6 @@
         signInAnonymously(auth).then(() => {
             initApp(currentCompanyId);
         }).catch((err) => {
-            console.error("فشل المصادقة سحابياً:", err);
             initApp(currentCompanyId);
         });
 
@@ -731,26 +812,24 @@
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
                 renderRssTicker();
-            } catch (e) {
-                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
-            }
+            } catch (e) {}
 
             unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateAdminHeader();
-            }, (err) => console.error("Accounts error:", err)));
+            }));
 
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Clients error:", err)));
+            }));
 
             unsubscribers.push(onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Products error:", err)));
+            }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
@@ -776,7 +855,7 @@
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
                 renderRssTicker();
-            }, (err) => console.error("Transactions error:", err)));
+            }));
         }
 
         function renderRssTicker() {
@@ -797,41 +876,6 @@
 
             container.innerHTML = dynamicNews.map(n => `<span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle text-[6px] text-amber-400"></i> ${n}</span>`).join('&nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp;');
         }
-
-        window.toggleRssPause = function() {
-            let ticker = document.getElementById('rssTickerContent');
-            let btn = document.getElementById('rssPauseBtn');
-            if(ticker.classList.contains('paused')) {
-                ticker.classList.remove('paused');
-                btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
-                btn.classList.remove('text-emerald-400');
-            } else {
-                ticker.classList.add('paused');
-                btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
-                btn.classList.add('text-emerald-400');
-            }
-        };
-
-        window.toggleRssSpeed = function() {
-            currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
-            let ticker = document.getElementById('rssTickerContent');
-            ticker.style.animationDuration = rssSpeeds[currentRssSpeedIndex];
-            document.getElementById('rssSpeedText').innerText = rssSpeedLabels[currentRssSpeedIndex];
-        };
-
-        window.openAddNewsModal = function() { document.getElementById('addNewsModal').classList.add('active'); };
-        window.closeAddNewsModal = function() { document.getElementById('addNewsModal').classList.remove('active'); };
-
-        window.submitCustomNews = function() {
-            let text = document.getElementById('newRssTextInput').value.trim();
-            let cat = document.getElementById('newRssCategoryInput').value;
-            if(!text) return alert('الرجاء كتابة نص الخبر أولاً');
-            rssNewsList.unshift(`📌 [${cat}] ${escapeHTML(text)}`);
-            document.getElementById('newRssTextInput').value = '';
-            closeAddNewsModal();
-            renderRssTicker();
-            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار الخاص بهذا الحساب.');
-        };
 
         (function setupDraggableFloatingBtn() {
             const dragEl = document.getElementById('floatingTvTrigger');
@@ -865,7 +909,8 @@
         function updateAdminHeader() {
             let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
             let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول الحساب';
-            document.getElementById('welcomeAdminName').innerText = adminName;
+            let nameEl = document.getElementById('welcomeAdminName');
+            if(nameEl) nameEl.innerText = adminName;
 
             const companyBadge = document.getElementById('companyIdDisplayBadge');
             if(companyBadge) {
@@ -876,12 +921,12 @@
             let img = document.getElementById('headerAvatarImg');
             let avatarText = document.getElementById('headerAvatarText');
 
-            if(savedAvatar) {
+            if(savedAvatar && img && avatarText) {
                 img.src = savedAvatar;
                 img.classList.remove('hidden');
                 avatarText.classList.add('hidden');
-            } else {
-                img.classList.add('hidden');
+            } else if(avatarText) {
+                if(img) img.classList.add('hidden');
                 avatarText.classList.remove('hidden');
                 avatarText.innerText = adminName ? adminName.charAt(0) : 'م';
             }
@@ -899,13 +944,14 @@
             let batchProfits = state.batchInvoices.reduce((s,b) => s + Number(b.profit || b.totalProfit || 0), 0);
             let totalProfits = indProfits + batchProfits;
 
-            document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
-            document.getElementById('statSales').innerText = totalSales.toLocaleString() + ' ج.م';
-            document.getElementById('statProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
-            document.getElementById('statClients').innerText = state.clients.length + ' جهة';
+            if(document.getElementById('statVault')) document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
+            if(document.getElementById('statSales')) document.getElementById('statSales').innerText = totalSales.toLocaleString() + ' ج.م';
+            if(document.getElementById('statProfits')) document.getElementById('statProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
+            if(document.getElementById('statClients')) document.getElementById('statClients').innerText = state.clients.length + ' جهة';
 
             let targetInvoices = filteredInvoices || state.batchInvoices;
             let tbody = document.getElementById('dashboardBatchTableBody');
+            if(!tbody) return;
 
             if(!targetInvoices.length) {
                 tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 font-bold">لا توجد نتائج مطابقة أو لا توجد فواتير مجمعة مسجلة سحابياً لهذا الحساب المعزول.</td></tr>`;
@@ -932,6 +978,7 @@
         window.showSummaryModal = function(type) {
             let modalTitle = document.getElementById('modalTitle');
             let modalBody = document.getElementById('modalBody');
+            if(!modalTitle || !modalBody) return;
 
             if (type === 'vault') {
                 let inc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
@@ -1008,8 +1055,6 @@
             document.getElementById('summaryModal').classList.add('active');
         };
 
-        window.closeSummaryModal = function() { document.getElementById('summaryModal').classList.remove('active'); };
-
         window.filterDashboardData = function(query) {
             let q = query.trim().toLowerCase();
             if(!q) return updateStatsAndDashboard();
@@ -1073,55 +1118,6 @@
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
-
-        // تصدير PDF بمعيار A4
-        window.downloadReportPDF = function() {
-            document.getElementById('printIndexCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
-            document.getElementById('printIndexDate').innerText = new Date().toISOString().split('T')[0];
-            window.print();
-        };
-
-        // تصدير التقرير كصورة عالية الدقة PNG
-        window.downloadReportImage = function() {
-            let element = document.getElementById('indexReportPrintArea');
-            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        };
-
-        // مشاركة التقرير محلياً على أندرويد وواتساب
-        window.shareReport = async function() {
-            let vaultVal = document.getElementById('statVault').innerText;
-            let salesVal = document.getElementById('statSales').innerText;
-            let profitsVal = document.getElementById('statProfits').innerText;
-            let clientsVal = document.getElementById('statClients').innerText;
-
-            let text = `📊 *EIDCO // تقرير لوحة المؤشرات الرئيسية*\n`;
-            text += `🏢 معرف الشركة: *${currentCompanyId}*\n`;
-            text += `💰 رصيد الخزنة: *${vaultVal}*\n`;
-            text += `🛍️ إجمالي المبيعات: *${salesVal}*\n`;
-            text += `📈 صافي الأرباح: *${profitsVal}*\n`;
-            text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
-            text += `_تم توليد التقرير عبر EIDCO Business OS_`;
-
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'EIDCO // ملخص مؤشرات الأداء',
-                        text: text
-                    });
-                } catch (err) {
-                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                window.open(whatsappUrl, '_blank');
-            }
-        };
     </script>
 </body>
 </html>

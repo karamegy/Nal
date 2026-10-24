@@ -17,6 +17,13 @@
     <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -38,8 +45,6 @@
         /* تحسينات الشاشات اللمسية وتطبيقات WebView */
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -57,15 +62,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
         header {
             flex-shrink: 0;
         }
 
-        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -117,7 +118,6 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         table th, table td { white-space: nowrap; }
 
-        /* شريط التمرير الناعم للتطبيقات الأهلية */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
@@ -159,8 +159,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -186,7 +207,6 @@
                 <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                 <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -243,7 +263,6 @@
                         <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                         <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -453,29 +472,29 @@
             unsubscribers = [];
 
             const invoicesCollection = collection(db, "invoices");
-            const batchInvoicesCollection = collection(db, "batch_invoices");
             const transactionsCollection = collection(db, "transactions");
             const productsCollection = collection(db, "products");
             const accountsCollection = collection(db, "accounts");
 
             const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
-            const batchInvoicesRef = query(batchInvoicesCollection, where("companyId", "==", companyId));
             const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
             const productsRef = query(productsCollection, where("companyId", "==", companyId));
             const accountsRef = query(accountsCollection, where("companyId", "==", companyId));
 
             try {
-                const [accountsSnap, invoicesSnap, batchInvoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
+                const [accountsSnap, invoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
                     getDocs(accountsRef),
                     getDocs(invoicesRef),
-                    getDocs(batchInvoicesRef),
                     getDocs(transactionsRef),
                     getDocs(productsRef)
                 ]);
 
                 state.accounts = accountsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                state.invoices = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                state.batchInvoices = batchInvoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                
+                let allInvs = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.invoices = allInvs.filter(i => !i.isBatch);
+                state.batchInvoices = allInvs.filter(i => i.isBatch);
+
                 state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 state.products = productsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
 
@@ -496,14 +515,11 @@
             }, (error) => console.error("خطأ في جلب الحسابات:", error)));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
-                state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                let allInvs = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.invoices = allInvs.filter(i => !i.isBatch);
+                state.batchInvoices = allInvs.filter(i => i.isBatch);
                 updateDashboard();
-            }, (error) => console.error("خطأ في جلب الفواتير الفردية:", error)));
-
-            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
-                state.batchInvoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                updateDashboard();
-            }, (error) => console.error("خطأ في جلب الفواتير المجمعة:", error)));
+            }, (error) => console.error("خطأ في جلب الفواتير:", error)));
 
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
@@ -597,7 +613,7 @@
             let vaultCtx = document.getElementById('dashVaultChart').getContext('2d');
             if (vaultChartInstance) vaultChartInstance.destroy();
 
-            vaultCtx = new Chart(vaultCtx, {
+            vaultChartInstance = new Chart(vaultCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['الإيرادات', 'المصروفات'],
@@ -611,7 +627,7 @@
         }
 
         window.fixCorruptedData = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if(!confirm('هل تريد إصلاح وتصحيح الأرقام المضخمة وإعادة ضبط الحسابات في سحابة Firebase المعزولة؟')) return;
 
             if (!auth.currentUser) {
@@ -630,35 +646,41 @@
                     }
                 }
 
-                window.NativeBridge.showToast("✓ تم إصلاح الأرقام وضبط الحسابات");
+                showNativeToast("✓ تم إصلاح الأرقام وضبط الحسابات");
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
+                showNativeToast('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
             }
         };
 
-        // تصدير PDF بمعيار A4
         window.downloadDashboardPDF = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('printDashCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printDashCurrentDate').innerText = new Date().toISOString().split('T')[0];
             window.print();
         };
 
-        // تصدير التقرير كصورة عالي الدقة PNG
         window.downloadDashboardImage = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let element = document.getElementById('dashboardPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Dashboard-${currentCompanyId}-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast("تم تصدير لوحة التحكم كصورة بنجاح");
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("تم تصدير لوحة التحكم كصورة بنجاح");
             });
         };
 
-        // مشاركة مباشرة عبر أندرويد وواتساب
         window.shareDashboardReport = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let vaultVal = document.getElementById('dashVault').innerText;
             let salesVal = document.getElementById('dashSales').innerText;
             let profitsVal = document.getElementById('dashProfits').innerText;
@@ -672,7 +694,18 @@
             text += `📦 الأصناف بالمخزن: *${productsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            window.NativeBridge.shareText(text, 'EIDCO // ملخص لوحة التحكم');
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(text, 'EIDCO // ملخص لوحة التحكم');
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'EIDCO // ملخص لوحة التحكم', text: text });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
     </script>
     

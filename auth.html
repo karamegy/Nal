@@ -2,15 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // اداره المخازن والشركات والمكاتب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // إدارة المخازن والشركات والمكاتب Native</title>
     
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -24,16 +26,100 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #0f172a; 
+            --card-bg: #1e293b; 
+            --border-color: #334155; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8; 
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        html, body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main) !important; 
+            color: var(--text-main); 
+            min-height: 100dvh; 
+            margin: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+            overscroll-behavior-y: contain;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* المحافظة على مسافة برؤية الحقول أثناء ظهور الكيبورد */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #0f172a; border: 1px solid var(--border-color); color: #fff; border-radius: 12px; padding: 12px 16px; transition: all 0.2s; box-sizing: border-box; width: 100%; }
-        .corporate-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 12px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 24px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #0f172a; 
+            border: 1px solid var(--border-color); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 12px 16px; 
+            transition: all 0.2s; 
+            box-sizing: border-box; 
+            width: 100%; 
+        }
+        .corporate-input:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 12px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            user-select: none;
+        }
         .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .custom-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(4px);
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+            overflow-y: auto;
+        }
         .custom-modal.active { display: flex !important; }
+
         @keyframes pulseRing {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(79, 70, 229, 0); }
@@ -41,10 +127,27 @@
         }
         .ring-pulse { animation: pulseRing 2s infinite; }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden">
+    <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden my-auto">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
         <!-- زر التثبيت البرمجي الظاهر عند جهوزية المتصفح -->
@@ -65,17 +168,17 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-2">
-            <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200">
+            <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                 <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
             </button>
-            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700">
+            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                 <i class="fa-solid fa-phone text-emerald-400 text-sm"></i> تسجيل برقم الهاتف
             </button>
         </div>
 
         <!-- زر الشكاوي والدعم الفني -->
         <div class="relative z-10">
-            <button onclick="openComplaintsModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow">
+            <button onclick="openComplaintsModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> هل تواجه مشكلة؟ إرسال شكوى أو بلاغ للإدارة
             </button>
         </div>
@@ -98,7 +201,7 @@
         </div>
 
         <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
-            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition ring-pulse" title="انقر لبدء الدخول">
+            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
             <div>
@@ -142,7 +245,7 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="submitUserComplaint()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold flex-1 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
+                <button onclick="submitUserComplaint()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold flex-1 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-paper-plane"></i> إرسال الشكوى للإدارة
                 </button>
                 <button onclick="closeComplaintsModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
@@ -161,12 +264,12 @@
                 <div id="phoneStep1">
                     <label class="block mb-1 text-slate-300 font-bold">رقم الهاتف (مع رمز الدولة)</label>
                     <input type="tel" id="userPhoneNumber" class="corporate-input text-xs mono-font" placeholder="+2010xxxxxxxx">
-                    <button onclick="sendPhoneVerificationCode()" class="btn-primary w-full mt-3 py-2.5 text-xs">إرسال رمز التحقق</button>
+                    <button onclick="sendPhoneVerificationCode()" class="btn-primary w-full mt-3 py-2.5 text-xs active:scale-95">إرسال رمز التحقق</button>
                 </div>
                 <div id="phoneStep2" class="hidden space-y-2">
                     <label class="block mb-1 text-slate-300 font-bold">أدخل رمز التحقق (OTP)</label>
                     <input type="text" id="phoneOtpCode" class="corporate-input text-xs mono-font text-center tracking-widest text-lg" placeholder="123456">
-                    <button onclick="verifyPhoneOtpCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full mt-2 py-2.5 rounded-xl text-xs transition cursor-pointer">تأكيد الرمز ودخول المنظومة</button>
+                    <button onclick="verifyPhoneOtpCode()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold w-full mt-2 py-2.5 rounded-xl text-xs transition cursor-pointer">تأكيد الرمز ودخول المنظومة</button>
                 </div>
                 <div id="recaptcha-container"></div>
             </div>
@@ -236,6 +339,7 @@
 
         // دوال نافذة الشكاوى
         window.openComplaintsModal = function() {
+            triggerHaptic(20);
             let currentInputName = document.getElementById('usernameInput').value.trim();
             if(currentInputName) {
                 document.getElementById('complaintSenderName').value = currentInputName;
@@ -244,10 +348,12 @@
         };
 
         window.closeComplaintsModal = function() {
+            triggerHaptic(15);
             document.getElementById('complaintsModal').classList.remove('active');
         };
 
         window.submitUserComplaint = async function() {
+            triggerHaptic(30);
             let name = document.getElementById('complaintSenderName').value.trim();
             let contact = document.getElementById('complaintContact').value.trim();
             let message = document.getElementById('complaintMessage').value.trim();
@@ -267,6 +373,7 @@
                     date: new Date().toISOString().replace('T', ' ').substring(0, 19)
                 });
 
+                showNativeToast("✓ تم إرسال الشكوى للإدارة بنجاح");
                 alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية، سيتم مراجعتها واتخاذ اللازم.');
                 document.getElementById('complaintMessage').value = '';
                 window.closeComplaintsModal();
@@ -374,6 +481,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
+                showNativeToast("✓ تم تسجيل الدخول بنجاح");
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
 
             } catch (error) {
@@ -383,6 +491,7 @@
 
         // دالة بدء تسجيل الدخول بـ Google
         window.signInWithGoogle = async function() {
+            triggerHaptic(25);
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
             } else {
@@ -466,19 +575,23 @@
             const urlParams = new URLSearchParams(window.location.search);
             const redirectPage = urlParams.get('redirect') || 'index.html';
 
+            showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
         window.openPhoneAuthModal = function() {
+            triggerHaptic(20);
             document.getElementById('phoneAuthModal').classList.add('active');
         };
         window.closePhoneAuthModal = function() {
+            triggerHaptic(15);
             document.getElementById('phoneAuthModal').classList.remove('active');
         };
 
         let confirmationResult = null;
 
         window.sendPhoneVerificationCode = async function() {
+            triggerHaptic(25);
             let phoneNumber = document.getElementById('userPhoneNumber').value.trim();
             if(!phoneNumber) {
                 alert('يرجى إدخال رقم الهاتف بصيغة صحيحة.');
@@ -492,6 +605,7 @@
                 confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
                 document.getElementById('phoneStep1').classList.add('hidden');
                 document.getElementById('phoneStep2').classList.remove('hidden');
+                showNativeToast("✓ تم إرسال رمز التحقق (OTP)");
                 alert('✓ تم إرسال رمز التحقق إلى هاتفك بنجاح.');
             } catch (error) {
                 alert('فشل إرسال رمز التحقق: ' + error.message);
@@ -499,6 +613,7 @@
         };
 
         window.verifyPhoneOtpCode = async function() {
+            triggerHaptic(30);
             let code = document.getElementById('phoneOtpCode').value.trim();
             if(!code) return alert('يرجى إدخال رمز التحقق.');
 
@@ -546,6 +661,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
+                showNativeToast("✓ تمت المصادقة بنجاح");
                 alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
@@ -554,6 +670,7 @@
         };
 
         window.performBiometricAuth = async function() {
+            triggerHaptic(40);
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
 
@@ -633,9 +750,10 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
+                showNativeToast(`مرحباً بك يا ${username}`);
                 setTimeout(() => {
                     window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-                }, 800);
+                }, 600);
 
             } catch (error) {
                 statusEl.innerText = "⚠️ خطأ في المصادقة السحابية: " + error.message;

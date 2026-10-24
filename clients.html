@@ -187,9 +187,9 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -241,9 +241,9 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link active"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -254,8 +254,19 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                <!-- شريط البحث الفوري في العملاء -->
+                <div class="corporate-card p-4 flex gap-3 items-center bg-white shadow-sm">
+                    <div class="flex-1 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
+                        <input type="text" id="searchClientsInput" oninput="renderClients()" placeholder="بحث فوري برقم الهاتف، اسم العميل، أو العنوان..." class="corporate-input pr-10 text-xs">
+                    </div>
+                </div>
+
                 <div class="corporate-card p-6 space-y-4">
-                    <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة العملاء والشركات السحابية المعزولة</h3>
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-users ml-2 text-indigo-600"></i> قائمة العملاء والشركات السحابية المعزولة</h3>
+                        <span id="clientsCountBadge" class="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-xl" dir="ltr">0 عميل</span>
+                    </div>
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
@@ -263,13 +274,13 @@
                                     <th class="p-4">اسم العميل / الشركة</th>
                                     <th class="p-4">رقم الهاتف</th>
                                     <th class="p-4">العنوان</th>
-                                    <th class="p-4">إجمالي المشتريات</th>
+                                    <th class="p-4">إجمالي المشتريات (فردي + مجمع)</th>
                                     <th class="p-4">المديونية المتبقية</th>
                                     <th class="p-4 text-center">إجراءات وكشف الحساب</th>
                                 </tr>
                             </thead>
                             <tbody id="clientsTableBody" class="divide-y divide-slate-100 bg-white">
-                                <tr><td colspan="6" class="p-4 text-center text-slate-400">جاري تحميل حسابات العملاء من سحابة Firebase المعزولة...</td></tr>
+                                <tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">جاري تحميل حسابات العملاء من سحابة Firebase المعزولة...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -447,6 +458,16 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -515,6 +536,7 @@
         let state = {
             clients: [],
             invoices: [],
+            batchInvoices: [],
             transactions: [],
             payments: []
         };
@@ -534,6 +556,7 @@
 
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
+            const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", companyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
             const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", companyId));
 
@@ -544,6 +567,12 @@
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                renderClients();
+                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
+            }));
+
+            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
+                state.batchInvoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
             }));
@@ -559,39 +588,65 @@
             }));
         }
 
-        function renderClients() {
+        function isClientMatch(itemClientName, itemClientId, targetClient) {
+            if (!targetClient) return false;
+            let targetName = (targetClient.name || targetClient.clientName || '').trim().toLowerCase();
+            let nameMatch = itemClientName && (itemClientName.trim().toLowerCase() === targetName);
+            let idMatch = itemClientId && (String(itemClientId) === String(targetClient.docId) || String(itemClientId) === String(targetClient.id));
+            return nameMatch || idMatch;
+        }
+
+        window.renderClients = function() {
             let tbody = document.getElementById('clientsTableBody');
-            if(!state.clients.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا توجد عملاء مسجلون سحابياً لهذا الحساب المعزول.</td></tr>`;
+            let searchVal = (document.getElementById('searchClientsInput')?.value || '').toLowerCase().trim();
+
+            let filteredClients = state.clients.filter(c => {
+                if (!searchVal) return true;
+                let name = (c.name || '').toLowerCase();
+                let phone = (c.phone || '').toLowerCase();
+                let address = (c.address || '').toLowerCase();
+                return name.includes(searchVal) || phone.includes(searchVal) || address.includes(searchVal);
+            });
+
+            const countBadge = document.getElementById('clientsCountBadge');
+            if (countBadge) countBadge.innerText = `${filteredClients.length} عميل`;
+
+            if(!filteredClients.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">لا يوجد عملاء مطبقون للبحث أو لا يوجد بيانات سحابية.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = state.clients.map(c => {
-                let clientInvoices = state.invoices.filter(i => i.client === c.name);
-                let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            tbody.innerHTML = filteredClients.map(c => {
+                let clientInvoices = state.invoices.filter(i => isClientMatch(i.client || i.clientName, i.clientId, c));
+                let totalIndPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || inv.totalAmount || inv.amount || 0), 0);
 
-                let clientPayments = state.payments.filter(p => p.clientName === c.name);
+                let clientBatchInvoices = state.batchInvoices.filter(b => isClientMatch(b.client || b.clientName, b.clientId, c));
+                let totalBatchPurchases = clientBatchInvoices.reduce((sum, b) => sum + Number(b.totalAmount || b.total || 0), 0);
+
+                let totalPurchases = totalIndPurchases + totalBatchPurchases;
+
+                let clientPayments = state.payments.filter(p => isClientMatch(p.clientName, p.clientId, c));
                 let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
                 let dueBalance = totalPurchases - totalPaid;
 
                 return `
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="p-4 font-bold text-slate-900">${c.name}</td>
-                        <td class="p-4 mono-font text-indigo-700 font-bold" dir="ltr">${c.phone || '---'}</td>
-                        <td class="p-4 text-slate-600">${c.address || '---'}</td>
+                        <td class="p-4 font-bold text-slate-900">${escapeHTML(c.name)}</td>
+                        <td class="p-4 mono-font text-indigo-700 font-bold" dir="ltr">${escapeHTML(c.phone || '---')}</td>
+                        <td class="p-4 text-slate-600">${escapeHTML(c.address || '---')}</td>
                         <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${totalPurchases.toLocaleString()} ج.م</td>
                         <td class="p-4 mono-font ${dueBalance > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}" dir="ltr">${dueBalance.toLocaleString()} ج.م</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="window.openClientStatement('${c.name}')" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
+                            <button onclick="window.openClientStatement('${escapeHTML(c.name)}')" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
                                 <i class="fa-solid fa-file-invoice-dollar ml-1"></i> كشف الحساب
                             </button>
-                            <button onclick="window.deleteClient('${c.docId}', '${c.name}')" class="text-rose-500 hover:text-rose-700 active:scale-95 cursor-pointer text-xs p-1" title="حذف العميل سحابياً"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="window.deleteClient('${c.docId}', '${escapeHTML(c.name)}')" class="text-rose-500 hover:text-rose-700 active:scale-95 cursor-pointer text-xs p-1" title="حذف العميل سحابياً"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
             }).join('');
-        }
+        };
 
         window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
         window.closeClientModal = function() { document.getElementById('clientModal').classList.remove('active'); };
@@ -645,10 +700,14 @@
             document.getElementById('printStmtCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printStmtDate').innerText = new Date().toISOString().split('T')[0];
 
-            let clientInvoices = state.invoices.filter(i => i.client === clientName);
-            let clientPayments = state.payments.filter(p => p.clientName === clientName);
+            let clientInvoices = state.invoices.filter(i => isClientMatch(i.client || i.clientName, i.clientId, currentActiveClient));
+            let clientBatchInvoices = state.batchInvoices.filter(b => isClientMatch(b.client || b.clientName, b.clientId, currentActiveClient));
+            let clientPayments = state.payments.filter(p => isClientMatch(p.clientName, p.clientId, currentActiveClient));
 
-            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+            let totalIndPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || inv.totalAmount || inv.amount || 0), 0);
+            let totalBatchPurchases = clientBatchInvoices.reduce((sum, b) => sum + Number(b.totalAmount || b.total || 0), 0);
+            let totalPurchases = totalIndPurchases + totalBatchPurchases;
+
             let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 
@@ -657,18 +716,33 @@
             document.getElementById('stmtTotalDue').innerText = dueBalance.toLocaleString() + ' ج.م';
 
             let rowsHtml = '';
+            
             clientInvoices.forEach(inv => {
+                let amount = Number(inv.total || inv.totalAmount || inv.amount || 0);
                 rowsHtml += `
                     <tr>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.id || 'INV'}</td>
-                        <td class="p-2.5">فاتورة مبيعات سحابية (${inv.items ? inv.items.length + ' أصناف' : 'فردية'})</td>
-                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${Number(inv.total).toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">${inv.invoiceNumber || inv.id || 'INV'}</td>
+                        <td class="p-2.5">فاتورة مبيعات فردية (${inv.items ? inv.items.length + ' أصناف' : 'مباشرة'})</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-600" dir="ltr">+${amount.toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${inv.date || '---'}</td>
                         <td class="p-2.5 text-center no-print">
-                            <button onclick="window.previewInvoice('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs flex items-center justify-center gap-1 mx-auto active:scale-95" title="معاينة الفاتورة">
+                            <button onclick="window.previewInvoice('${inv.id || inv.docId}')" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer text-xs flex items-center justify-center gap-1 mx-auto active:scale-95" title="معاينة الفاتورة">
                                 <i class="fa-solid fa-eye"></i> معاينة
                             </button>
                         </td>
+                    </tr>
+                `;
+            });
+
+            clientBatchInvoices.forEach(b => {
+                let amount = Number(b.totalAmount || b.total || 0);
+                rowsHtml += `
+                    <tr class="bg-indigo-50/40">
+                        <td class="p-2.5 mono-font font-bold text-indigo-800" dir="ltr">${b.batchNumber || b.id || 'BATCH'}</td>
+                        <td class="p-2.5 font-bold text-indigo-900">فاتورة مجمعة (${b.invoicesCount || (b.invoices ? b.invoices.length : 1)} فواتير)</td>
+                        <td class="p-2.5 mono-font font-bold text-indigo-800" dir="ltr">+${amount.toLocaleString()} ج.م</td>
+                        <td class="p-2.5 mono-font text-slate-500" dir="ltr">${b.date || '---'}</td>
+                        <td class="p-2.5 text-center no-print"><span class="text-slate-400 font-mono">مجمعة</span></td>
                     </tr>
                 `;
             });
@@ -722,6 +796,7 @@
                 await addDoc(paymentsCollection, {
                     companyId: currentCompanyId,
                     id: payId,
+                    clientId: currentActiveClient.docId || currentActiveClient.id || '',
                     clientName: currentActiveClient.name,
                     amount: amount,
                     method: method,
@@ -730,6 +805,7 @@
 
                 await addDoc(transactionsCollection, {
                     companyId: currentCompanyId,
+                    paymentId: payId,
                     type: 'إيراد',
                     amount: amount,
                     desc: `تحصيل دفعة (${method}) من العميل ${currentActiveClient.name}`,
@@ -750,7 +826,7 @@
                 await deleteDoc(doc(db, "client_payments", payDocId));
 
                 if (pay) {
-                    let tx = state.transactions.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount));
+                    let tx = state.transactions.find(t => t.paymentId === pay.id || (t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(pay.amount)));
                     if (tx && tx.docId) {
                         await deleteDoc(doc(db, "transactions", tx.docId));
                     }
@@ -772,7 +848,7 @@
                 await updateDoc(doc(db, "client_payments", payDocId), { amount: newAmount });
 
                 if (pay) {
-                    let tx = state.transactions.find(t => t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(oldAmount));
+                    let tx = state.transactions.find(t => t.paymentId === pay.id || (t.desc && t.desc.includes(pay.clientName) && Number(t.amount) === Number(oldAmount)));
                     if (tx && tx.docId) {
                         await updateDoc(doc(db, "transactions", tx.docId), { amount: newAmount });
                     }
@@ -783,23 +859,25 @@
             }
         };
 
-        window.previewInvoice = function(invId) {
-            let inv = state.invoices.find(i => i.id === invId);
+        window.previewInvoice = function(invKey) {
+            let inv = state.invoices.find(i => i.id === invKey || i.docId === invKey);
             if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة سحابياً');
 
-            document.getElementById('prevSingleInvId').innerText = inv.id;
+            document.getElementById('prevSingleInvId').innerText = inv.invoiceNumber || inv.id || 'INV';
             document.getElementById('prevSingleDate').innerText = inv.date || '---';
-            document.getElementById('prevSingleClient').innerText = inv.client || 'عميل عام';
-            document.getElementById('prevSingleTotal').innerText = Number(inv.total).toLocaleString() + ' ج.م';
+            document.getElementById('prevSingleClient').innerText = inv.client || inv.clientName || 'عميل عام';
+            
+            let totalVal = Number(inv.total || inv.totalAmount || inv.amount || 0);
+            document.getElementById('prevSingleTotal').innerText = totalVal.toLocaleString() + ' ج.م';
 
             let itemsHtml = '';
             if(inv.items && inv.items.length) {
                 itemsHtml = inv.items.map(it => `
                     <tr>
-                        <td class="p-2.5 font-bold text-slate-900">${it.prodName || it.name}</td>
+                        <td class="p-2.5 font-bold text-slate-900">${escapeHTML(it.prodName || it.name)}</td>
                         <td class="p-2.5 text-center mono-font" dir="ltr">${it.qty}</td>
-                        <td class="p-2.5 text-center mono-font" dir="ltr">${Number(it.unitPrice || it.price).toLocaleString()}</td>
-                        <td class="p-2.5 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal || (it.qty * (it.unitPrice || it.price))).toLocaleString()}</td>
+                        <td class="p-2.5 text-center mono-font" dir="ltr">${Number(it.unitPrice || it.price || 0).toLocaleString()}</td>
+                        <td class="p-2.5 text-left mono-font text-indigo-600 font-bold" dir="ltr">${Number(it.subtotal || (it.qty * (it.unitPrice || it.price || 0))).toLocaleString()}</td>
                     </tr>
                 `).join('');
             } else {
@@ -845,10 +923,15 @@
         // مشاركة مباشرة عبر أندرويد وواتساب
         window.sendStatementWhatsApp = async function() {
             if(!currentActiveClient) return;
-            let clientInvoices = state.invoices.filter(i => i.client === currentActiveClient.name);
-            let totalPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
             
-            let clientPayments = state.payments.filter(p => p.clientName === currentActiveClient.name);
+            let clientInvoices = state.invoices.filter(i => isClientMatch(i.client || i.clientName, i.clientId, currentActiveClient));
+            let clientBatchInvoices = state.batchInvoices.filter(b => isClientMatch(b.client || b.clientName, b.clientId, currentActiveClient));
+            
+            let totalIndPurchases = clientInvoices.reduce((sum, inv) => sum + Number(inv.total || inv.totalAmount || inv.amount || 0), 0);
+            let totalBatchPurchases = clientBatchInvoices.reduce((sum, b) => sum + Number(b.totalAmount || b.total || 0), 0);
+            let totalPurchases = totalIndPurchases + totalBatchPurchases;
+            
+            let clientPayments = state.payments.filter(p => isClientMatch(p.clientName, p.clientId, currentActiveClient));
             let totalPaid = clientPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let dueBalance = totalPurchases - totalPaid;
 

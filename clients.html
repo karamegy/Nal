@@ -9,23 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
-
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -47,6 +37,8 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -54,10 +46,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -69,6 +63,8 @@
 
         /* المحافظة على مسافة برؤية الحقول أثناء الكتابة */
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -133,16 +129,23 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.65); 
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(8px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
-            overflow-y: auto; 
             box-sizing: border-box; 
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -192,30 +195,15 @@
 
     <script>
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
             }
         }
-
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
@@ -273,7 +261,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -334,7 +322,7 @@
 
     <!-- نافذة إضافة عميل -->
     <div id="clientModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl custom-modal-content">
             <h3 class="font-bold text-sm text-slate-900">إضافة عميل / شركة جديدة سحابياً</h3>
             <div class="space-y-3 text-xs">
                 <div>
@@ -359,7 +347,7 @@
 
     <!-- نافذة كشف حساب العميل التفصيلي A4 -->
     <div id="statementModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
+        <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border custom-modal-content">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
                 
                 <!-- هيدر معتمد للطباعة والتصدير المعياري A4 -->
@@ -449,7 +437,7 @@
 
     <!-- نافذة معاينة الفاتورة الفردية -->
     <div id="invoicePreviewModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border custom-modal-content">
             <div id="singleInvoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4 w-full box-border">
                 <div class="flex justify-between items-center border-b pb-3">
                     <div>
@@ -506,7 +494,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -550,17 +538,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل IndexedDB للتخزين المحلي أوفلاين للعمل اللحظي في Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -681,16 +662,16 @@
         };
 
         window.openClientModal = function() { 
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('clientModal').classList.add('active'); 
         };
         window.closeClientModal = function() { 
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('clientModal').classList.remove('active'); 
         };
 
         window.saveClient = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let name = document.getElementById('clientNameInput').value.trim();
             let phone = document.getElementById('clientPhoneInput').value.trim();
             let address = document.getElementById('clientAddressInput').value.trim();
@@ -710,15 +691,14 @@
                 document.getElementById('clientNameInput').value = '';
                 document.getElementById('clientPhoneInput').value = '';
                 document.getElementById('clientAddressInput').value = '';
-                showNativeToast("✓ تم إضافة العميل بنجاح");
-                alert('✓ تم إضافة العميل في السحابة بنجاح');
+                window.NativeBridge.showToast("✓ تم إضافة العميل بنجاح");
             } catch (err) {
-                alert('حدث خطأ أثناء حفظ العميل بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء حفظ العميل بالسحابة: ' + err.message);
             }
         };
 
         window.deleteClient = async function(docId, name) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if(!confirm(`هل أنت متأكد من حذف العميل (${name}) من قاعدة البيانات السحابية؟`)) return;
             try {
                 if (docId) {
@@ -727,15 +707,14 @@
                     let c = state.clients.find(x => x.name === name);
                     if (c && c.docId) await deleteDoc(doc(db, "clients", c.docId));
                 }
-                showNativeToast("✓ تم حذف العميل سحابياً");
-                alert('✓ تم حذف العميل سحابياً بنجاح');
+                window.NativeBridge.showToast("✓ تم حذف العميل سحابياً");
             } catch (err) {
-                alert('حدث خطأ أثناء حذف العميل بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء حذف العميل بالسحابة: ' + err.message);
             }
         };
 
         window.openClientStatement = function(clientName) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             currentActiveClient = state.clients.find(c => c.name === clientName);
             if(!currentActiveClient) return;
 
@@ -818,13 +797,13 @@
         };
 
         window.closeStatementModal = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
         };
 
         window.recordClientPayment = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
             let method = document.getElementById('paymentMethodInput').value;
@@ -858,15 +837,14 @@
                 });
 
                 document.getElementById('paymentAmountInput').value = '';
-                showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
-                alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وكشف الحساب سحابياً بنجاح بدون تكرار');
+                window.NativeBridge.showToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
             } catch (err) {
-                alert('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
             }
         };
 
         window.deletePayment = async function(payDocId) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if(!confirm('هل أنت متأكد من حذف دفعة السداد هذه من السحابة؟')) return;
             try {
                 let pay = state.payments.find(p => p.docId === payDocId);
@@ -878,15 +856,14 @@
                         await deleteDoc(doc(db, "transactions", tx.docId));
                     }
                 }
-                showNativeToast("✓ تم حذف الدفعة سحابياً");
-                alert('✓ تم حذف دفعة السداد من السحابة بنجاح');
+                window.NativeBridge.showToast("✓ تم حذف الدفعة سحابياً");
             } catch (err) {
-                alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 
         window.editPayment = async function(payDocId, oldAmount) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let newAmountStr = prompt('أدخل مبلغ دفعة السداد الجديد (ج.م):', oldAmount);
             if(newAmountStr === null) return;
             let newAmount = Number(newAmountStr);
@@ -902,15 +879,14 @@
                         await updateDoc(doc(db, "transactions", tx.docId), { amount: newAmount });
                     }
                 }
-                showNativeToast("✓ تم تعديل الدفعة بنجاح");
-                alert('✓ تم تعديل مبلغ الدفعة سحابياً بنجاح');
+                window.NativeBridge.showToast("✓ تم تعديل الدفعة بنجاح");
             } catch (err) {
-                alert('حدث خطأ أثناء التعديل بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء التعديل بالسحابة: ' + err.message);
             }
         };
 
         window.previewInvoice = function(invKey) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let inv = state.invoices.find(i => i.id === invKey || i.docId === invKey);
             if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة سحابياً');
 
@@ -941,7 +917,7 @@
         };
 
         window.closeInvoicePreviewModal = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('invoicePreviewModal').classList.remove('active');
             if(currentActiveClient) {
                 window.openClientStatement(currentActiveClient.name);
@@ -949,34 +925,34 @@
         };
 
         window.downloadSingleInvoiceImage = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let element = document.getElementById('singleInvoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير صورة الفاتورة بنجاح");
             });
         };
 
         window.downloadStatementImage = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let element = document.getElementById('statementPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير كشف الحساب كصورة بنجاح");
             });
         };
 
         window.downloadStatementPDF = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             window.print();
         };
 
         window.sendStatementWhatsApp = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if(!currentActiveClient) return;
             
             let clientInvoices = state.invoices.filter(i => isClientMatch(i.client || i.clientName, i.clientId, currentActiveClient));
@@ -998,30 +974,13 @@
             text += `📌 *الرصيد المتبقي (المديونية): ${dueBalance.toLocaleString()} ج.م*\n\n`;
             text += `شكراً لتعاملكم المستمر معنا! 🙏`;
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(text);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: `كشف حساب ${currentActiveClient.name}`,
-                        text: text
-                    });
-                } catch (err) {
-                    let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
-                    let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let phone = currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
-                let whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            window.NativeBridge.shareText(text, `كشف حساب ${currentActiveClient.name}`);
         };
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

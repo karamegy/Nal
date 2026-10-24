@@ -46,9 +46,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. إنشاء مجلد www وبداخله ملف مؤقت لمنع أخطاء Capacitor Plugins
+          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع لكي تستقر إضافات كاباسيتور وملفاتها
           mkdir -p www
-          echo "<HTML><BODY>EIDCO Business OS</BODY></HTML>" > www/index.html
+          cp -r *.html *.js *.json assets www/ 2>/dev/null || true
 
           # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
@@ -57,7 +57,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
+          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي مع توجيه الـ webDir إلى www
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -91,17 +91,11 @@ jobs:
           }
           EOF
 
-          # 5. تجهيز الأيقونة وتوليد أحجام mipmap لأندرويد
-          mkdir -p assets
+          # 5. توليد أحجام الأيقونات لأندرويد
           if [ -f "icon-new-512.png" ]; then
-            cp icon-new-512.png assets/icon.png
-            cp icon-new-512.png assets/icon-only.png
-          elif [ -f "icon-192.png" ]; then
-            cp icon-192.png assets/icon.png
-            cp icon-192.png assets/icon-only.png
+            cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
-            cp logo.png assets/icon.png
-            cp logo.png assets/icon-only.png
+            cp logo.png assets/icon.png 2>/dev/null || true
           fi
           
           if [ -f "assets/icon.png" ]; then
@@ -251,8 +245,7 @@ jobs:
           rm -rf ~/.gradle/caches/jars-9/ || true
           rm -rf ~/.gradle/caches/transforms/ || true
 
-          # 12. التحديث والمزامنة والبناء المباشر
-          npx cap update android
+          # 12. المزامنة والبناء المباشر (توليد ملفات الإضافات بنجاح)
           npx cap sync android
           cd android
           chmod +x gradlew

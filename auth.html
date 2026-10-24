@@ -349,7 +349,7 @@
         }
     </script>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules & Google Identity -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -366,8 +366,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithRedirect,
-            getRedirectResult,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -391,42 +389,60 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // 1. معالجة التوجيه المباشر عند العودة من Google
-        getRedirectResult(auth).then(async (result) => {
-            if (result && result.user) {
-                showNativeToast("✓ تم التحقق من حساب Google بنجاح");
-                await processGoogleAccountData(result.user);
+        // 1. تهيئة مكتبة جوجل فور فتح الصفحة لإعداد قائمة الحسابات العائمة
+        function initGoogleOneTap() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleIdToken,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
             }
-        }).catch((error) => {
-            console.error("Redirect Auth Error:", error);
+        }
+
+        // تشغيل التهيئة فور استكمال تحميل الصفحة
+        window.addEventListener('load', () => {
+            initGoogleOneTap();
         });
 
-        // 2. دالة استقبال ID Token المباشر من Google GSI
-        window.handleGoogleIdToken = async function(idToken) {
+        // 2. استقبال الحساب عند اختياره من القائمة العائمة
+        async function handleGoogleIdToken(response) {
             try {
                 showNativeToast("جاري التحقق من حساب Google...");
-                const credential = GoogleAuthProvider.credential(idToken);
+                const credential = GoogleAuthProvider.credential(response.credential);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
             } catch (error) {
                 alert('خطأ في مصادقة جوجل: ' + error.message);
             }
-        };
+        }
 
-        // 3. دالة الزر الفورية بدون async لضمان عدم حظر المتصفح للتوجيه
+        // 3. عند الضغط على الزر: إظهار النافذة العائمة (اختيار حساب) فوراً فوق الصفحة
         window.signInWithGoogle = function() {
             triggerHaptic(25);
 
-            // في حال التطبيق داخل Native WebView
+            // لو التطبيق شغال داخل Native Android WebView
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // توجيه فوري مباشر يمنع المتصفح من حظر النافذة
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-            signInWithRedirect(auth, provider);
+            // فتح قائمة الحسابات العائمة (One Tap Prompt) كما في الصورة
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed()) {
+                        // إذا منع المتصفح الإظهار التلقائي، يعاد التظهير بشكل مباشر
+                        google.accounts.id.initialize({
+                            client_id: GOOGLE_CLIENT_ID,
+                            callback: handleGoogleIdToken
+                        });
+                        google.accounts.id.prompt();
+                    }
+                });
+            } else {
+                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات.");
+            }
         };
 
         // المصادقة التلقائية الأولية

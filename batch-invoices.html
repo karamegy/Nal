@@ -11,12 +11,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
+        }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
+            });
         }
     </script>
 
@@ -95,6 +102,9 @@
             transition: all 0.2s; 
             user-select: none; 
             width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -156,14 +166,38 @@
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
+
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        // إرسال توست نيتف
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        // اهتزاز لمسي نيتف
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
             <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
@@ -172,9 +206,7 @@
                 <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -230,9 +262,7 @@
                         <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -269,23 +299,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">اختر العميل / الشركة</label>
-                            <select id="batchClient" class="corporate-input" onchange="updateClientLedgerInfo()"></select>
+                            <select id="batchClient" class="corporate-input font-bold text-slate-800" onchange="updateClientLedgerInfo()"></select>
                             <span id="clientLedgerInfo" class="block mt-1 text-[11px] text-slate-500 font-mono" dir="ltr">رصيد المديونية: 0.00 ج.م</span>
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">طريقة الدفع</label>
-                            <select id="batchPaymentType" class="corporate-input">
+                            <select id="batchPaymentType" class="corporate-input font-bold text-slate-800">
                                 <option value="نقدي">نقدي (تورد للخزنة سحابياً فوراً)</option>
                                 <option value="آجل">آجل (تسجل على حساب العميل سحابياً)</option>
                             </select>
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">خصم إضافي (ج.م)</label>
-                            <input type="number" id="batchDiscount" class="corporate-input mono-font" value="0" min="0" oninput="calculateBatchTotals()" dir="ltr">
+                            <input type="number" id="batchDiscount" class="corporate-input mono-font font-bold" value="0" min="0" oninput="calculateBatchTotals()" dir="ltr">
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">بحث سريع عن صنف للإضافة</label>
-                            <input type="text" id="quickItemSearch" class="corporate-input" placeholder="اكتب للبحث..." oninput="filterProductOptions(this.value)">
+                            <input type="text" id="quickItemSearch" class="corporate-input font-bold" placeholder="اكتب للبحث..." oninput="filterProductOptions(this.value)">
                         </div>
                     </div>
 
@@ -316,7 +346,7 @@
                     <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div class="space-y-1 text-center sm:text-right">
                             <span class="text-xs text-slate-600">الإجمالي النهائي بعد الخصم: <strong id="batchGrandTotal" class="text-indigo-600 mono-font text-base" dir="ltr">0.00 ج.م</strong></span>
-                            <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font" dir="ltr">0.00 ج.م</strong></span>
+                            <span class="block text-[11px] text-emerald-600">صافي الربح المتوقع: <strong id="batchTotalProfit" class="mono-font font-bold" dir="ltr">0.00 ج.م</strong></span>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
                             <button type="button" id="saveBtn" onclick="saveBatchInvoice()" class="btn-primary text-xs py-3 px-6 flex-1 sm:flex-initial flex items-center justify-center gap-2 cursor-pointer active:scale-95">
@@ -443,15 +473,7 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -500,13 +522,7 @@
         const auth = getAuth(app);
 
         // تفعيل IndexedDB للعمل الشامل أوفلاين في التطبيقات الأهلية Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -595,6 +611,7 @@
         };
 
         window.addBatchItemRow = function(productCode = '', qtyVal = 1, priceVal = 0) {
+            triggerHaptic(20);
             let tbody = document.getElementById('batchItemsTableBody');
             let rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 4);
             let productOptions = state.products.map(p => `<option value="${p.code}" data-barcode="${p.barcode || ''}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === productCode ? 'selected' : ''}>${p.name} (المتاح سحابياً: ${p.qty})</option>`).join('');
@@ -603,11 +620,11 @@
             tr.id = rowId;
             tr.className = "hover:bg-slate-50 transition";
             tr.innerHTML = `
-                <td class="p-3"><select class="corporate-input item-product" onchange="window.updateRowDetails('${rowId}')">${productOptions}</select></td>
-                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font item-qty" value="${qtyVal}" min="1" oninput="window.calculateBatchTotals()" dir="ltr"></td>
-                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font item-price" value="${priceVal}" oninput="window.calculateBatchTotals()" dir="ltr"></td>
+                <td class="p-3"><select class="corporate-input item-product font-bold" onchange="window.updateRowDetails('${rowId}')">${productOptions}</select></td>
+                <td class="p-3"><input type="number" class="corporate-input w-24 mono-font font-bold item-qty" value="${qtyVal}" min="1" oninput="window.calculateBatchTotals()" dir="ltr"></td>
+                <td class="p-3"><input type="number" class="corporate-input w-28 mono-font font-bold item-price" value="${priceVal}" oninput="window.calculateBatchTotals()" dir="ltr"></td>
                 <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal" dir="ltr">0.00 ج.م</td>
-                <td class="p-3 text-center"><button type="button" onclick="document.getElementById('${rowId}').remove(); window.calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer p-1"><i class="fa-solid fa-trash"></i></button></td>
+                <td class="p-3 text-center"><button type="button" onclick="document.getElementById('${rowId}').remove(); window.calculateBatchTotals();" class="text-rose-500 hover:text-rose-700 cursor-pointer p-1 active:scale-95"><i class="fa-solid fa-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
             if(!productCode) {
@@ -661,12 +678,15 @@
             if(!query) return;
             let matchedProd = state.products.find(p => (p.name && p.name.toLowerCase().includes(query)) || (p.code && p.code.toLowerCase().includes(query)) || (p.barcode && p.barcode.includes(query)));
             if(matchedProd) {
+                triggerHaptic(30);
                 window.addBatchItemRow(matchedProd.code, 1, matchedProd.sellPrice);
                 document.getElementById('quickItemSearch').value = '';
+                showNativeToast(`✓ تم إضافة الصنف (${matchedProd.name})`);
             }
         };
 
         window.saveBatchInvoice = async function() {
+            triggerHaptic(40);
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار العميل');
 
@@ -786,6 +806,7 @@
                     });
                 }
 
+                showNativeToast("✓ تم حفظ وتحديث الفاتورة والمخزن سحابياً");
                 alert('✓ تم حفظ الفاتورة وتحديث المخزن وكشف حساب العميل والخزنة سحابياً بنجاح');
                 window.resetBatchForm();
             } catch (err) {
@@ -794,6 +815,7 @@
         };
 
         window.editBatchInvoice = function(id) {
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -817,6 +839,7 @@
         };
 
         window.resetBatchForm = function() {
+            triggerHaptic(20);
             editingBatchId = null;
             document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-circle-plus ml-2 text-indigo-600"></i> إنشاء فاتورة مجمعة جديدة`;
             document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة وتحديث المخزن سحابياً`;
@@ -840,7 +863,7 @@
                 <tr class="hover:bg-slate-50 transition">
                     <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id}</td>
                     <td class="p-4 font-bold text-slate-900">${i.client}</td>
-                    <td class="p-4"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${i.paymentType === 'آجل' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}">${i.paymentType || 'نقدي'}</span></td>
+                    <td class="p-4"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${i.paymentType === 'آجل' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">${i.paymentType || 'نقدي'}</span></td>
                     <td class="p-4 mono-font" dir="ltr">${i.items ? i.items.length : 0} أصناف</td>
                     <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit||0).toLocaleString()} ج.م</td>
@@ -866,12 +889,14 @@
         }
 
         window.sendBatchToETA = async function(batchId) {
+            triggerHaptic(50);
             let inv = state.invoices.find(i => i.id === batchId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
 
             if (!confirm(`هل أنت متأكد من إرسال الفاتورة المجمعة (${batchId}) إلى مصلحة الضرائب المصرية؟`)) return;
 
             try {
+                showNativeToast("⏳ جاري الإرسال للضرائب...");
                 alert('⏳ جاري إرسال الفاتورة المجمعة إلى خادم مصلحة الضرائب...');
 
                 const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
@@ -900,6 +925,7 @@
                             etaResponse: result.response 
                         });
                     }
+                    showNativeToast("✅ تم اعتماد الفاتورة لدى مصلحة الضرائب");
                     alert('✅ تم إرسال الفاتورة المجمعة بنجاح إلى مصلحة الضرائب وتحديث حالة المستند!');
                 } else {
                     console.error('ETA Rejection:', result.error);
@@ -912,6 +938,7 @@
         };
 
         window.deleteBatchInvoice = async function(id) {
+            triggerHaptic(80);
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إعادة الأصناف للمخزن في السحابة.')) return;
             
             try {
@@ -939,6 +966,7 @@
                     await deleteDoc(doc(db, "transactions", tx.id));
                 }
 
+                showNativeToast("✓ تم حذف الفاتورة وتصفية البيانات سحابياً");
                 alert('✓ تم حذف الفاتورة وتحديث البيانات السحابية بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
@@ -946,6 +974,7 @@
         };
 
         window.openInvoicePreview = function(id) {
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -977,15 +1006,18 @@
         };
 
         window.closePreviewModal = function() {
+            triggerHaptic(20);
             document.getElementById('previewModal').classList.remove('active');
             activePreviewInv = null;
         };
 
         window.printInvoicePDF = function() {
+            triggerHaptic(30);
             window.print();
         };
 
         window.downloadInvoiceImage = function() {
+            triggerHaptic(40);
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -997,6 +1029,7 @@
 
         // مشاركة التقرير والفاتورة المباشرة عبر متصفح أندرويد وتطبيق واتساب
         window.shareBatchInvoiceNative = async function() {
+            triggerHaptic(30);
             if(!activePreviewInv) return;
             let inv = activePreviewInv;
 
@@ -1018,7 +1051,9 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا! 🙏`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: `فاتورة ${inv.id}`,
@@ -1042,10 +1077,12 @@
         };
 
         window.triggerCloudSync = function() {
+            triggerHaptic(30);
             let badge = document.getElementById('syncStatusBadge');
             badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري المزامنة...`;
             setTimeout(() => {
                 badge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">متزامن سحابياً</span>`;
+                showNativeToast("✓ تم المزامنة اللحظية مع السحابة");
                 alert('✓ تم التأكد من المزامنة اللحظية مع سحابة Firebase');
             }, 600);
         };
@@ -1091,6 +1128,7 @@
         }
 
         window.openBarcodeScannerModal = function() {
+            triggerHaptic(30);
             document.getElementById('barcodeScannerModal').classList.add('active');
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
@@ -1107,6 +1145,7 @@
         };
 
         window.closeBarcodeScannerModal = function() {
+            triggerHaptic(20);
             if(html5QrCode) {
                 html5QrCode.stop().then(() => {
                     document.getElementById('barcodeScannerModal').classList.remove('active');

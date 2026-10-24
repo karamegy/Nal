@@ -159,7 +159,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -215,7 +216,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -332,6 +334,16 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -409,6 +421,7 @@
 
         let state = {
             invoices: [],
+            batchInvoices: [],
             transactions: [],
             products: [],
             accounts: []
@@ -430,25 +443,29 @@
             unsubscribers = [];
 
             const invoicesCollection = collection(db, "invoices");
+            const batchInvoicesCollection = collection(db, "batch_invoices");
             const transactionsCollection = collection(db, "transactions");
             const productsCollection = collection(db, "products");
             const accountsCollection = collection(db, "accounts");
 
             const invoicesRef = query(invoicesCollection, where("companyId", "==", companyId));
+            const batchInvoicesRef = query(batchInvoicesCollection, where("companyId", "==", companyId));
             const transactionsRef = query(transactionsCollection, where("companyId", "==", companyId));
             const productsRef = query(productsCollection, where("companyId", "==", companyId));
             const accountsRef = query(accountsCollection, where("companyId", "==", companyId));
 
             try {
-                const [accountsSnap, invoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
+                const [accountsSnap, invoicesSnap, batchInvoicesSnap, transactionsSnap, productsSnap] = await Promise.all([
                     getDocs(accountsRef),
                     getDocs(invoicesRef),
+                    getDocs(batchInvoicesRef),
                     getDocs(transactionsRef),
                     getDocs(productsRef)
                 ]);
 
                 state.accounts = accountsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 state.invoices = invoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.batchInvoices = batchInvoicesSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 state.transactions = transactionsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 state.products = productsSnap.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
 
@@ -471,7 +488,12 @@
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
                 updateDashboard();
-            }, (error) => console.error("خطأ في جلب الفواتير:", error)));
+            }, (error) => console.error("خطأ في جلب الفواتير الفردية:", error)));
+
+            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
+                state.batchInvoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                updateDashboard();
+            }, (error) => console.error("خطأ في جلب الفواتير المجمعة:", error)));
 
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
@@ -491,8 +513,14 @@
 
             let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
             let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
-            let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
-            let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+            
+            let totalIndSales = state.invoices.reduce((s,i) => s + Number(i.total || i.totalAmount || i.amount || 0), 0);
+            let totalBatchSales = state.batchInvoices.reduce((s,b) => s + Number(b.totalAmount || b.total || 0), 0);
+            let totalSales = totalIndSales + totalBatchSales;
+
+            let totalIndProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+            let totalBatchProfits = state.batchInvoices.reduce((s,b) => s + Number(b.profit || b.totalProfit || 0), 0);
+            let totalProfits = totalIndProfits + totalBatchProfits;
 
             const vaultText = (totalInc - totalExp).toLocaleString() + ' ج.م';
             const salesText = totalSales.toLocaleString() + ' ج.م';
@@ -520,11 +548,11 @@
             } else {
                 logsTable.innerHTML = recentTxs.map(t => `
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3.5 mono-font text-indigo-600 font-bold" dir="ltr">${t.id || 'TX'}</td>
-                        <td class="p-3.5 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${t.type || 'إيراد'}</td>
+                        <td class="p-3.5 mono-font text-indigo-600 font-bold" dir="ltr">${escapeHTML(t.id || 'TX')}</td>
+                        <td class="p-3.5 font-bold ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}">${escapeHTML(t.type || 'إيراد')}</td>
                         <td class="p-3.5 mono-font font-bold" dir="ltr">${Number(t.amount || 0).toLocaleString()} ج.م</td>
-                        <td class="p-3.5 text-slate-600">${t.desc || '---'}</td>
-                        <td class="p-3.5 mono-font text-slate-500" dir="ltr">${t.date || 'اليوم'}</td>
+                        <td class="p-3.5 text-slate-600">${escapeHTML(t.desc || '---')}</td>
+                        <td class="p-3.5 mono-font text-slate-500" dir="ltr">${escapeHTML(t.date || 'اليوم')}</td>
                     </tr>
                 `).join('');
             }
@@ -536,13 +564,17 @@
             let salesCtx = document.getElementById('dashSalesChart').getContext('2d');
             if (salesChartInstance) salesChartInstance.destroy();
 
+            let allInvoicesList = [...state.invoices, ...state.batchInvoices];
+            allInvoicesList.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            let chartItems = allInvoicesList.slice(-10);
+
             salesChartInstance = new Chart(salesCtx, {
                 type: 'line',
                 data: {
-                    labels: state.invoices.length ? state.invoices.map(i => i.id || 'INV') : ['بداية التشغيل', 'اليوم'],
+                    labels: chartItems.length ? chartItems.map(i => i.invoiceNumber || i.batchNumber || i.id || 'INV') : ['بداية التشغيل', 'اليوم'],
                     datasets: [{ 
                         label: 'المبيعات الكلية سحابياً', 
-                        data: state.invoices.length ? state.invoices.map(i => i.total || 0) : [0, 0], 
+                        data: chartItems.length ? chartItems.map(i => Number(i.total || i.totalAmount || i.amount || 0)) : [0, 0], 
                         borderColor: '#4f46e5', 
                         tension: 0.4, 
                         fill: true, 

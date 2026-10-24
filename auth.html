@@ -366,6 +366,7 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -389,8 +390,8 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // 1. تهيئة مكتبة جوجل فور فتح الصفحة لإعداد قائمة الحسابات العائمة
-        function initGoogleOneTap() {
+        // 1. تهيئة خيار Google One Tap و Native GoogleAuth
+        function initGoogleAuthServices() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
@@ -399,14 +400,25 @@
                     cancel_on_tap_outside: true
                 });
             }
+
+            // تهيئة البلاجن لبيئة Capacitor النيتف إن وجد
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                try {
+                    window.Capacitor.Plugins.GoogleAuth.initialize({
+                        clientId: GOOGLE_CLIENT_ID,
+                        scopes: ['profile', 'email'],
+                        grantOfflineAccess: true
+                    });
+                } catch(e) {
+                    console.log("GoogleAuth Init Note:", e);
+                }
+            }
         }
 
-        // تشغيل التهيئة فور استكمال تحميل الصفحة
         window.addEventListener('load', () => {
-            initGoogleOneTap();
+            initGoogleAuthServices();
         });
 
-        // 2. استقبال الحساب عند اختياره من القائمة العائمة
         async function handleGoogleIdToken(response) {
             try {
                 showNativeToast("جاري التحقق من حساب Google...");
@@ -418,30 +430,53 @@
             }
         }
 
-        // 3. عند الضغط على الزر: إظهار النافذة العائمة (اختيار حساب) فوراً فوق الصفحة
-        window.signInWithGoogle = function() {
+        // 2. زر تسجيل الدخول الموحد بـ Google (فتح قائمة الحسابات فوراً)
+        window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // لو التطبيق شغال داخل Native Android WebView
+            // أ) إذا كان التطبيق يعتمد على Capacitor Native (موبايل)
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                try {
+                    showNativeToast("جاري فتح نافذة حسابات Google...");
+                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+                    const result = await signInWithCredential(auth, credential);
+                    await processGoogleAccountData(result.user);
+                    return;
+                } catch (error) {
+                    console.error("Capacitor Native Google Sign-In Error:", error);
+                }
+            }
+
+            // ب) إذا كان هناك جسر AndroidBridge مباشر
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // فتح قائمة الحسابات العائمة (One Tap Prompt) كما في الصورة
+            // جـ) فتح قائمة اختيار الحسابات العائمة (One Tap Bottom Sheet)
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-                        // إذا منع المتصفح الإظهار التلقائي، يعاد التظهير بشكل مباشر
-                        google.accounts.id.initialize({
-                            client_id: GOOGLE_CLIENT_ID,
-                            callback: handleGoogleIdToken
-                        });
-                        google.accounts.id.prompt();
+                google.accounts.id.prompt(async (notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // في حال تعذر النافذة العائمة، فتح نافذة المصادقة المباشرة من Firebase
+                        try {
+                            const provider = new GoogleAuthProvider();
+                            const result = await signInWithPopup(auth, provider);
+                            await processGoogleAccountData(result.user);
+                        } catch(err) {
+                            console.error("Fallback Popup Error:", err);
+                        }
                     }
                 });
             } else {
-                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات.");
+                // فتح نافذة المصادقة المباشرة كخيار احتياطي
+                try {
+                    const provider = new GoogleAuthProvider();
+                    const result = await signInWithPopup(auth, provider);
+                    await processGoogleAccountData(result.user);
+                } catch(err) {
+                    alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات.");
+                }
             }
         };
 
@@ -527,6 +562,7 @@
             }
         }
 
+        // 3. معالجة وتخزين بيانات حساب Google وإنشاء معرف الشركة (companyId)
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
@@ -564,6 +600,7 @@
                 let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
                 if (!pinCodeInput) pinCodeInput = "1234";
 
+                // حفظ الحساب الجديد وتوليد الـ companyId في Firestore
                 await setDoc(doc(db, "accounts", assignedCompanyId), {
                     name: finalUserName,
                     pin: pinCodeInput,

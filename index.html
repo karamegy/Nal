@@ -36,8 +36,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -203,20 +201,43 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileSidebar() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const sidebar = document.getElementById('appSidebar');
             if (sidebar) {
                 sidebar.classList.toggle('mobile-open');
             }
         }
+
         function lockSession() {
-            window.NativeBridge.vibrate(35);
+            triggerHaptic(35);
             sessionStorage.removeItem('eidco_session_auth');
             sessionStorage.removeItem('eidco_biometric_verified');
             const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
         }
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -588,7 +609,7 @@
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
         window.toggleRssPause = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let ticker = document.getElementById('rssTickerContent');
             let btn = document.getElementById('rssPauseBtn');
             if(ticker && btn) {
@@ -605,7 +626,7 @@
         };
 
         window.toggleRssSpeed = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
             let ticker = document.getElementById('rssTickerContent');
             if(ticker) {
@@ -615,42 +636,42 @@
         };
 
         window.openAddNewsModal = function() { 
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let m = document.getElementById('addNewsModal');
             if(m) m.classList.add('active'); 
         };
         
         window.closeAddNewsModal = function() { 
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let m = document.getElementById('addNewsModal');
             if(m) m.classList.remove('active'); 
         };
 
         window.submitCustomNews = function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let textInput = document.getElementById('newRssTextInput');
             let catInput = document.getElementById('newRssCategoryInput');
             if(!textInput) return;
             let text = textInput.value.trim();
             let cat = catInput ? catInput.value : 'تحديث';
             if(!text) {
-                window.NativeBridge.showToast('الرجاء كتابة نص الخبر أولاً');
+                showNativeToast('الرجاء كتابة نص الخبر أولاً');
                 return;
             }
             rssNewsList.unshift(`📌 [${cat}] ${text}`);
             textInput.value = '';
             window.closeAddNewsModal();
-            window.NativeBridge.showToast('تم نشر الخبر بنجاح لشريط الأخبار');
+            showNativeToast('تم نشر الخبر بنجاح لشريط الأخبار');
         };
 
         window.closeSummaryModal = function() { 
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let m = document.getElementById('summaryModal');
             if(m) m.classList.remove('active'); 
         };
 
         window.downloadReportPDF = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let tag = document.getElementById('printIndexCompanyTag');
             let dateEl = document.getElementById('printIndexDate');
             if(tag) tag.innerText = `معرف الشركة: ${currentCompanyId}`;
@@ -659,9 +680,9 @@
         };
 
         window.downloadReportImage = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let element = document.getElementById('indexReportPrintArea');
-            if (!element) return window.NativeBridge.showToast('منطقة التقرير غير متوفرة');
+            if (!element) return showNativeToast('منطقة التقرير غير متوفرة');
             
             if (typeof html2canvas === 'undefined') {
                 let script = document.createElement('script');
@@ -677,15 +698,24 @@
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast('تم تصدير وحفظ التقرير كصورة بنجاح');
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast('تم تصدير وحفظ التقرير كصورة بنجاح');
             }).catch(err => {
-                window.NativeBridge.showToast('فشل تصدير الصورة: ' + err.message);
+                showNativeToast('فشل تصدير الصورة: ' + err.message);
             });
         }
 
         window.shareReport = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let vaultVal = document.getElementById('statVault')?.innerText || '0 ج.م';
             let salesVal = document.getElementById('statSales')?.innerText || '0 ج.م';
             let profitsVal = document.getElementById('statProfits')?.innerText || '0 ج.م';
@@ -699,7 +729,18 @@
             text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            window.NativeBridge.shareText(text, 'EIDCO // ملخص مؤشرات الأداء');
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(text, 'EIDCO // ملخص مؤشرات الأداء');
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'EIDCO // ملخص مؤشرات الأداء', text: text });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -760,7 +801,7 @@
         let unsubscribers = [];
 
         window.purgeAllInvalidData = async function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب في السحابة؟')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -777,10 +818,10 @@
                         txDeleted++;
                     }
                 }
-                window.NativeBridge.vibrate(80);
-                window.NativeBridge.showToast(`تم إزالة ${txDeleted} حركة غير صالحة سحابياً`);
+                triggerHaptic(80);
+                showNativeToast(`تم إزالة ${txDeleted} حركة غير صالحة سحابياً`);
             } catch (err) {
-                window.NativeBridge.showToast('خطأ أثناء التطهير السحابي: ' + err.message);
+                showNativeToast('خطأ أثناء التطهير السحابي: ' + err.message);
             }
         };
 
@@ -980,7 +1021,7 @@
         }
 
         window.showSummaryModal = function(type) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let modalTitle = document.getElementById('modalTitle');
             let modalBody = document.getElementById('modalBody');
             if(!modalTitle || !modalBody) return;
@@ -1073,7 +1114,7 @@
         };
 
         window.deleteDashboardBatchInvoice = async function(id, docId) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة في سحابة Firebase.')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -1095,10 +1136,10 @@
                 let tx = txSnap.docs.find(t => t.data().desc && t.data().desc.includes(id));
                 if(tx) await deleteDoc(doc(db, "transactions", tx.id));
 
-                window.NativeBridge.vibrate(60);
-                window.NativeBridge.showToast('تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
+                triggerHaptic(60);
+                showNativeToast('تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
             } catch (err) {
-                window.NativeBridge.showToast('خطأ أثناء الحذف بالسحابة: ' + err.message);
+                showNativeToast('خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 

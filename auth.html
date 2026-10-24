@@ -389,9 +389,8 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        let tokenClient;
+        let tokenClient = null;
 
-        // 1. تهيئة Google Token Client المخصص للنقرات بدون أي Cooldown
         function initGoogleAuthClient() {
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
                 tokenClient = google.accounts.oauth2.initTokenClient({
@@ -400,6 +399,7 @@
                     callback: async (tokenResponse) => {
                         if (tokenResponse.error) {
                             console.error('Google Auth Error:', tokenResponse);
+                            alert('حدث خطأ أثناء فتح حسابات جوجل');
                             return;
                         }
                         try {
@@ -419,19 +419,22 @@
             initGoogleAuthClient();
         });
 
-        // 2. دالة النقر على الزر - تفتح نافذة الحسابات فوراً بدون مغادرة الصفحة
+        // دالة تسجيل الدخول بالضغط المباشر لإظهار قائمة اختيار الحسابات مباشرة
         window.signInWithGoogle = function() {
             triggerHaptic(25);
 
+            // 1. استخدام AndroidBridge إذا كان متوفراً في التطبيق الأصلي
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            if (tokenClient) {
-                tokenClient.requestAccessToken({ prompt: 'select_account' });
-            } else if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+            // 2. الفتح المباشر لقائمة اختيار الحسابات عبر GIS Token Client
+            if (!tokenClient) {
                 initGoogleAuthClient();
+            }
+
+            if (tokenClient) {
                 tokenClient.requestAccessToken({ prompt: 'select_account' });
             } else {
                 alert("جاري تحميل خدمات Google، يرجى المحاولة بعد ثوانٍ قليلة.");

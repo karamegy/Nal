@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // مركز الذكاء وتوسعة الأفكار المتقدم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // مركز الذكاء وتوسعة الأفكار المتقدم Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -40,16 +40,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 4rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; }
@@ -127,16 +137,45 @@
             cursor: pointer;
             transition: all 0.2s;
             white-space: nowrap;
+            user-select: none;
         }
         .chip-btn:hover {
             background-color: #4f46e5;
             color: #ffffff;
             border-color: #4f46e5;
         }
+        .chip-btn:active {
+            transform: scale(0.95);
+        }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -174,7 +213,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز الذكاء الاصطناعي، المستشار، وتوسعة الأفكار <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز الذكاء الاصطناعي، المستشار، وتوسعة الأفكار <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -337,7 +376,7 @@
                         </div>
                         <div>
                             <label class="block mb-1.5 text-slate-600 font-bold">نوع الأداة التعليمية</label>
-                            <select id="studyToolType" class="corporate-input cursor-pointer">
+                            <select id="studyToolType" class="corporate-input cursor-pointer font-bold text-slate-800">
                                 <option value="socratic">شرح تحليلي سقراطي (خطوة بخطوة)</option>
                                 <option value="quiz">اختبار تدريبي رقمي (Multiple Choice)</option>
                                 <option value="flashcards">مولد البطاقات التعليمية (Flashcards)</option>
@@ -381,13 +420,6 @@
 
     <!-- دوال التنقل المائي والموبايل -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -433,7 +465,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل Tالتخزين المؤقت للعمل أوفلاين
+        // تفعيل التخزين المؤقت للعمل أوفلاين
         enableIndexedDbPersistence(db).catch((err) => {
             if (err.code === 'failed-precondition') {
                 console.warn('Persistence failed: Multiple tabs open');
@@ -516,11 +548,13 @@
         }
 
         window.askAiQuick = function(promptText) {
+            triggerHaptic(20);
             document.getElementById('aiUserQuestion').value = promptText;
             window.processAiConsultation();
         };
 
         window.processAiConsultation = function() {
+            triggerHaptic(30);
             let question = document.getElementById('aiUserQuestion').value.trim();
             if(!question) return alert('الرجاء كتابة سؤالك أو استشارتك أولاً');
 
@@ -581,17 +615,21 @@
                 }
 
                 responseText.innerHTML = answerHtml;
+                showNativeToast("✓ تم إعداد الاستشارة الذكية بنجاح");
             }, 600);
         };
 
         window.copyAiResponse = function() {
+            triggerHaptic(20);
             let text = document.getElementById('aiResponseText').innerText;
             navigator.clipboard.writeText(text).then(() => {
+                showNativeToast("✓ تم نسخ التوصية والاستشارة");
                 alert('✓ تم نسخ التوصية والاستشارة بنجاح!');
             });
         };
 
         window.saveIntelligenceSettings = async function() {
+            triggerHaptic(15);
             let settings = {
                 companyId: currentCompanyId,
                 gmail: document.getElementById('srcGmail').checked,
@@ -608,12 +646,14 @@
             try {
                 const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
                 await setDoc(settingsDocRef, settings, { merge: true });
+                showNativeToast("✓ تم تحديث إعدادات الذكاء الشخصي");
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
             }
         };
 
         window.generateLearningContent = async function() {
+            triggerHaptic(30);
             let topic = document.getElementById('studyTopic').value.trim();
             let toolType = document.getElementById('studyToolType').value;
             if(!topic) return alert('الرجاء كتابة الموضوع أو المقرر الدراسي');
@@ -640,6 +680,7 @@
             }
 
             resultText.innerHTML = generatedHtml;
+            showNativeToast("✓ تم توليد المحتوى التعليمي");
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -659,6 +700,7 @@
         };
 
         window.handleMigrationUpload = async function(event) {
+            triggerHaptic(30);
             let file = event.target.files[0];
             if(!file) return;
             let status = document.getElementById('migrationStatus');
@@ -680,6 +722,7 @@
 
                 setTimeout(() => {
                     status.innerHTML = `✓ تم استيراد وترحيل السجل والذاكرة بنجاح من أرشيف (${file.name}) وتم ربطها سحابياً بـ Firebase المعزول!`;
+                    showNativeToast("✓ تم ترحيل ملف الأرشيف بنجاح");
                 }, 1200);
             } catch(err) {
                 status.innerHTML = `⚠️ حدث خطأ أثناء الترحيل السحابي: ${err.message}`;

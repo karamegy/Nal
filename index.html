@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // لوحة التحكم الرئيسية</title>
+    <title>EIDCO // لوحة التحكم الرئيسية والمؤشرات</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -200,6 +200,15 @@
             sessionStorage.removeItem('eidco_biometric_verified');
             window.location.href = 'auth.html';
         }
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </head>
 <body>
@@ -266,8 +275,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -435,12 +444,12 @@
                         </a>
                         
                         <a href="accounts-tree.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-indigo-600">
-                            <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-sitemap"></i></div>
+                            <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fa-solid fa-folder-tree"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">شجرة الحسابات</h4><span class="text-[11px] text-slate-500">الدليل المحاسبي والبنود</span></div>
                         </a>
 
                         <a href="documents.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
-                            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-folder-tree"></i></div>
+                            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-folder-open"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">شجرة المستندات</h4><span class="text-[11px] text-slate-500">الأرشيف والعقود والتنبيهات</span></div>
                         </a>
                         <a href="chat.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-cyan-500">
@@ -626,7 +635,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل Tالتخزين المؤقت IndexedDB للعمل أوفلاين في التطبيق الأهلي Native WebView
+        // تفعيل التخزين المؤقت IndexedDB للعمل أوفلاين في التطبيق الأهلي Native WebView
         enableIndexedDbPersistence(db).catch((err) => {
             if (err.code === 'failed-precondition') {
                 console.warn('Persistence failed: Multiple tabs open');
@@ -644,6 +653,7 @@
             clients: [],
             products: [],
             invoices: [],
+            batchInvoices: [],
             transactions: []
         };
 
@@ -697,14 +707,16 @@
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", companyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
+            const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", companyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
 
             try {
-                const [accountsSnap, clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
+                const [accountsSnap, clientsSnap, productsSnap, invoicesSnap, batchInvoicesSnap, transactionsSnap] = await Promise.all([
                     getDocs(accountsRef),
                     getDocs(clientsRef),
                     getDocs(productsRef),
                     getDocs(invoicesRef),
+                    getDocs(batchInvoicesRef),
                     getDocs(transactionsRef)
                 ]);
 
@@ -712,6 +724,7 @@
                 state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
                 state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
                 state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.batchInvoices = batchInvoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
                 state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
                 updateAdminHeader();
@@ -749,6 +762,16 @@
                 updateStatsAndDashboard();
             }));
 
+            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
+                state.batchInvoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                updateStatsAndDashboard();
+                renderAnalyticsChart();
+                renderRssTicker();
+            }, (err) => {
+                state.batchInvoices = [];
+                updateStatsAndDashboard();
+            }));
+
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
@@ -761,9 +784,13 @@
             if(!container) return;
 
             let dynamicNews = [...rssNewsList];
-            if(state.invoices.length > 0) {
-                let lastInv = state.invoices[state.invoices.length - 1];
-                dynamicNews.unshift(`🧾 أحدث فاتورة صادرة سحابياً: رقم ${lastInv.id || 'INV'} بقيمة ${(Number(lastInv.total)||0).toLocaleString()} ج.م للعميل (${lastInv.client || 'عام'})`);
+            let allInvoices = [...state.invoices, ...state.batchInvoices];
+            if(allInvoices.length > 0) {
+                let lastInv = allInvoices[allInvoices.length - 1];
+                let invId = lastInv.invoiceNumber || lastInv.batchNumber || lastInv.id || 'INV';
+                let invTotal = Number(lastInv.total || lastInv.totalAmount || lastInv.amount || 0);
+                let invClient = lastInv.client || lastInv.clientName || 'عام';
+                dynamicNews.unshift(`🧾 أحدث فاتورة صادرة سحابياً: رقم ${escapeHTML(invId)} بقيمة ${invTotal.toLocaleString()} ج.م للعميل (${escapeHTML(invClient)})`);
             }
             let totalVault = state.transactions.filter(t=>t.type==='إيراد').reduce((s,t)=>s+Number(t.amount||0),0) - state.transactions.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount||0),0);
             dynamicNews.push(`💰 رصيد الخزنة النقدية الحالي سحابياً: ${totalVault.toLocaleString()} ج.م`);
@@ -799,7 +826,7 @@
             let text = document.getElementById('newRssTextInput').value.trim();
             let cat = document.getElementById('newRssCategoryInput').value;
             if(!text) return alert('الرجاء كتابة نص الخبر أولاً');
-            rssNewsList.unshift(`📌 [${cat}] ${text}`);
+            rssNewsList.unshift(`📌 [${cat}] ${escapeHTML(text)}`);
             document.getElementById('newRssTextInput').value = '';
             closeAddNewsModal();
             renderRssTicker();
@@ -864,13 +891,20 @@
             let totalInc = state.transactions.filter(t => t.type === 'إيراد').reduce((s,t) => s + Number(t.amount || 0), 0);
             let totalExp = state.transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
             
+            let indSales = state.invoices.reduce((s,i) => s + Number(i.total || i.totalAmount || i.amount || 0), 0);
+            let batchSales = state.batchInvoices.reduce((s,b) => s + Number(b.totalAmount || b.total || 0), 0);
+            let totalSales = indSales + batchSales;
+
+            let indProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+            let batchProfits = state.batchInvoices.reduce((s,b) => s + Number(b.profit || b.totalProfit || 0), 0);
+            let totalProfits = indProfits + batchProfits;
+
             document.getElementById('statVault').innerText = (totalInc - totalExp).toLocaleString() + ' ج.م';
-            document.getElementById('statSales').innerText = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0).toLocaleString() + ' ج.م';
-            document.getElementById('statProfits').innerText = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0).toLocaleString() + ' ج.م';
+            document.getElementById('statSales').innerText = totalSales.toLocaleString() + ' ج.م';
+            document.getElementById('statProfits').innerText = totalProfits.toLocaleString() + ' ج.م';
             document.getElementById('statClients').innerText = state.clients.length + ' جهة';
 
-            let batchInvs = state.invoices.filter(i => i.isBatch);
-            let targetInvoices = filteredInvoices || batchInvs;
+            let targetInvoices = filteredInvoices || state.batchInvoices;
             let tbody = document.getElementById('dashboardBatchTableBody');
 
             if(!targetInvoices.length) {
@@ -880,12 +914,12 @@
 
             tbody.innerHTML = targetInvoices.map(i => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${i.id || 'BATCH'}</td>
-                    <td class="p-4 font-bold text-slate-900">${i.client || 'عميل'}</td>
-                    <td class="p-4 mono-font" dir="ltr">${i.items ? i.items.length : 1} أصناف</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${escapeHTML(i.batchNumber || i.id || 'BATCH')}</td>
+                    <td class="p-4 font-bold text-slate-900">${escapeHTML(i.client || i.clientName || 'عميل')}</td>
+                    <td class="p-4 mono-font" dir="ltr">${i.invoicesCount || (i.items ? i.items.length : (i.invoices ? i.invoices.length : 1))} أصناف</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.totalAmount || i.total || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || i.totalProfit || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-slate-500" dir="ltr">${escapeHTML(i.date || '---')}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse no-print">
                         <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i> حذف
@@ -913,32 +947,38 @@
                     <div class="space-y-2">
                         ${state.transactions.slice(-5).reverse().map(t => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
-                                <div><span class="font-bold text-slate-900 block">${t.desc || 'معاملة'}</span><span class="text-[10px] text-slate-400 font-mono" dir="ltr">${t.date || '---'}</span></div>
+                                <div><span class="font-bold text-slate-900 block">${escapeHTML(t.desc || 'معاملة')}</span><span class="text-[10px] text-slate-400 font-mono" dir="ltr">${escapeHTML(t.date || '---')}</span></div>
                                 <span class="font-bold mono-font ${t.type === 'إيراد' ? 'text-cyan-600' : 'text-purple-600'}" dir="ltr">${t.type === 'إيراد' ? '+' : '-'}${Number(t.amount || 0).toLocaleString()} ج.م</span>
                             </div>
                         `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد حركات سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'sales') {
-                let totalSales = state.invoices.reduce((s,i) => s + Number(i.total || 0), 0);
+                let indSales = state.invoices.reduce((s,i) => s + Number(i.total || i.totalAmount || i.amount || 0), 0);
+                let batchSales = state.batchInvoices.reduce((s,b) => s + Number(b.totalAmount || b.total || 0), 0);
+                let totalSales = indSales + batchSales;
+
                 modalTitle.innerText = 'ملخص إجمالي المبيعات السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-cyan-50 rounded-xl text-center mb-3 border border-cyan-100">
-                        <span class="text-xs text-slate-500 block font-bold">إجمالي مبيعات الفواتير السحابية</span>
+                        <span class="text-xs text-slate-500 block font-bold">إجمالي مبيعات الفواتير السحابية (فردية ومجمعة)</span>
                         <span class="text-xl font-black text-cyan-600 mono-font" dir="ltr">${totalSales.toLocaleString()} ج.م</span>
                     </div>
                     <h4 class="font-bold text-slate-700 mb-2">أحدث الفواتير المسجلة سحابياً:</h4>
                     <div class="space-y-2">
-                        ${state.invoices.slice(-5).reverse().map(i => `
+                        ${[...state.invoices, ...state.batchInvoices].slice(-5).reverse().map(i => `
                             <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border">
-                                <div><span class="font-bold text-indigo-600 mono-font" dir="ltr">${i.id || 'INV'}</span> <span class="text-slate-600">(${i.client || 'عميل'})</span></div>
-                                <span class="font-bold mono-font text-slate-900" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</span>
+                                <div><span class="font-bold text-indigo-600 mono-font" dir="ltr">${escapeHTML(i.invoiceNumber || i.batchNumber || i.id || 'INV')}</span> <span class="text-slate-600">(${escapeHTML(i.client || i.clientName || 'عميل')})</span></div>
+                                <span class="font-bold mono-font text-slate-900" dir="ltr">${Number(i.total || i.totalAmount || i.amount || 0).toLocaleString()} ج.م</span>
                             </div>
                         `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد فواتير سحابية مسجلة</p>'}
                     </div>
                 `;
             } else if (type === 'profits') {
-                let totalProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+                let indProfits = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
+                let batchProfits = state.batchInvoices.reduce((s,b) => s + Number(b.profit || b.totalProfit || 0), 0);
+                let totalProfits = indProfits + batchProfits;
+
                 modalTitle.innerText = 'ملخص صافي الأرباح السحابية المعزولة';
                 modalBody.innerHTML = `
                     <div class="p-3 bg-emerald-50 rounded-xl text-center mb-3 border border-emerald-100">
@@ -957,8 +997,8 @@
                     <div class="space-y-2">
                         ${state.clients.map(c => `
                             <div class="p-2.5 bg-slate-50 rounded-xl border flex justify-between items-center">
-                                <span class="font-bold text-slate-900">${c.name}</span>
-                                <span class="text-slate-500 mono-font text-[11px]" dir="ltr">${c.phone || 'جهة مسجلة سحابياً'}</span>
+                                <span class="font-bold text-slate-900">${escapeHTML(c.name)}</span>
+                                <span class="text-slate-500 mono-font text-[11px]" dir="ltr">${escapeHTML(c.phone || 'جهة مسجلة سحابياً')}</span>
                             </div>
                         `).join('') || '<p class="text-slate-400 text-center font-bold">لا توجد جهات مسجلة سحابياً</p>'}
                     </div>
@@ -972,9 +1012,13 @@
 
         window.filterDashboardData = function(query) {
             let q = query.trim().toLowerCase();
-            let batchInvs = state.invoices.filter(i => i.isBatch);
-            if(!q) return updateStatsAndDashboard(batchInvs);
-            let filtered = batchInvs.filter(i => (i.id && i.id.toLowerCase().includes(q)) || (i.client && i.client.toLowerCase().includes(q)));
+            if(!q) return updateStatsAndDashboard();
+            let filtered = state.batchInvoices.filter(i => 
+                (i.id && i.id.toLowerCase().includes(q)) || 
+                (i.batchNumber && i.batchNumber.toLowerCase().includes(q)) ||
+                (i.client && i.client.toLowerCase().includes(q)) ||
+                (i.clientName && i.clientName.toLowerCase().includes(q))
+            );
             updateStatsAndDashboard(filtered);
         };
 
@@ -984,7 +1028,7 @@
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
-                let inv = state.invoices.find(i => i.id === id);
+                let inv = state.batchInvoices.find(i => i.id === id || i.docId === docId);
                 if(inv && inv.items) {
                     for(let it of inv.items) {
                         let p = state.products.find(x => x.code === it.code);
@@ -994,7 +1038,7 @@
                     }
                 }
                 let targetDocId = docId || (inv ? inv.docId : null);
-                if(targetDocId) await deleteDoc(doc(db, "invoices", targetDocId));
+                if(targetDocId) await deleteDoc(doc(db, "batch_invoices", targetDocId));
                 let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
                 if(tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
                 alert('✓ تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
@@ -1009,15 +1053,17 @@
             let ctx = canvas.getContext('2d');
             if (analyticsChartInstance) analyticsChartInstance.destroy();
 
-            let batchInvs = state.invoices.filter(i => i.isBatch);
+            let allInvoicesList = [...state.invoices, ...state.batchInvoices];
+            allInvoicesList.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            let chartItems = allInvoicesList.slice(-10);
 
             analyticsChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: batchInvs.length ? batchInvs.map(i => i.id || 'INV') : ['بداية التشغيل سحابياً', 'اليوم'],
+                    labels: chartItems.length ? chartItems.map(i => i.invoiceNumber || i.batchNumber || i.id || 'INV') : ['بداية التشغيل سحابياً', 'اليوم'],
                     datasets: [{ 
                         label: 'المبيعات السحابية المعزولة', 
-                        data: batchInvs.length ? batchInvs.map(i => i.total || 0) : [0, 0], 
+                        data: chartItems.length ? chartItems.map(i => Number(i.total || i.totalAmount || i.amount || 0)) : [0, 0], 
                         borderColor: '#4f46e5', 
                         tension: 0.4, 
                         fill: true, 

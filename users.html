@@ -2,14 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // إدارة الحسابات والصلاحيات الشاملة (المدير المؤسس)</title>
     
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+
+    <script src="./eidco-core.js"></script>
 
     <script>
         // التحقق الأمني الذكي للمدير المؤسس كرم حمدي عبدالعظيم ومعرف الشركة
@@ -34,23 +38,50 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; font-size: 0.875rem; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; font-size: 0.875rem; transition: all 0.2s; }
+        .corporate-input:focus { outline: none; border-color: var(--primary); background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
+
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        // إرسال توست نيتف أو تسجيله
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        // اهتزاز لمسي نيتف للأزرار
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
@@ -80,7 +111,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة كافة الحسابات والشركات <span class="hidden sm:inline text-slate-500 font-normal">(صلاحيات المدير المؤسس)</span></h1>
@@ -90,7 +121,7 @@
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
                         <span id="authStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold">✓ كرم حمدي (مدير مؤسس)</span>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate">company_founder_karm</span>
-                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 shadow-sm cursor-pointer">
+                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95">
                             <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
                         </button>
                     </div>
@@ -165,7 +196,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">اسم المسؤول الكامل</label>
-                    <input type="text" id="userName" class="corporate-input" placeholder="أدخل اسم المسؤول أو كرم حمدي عبدالعظيم">
+                    <input type="text" id="userName" class="corporate-input font-bold" placeholder="أدخل اسم المسؤول أو كرم حمدي عبدالعظيم">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">معرف الشركة (Company ID)</label>
@@ -187,20 +218,13 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveUser()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ بالسحابة</button>
-                <button onclick="window.closeUserModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-300 transition">إلغاء</button>
+                <button onclick="window.saveUser()" class="btn-primary flex-1 py-2 text-xs cursor-pointer active:scale-95">حفظ بالسحابة</button>
+                <button onclick="window.closeUserModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-300 transition active:scale-95">إلغاء</button>
             </div>
         </div>
     </div>
 
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             let currentCompanyId = 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
@@ -215,7 +239,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules -->
+    <!-- Firebase SDK Modules والمزامنة السحابية اللحظية مع وضع الأوفلاين -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -225,7 +249,8 @@
             doc, 
             updateDoc, 
             setDoc,
-            onSnapshot 
+            onSnapshot,
+            enableIndexedDbPersistence 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -242,9 +267,12 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // تفعيل استمرار البيانات أوفلاين
+        enableIndexedDbPersistence(db).catch(() => {});
+
         let accountsList = [];
 
-        // مصادقة تلقائية صامتة لضمان استيفاء شروط القاعدة الأمنية isAuthenticated
+        // مصادقة تلقائية صامتة لضمان استيفاء شروط القاعدة الأمنية
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 try {
@@ -280,20 +308,20 @@
                 let compId = acc.companyId || 'company_founder_karm';
                 let pinCode = acc.pin || '1234';
                 return `
-                    <tr class="hover:bg-slate-50 ${isBanned ? 'bg-rose-50/40' : ''}">
+                    <tr class="hover:bg-slate-50 transition ${isBanned ? 'bg-rose-50/40' : ''}">
                         <td class="p-4 font-bold text-slate-900">${acc.name || 'مسؤول'}</td>
                         <td class="p-4 font-semibold text-slate-600">${acc.role || 'مدير نظام'}</td>
                         <td class="p-4 mono-font text-indigo-600 font-bold">${compId}</td>
                         <td class="p-4 mono-font text-slate-700 tracking-widest">${pinCode}</td>
                         <td class="p-4">
-                            ${isBanned ? '<span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
+                            ${isBanned ? '<span class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-ban ml-1"></i> محظور</span>' : '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold"><i class="fa-solid fa-circle-check ml-1"></i> نشط ومصرح</span>'}
                         </td>
                         <td class="p-4 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
+                            <button onclick="window.toggleUserBan('${acc.docId}', ${isBanned})" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition active:scale-95 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
                             </button>
-                            <button onclick="window.editUser('${acc.docId}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold px-2 py-1" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="window.deleteUser('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-500 hover:text-rose-700 cursor-pointer text-xs font-bold px-2 py-1" title="حذف نهائي"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="window.editUser('${acc.docId}')" class="p-1.5 px-2.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold hover:bg-indigo-100 transition cursor-pointer active:scale-95" title="تعديل"><i class="fa-solid fa-pen-to-square ml-1"></i> تعديل</button>
+                            <button onclick="window.deleteUser('${acc.docId}', '${acc.name || 'الحساب'}')" class="p-1.5 px-2.5 bg-rose-50 text-rose-600 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer active:scale-95" title="حذف نهائي"><i class="fa-solid fa-trash ml-1"></i> حذف</button>
                         </td>
                     </tr>
                 `;
@@ -301,6 +329,7 @@
         };
 
         window.openAddAccountModal = function() {
+            triggerHaptic(30);
             document.getElementById('userModalTitle').innerText = "إضافة حساب جديد بالسحابة";
             document.getElementById('editDocId').value = '';
             document.getElementById('userName').value = '';
@@ -311,10 +340,12 @@
         };
 
         window.closeUserModal = function() {
+            triggerHaptic(20);
             document.getElementById('userModal').classList.remove('active');
         };
 
         window.editUser = function(docId) {
+            triggerHaptic(30);
             let acc = accountsList.find(a => a.docId === docId);
             if(!acc) return;
 
@@ -328,6 +359,7 @@
         };
 
         window.saveUser = async function() {
+            triggerHaptic(40);
             let editDocId = document.getElementById('editDocId').value;
             let name = document.getElementById('userName').value.trim();
             let companyIdInput = document.getElementById('userCompanyIdInput').value.trim() || 'company_founder_karm';
@@ -356,6 +388,7 @@
                 }, { merge: true });
 
                 window.closeUserModal();
+                showNativeToast("✓ تم حفظ بيانات الحساب سحابياً بنجاح");
                 alert('✓ تم حفظ وتحديث بيانات الحساب سحابياً بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
@@ -363,6 +396,7 @@
         };
 
         window.toggleUserBan = async function(docId, currentBannedStatus) {
+            triggerHaptic(50);
             let actionName = currentBannedStatus ? 'إلغاء الحظر عن' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
 
@@ -374,6 +408,7 @@
                 await updateDoc(doc(db, "accounts", docId), {
                     isBanned: !currentBannedStatus
                 });
+                showNativeToast(`✓ تم ${actionName} الحساب بنجاح`);
                 alert(`✓ تم تنفيذ إجراء ${actionName} الحساب بنجاح.`);
             } catch (err) {
                 alert('حدث خطأ أثناء تحديث حالة الحظر: ' + err.message);
@@ -381,6 +416,7 @@
         };
 
         window.deleteUser = async function(docId, name) {
+            triggerHaptic(80);
             if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً من السحابة؟`)) return;
 
             if (!auth.currentUser) {
@@ -389,6 +425,7 @@
 
             try {
                 await deleteDoc(doc(db, "accounts", docId));
+                showNativeToast("✓ تم حذف الحساب نهائياً");
                 alert('✓ تم حذف الحساب نهائياً من السحابة بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);

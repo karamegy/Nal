@@ -21,7 +21,7 @@
       }
     </script>
 
-    <!-- Google Identity Services SDK لعرض نافذة اختيار الحساب المباشرة -->
+    <!-- Google Identity Services SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -329,8 +329,7 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithCredential,
-            signInWithPopup, 
+            signInWithCredential, 
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -344,6 +343,9 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
+        // معرّف العميل لخدمات Google Identity Services (من مشروع Firebase)
+        const GOOGLE_CLIENT_ID = "515898424721-web.apps.googleusercontent.com"; 
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
@@ -351,6 +353,33 @@
         const messagesRef = collection(db, "messages");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+
+        // تهيئة Google Identity Services المنسدلة (One-Tap / Bottom Sheet)
+        function initGoogleIdentity() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleOneTapResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+            }
+        }
+
+        // معالجة رمز الدخول القادم من النافذة المنسدلة مباشرة
+        async function handleGoogleOneTapResponse(response) {
+            try {
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                alert('خطأ أثناء إكمال الدخول: ' + error.message);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initGoogleIdentity();
+        });
 
         // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {
@@ -453,17 +482,6 @@
             }
         }
 
-        // دالة معالجة دخول Google الموحدة
-        window.handleNativeGoogleSignIn = async function(idToken) {
-            try {
-                const credential = GoogleAuthProvider.credential(idToken);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                alert('خطأ أثناء إكمال المصادقة عبر Google: ' + error.message);
-            }
-        };
-
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
@@ -528,41 +546,29 @@
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
-        // بدء الدخول بـ Google
-        window.signInWithGoogle = async function() {
+        // زر تسجيل الدخول المباشر بالنافذة المنسدلة
+        window.signInWithGoogle = function() {
             triggerHaptic(25);
             
-            // 1. استخدام Native Bridge إذا كان معرّفاً بالأندرويد الأهلي
+            // 1. إذا وجد Bridge للأندرويد
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. استخدام Google One-Tap Popup من المكتبة فور توفرها
+            // 2. إظهار نافذة اختيار الحساب المنسدلة (Google One-Tap / Bottom Sheet)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        fallbackGooglePopup();
+                        // إظهار التنبيه فقط إذا تم الغاء النافذة من قبل المستخدم
+                        console.log("لم يتم عرض النافذة المنسدلة تلقائياً، جاري إعادة المحاولة...");
+                        google.accounts.id.prompt();
                     }
                 });
             } else {
-                fallbackGooglePopup();
+                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات...");
             }
         };
-
-        async function fallbackGooglePopup() {
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.addScope('email');
-                provider.addScope('profile');
-                provider.setCustomParameters({ 'prompt': 'select_account' });
-
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
-            }
-        }
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);

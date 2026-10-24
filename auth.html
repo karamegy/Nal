@@ -330,6 +330,8 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential, 
+            signInWithPopup,
+            signInWithRedirect,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -353,11 +355,9 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        let tokenClient = null;
-
-        // تهيئة Google Identity Services SDK لاستدعاء نافذة الحسابات المباشرة
+        // تهيئة Google Identity Services
         function initGoogleIdentity() {
-            if (window.google && window.google.accounts) {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
                 try {
                     google.accounts.id.initialize({
                         client_id: GOOGLE_CLIENT_ID,
@@ -366,29 +366,7 @@
                         cancel_on_tap_outside: true
                     });
                 } catch(e) {
-                    console.log("GSI ID init error:", e);
-                }
-
-                try {
-                    if (google.accounts.oauth2) {
-                        tokenClient = google.accounts.oauth2.initTokenClient({
-                            client_id: GOOGLE_CLIENT_ID,
-                            scope: 'email profile openid',
-                            callback: async (tokenResponse) => {
-                                if (tokenResponse && tokenResponse.access_token) {
-                                    try {
-                                        const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                                        const result = await signInWithCredential(auth, credential);
-                                        await processGoogleAccountData(result.user);
-                                    } catch (err) {
-                                        alert('خطأ في إكمال الدخول: ' + err.message);
-                                    }
-                                }
-                            }
-                        });
-                    }
-                } catch(e) {
-                    console.log("GSI OAuth2 init error:", e);
+                    console.log("GSI init error:", e);
                 }
             }
         }
@@ -572,61 +550,42 @@
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
-        // فتح نافذة اختيار حساب جوجل المباشرة من داخل الصفحة بدون فتح المتصفح الخارجي
+        // زر تسجيل الدخول المباشر بواسطة Google لفتح شاشة اختيار الحسابات
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             
-            // 1. إذا كان يعمل داخل تطبيق أندرويد بحزمة Native / Bridge
+            // 1. إذا وجد Bridge للأندرويد
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-                try {
-                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
-                    const result = await signInWithCredential(auth, credential);
-                    await processGoogleAccountData(result.user);
-                    return;
-                } catch (capErr) {
-                    console.log("Capacitor GoogleAuth err:", capErr);
-                }
-            }
+            // 2. فتح نافذة اختيار الحسابات المباشرة (Google OAuth Popup / Sheet)
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({
+                    prompt: 'select_account' // إجبار عرض قائمة اختيار الحسابات
+                });
 
-            // 2. إظهار نافذة اختيار حساب جوجل المباشرة من المكتبة الرسمية داخل التطبيق
-            if (window.google && window.google.accounts) {
-                if (!tokenClient && window.google.accounts.oauth2) {
-                    tokenClient = google.accounts.oauth2.initTokenClient({
-                        client_id: GOOGLE_CLIENT_ID,
-                        scope: 'email profile openid',
-                        callback: async (tokenResponse) => {
-                            if (tokenResponse && tokenResponse.access_token) {
-                                try {
-                                    const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                                    const result = await signInWithCredential(auth, credential);
-                                    await processGoogleAccountData(result.user);
-                                } catch (err) {
-                                    alert('خطأ في إكمال الدخول: ' + err.message);
-                                }
-                            }
-                        }
-                    });
-                }
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                console.error("خطأ أثناء تسجيل الدخول بـ Google:", error);
 
-                if (tokenClient) {
-                    tokenClient.requestAccessToken({ prompt: 'select_account' });
-                    return;
-                }
-
-                if (window.google.accounts.id) {
-                    document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                    try {
+                        const provider = new GoogleAuthProvider();
+                        provider.setCustomParameters({ prompt: 'select_account' });
+                        await signInWithRedirect(auth, provider);
+                    } catch (redirectErr) {
+                        alert("يرجى السماح بالنوافذ المنبثقة (Popups) في المتصفح لإكمال تسجيل الدخول.");
+                    }
+                } else if (window.google && window.google.accounts && window.google.accounts.id) {
                     google.accounts.id.prompt();
-                    return;
+                } else {
+                    alert("تعذر فتح نافذة تسجيل الدخول: " + (error.message || "يرجى التحقق من اتصال الإنترنت"));
                 }
             }
-
-            alert("جاري تحميل خدمات جوجل... يرجى إعادة المحاولة خلال ثوانٍ.");
         };
 
         window.openPhoneAuthModal = function() {

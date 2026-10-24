@@ -9,16 +9,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
-
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -41,6 +38,8 @@
         /* تحسينات الشاشات اللمسية وتطبيقات WebView */
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -48,10 +47,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem);
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -63,6 +64,8 @@
 
         /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -156,23 +159,8 @@
     </style>
 
     <script>
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
-
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -180,7 +168,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
@@ -241,7 +229,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -375,7 +363,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -435,17 +423,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل التخزين المؤقت في IndexedDB لسرعة التحميل بدون إنترنت في الـ Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let state = {
@@ -630,7 +611,7 @@
         }
 
         window.fixCorruptedData = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if(!confirm('هل تريد إصلاح وتصحيح الأرقام المضخمة وإعادة ضبط الحسابات في سحابة Firebase المعزولة؟')) return;
 
             if (!auth.currentUser) {
@@ -649,16 +630,15 @@
                     }
                 }
 
-                showNativeToast("✓ تم إصلاح الأرقام وضبط الحسابات");
-                alert('✓ تم إصلاح جميع الأرقام الوهمية وضبط الحسابات السحابية بنجاح!');
+                window.NativeBridge.showToast("✓ تم إصلاح الأرقام وضبط الحسابات");
             } catch (err) {
-                alert('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
             }
         };
 
         // تصدير PDF بمعيار A4
         window.downloadDashboardPDF = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('printDashCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printDashCurrentDate').innerText = new Date().toISOString().split('T')[0];
             window.print();
@@ -666,19 +646,19 @@
 
         // تصدير التقرير كصورة عالي الدقة PNG
         window.downloadDashboardImage = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let element = document.getElementById('dashboardPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-Dashboard-${currentCompanyId}-${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = `EIDCO-Dashboard-${currentCompanyId}-${Date.now()}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير لوحة التحكم كصورة بنجاح");
             });
         };
 
         // مشاركة مباشرة عبر أندرويد وواتساب
         window.shareDashboardReport = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let vaultVal = document.getElementById('dashVault').innerText;
             let salesVal = document.getElementById('dashSales').innerText;
             let profitsVal = document.getElementById('dashProfits').innerText;
@@ -692,28 +672,13 @@
             text += `📦 الأصناف بالمخزن: *${productsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(text);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'EIDCO // ملخص لوحة التحكم',
-                        text: text
-                    });
-                } catch (err) {
-                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            window.NativeBridge.shareText(text, 'EIDCO // ملخص لوحة التحكم');
         };
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

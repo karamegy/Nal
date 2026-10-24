@@ -46,14 +46,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع
+          # 1. إعداد مجلد الويب وتجهيز ملفات المشروع
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 1.1 إنشاء ملف assetlinks.json التلقائي للبصمة والنطاق
+          # 1.1 إنشاء ملف assetlinks.json للتأكيد الآلي للنطاق والبصمة
           mkdir -p www/.well-known
           cat << 'EOF' > www/.well-known/assetlinks.json
           [
@@ -69,7 +69,7 @@ jobs:
           ]
           EOF
 
-          # 2. ضبط ملف capacitor.config.json لنطاق Nal وحزمة io.github.karamegy.twa
+          # 2. إعداد ملف capacitor.config.json الخاص بمشروع EIDCO ونطاق Nal
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -103,14 +103,14 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت أدوات الكاباسيتور والمكتبات
+          # 3. تثبيت أدوات الكاباسيتور والمكتبات الأساسية
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 4. إعادة إنشاء منصة أندرويد
+          # 4. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للـ Package
+          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للحزمة
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -301,23 +301,24 @@ jobs:
           }
           EOF
 
-          # 6. توليد الأيقونات
+          # 6. تجهيز الأيقونة وتوليد أحجام mipmap لأندرويد
+          mkdir -p assets
           if [ -f "icon-new-512.png" ]; then
             cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
             cp logo.png assets/icon.png 2>/dev/null || true
           fi
-          
+
           if [ -f "assets/icon.png" ]; then
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. نسخ google-services.json إذا وُجد
+          # 7. نسخ google-services.json إلى مشروع الأندرويد إذا وجد
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
 
-          # 8. إعداد AndroidManifest و file_paths و strings
+          # 8. تجهيز مسارات موفر الملفات والـ AndroidManifest بأسماء مشروع EIDCO
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -363,7 +364,7 @@ jobs:
                   android:supportsRtl="true"
                   android:usesCleartextTraffic="true"
                   android:theme="@style/AppTheme"
-                  tools:overrideLibrary="com.getcapacitor.android, com.capacitorjs.plugins.filesystem, com.capacitorjs.plugins.share">
+                  tools:overrideLibrary="com.getcapacitor.android">
 
                   <activity
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -401,6 +402,7 @@ jobs:
           </manifest>
           EOF
 
+          # 9. حقن ملف strings.xml
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -413,105 +415,56 @@ jobs:
           </resources>
           EOF
 
-          # 9. مفتاح التوقيع
-          HAS_KEYSTORE=false
+          # 10. نسخ ملف التوقيع إن وجد
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
-            HAS_KEYSTORE=true
           fi
-          export HAS_KEYSTORE
 
-          # 10. المزامنة والنسخ وتأمين الأصول
-          npx cap copy android
-          mkdir -p android/app/src/main/assets
-          touch android/app/src/main/assets/capacitor.plugins.json
-          npx cap update android || true
-
-          # 11. حقن ملف android/app/build.gradle السليم النظيف مباشرة دون استبدالات Node البرمجية
-          cat << 'EOF' > android/app/build.gradle
-          apply plugin: 'com.android.application'
+          # 11. إعداد Gradle للتوقيع والإصدارات على نفس نمط الموديل الناجح
+          cat << EOF >> android/app/build.gradle
 
           android {
-              namespace "io.github.karamegy.twa"
-              compileSdk 34
-
               defaultConfig {
                   applicationId "io.github.karamegy.twa"
                   minSdk 24
                   targetSdk 34
                   versionCode 24
                   versionName "8.0.0.0"
-                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-                  aaptOptions {
-                      ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~'
-                  }
               }
-
               signingConfigs {
                   release {
                       if (file('signing.keystore').exists()) {
                           storeFile file('signing.keystore')
-                          storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
-                          keyAlias System.getenv("KEY_ALIAS") ?: ""
-                          keyPassword System.getenv("KEY_PASSWORD") ?: ""
+                          storePassword '$KEYSTORE_PASSWORD'
+                          keyAlias '$KEY_ALIAS'
+                          keyPassword '$KEY_PASSWORD'
                       }
                   }
               }
-
               buildTypes {
                   release {
                       if (file('signing.keystore').exists()) {
                           signingConfig signingConfigs.release
                       }
                       minifyEnabled false
-                      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
                   }
               }
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-
-          repositories {
-              flatDir {
-                  dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-              }
-          }
-
-          dependencies {
-              implementation fileTree(dir: 'libs', include: ['*.jar'])
-              implementation "androidx.appcompat:appcompat:${rootProject.ext.has('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.6.1'}"
-              implementation "androidx.coordinatorlayout:coordinatorlayout:${rootProject.ext.has('androidxCoordinatorLayoutVersion') ? rootProject.ext.androidxCoordinatorLayoutVersion : '1.2.0'}"
-              implementation "androidx.core:core-splashscreen:${rootProject.ext.has('coreSplashScreenVersion') ? rootProject.ext.coreSplashScreenVersion : '1.0.1'}"
-              implementation project(':capacitor-android')
-              implementation project(':capacitor-cordova-android-plugins')
-          }
-
-          try {
-              def servicesJSON = file('google-services.json')
-              if (servicesJSON.text) {
-                  apply plugin: 'com.google.gms.google-services'
-              }
-          } catch(Exception e) {
-              logger.info("google-services.json not found")
           }
           EOF
 
-          # 12. بناء التطبيق بـ Gradle
+          # 12. المزامنة والبناء الآمن بنفس طريقة الموديل الناجح
+          npx cap sync android
           cd android
           chmod +x gradlew
-          ./gradlew clean --no-daemon
-
-          if [ "$HAS_KEYSTORE" = "true" ]; then
+          
+          if [ -f "signing.keystore" ]; then
             ./gradlew assembleRelease --no-daemon || ./gradlew assembleDebug --no-daemon
             ./gradlew bundleRelease --no-daemon || true
           else
             ./gradlew assembleDebug --no-daemon
           fi
 
-          # 13. تجميع المخرجات
+          # 13. تجميع المخرجات للرفع
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;

@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ ملفات المشروع
+          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
@@ -103,14 +103,14 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت مكتبات الكاباسيتور
+          # 3. تثبيت أدوات الكاباسيتور والمكتبات
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للحزمة
+          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للـ Package
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -421,38 +421,83 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. المزامنة والنسخ الآمن مع تأمين مجلد assets وملف capacitor.plugins.json
+          # 10. المزامنة والنسخ وتأمين الأصول
           npx cap copy android
           mkdir -p android/app/src/main/assets
           touch android/app/src/main/assets/capacitor.plugins.json
-          npx cap update android || (mkdir -p android/app/src/main/assets && touch android/app/src/main/assets/capacitor.plugins.json && npx cap update android)
+          npx cap update android || true
 
-          # 11. تعديل build.gradle برمجياً
-          node -e "
-          const fs = require('fs');
-          let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+          # 11. حقن ملف android/app/build.gradle السليم النظيف مباشرة دون استبدالات Node البرمجية
+          cat << 'EOF' > android/app/build.gradle
+          apply plugin: 'com.android.application'
 
-          if (process.env.HAS_KEYSTORE === 'true') {
-            const signingBlock = \`
-              signingConfigs {
-                  release {
-                      storeFile file('signing.keystore')
-                      storePassword '\${process.env.KEYSTORE_PASSWORD}'
-                      keyAlias '\${process.env.KEY_ALIAS}'
-                      keyPassword '\${process.env.KEY_PASSWORD}'
+          android {
+              namespace "io.github.karamegy.twa"
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "io.github.karamegy.twa"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 24
+                  versionName "8.0.0.0"
+                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+                  aaptOptions {
+                      ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~'
                   }
               }
-            \`;
-            gradle = gradle.replace(/android\s*\{/, 'android {' + signingBlock);
-            gradle = gradle.replace(/buildTypes\s*\{\s*release\s*\{/, 'buildTypes { release { signingConfig signingConfigs.release ');
+
+              signingConfigs {
+                  release {
+                      if (file('signing.keystore').exists()) {
+                          storeFile file('signing.keystore')
+                          storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+                          keyAlias System.getenv("KEY_ALIAS") ?: ""
+                          keyPassword System.getenv("KEY_PASSWORD") ?: ""
+                      }
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      if (file('signing.keystore').exists()) {
+                          signingConfig signingConfigs.release
+                      }
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
           }
 
-          gradle = gradle.replace(/applicationId\s+=?\s*\"[^\"]+\"/, 'applicationId \"io.github.karamegy.twa\"');
-          gradle = gradle.replace(/versionCode\s+=?\s*\d+/, 'versionCode 24');
-          gradle = gradle.replace(/versionName\s+=?\s*\"[^\"]+\"/, 'versionName \"8.0.0.0\"');
+          repositories {
+              flatDir {
+                  dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+              }
+          }
 
-          fs.writeFileSync('android/app/build.gradle', gradle);
-          "
+          dependencies {
+              implementation fileTree(dir: 'libs', include: ['*.jar'])
+              implementation "androidx.appcompat:appcompat:${rootProject.ext.has('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.6.1'}"
+              implementation "androidx.coordinatorlayout:coordinatorlayout:${rootProject.ext.has('androidxCoordinatorLayoutVersion') ? rootProject.ext.androidxCoordinatorLayoutVersion : '1.2.0'}"
+              implementation "androidx.core:core-splashscreen:${rootProject.ext.has('coreSplashScreenVersion') ? rootProject.ext.coreSplashScreenVersion : '1.0.1'}"
+              implementation project(':capacitor-android')
+              implementation project(':capacitor-cordova-android-plugins')
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.text) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json not found")
+          }
+          EOF
 
           # 12. بناء التطبيق بـ Gradle
           cd android
@@ -466,7 +511,7 @@ jobs:
             ./gradlew assembleDebug --no-daemon
           fi
 
-          # 13. تجميع المخرجات وتأمين الملفات
+          # 13. تجميع المخرجات
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;

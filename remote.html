@@ -16,6 +16,10 @@
     <script src="./eidco-core.js"></script>
 
     <script>
+        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
+        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
+        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
+
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -88,9 +92,14 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
+
         function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
             }
@@ -98,8 +107,9 @@
 
         function triggerHaptic(duration = 35) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
             }
         }
     </script>
@@ -247,6 +257,8 @@
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        const DEFAULT_COMPANY_ID = 'company_founder_karm';
+
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -263,7 +275,7 @@
         signInAnonymously(auth).catch(err => console.error("فشل مصادقة الريموت:", err));
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const companyIdEl = document.getElementById('remoteCompanyId');

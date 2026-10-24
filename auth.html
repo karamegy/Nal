@@ -330,6 +330,8 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential, 
+            signInWithPopup,
+            signInWithRedirect,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -343,7 +345,6 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // معرّف العميل لخدمات Google Identity Services (من مشروع Firebase)
         const GOOGLE_CLIENT_ID = "515898424721-web.apps.googleusercontent.com"; 
 
         const app = initializeApp(firebaseConfig);
@@ -354,19 +355,22 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // تهيئة Google Identity Services المنسدلة (One-Tap / Bottom Sheet)
+        // تهيئة Google Identity Services
         function initGoogleIdentity() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleOneTapResponse,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
+                try {
+                    google.accounts.id.initialize({
+                        client_id: GOOGLE_CLIENT_ID,
+                        callback: handleGoogleOneTapResponse,
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
+                } catch(e) {
+                    console.log("GSI init error:", e);
+                }
             }
         }
 
-        // معالجة رمز الدخول القادم من النافذة المنسدلة مباشرة
         async function handleGoogleOneTapResponse(response) {
             try {
                 const credential = GoogleAuthProvider.credential(response.credential);
@@ -546,8 +550,8 @@
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
-        // زر تسجيل الدخول المباشر بالنافذة المنسدلة
-        window.signInWithGoogle = function() {
+        // زر تسجيل الدخول المباشر بواسطة Google لفتح شاشة اختيار الحسابات
+        window.signInWithGoogle = async function() {
             triggerHaptic(25);
             
             // 1. إذا وجد Bridge للأندرويد
@@ -556,17 +560,31 @@
                 return;
             }
 
-            // 2. إظهار نافذة اختيار الحساب المنسدلة (Google One-Tap / Bottom Sheet)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // إظهار التنبيه فقط إذا تم الغاء النافذة من قبل المستخدم
-                        console.log("لم يتم عرض النافذة المنسدلة تلقائياً، جاري إعادة المحاولة...");
-                        google.accounts.id.prompt();
-                    }
+            // 2. فتح نافذة اختيار الحسابات المباشرة (Google OAuth Popup / Sheet)
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({
+                    prompt: 'select_account' // إجبار عرض قائمة اختيار الحسابات
                 });
-            } else {
-                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات...");
+
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                console.error("خطأ أثناء تسجيل الدخول بـ Google:", error);
+
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                    try {
+                        const provider = new GoogleAuthProvider();
+                        provider.setCustomParameters({ prompt: 'select_account' });
+                        await signInWithRedirect(auth, provider);
+                    } catch (redirectErr) {
+                        alert("يرجى السماح بالنوافذ المنبثقة (Popups) في المتصفح لإكمال تسجيل الدخول.");
+                    }
+                } else if (window.google && window.google.accounts && window.google.accounts.id) {
+                    google.accounts.id.prompt();
+                } else {
+                    alert("تعذر فتح نافذة تسجيل الدخول: " + (error.message || "يرجى التحقق من اتصال الإنترنت"));
+                }
             }
         };
 

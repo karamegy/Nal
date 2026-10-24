@@ -62,7 +62,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            padding: 1rem; 
+            padding: 0.75rem; 
             box-sizing: border-box; 
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
@@ -117,8 +117,8 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(2, 6, 23, 0.85); 
-            backdrop-filter: blur(8px);
+            background: rgba(2, 6, 23, 0.88); 
+            backdrop-filter: blur(10px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
@@ -163,7 +163,7 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden my-auto">
+    <div class="corporate-card p-5 sm:p-8 max-w-lg w-full space-y-5 text-right relative overflow-hidden my-auto">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
         <!-- زر التثبيت البرمجي -->
@@ -184,7 +184,7 @@
         </div>
 
         <!-- خيارات الدخول السريع بواسطة Google ورقم الهاتف -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-1">
             <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                 <i class="fa-brands fa-google text-rose-500 text-base"></i> تسجيل بـ Google
             </button>
@@ -217,7 +217,7 @@
             </div>
         </div>
 
-        <div class="p-5 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
+        <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
             <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
@@ -227,16 +227,49 @@
             </div>
         </div>
 
-        <!-- نص الموافقة ورابط سياسة الخصوصية -->
-        <div class="text-center text-[11px] text-slate-400 font-medium relative z-10 pt-1">
-            بمتابعة الاستخدام فإنك توافق على 
-            <a href="privacy.html" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4 font-bold transition">
-                سياسة الخصوصية
-            </a>
+        <!-- زر وسياسة الخصوصية بارز وواضح -->
+        <div class="relative z-10 pt-1">
+            <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 text-center flex items-center justify-between gap-2">
+                <span class="text-[11px] text-slate-300 font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved text-indigo-400 text-xs"></i> حماية وتأمين البيانات
+                </span>
+                <button onclick="openPrivacyModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer flex items-center gap-1 active:scale-95 shadow">
+                    <i class="fa-solid fa-file-contract text-[10px]"></i> سياسة الخصوصية
+                </button>
+            </div>
         </div>
 
         <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono relative z-10">
             <span>EIDCO Business OS &copy; 2026</span>
+        </div>
+    </div>
+
+    <!-- نافذة عرض سياسة الخصوصية -->
+    <div id="privacyModal" class="custom-modal">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-indigo-400"></i> سياسة الخصوصية وحماية البيانات
+                </h3>
+                <button onclick="closePrivacyModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pl-1">
+                <p class="font-bold text-indigo-300">نظام EIDCO يلتزم بالكامل بحماية خصوصيتك وأمان بياناتك:</p>
+                <ul class="list-disc list-inside space-y-2 text-slate-400">
+                    <li><strong class="text-white">حماية الحسابات:</strong> تُستخدم بيانات التسجيل (Google / رقم الهاتف / البصمة) حصراً للتحقق من هوية المستخدم وتخصيص صلاحيات المنظومة.</li>
+                    <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة ومحميّة بأعلى معايير الأمان والمعزولة تماماً لكل شركة.</li>
+                    <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك بواسطة تقنيات الأمان المدمجة بالجهاز ولا يتم نقل بصمتك الخارجية.</li>
+                    <li><strong class="text-white">عدم المشاركة:</strong> لا نقوم ببيع أو مشاركة بياناتك الشخصية أو التجارية مع أي أطراف خارجية.</li>
+                </ul>
+            </div>
+
+            <div class="flex gap-2 pt-2 border-t border-slate-800">
+                <a href="privacy.html" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold flex-1 py-2.5 rounded-xl text-xs transition cursor-pointer text-center flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> فتح الصفحة الكاملة
+                </a>
+                <button onclick="closePrivacyModal()" class="bg-slate-800 text-slate-300 hover:bg-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -311,6 +344,16 @@
                 }
             });
         }
+
+        // دوال نافذة سياسة الخصوصية
+        function openPrivacyModal() {
+            triggerHaptic(20);
+            document.getElementById('privacyModal').classList.add('active');
+        }
+        function closePrivacyModal() {
+            triggerHaptic(15);
+            document.getElementById('privacyModal').classList.remove('active');
+        }
     </script>
 
     <!-- Firebase SDK Modules وخدمات تسجيل الدخول -->
@@ -365,7 +408,7 @@
                 await processGoogleAccountData(result.user);
             }
         }).catch((error) => {
-            console.error("خطأ في استقبال Redirect Result:", error);
+            console.error("خطأ Redirect:", error);
         });
 
         // تهيئة Google Identity Services
@@ -422,48 +465,33 @@
         });
 
         // ==========================================
-        //  دالة تسجيل الدخول بـ Google الرسمية
+        //  دالة تسجيل الدخول المباشرة والمتوافقة
         // ==========================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // 1. إذا وجد Bridge للأندرويد Native
+            // 1. إذا كان التطبيق يعمل داخل Android WebView Native
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. محاولة إظهار نافذة اختيار الحساب الأصيلة من Google (One Tap / Account Picker)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // إذا تم حجب Prompt، يتم استخدام Popup أو Redirect المباشر
-                        triggerFirebaseGoogleAuth();
-                    }
-                });
-            } else {
-                triggerFirebaseGoogleAuth();
-            }
-        };
-
-        async function triggerFirebaseGoogleAuth() {
+            // 2. المحاولة باستخدام Firebase Provider المعالج لشبكات الموبايل
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
 
             try {
-                // تجربة النافذة المنبثقة أولاً
                 const result = await signInWithPopup(auth, provider);
                 await processGoogleAccountData(result.user);
             } catch (error) {
-                console.warn("Popup blocked or failed, switching to redirect:", error);
-                // إذا تم حظر Popup أو تعطل بالهاتف، يتم التحويل المباشر لصفحة جوجل
+                console.warn("Popup blocked or network issue, using redirect fallback...", error);
                 try {
                     await signInWithRedirect(auth, provider);
-                } catch(redirectError) {
-                    alert("تعذر فتح تسجيل الدخول: " + redirectError.message);
+                } catch(redirectErr) {
+                    alert("تعذر تسجيل الدخول بـ Google. يرجى التأكد من إضافة النطاق (karamegy.github.io) في Firebase Authorized Domains.");
                 }
             }
-        }
+        };
 
         // دوال الشكاوى
         window.openComplaintsModal = function() {

@@ -9,9 +9,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -37,6 +40,8 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -44,10 +49,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 4rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -59,6 +66,8 @@
 
         /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -153,23 +162,8 @@
     </style>
 
     <script>
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
-
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -177,7 +171,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -231,7 +225,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -272,7 +266,7 @@
                                     <span id="connectedAccountRoleBadge" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono font-bold">مسؤول النظام</span>
                                 </div>
                                 <h2 id="connectedAdminName" class="text-xl font-black text-white mt-1">جاري قراءة الحساب المتصل...</h2>
-                                <p id="connectedCompanySubtext" class="text-xs text-indigo-200/80 font-mono mt-0.5">ID: default_company</p>
+                                <p id="connectedCompanySubtext" class="text-xs text-indigo-200/80 font-mono mt-0.5">ID: company_founder_karm</p>
                             </div>
                         </div>
 
@@ -312,7 +306,7 @@
                     <div class="space-y-3 pt-2">
                         <div class="flex flex-col sm:flex-row gap-2">
                             <input type="text" id="aiUserQuestion" class="corporate-input flex-1" placeholder="اكتب سؤالك، استشارتك، أو الفكرة التي تريد تطويرها هنا...">
-                            <button type="button" onclick="window.processAiConsultation()" class="btn-primary shrink-0 text-xs py-3 px-6"><i class="fa-solid fa-paper-plane"></i> استشارة وتوسعة الفكرة</button>
+                            <button type="button" onclick="window.processAiConsultation()" class="btn-primary shrink-0 text-xs py-3 px-6 cursor-pointer"><i class="fa-solid fa-paper-plane"></i> استشارة وتوسعة الفكرة</button>
                         </div>
                     </div>
 
@@ -323,7 +317,7 @@
                                 <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
                                 <h4 class="font-bold text-xs text-indigo-300"><i class="fa-solid fa-brain ml-1"></i> التحليل المالي والإستراتيجي المخصص للحساب:</h4>
                             </div>
-                            <button onclick="window.copyAiResponse()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-bold"><i class="fa-solid fa-copy ml-1"></i> نسخ التوصية</button>
+                            <button onclick="window.copyAiResponse()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-bold cursor-pointer"><i class="fa-solid fa-copy ml-1"></i> نسخ التوصية</button>
                         </div>
                         <div id="aiResponseText" class="text-xs sm:text-sm leading-relaxed space-y-3 text-slate-200"></div>
                     </div>
@@ -422,7 +416,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -465,17 +459,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل التخزين المؤقت للعمل أوفلاين
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let systemState = {
@@ -501,14 +488,14 @@
         });
 
         function updateConnectedUserCard() {
-            let adminName = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_admin_' + currentCompanyId) || 'مسؤول النظام الرئيسي';
-            const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+            let adminName = localStorage.getItem('eidco_v14_admin') || localStorage.getItem('eidco_admin_' + currentCompanyId) || 'كرم حمدي عبد العظيم';
+            const FOUNDER_NAME = "كرم حمدي عبد العظيم";
             
             document.getElementById('connectedAdminName').innerText = adminName;
             document.getElementById('connectedCompanySubtext').innerText = `ID: ${currentCompanyId} | الجلسة الآمنة مفعّلة`;
             
             let roleBadge = document.getElementById('connectedAccountRoleBadge');
-            if(adminName === FOUNDER_NAME) {
+            if(adminName === FOUNDER_NAME || adminName.includes('كرم')) {
                 roleBadge.innerText = 'المؤسس / المدير العام';
                 roleBadge.className = 'text-[10px] bg-amber-500/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded-full font-mono font-bold';
             } else {
@@ -516,7 +503,7 @@
             }
 
             let avatarText = document.getElementById('connectedUserAvatarText');
-            if(avatarText) avatarText.innerText = adminName ? adminName.charAt(0) : 'م';
+            if(avatarText) avatarText.innerText = adminName ? adminName.charAt(0) : 'ك';
         }
 
         function initAppListeners() {
@@ -533,7 +520,6 @@
                 }
             });
 
-            // مزامنة البيانات للذكاء الاصطناعي
             const qInv = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             onSnapshot(qInv, snap => { systemState.invoices = snap.docs.map(d=>d.data()); });
 
@@ -548,13 +534,13 @@
         }
 
         window.askAiQuick = function(promptText) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('aiUserQuestion').value = promptText;
             window.processAiConsultation();
         };
 
         window.processAiConsultation = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let question = document.getElementById('aiUserQuestion').value.trim();
             if(!question) return alert('الرجاء كتابة سؤالك أو استشارتك أولاً');
 
@@ -564,7 +550,7 @@
             container.classList.remove('hidden');
             responseText.innerHTML = `<div class="flex items-center gap-2 text-indigo-300 font-bold"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحليل بيانات الحساب وتوليد الاستشارة المخصصة...</div>`;
 
-            let totalSales = systemState.invoices.reduce((s,i)=>s+Number(i.total||0), 0);
+            let totalSales = systemState.invoices.reduce((s,i)=>s+Number(i.total||i.totalAmount||i.amount||0), 0);
             let totalProfits = systemState.invoices.reduce((s,i)=>s+Number(i.profit||0), 0);
             let totalInc = systemState.transactions.filter(t=>t.type==='إيراد').reduce((s,t)=>s+Number(t.amount||0), 0);
             let totalExp = systemState.transactions.filter(t=>t.type==='مصروف').reduce((s,t)=>s+Number(t.amount||0), 0);
@@ -574,7 +560,7 @@
 
             setTimeout(() => {
                 let answerHtml = ``;
-                let currentAdmin = localStorage.getItem('eidco_v14_admin') || 'المسؤول';
+                let currentAdmin = localStorage.getItem('eidco_v14_admin') || 'كرم حمدي عبد العظيم';
 
                 answerHtml += `<p class="font-bold text-amber-300">مرحباً أ/ ${currentAdmin}، بناءً على بيانات شركة (${currentCompanyId}) الحالية:</p>`;
                 answerHtml += `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 my-2 font-mono text-[11px]">
@@ -586,11 +572,11 @@
 
                 if(question.includes('تصدير') || question.includes('توسع') || question.includes('الخارجية')) {
                     answerHtml += `
-                    <p class="font-bold text-indigo-300">💡 **خطة التوسع والتصدير للأسواق الخارجية:**</p>
+                    <p class="font-bold text-indigo-300">💡 **خطة والتوسع والتصدير للأسواق الخارجية:**</p>
                     <ul class="list-disc list-inside space-y-1.5 text-slate-300">
                         <li><b>دراسة الأسواق المستهدفة:</b> التركيز على المنتجات ذات القيمة المضافة العالية في مخزنك (${productsCount} صنف مسجل) وتحديد الدول الأكثر طلباً.</li>
                         <li><b>توفير معايير التعبئة والتغليف:</b> مطابقة مواصفات الجودة العالمية للحصول على شهادات التصدير.</li>
-                        <li><b>التسويق الرقمي والموزعين:</b> إنشاء بروفايل تجاري احترافي واستهداف الموزعين والمستوردين في الولايات المتحدة والدول العربية.</li>
+                        <li><b>التسويق الرقمي والموزعين:</b> إنشاء بروفايل تجاري احترافي واستهداف الموزعين والمستوردين.</li>
                         <li><b>التأمين المالي:</b> استخدام الاعتمادات المستندية (LC) أو الدفع المسبق لتأمين مستحقاتك المالية.</li>
                     </ul>`;
                 } else if(question.includes('المبيعات') || question.includes('الأرباح') || question.includes('زيادة')) {
@@ -615,21 +601,20 @@
                 }
 
                 responseText.innerHTML = answerHtml;
-                showNativeToast("✓ تم إعداد الاستشارة الذكية بنجاح");
+                window.NativeBridge.showToast("✓ تم إعداد الاستشارة الذكية بنجاح");
             }, 600);
         };
 
         window.copyAiResponse = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let text = document.getElementById('aiResponseText').innerText;
             navigator.clipboard.writeText(text).then(() => {
-                showNativeToast("✓ تم نسخ التوصية والاستشارة");
-                alert('✓ تم نسخ التوصية والاستشارة بنجاح!');
+                window.NativeBridge.showToast("✓ تم نسخ التوصية والاستشارة");
             });
         };
 
         window.saveIntelligenceSettings = async function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             let settings = {
                 companyId: currentCompanyId,
                 gmail: document.getElementById('srcGmail').checked,
@@ -646,14 +631,14 @@
             try {
                 const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
                 await setDoc(settingsDocRef, settings, { merge: true });
-                showNativeToast("✓ تم تحديث إعدادات الذكاء الشخصي");
+                window.NativeBridge.showToast("✓ تم تحديث إعدادات الذكاء الشخصي");
             } catch (err) {
-                alert('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
             }
         };
 
         window.generateLearningContent = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let topic = document.getElementById('studyTopic').value.trim();
             let toolType = document.getElementById('studyToolType').value;
             if(!topic) return alert('الرجاء كتابة الموضوع أو المقرر الدراسي');
@@ -680,7 +665,7 @@
             }
 
             resultText.innerHTML = generatedHtml;
-            showNativeToast("✓ تم توليد المحتوى التعليمي");
+            window.NativeBridge.showToast("✓ تم توليد المحتوى التعليمي");
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -700,7 +685,7 @@
         };
 
         window.handleMigrationUpload = async function(event) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let file = event.target.files[0];
             if(!file) return;
             let status = document.getElementById('migrationStatus');
@@ -722,7 +707,7 @@
 
                 setTimeout(() => {
                     status.innerHTML = `✓ تم استيراد وترحيل السجل والذاكرة بنجاح من أرشيف (${file.name}) وتم ربطها سحابياً بـ Firebase المعزول!`;
-                    showNativeToast("✓ تم ترحيل ملف الأرشيف بنجاح");
+                    window.NativeBridge.showToast("✓ تم ترحيل ملف الأرشيف بنجاح");
                 }, 1200);
             } catch(err) {
                 status.innerHTML = `⚠️ حدث خطأ أثناء الترحيل السحابي: ${err.message}`;
@@ -732,7 +717,7 @@
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

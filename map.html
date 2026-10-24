@@ -45,8 +45,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -69,8 +67,6 @@
         }
 
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -222,6 +218,27 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -232,7 +249,6 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // دالة موحدة ومضمونة للحصول على الموقع الجغرافي مع الدعم الأهلي للأندرويد
         function getUserGpsPosition(successCb, errorCb) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -277,7 +293,7 @@
         window.addEventListener('DOMContentLoaded', requestAllAppPermissions);
 
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -285,7 +301,7 @@
         }
 
         window.openAddVehicleModal = function(defaultLat = '', defaultLng = '') {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
@@ -300,12 +316,12 @@
         };
 
         window.closeVehicleModal = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('vehicleModal').classList.add('hidden');
         };
 
         window.openAddShipmentModal = function(defaultLat = '', defaultLng = '') {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
@@ -321,12 +337,12 @@
         };
 
         window.closeShipmentModal = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('shipmentModal').classList.add('hidden');
         };
 
         window.toggleTouchPanel = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             const panel = document.getElementById('touchControlPanel');
             const icon = document.getElementById('panelToggleIcon');
             if(panel && icon) {
@@ -352,8 +368,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -403,8 +419,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -762,7 +778,7 @@
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 13);
-                        window.NativeBridge.showToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
+                        showNativeToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
                     }
                 },
                 err => {
@@ -771,7 +787,7 @@
             );
 
             window.switchLayer = function(type) {
-                window.NativeBridge.vibrate(15);
+                triggerHaptic(15);
                 map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
                 if(type === 'street') streetLayer.addTo(map);
                 if(type === 'topo') topoLayer.addTo(map);
@@ -783,21 +799,21 @@
                 const lng = e.latlng.lng.toFixed(6);
 
                 if (pickingMode === 'vehicle') {
-                    window.NativeBridge.vibrate(25);
+                    triggerHaptic(25);
                     document.getElementById('vehicleLat').value = lat;
                     document.getElementById('vehicleLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    window.NativeBridge.showToast(`✓ تم التقاط موقع المركبة: (${lat}, ${lng})`);
+                    showNativeToast(`✓ تم التقاط موقع المركبة: (${lat}, ${lng})`);
                     return;
                 }
                 if (pickingMode === 'shipment') {
-                    window.NativeBridge.vibrate(25);
+                    triggerHaptic(25);
                     document.getElementById('shipmentLat').value = lat;
                     document.getElementById('shipmentLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    window.NativeBridge.showToast(`✓ تم التقاط موقع الشحنة: (${lat}, ${lng})`);
+                    showNativeToast(`✓ تم التقاط موقع الشحنة: (${lat}, ${lng})`);
                     return;
                 }
 
@@ -841,7 +857,7 @@
         }
 
         window.rotateMap = function(degDelta) {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             if (!map) return;
             let currentBearing = map.getBearing ? map.getBearing() : 0;
             let newBearing = (currentBearing + degDelta) % 360;
@@ -851,7 +867,7 @@
         };
 
         window.resetMapRotation = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             if (!map) return;
             if (map.setBearing) {
                 map.setBearing(0);
@@ -862,7 +878,7 @@
         let currentShipmentDocs = [];
 
         window.resetMapView = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             if (!map) return;
             let bounds = [];
             currentFleetDocs.forEach(v => {
@@ -884,14 +900,14 @@
                         map.setView([lat, lng], 14);
                     },
                     err => {
-                        window.NativeBridge.showToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
+                        showNativeToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
                     }
                 );
             }
         };
 
         window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             if (!map) return;
             if (activeRoutingControl) {
                 map.removeControl(activeRoutingControl);
@@ -933,12 +949,12 @@
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.remove('hidden');
 
-                window.NativeBridge.showToast(`🧭 المسافة: ${distanceKm} كم | الوقت: ${timeMin} دقيقة`);
+                showNativeToast(`🧭 المسافة: ${distanceKm} كم | الوقت: ${timeMin} دقيقة`);
             });
         };
 
         window.navigateRouteTo = function(destLat, destLng, destName) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             getUserGpsPosition(
                 (lat, lng) => {
                     window.calculateRoute(lat, lng, destLat, destLng, destName);
@@ -950,7 +966,7 @@
         };
 
         window.searchAndCalculateRoute = async function() {
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             const startQuery = document.getElementById('routeStartInput').value.trim();
             const endQuery = document.getElementById('routeEndInput').value.trim();
 
@@ -1004,7 +1020,7 @@
         };
 
         window.clearActiveRoute = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             if (activeRoutingControl && map) {
                 map.removeControl(activeRoutingControl);
                 activeRoutingControl = null;
@@ -1012,13 +1028,13 @@
                 if(etaEl) etaEl.innerText = '-- دقيقة';
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.add('hidden');
-                window.NativeBridge.showToast("✓ تم إلغاء المسار الحالي");
+                showNativeToast("✓ تم إلغاء المسار الحالي");
             }
         };
 
         window.fetchGpsForModal = function(target) {
-            window.NativeBridge.vibrate(30);
-            window.NativeBridge.showToast("⏳ جاري الاتصال بحساسات الـ GPS...");
+            triggerHaptic(30);
+            showNativeToast("⏳ جاري الاتصال بحساسات الـ GPS...");
             getUserGpsPosition(
                 (lat, lng) => {
                     let latFixed = lat.toFixed(6);
@@ -1031,7 +1047,7 @@
                         document.getElementById('shipmentLng').value = lngFixed;
                     }
                     if (map) map.setView([lat, lng], 15);
-                    window.NativeBridge.showToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
+                    showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
                 },
                 err => {
                     alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى التين من تفعيل الـ GPS والسمح بالأذونات.");
@@ -1040,16 +1056,16 @@
         };
 
         window.pickFromMap = function(target) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             pickingMode = target;
             if (map) {
                 map.getContainer().style.cursor = 'crosshair';
-                window.NativeBridge.showToast("💡 انقر الآن على أي مكان داخل الخريطة");
+                showNativeToast("💡 انقر الآن على أي مكان داخل الخريطة");
             }
         };
 
         window.focusOnMap = function(lat, lng, label) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             if (map && !isNaN(lat) && !isNaN(lng)) {
                 map.setView([lat, lng], 16, { animate: true });
                 L.popup()
@@ -1060,12 +1076,12 @@
         };
 
         window.searchCustomLocation = async function() {
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             const queryText = document.getElementById('customSearchInput').value.trim();
             if(!queryText) return;
 
             try {
-                window.NativeBridge.showToast("🔍 جاري البحث الميداني...");
+                showNativeToast("🔍 جاري البحث الميداني...");
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}`);
                 const data = await res.json();
 
@@ -1095,7 +1111,7 @@
         };
 
         window.saveVehicle = async function(e) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
             let name = document.getElementById('vehicleName').value;
@@ -1130,14 +1146,14 @@
                     await addDoc(fleetCollection, vehicleData);
                 }
                 window.closeVehicleModal();
-                window.NativeBridge.showToast("✓ تم حفظ بيانات المركبة بنجاح");
+                showNativeToast("✓ تم حفظ بيانات المركبة بنجاح");
             } catch (err) {
-                window.NativeBridge.showToast("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
+                showNativeToast("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
             }
         };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة سحابياً';
             document.getElementById('vehicleId').value = id;
             document.getElementById('vehicleName').value = name;
@@ -1148,22 +1164,22 @@
         };
 
         window.deleteVehicle = async function(id) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول السحابي؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
-                    window.NativeBridge.showToast("✓ تم حذف المركبة بنجاح");
+                    showNativeToast("✓ تم حذف المركبة بنجاح");
                 } catch (err) {
-                    window.NativeBridge.showToast("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
+                    showNativeToast("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
                 }
             }
         };
 
         window.saveShipment = async function(e) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (e && e.preventDefault) e.preventDefault();
             let code = document.getElementById('shipmentCode').value;
             let receiver = document.getElementById('shipmentReceiver').value;
@@ -1192,38 +1208,38 @@
                     createdAt: new Date().toISOString()
                 });
                 window.closeShipmentModal();
-                window.NativeBridge.showToast("✓ تم إضافة الشحنة بنجاح");
+                showNativeToast("✓ تم إضافة الشحنة بنجاح");
             } catch (err) {
-                window.NativeBridge.showToast("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
+                showNativeToast("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
             }
         };
 
         window.deleteShipment = async function(id) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(confirm("هل أنت متأكد من حذف هذه الشحنة سحابياً؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "shipments", id));
-                    window.NativeBridge.showToast("✓ تم حذف الشحنة بنجاح");
+                    showNativeToast("✓ تم حذف الشحنة بنجاح");
                 } catch (err) {
-                    window.NativeBridge.showToast("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
+                    showNativeToast("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
                 }
             }
         };
 
         window.toggleShipmentStatusOnMap = async function(id, currentStatus) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const nextStatus = currentStatus === 'تم التسليم' ? 'قيد التوصيل' : 'تم التسليم';
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
                 await updateDoc(doc(db, "shipments", id), { status: nextStatus });
-                window.NativeBridge.showToast(`✓ تم تغيير حالة الشحنة إلى (${nextStatus})`);
+                showNativeToast(`✓ تم تغيير حالة الشحنة إلى (${nextStatus})`);
             } catch(e) {
-                window.NativeBridge.showToast("فشل تحديث حالة الشحنة: " + e.message);
+                showNativeToast("فشل تحديث حالة الشحنة: " + e.message);
             }
         };
 
@@ -1456,13 +1472,13 @@
 
         window.panToFleet = function() { window.resetMapView(); };
         window.panToUser = function() { 
-            window.NativeBridge.vibrate(20);
-            window.NativeBridge.showToast("⏳ جاري تحديد موقعك الجغرافي الحقيقي...");
+            triggerHaptic(20);
+            showNativeToast("⏳ جاري تحديد موقعك الجغرافي الحقيقي...");
             getUserGpsPosition(
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 16, { animate: true });
-                        window.NativeBridge.showToast("✓ تم التمركز عند موقعك الحالي");
+                        showNativeToast("✓ تم التمركز عند موقعك الحالي");
                     }
                 },
                 err => {

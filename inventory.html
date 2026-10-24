@@ -17,6 +17,7 @@
     <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
@@ -43,8 +44,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -62,15 +61,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
         header {
             flex-shrink: 0;
         }
 
-        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -163,8 +158,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -187,8 +203,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link active"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -238,8 +254,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link active"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -554,7 +570,7 @@
         }
 
         window.resetProductForm = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('editOriginalCode').value = '';
             document.getElementById('editDocId').value = '';
             document.getElementById('prodCode').value = generateNewCode();
@@ -570,7 +586,7 @@
         };
 
         window.editProduct = function(code) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let p = productsList.find(x => x.code === code);
             if(!p) return;
 
@@ -591,7 +607,7 @@
         };
 
         window.executeSaveProduct = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             try {
                 let originalCode = document.getElementById('editOriginalCode').value.trim();
                 let docId = document.getElementById('editDocId').value.trim();
@@ -642,14 +658,14 @@
                 }
 
                 window.resetProductForm();
-                window.NativeBridge.showToast("✓ تم حفظ الصنف وتحديث المخزن");
+                showNativeToast("✓ تم حفظ الصنف وتحديث المخزن");
             } catch (err) {
-                window.NativeBridge.showToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+                showNativeToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
         window.deleteProduct = async function(code, docId) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن السحابي؟')) return;
             try {
                 let targetDocId = docId;
@@ -660,17 +676,17 @@
 
                 if(targetDocId) {
                     await deleteDoc(doc(db, "products", targetDocId));
-                    window.NativeBridge.showToast("✓ تم حذف الصنف بنجاح");
+                    showNativeToast("✓ تم حذف الصنف بنجاح");
                 } else {
                     alert('تعذر تحديد المستند المطلوب حذفه');
                 }
             } catch(err) {
-                window.NativeBridge.showToast('خطأ أثناء الحذف من السحابة: ' + err.message);
+                showNativeToast('خطأ أثناء الحذف من السحابة: ' + err.message);
             }
         };
 
         window.downloadInventoryPDF = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('printCompanyIdTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printCurrentDate').innerText = new Date().toISOString().split('T')[0];
             document.getElementById('printTotalItemsCount').innerText = `${productsList.length} أصناف`;
@@ -678,18 +694,27 @@
         };
 
         window.downloadInventoryImage = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let element = document.getElementById('inventoryPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Inventory-${currentCompanyId}-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast("تم تصدير صورة التقرير بنجاح");
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("تم تصدير صورة التقرير بنجاح");
             });
         };
 
         window.shareInventoryReport = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let totalQty = productsList.reduce((sum, p) => sum + Number(p.qty || 0), 0);
             let totalVal = productsList.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.sellPrice || 0)), 0);
 
@@ -700,7 +725,18 @@
             text += `💰 إجمالي القيمة: *${totalVal.toLocaleString()} ج.م*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            window.NativeBridge.shareText(text, 'EIDCO // تقرير المخزون');
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(text, 'EIDCO // تقرير المخزون');
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'EIDCO // تقرير المخزون', text: text });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
 
         window.addEventListener('DOMContentLoaded', () => {

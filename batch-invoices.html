@@ -2,30 +2,20 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // الفواتير المجمعة للجملة والتوزيع</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
-
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -48,17 +38,27 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
         body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100vh;
+            min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -127,8 +127,8 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.75); 
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(8px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
@@ -137,6 +137,14 @@
             box-sizing: border-box; 
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -169,27 +177,13 @@
 
     <script>
         function toggleMobileMenu() {
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
-
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -249,7 +243,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-truck-ramp-box"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO B2B // كابيتر</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">CAPITER OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -425,7 +419,7 @@
 
     <!-- نافذة معاينة الفاتورة للتصدير A4 (PDF / صورة / مشاركة أندرويد) -->
     <div id="previewModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative box-border">
+        <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative custom-modal-content">
             <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4 w-full box-border">
                 
                 <!-- هيدر معتمد خصيصاً للطباعة والـ A4 -->
@@ -509,7 +503,7 @@
 
     <!-- نافذة ماسح الباركود بالكاميرا -->
     <div id="barcodeScannerModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative custom-modal-content">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-barcode ml-2 text-indigo-600"></i> مسح باركود الصنف بكاميرا الهاتف</h3>
                 <button type="button" onclick="closeBarcodeScannerModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -519,22 +513,6 @@
             <button type="button" onclick="closeBarcodeScannerModal()" class="bg-slate-200 text-slate-700 w-full py-2.5 rounded-xl text-xs font-bold cursor-pointer">إغلاق الماسح</button>
         </div>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
-            localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
-            document.querySelectorAll('a[href]').forEach(link => {
-                let href = link.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
-                    let separator = href.includes('?') ? '&' : '?';
-                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
-                }
-            });
-        });
-    </script>
 
     <!-- Firebase SDK Modules مع التخزين أوفلاين والمزامنة اللحظية -->
     <script type="module">
@@ -571,7 +549,7 @@
         enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -672,7 +650,7 @@
         }
 
         window.addBatchItemRow = function(productCode = '', qtyVal = 1, priceVal = 0) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let tbody = document.getElementById('batchItemsTableBody');
             let rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 4);
             let productOptions = state.products.map(p => `<option value="${p.code}" data-barcode="${p.barcode || ''}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === productCode ? 'selected' : ''}>${p.name} (المتاح بالمخزن: ${p.qty})</option>`).join('');
@@ -739,15 +717,15 @@
             if(!query) return;
             let matchedProd = state.products.find(p => (p.name && p.name.toLowerCase().includes(query)) || (p.code && p.code.toLowerCase().includes(query)) || (p.barcode && p.barcode.includes(query)));
             if(matchedProd) {
-                triggerHaptic(30);
+                window.NativeBridge.vibrate(30);
                 window.addBatchItemRow(matchedProd.code, 1, matchedProd.sellPrice);
                 document.getElementById('quickItemSearch').value = '';
-                showNativeToast(`✓ تم إضافة (${matchedProd.name}) لشحنة كابيتر`);
+                window.NativeBridge.showToast(`✓ تم إضافة (${matchedProd.name}) لشحنة كابيتر`);
             }
         };
 
         window.saveBatchInvoice = async function() {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار المحل / العميل أولاً');
 
@@ -872,26 +850,25 @@
                     });
                 }
 
-                showNativeToast("✓ تم حفظ طلب كابيتر وتحديث الشحنات والمخزن سحابياً");
-                alert('✓ تم تسجيل وتحديث الطلب بنجاح في سحابة كابيتر وتحديث كميات المخزن وبيان التحصيل!');
+                window.NativeBridge.showToast("✓ تم حفظ طلب كابيتر وتحديث المخزن سحابياً");
                 window.resetBatchForm();
             } catch (err) {
-                alert('حدث خطأ أثناء الحفظ بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
         window.updateCapiterStatusFast = async function(docId, newStatus) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             try {
                 await updateDoc(doc(db, "invoices", docId), { orderStatus: newStatus });
-                showNativeToast(`✓ تم تحديث حالة الشحنة إلى (${newStatus})`);
+                window.NativeBridge.showToast(`✓ تم تحديث حالة الشحنة إلى (${newStatus})`);
             } catch (err) {
-                alert('فشل تحديث حالة الشحنة: ' + err.message);
+                window.NativeBridge.showToast('فشل تحديث حالة الشحنة: ' + err.message);
             }
         };
 
         window.editBatchInvoice = function(id) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -917,7 +894,7 @@
         };
 
         window.resetBatchForm = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             editingBatchId = null;
             document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-truck-loading ml-2 text-indigo-600"></i> إنشـاء طلب جملة كابيتر جديد`;
             document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> حفظ طلب كابيتر وتحديث المخزن سحابياً`;
@@ -981,7 +958,7 @@
         }
 
         window.printDriverWaybill = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let activeOrders = state.invoices.filter(i => i.isBatch && i.orderStatus !== 'ملغي');
             if(!activeOrders.length) return alert('لا توجد شحنات نشطة لطباعة بيان السائق');
 
@@ -1030,15 +1007,14 @@
         };
 
         window.sendBatchToETA = async function(batchId) {
-            triggerHaptic(50);
+            window.NativeBridge.vibrate(50);
             let inv = state.invoices.find(i => i.id === batchId);
-            if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
+            if (!inv) return window.NativeBridge.showToast('⚠️ الفاتورة غير موجودة محلياً');
 
             if (!confirm(`هل أنت متأكد من إرسال الشحنة (${batchId}) إلى مصلحة الضرائب المصرية؟`)) return;
 
             try {
-                showNativeToast("⏳ جاري الإرسال للضرائب...");
-                alert('⏳ جاري إرسال البيانات لمصلحة الضرائب...');
+                window.NativeBridge.showToast("⏳ جاري الإرسال للضرائب...");
 
                 const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
 
@@ -1066,20 +1042,19 @@
                             etaResponse: result.response 
                         });
                     }
-                    showNativeToast("✅ تم اعتماد الفاتورة لدى مصلحة الضرائب");
-                    alert('✅ تم إرسال الشحنة بنجاح إلى مصلحة الضرائب المصرية وتحديث المستند!');
+                    window.NativeBridge.showToast("✅ تم اعتماد الفاتورة لدى مصلحة الضرائب");
                 } else {
                     console.error('ETA Rejection:', result.error);
-                    alert('❌ رفضت مصلحة الضرائب الفاتورة: ' + (typeof result.error === 'object' ? JSON.stringify(result.error) : result.error));
+                    window.NativeBridge.showToast('❌ رفضت مصلحة الضرائب الفاتورة');
                 }
             } catch (err) {
                 console.error('Network Error Details:', err);
-                alert('❌ تفاصيل الخطأ الفعلي: ' + err.message);
+                window.NativeBridge.showToast('❌ خطأ في شبكة الضرائب: ' + err.message);
             }
         };
 
         window.deleteBatchInvoice = async function(id) {
-            triggerHaptic(80);
+            window.NativeBridge.vibrate(80);
             if(!confirm('هل أنت متأكد من إلغاء وحذف هذه الشحنة؟ سيتم إعادة الكميات للمخزن السحابي.')) return;
             
             try {
@@ -1107,15 +1082,14 @@
                     await deleteDoc(doc(db, "transactions", tx.id));
                 }
 
-                showNativeToast("✓ تم حذف الطلب وتصفية البيانات سحابياً");
-                alert('✓ تم حذف الطلب وإعادة الكميات للمخزن وتحديث الخزنة بنجاح');
+                window.NativeBridge.showToast("✓ تم حذف الطلب وتصفية البيانات سحابياً");
             } catch (err) {
-                alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 
         window.openInvoicePreview = function(id) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -1148,29 +1122,29 @@
         };
 
         window.closePreviewModal = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('previewModal').classList.remove('active');
             activePreviewInv = null;
         };
 
         window.printInvoicePDF = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             window.print();
         };
 
         window.downloadInvoiceImage = function() {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-CapiterOrder-${activePreviewInv ? activePreviewInv.id : Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = `EIDCO-CapiterOrder-${activePreviewInv ? activePreviewInv.id : Date.now()}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير وحفظ الصورة بنجاح");
             });
         };
 
         window.shareBatchInvoiceNative = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if(!activePreviewInv) return;
             let inv = activePreviewInv;
 
@@ -1194,22 +1168,7 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا في منظومة كابيتر للجملة! 🙏`;
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(text);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: `طلب كابيتر ${inv.id}`,
-                        text: text
-                    });
-                } catch (err) {
-                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            window.NativeBridge.shareText(text, `طلب كابيتر ${inv.id}`);
         };
 
         window.sendInvoiceWhatsApp = function(id) {
@@ -1220,18 +1179,19 @@
         };
 
         window.triggerCloudSync = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let badge = document.getElementById('syncStatusBadge');
             badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري المزامنة...`;
             setTimeout(() => {
                 badge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">متزامن سحابياً</span>`;
-                showNativeToast("✓ تم المزامنة اللحظية مع سحابة كابيتر");
-                alert('✓ تم التأكد من المزامنة اللحظية مع السحابة المركزية');
+                window.NativeBridge.showToast("✓ تم المزامنة اللحظية مع سحابة كابيتر");
             }, 600);
         };
 
         function renderAnalyticsChart() {
-            let ctx = document.getElementById('salesAnalyticsChart').getContext('2d');
+            let canvas = document.getElementById('salesAnalyticsChart');
+            if(!canvas) return;
+            let ctx = canvas.getContext('2d');
             let batchInvs = state.invoices.filter(i => i.isBatch).slice(-5);
             
             let labels = batchInvs.map(i => i.id);
@@ -1271,7 +1231,7 @@
         }
 
         window.openBarcodeScannerModal = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             document.getElementById('barcodeScannerModal').classList.add('active');
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
@@ -1283,12 +1243,12 @@
                 },
                 errorMessage => {}
             ).catch(err => {
-                alert('تعذر تشغيل الكاميرا: تأكد من إعطاء الصلاحيات.');
+                window.NativeBridge.showToast('تعذر تشغيل الكاميرا: تأكد من إعطاء الصلاحيات.');
             });
         };
 
         window.closeBarcodeScannerModal = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             if(html5QrCode) {
                 html5QrCode.stop().then(() => {
                     document.getElementById('barcodeScannerModal').classList.remove('active');
@@ -1307,7 +1267,7 @@
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

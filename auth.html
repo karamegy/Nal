@@ -365,7 +365,6 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithPopup,
             signInWithCredential,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
@@ -390,64 +389,59 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        let tokenClient;
-
-        function initGoogleAuthClient() {
-            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-                tokenClient = google.accounts.oauth2.initTokenClient({
+        // 1. تهيئة مكتبة جوجل فور فتح الصفحة لإعداد قائمة الحسابات العائمة
+        function initGoogleOneTap() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
-                    scope: 'email profile openid',
-                    callback: async (tokenResponse) => {
-                        if (tokenResponse.error) {
-                            console.error('Google Auth Error:', tokenResponse);
-                            return;
-                        }
-                        try {
-                            showNativeToast("جاري التحقق من حساب Google...");
-                            const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                            const result = await signInWithCredential(auth, credential);
-                            await processGoogleAccountData(result.user);
-                        } catch (error) {
-                            alert('خطأ في مصادقة جوجل: ' + error.message);
-                        }
-                    }
+                    callback: handleGoogleIdToken,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
                 });
             }
         }
 
+        // تشغيل التهيئة فور استكمال تحميل الصفحة
         window.addEventListener('load', () => {
-            initGoogleAuthClient();
+            initGoogleOneTap();
         });
 
-        // دالة تسجيل الدخول المحسنة لتستوعب الويب والـ WebView تلقائيًا
-        window.signInWithGoogle = async function() {
+        // 2. استقبال الحساب عند اختياره من القائمة العائمة
+        async function handleGoogleIdToken(response) {
+            try {
+                showNativeToast("جاري التحقق من حساب Google...");
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                alert('خطأ في مصادقة جوجل: ' + error.message);
+            }
+        }
+
+        // 3. عند الضغط على الزر: إظهار النافذة العائمة (اختيار حساب) فوراً فوق الصفحة
+        window.signInWithGoogle = function() {
             triggerHaptic(25);
 
-            // 1. إذا كان التطبيق يستخدم AndroidBridge الأصلي
+            // لو التطبيق شغال داخل Native Android WebView
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. المحاولة عبر Firebase Popup أولاً (تشتغل في بيئات الـ Web والـ WebView)
-            try {
-                showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
-                const provider = new GoogleAuthProvider();
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-                return;
-            } catch (popupError) {
-                console.warn("Popup Auth failed/blocked, falling back to OAuth Client...", popupError);
-            }
-
-            // 3. Fallback لمكتبة Google Identity Services للويب العادي
-            if (tokenClient) {
-                tokenClient.requestAccessToken({ prompt: 'select_account' });
-            } else if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-                initGoogleAuthClient();
-                tokenClient.requestAccessToken({ prompt: 'select_account' });
+            // فتح قائمة الحسابات العائمة (One Tap Prompt) كما في الصورة
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed()) {
+                        // إذا منع المتصفح الإظهار التلقائي، يعاد التظهير بشكل مباشر
+                        google.accounts.id.initialize({
+                            client_id: GOOGLE_CLIENT_ID,
+                            callback: handleGoogleIdToken
+                        });
+                        google.accounts.id.prompt();
+                    }
+                });
             } else {
-                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد ثوانٍ قليلة.");
+                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات.");
             }
         };
 

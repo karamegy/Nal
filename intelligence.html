@@ -17,6 +17,7 @@
     <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
@@ -40,8 +41,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -59,15 +58,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
         header {
             flex-shrink: 0;
         }
 
-        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -162,8 +157,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -186,8 +202,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link active"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -236,8 +252,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link active"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -439,7 +455,6 @@
             onSnapshot,
             collection,
             addDoc,
-            getDocs,
             query,
             where,
             enableIndexedDbPersistence
@@ -534,13 +549,13 @@
         }
 
         window.askAiQuick = function(promptText) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('aiUserQuestion').value = promptText;
             window.processAiConsultation();
         };
 
         window.processAiConsultation = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let question = document.getElementById('aiUserQuestion').value.trim();
             if(!question) return alert('الرجاء كتابة سؤالك أو استشارتك أولاً');
 
@@ -601,20 +616,26 @@
                 }
 
                 responseText.innerHTML = answerHtml;
-                window.NativeBridge.showToast("✓ تم إعداد الاستشارة الذكية بنجاح");
+                showNativeToast("✓ تم إعداد الاستشارة الذكية بنجاح");
             }, 600);
         };
 
         window.copyAiResponse = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let text = document.getElementById('aiResponseText').innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                window.NativeBridge.showToast("✓ تم نسخ التوصية والاستشارة");
-            });
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showNativeToast("✓ تم نسخ التوصية والاستشارة");
+                }).catch(() => {
+                    showNativeToast("⚠️ تعذر النسخ التلقائي");
+                });
+            } else {
+                showNativeToast("✓ تم نسخ التوصية والاستشارة");
+            }
         };
 
         window.saveIntelligenceSettings = async function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             let settings = {
                 companyId: currentCompanyId,
                 gmail: document.getElementById('srcGmail').checked,
@@ -631,14 +652,14 @@
             try {
                 const settingsDocRef = doc(db, "settings", currentCompanyId + "_intelligence");
                 await setDoc(settingsDocRef, settings, { merge: true });
-                window.NativeBridge.showToast("✓ تم تحديث إعدادات الذكاء الشخصي");
+                showNativeToast("✓ تم تحديث إعدادات الذكاء الشخصي");
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
+                showNativeToast('حدث خطأ أثناء حفظ الإعدادات بالسحابة: ' + err.message);
             }
         };
 
         window.generateLearningContent = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let topic = document.getElementById('studyTopic').value.trim();
             let toolType = document.getElementById('studyToolType').value;
             if(!topic) return alert('الرجاء كتابة الموضوع أو المقرر الدراسي');
@@ -665,7 +686,7 @@
             }
 
             resultText.innerHTML = generatedHtml;
-            window.NativeBridge.showToast("✓ تم توليد المحتوى التعليمي");
+            showNativeToast("✓ تم توليد المحتوى التعليمي");
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -685,7 +706,7 @@
         };
 
         window.handleMigrationUpload = async function(event) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let file = event.target.files[0];
             if(!file) return;
             let status = document.getElementById('migrationStatus');
@@ -707,7 +728,7 @@
 
                 setTimeout(() => {
                     status.innerHTML = `✓ تم استيراد وترحيل السجل والذاكرة بنجاح من أرشيف (${file.name}) وتم ربطها سحابياً بـ Firebase المعزول!`;
-                    window.NativeBridge.showToast("✓ تم ترحيل ملف الأرشيف بنجاح");
+                    showNativeToast("✓ تم ترحيل ملف الأرشيف بنجاح");
                 }, 1200);
             } catch(err) {
                 status.innerHTML = `⚠️ حدث خطأ أثناء الترحيل السحابي: ${err.message}`;

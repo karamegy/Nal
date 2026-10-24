@@ -323,7 +323,6 @@
     </div>
 
     <script>
-        // إغلاق النوافذ عند الضغط خارج محتواها
         function closeModalOnOutsideClick(event, modalId) {
             if (event.target.id === modalId) {
                 triggerHaptic(15);
@@ -348,7 +347,6 @@
             });
         }
 
-        // تفعيل زر تثبيت الـ PWA تلقائياً
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -421,7 +419,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // استماع تلقائي عند العودة من تحويل Google (Redirect)
+        // 1. التقاط المباشر لنتيجة التوجيه (Redirect) فور تحميل الصفحة في البداية
         getRedirectResult(auth).then(async (result) => {
             if (result && result.user) {
                 showNativeToast("جاري استكمال تسجيل الدخول بـ Google...");
@@ -431,7 +429,7 @@
             console.error("خطأ التوجيه:", error);
         });
 
-        // 1. تهيئة خيار Google One Tap و Native GoogleAuth
+        // 2. تهيئة خيار Google One Tap و Native GoogleAuth
         function initGoogleAuthServices() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 google.accounts.id.initialize({
@@ -470,11 +468,11 @@
             }
         }
 
-        // 2. زر تسجيل الدخول الموحد بـ Google
+        // 3. زر تسجيل الدخول الذكي والمحسن لـ Google مع مراعاة بيئة الـ WebView والـ Native
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // أ) إذا كان التطبيق يعتمد على Capacitor Native (موبايل)
+            // أ) Capacitor Native (موبايل)
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -488,28 +486,34 @@
                 }
             }
 
-            // ب) إذا كان هناك جسر AndroidBridge مباشر
+            // ب) جسر AndroidBridge مباشر
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // جـ) الدخول عبر المتصفح مع Fallback تلقائي للتحويل في حال فشل النافذة المنبثقة
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
 
-            try {
-                showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                console.warn("Popup blocked or network failed, falling back to redirect...", err);
-                // في حال خطأ الشبكة أو حظر النافذة من متصفح الهواتف، يتم التحويل التلقائي
-                if (err.code === 'auth/network-request-failed' || err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+            // جـ) فحص بيئة الـ WebView / APK Native لمنع فشل الـ Popup وإتاحة التوجيه المباشر
+            const isWebView = /WV|WebView|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || 
+                              window.matchMedia('(display-mode: standalone)').matches ||
+                              navigator.standalone;
+
+            if (isWebView) {
+                // داخل التطبيق/WebView: التوجه المباشر للـ Redirect بدون تضييع وقت في محاولة الـ Popup المحظورة
+                showNativeToast("جاري تحويلك إلى تسجيل دخول Google...");
+                await signInWithRedirect(auth, provider);
+            } else {
+                // متصفح عادي: محاولة النافذة المنبثقة أولاً
+                try {
+                    showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
+                    const result = await signInWithPopup(auth, provider);
+                    await processGoogleAccountData(result.user);
+                } catch (err) {
+                    console.warn("Popup blocked or network failed, falling back to redirect...", err);
                     showNativeToast("جاري تحويلك إلى صفحة Google...");
                     await signInWithRedirect(auth, provider);
-                } else {
-                    alert("تعذر فتح نافذة Google: " + err.message);
                 }
             }
         };
@@ -596,7 +600,7 @@
             }
         }
 
-        // 3. معالجة وتخزين بيانات حساب Google وإنشاء معرف الشركة (companyId)
+        // معالجة وتخزين بيانات حساب Google وإنشاء معرف الشركة (companyId)
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];

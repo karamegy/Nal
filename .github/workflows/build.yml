@@ -46,14 +46,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www
+          # 1. تجهيز مجلد الويب www ونسخ ملفات المشروع
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 2. ضبط ملف capacitor.config.json لنطاق Nal قبل إضافة المنصة
+          # 1.1 إنشاء ملف assetlinks.json التلقائي للبصمة والنطاق
+          mkdir -p www/.well-known
+          cat << 'EOF' > www/.well-known/assetlinks.json
+          [
+            {
+              "relation": ["delegate_permission/common.handle_all_urls"],
+              "target": {
+                "namespace": "android_app",
+                "package_name": "io.github.karamegy.twa",
+                "sha256_cert_fingerprints":
+                  ["64:FD:12:52:9E:51:45:41:86:E8:CD:1D:2F:79:0D:32:CF:BE:F0:CE:06:FF:8F:09:07:EE:5C:90:8C:39:EE:D5"]
+              }
+            }
+          ]
+          EOF
+
+          # 2. ضبط ملف capacitor.config.json لنطاق Nal وحزمة io.github.karamegy.twa
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -87,14 +103,14 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت أدوات الكاباسيتور والمكتبات
+          # 3. تثبيت مكتبات الكاباسيتور
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 4. إضافة منصة أندرويد
+          # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java بالمسار المطابق للـ Package
+          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للحزمة
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -296,7 +312,7 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. google-services.json
+          # 7. نسخ google-services.json إذا وُجد
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
@@ -405,7 +421,7 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. المزامنة الآمنة للملفات وتجهيز المجلدات
+          # 10. المزامنة والنسخ الآمن مع تأمين مجلد assets وملف capacitor.plugins.json
           npx cap copy android
           mkdir -p android/app/src/main/assets
           touch android/app/src/main/assets/capacitor.plugins.json
@@ -450,16 +466,14 @@ jobs:
             ./gradlew assembleDebug --no-daemon
           fi
 
-          # 13. تجميع وتوفير المخرجات النهائية وتأمين الملفات الاحتياطية
+          # 13. تجميع المخرجات وتأمين الملفات
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;
           
-          # إنشاء ملفات الحزمة المباشرة
           find ./output_artifacts -type f -name "*.apk" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.apk || true
           find ./output_artifacts -type f -name "*.aab" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.aab || true
           
-          # ملفات حماية لعدم الفشل في خطوة الرفع
           touch ./EIDCO-OS-release.apk
           touch ./EIDCO-OS-release.aab
 

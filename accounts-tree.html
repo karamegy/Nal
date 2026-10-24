@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // شجرة الحسابات والدليل المحاسبي وحسابات العملاء والمصروفات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // شجرة الحسابات والدليل المحاسبي وحسابات العملاء والمصروفات Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -42,16 +42,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -73,6 +83,7 @@
             width: 100%; 
             font-size: 14px; 
             box-sizing: border-box; 
+            transition: all 0.2s;
         }
         .corporate-input:focus {
             outline: none;
@@ -91,6 +102,7 @@
             cursor: pointer; 
             transition: all 0.2s; 
             width: 100%; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -109,7 +121,7 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 0.75rem; backdrop-filter: blur(4px); overflow-y: auto; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 1000; align-items: center; justify-content: center; padding: 0.75rem; backdrop-filter: blur(4px); overflow-y: auto; box-sizing: border-box; }
         .custom-modal.active { display: flex !important; }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -131,6 +143,29 @@
             .no-print, button, input, select { display: none !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -172,7 +207,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة الحسابات المحاسبية وحسابات العملاء والمصروفات 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(حقول إدخال تفاعلية وجداول مرتبة بالكامل)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span>
                             </h1>
                         </div>
                     </div>
@@ -298,7 +333,7 @@
                     </div>
 
                     <div class="pt-2">
-                        <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md w-full">
+                        <button onclick="window.saveAccountNode()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 shadow-md w-full active:scale-95">
                             <i class="fa-solid fa-plus-circle text-base"></i> حفظ الحساب ورفع المستند وربطه بالملف سحابياً
                         </button>
                     </div>
@@ -434,7 +469,7 @@
                         <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
                     </select>
                 </div>
-                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer">
+                <button onclick="recordClientPayment()" class="btn-primary text-xs py-2.5 w-full flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
                     <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية وإضافتها للخزنة وكشف الحساب
                 </button>
             </div>
@@ -456,11 +491,6 @@
 
     <!-- دوال القائمة الجانبية ومراقبة الأحداث -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
-        }
-
         function handleCategoryChange() {
             let cat = document.getElementById('accCategory').value;
             let titleLabel = document.getElementById('titleLabel');
@@ -665,6 +695,7 @@
         }).catch(err => console.error("خطأ المصادقة السحابية في Firebase:", err));
 
         window.saveAccountNode = async function() {
+            triggerHaptic(30);
             let category = document.getElementById('accCategory').value;
             let title = document.getElementById('accTitle').value.trim();
             let code = document.getElementById('accCode').value.trim();
@@ -710,6 +741,7 @@
                 document.getElementById('generalImagePreviewContainer').classList.add('hidden');
                 window.generalUploadedImageBase64 = '';
 
+                showNativeToast("✓ تم حفظ الحساب والمستند بنجاح");
                 alert('✓ تم حفظ المدخل ورفع المستند وربطه بالملف سحابياً بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
@@ -717,6 +749,7 @@
         };
 
         window.seedDefaultAccountsTree = async function() {
+            triggerHaptic(20);
             if (!confirm('هل تريد استيراد شجرة الحسابات والملفات الافتراضية؟')) return;
             
             const defaultAccounts = [
@@ -747,6 +780,7 @@
                         admin: localStorage.getItem('eidco_v14_admin') || 'مدير النظام'
                     });
                 }
+                showNativeToast("✓ تم استيراد الملفات الافتراضية");
                 alert('✓ تم استيراد الملفات الافتراضية بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الاستيراد: ' + err.message);
@@ -754,6 +788,7 @@
         };
 
         window.openFolderTable = function(categoryName, isSilent = false) {
+            if (!isSilent) triggerHaptic(20);
             currentActiveFolder = categoryName;
             document.getElementById('folderModalTitle').innerHTML = `<i class="fa-solid fa-folder-open text-indigo-600"></i> جدول مدخلات الملف: ${categoryName}`;
             document.getElementById('folderModalSubtitle').innerText = `إدارة وعرض كافة المدخلات والمستندات والعملاء التابعة لـ [${categoryName}]`;
@@ -832,10 +867,10 @@
                             <td class="p-3 text-slate-600 font-bold">${i.extraField || '---'}</td>
                             <td class="p-3 mono-font text-slate-500" dir="ltr">${i.date || '---'}</td>
                             <td class="p-3">
-                                ${i.receiptImage ? `<button onclick="window.viewDocumentImageById('${i.accountId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold"><i class="fa-solid fa-image ml-1"></i> معاينة الصورة</button>` : '<span class="text-slate-400">بدون صورة</span>'}
+                                ${i.receiptImage ? `<button onclick="window.viewDocumentImageById('${i.accountId}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold active:scale-95"><i class="fa-solid fa-image ml-1"></i> معاينة الصورة</button>` : '<span class="text-slate-400">بدون صورة</span>'}
                             </td>
                             <td class="p-3 text-center flex items-center justify-center gap-2">
-                                <button onclick="window.deleteFolderItem('${i.accountId}')" class="text-rose-500 hover:text-rose-700 text-xs p-1.5 rounded-lg hover:bg-rose-50 transition" title="حذف">
+                                <button onclick="window.deleteFolderItem('${i.accountId}')" class="text-rose-500 hover:text-rose-700 text-xs p-1.5 rounded-lg hover:bg-rose-50 transition active:scale-95" title="حذف">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
@@ -857,15 +892,18 @@
         };
 
         window.closeFolderModal = function() {
+            triggerHaptic(15);
             document.getElementById('folderTableModal').classList.remove('active');
             currentActiveFolder = null;
         };
 
         window.deleteFolderItem = async function(accountId) {
+            triggerHaptic(40);
             if (!confirm('هل أنت متأكد من حذف هذا المدخل؟')) return;
             try {
                 await deleteDoc(doc(db, "accounts_tree", accountId));
                 if (currentActiveFolder) openFolderTable(currentActiveFolder, true);
+                showNativeToast("✓ تم الحذف بنجاح");
                 alert('✓ تم الحذف بنجاح.');
             } catch (e) {
                 alert('خطأ أثناء الحذف: ' + e.message);
@@ -873,6 +911,7 @@
         };
 
         window.viewDocumentImageById = function(accountId) {
+            triggerHaptic(20);
             let item = accountsTreeList.find(a => a.accountId === accountId);
             if (!item || !item.receiptImage) return alert('لا توجد صورة مرفقة مع هذا الحساب.');
             document.getElementById('modalFullImage').setAttribute('src', item.receiptImage);
@@ -881,10 +920,12 @@
         };
 
         window.closeImagePreviewModal = function() {
+            triggerHaptic(15);
             document.getElementById('imagePreviewModal').classList.remove('active');
         };
 
         window.openClientStatement = function(clientName) {
+            triggerHaptic(20);
             currentActiveClient = clientsList.find(c => (c.name || c.clientName || c.companyName) === clientName);
             let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : clientName;
             
@@ -944,11 +985,13 @@
         };
 
         window.closeStatementModal = function() {
+            triggerHaptic(15);
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
         };
 
         window.recordClientPayment = async function() {
+            triggerHaptic(30);
             let amount = Number(document.getElementById('paymentAmountInput').value);
             let method = document.getElementById('paymentMethodInput').value;
             let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : document.getElementById('stmtClientName').innerText;
@@ -977,6 +1020,7 @@
                 });
 
                 document.getElementById('paymentAmountInput').value = '';
+                showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
                 alert('✓ تم تسجيل الدفعة بنجاح وإضافتها للخزنة وكشف الحساب');
             } catch (err) {
                 alert('خطأ أثناء تسجيل الدفعة: ' + err.message);
@@ -984,6 +1028,7 @@
         };
 
         window.downloadStatementImage = function() {
+            triggerHaptic(30);
             html2canvas(document.getElementById('statementPrintArea'), { scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
                 let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : 'Client';
@@ -994,14 +1039,31 @@
         };
 
         window.downloadStatementPDF = function() {
+            triggerHaptic(20);
             window.print();
         };
 
-        window.sendStatementWhatsApp = function() {
-            let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : document.getElementById('stmtClientName').innerText;
-            let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
-            let phone = currentActiveClient && currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
-            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
+        window.sendStatementWhatsApp = async function() {
+            triggerHaptic(30);
+            let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : document.getElementById('stmtClientName').innerText;
+            let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n🏢 معرف الشركة: *${currentCompanyId}*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
+            
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: `كشف حساب ${cName}`,
+                        text: text
+                    });
+                } catch (err) {
+                    let phone = currentActiveClient && currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+                    window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                let phone = currentActiveClient && currentActiveClient.phone ? currentActiveClient.phone.replace(/\D/g, '') : '';
+                window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
 
         window.renderAccountsTree = function() {

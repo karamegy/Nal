@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // الملف الشخصي السحابي المعزول</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // الملف الشخصي السحابي المعزول Native</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
@@ -26,22 +26,118 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg-main: #f8fafc; 
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+        }
+
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            box-sizing: border-box; 
+        }
+
+        html, body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-main) !important; 
+            color: var(--text-main); 
+            min-height: 100dvh; 
+            margin: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain; 
+            -webkit-font-smoothing: antialiased; 
+        }
+
+        header {
+            flex-shrink: 0;
+        }
+
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; box-sizing: border-box; transition: all 0.2s; }
-        .corporate-input:focus { outline: none; border-color: var(--primary); background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        
+        .corporate-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #f1f5f9; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 10px 16px; 
+            box-sizing: border-box; 
+            transition: all 0.2s; 
+        }
+        .corporate-input:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            background: #ffffff; 
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); 
+        }
+
+        .btn-primary { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 20px; 
+            font-weight: 700; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            user-select: none;
+        }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:active { transform: scale(0.98); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.2s; 
+        }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 
     <script>
-        // طلب كل أذونات الهاتف تلقائياً (الكاميرا والوسائط والإشعارات)
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
         async function requestProfileNativePermissions() {
             try {
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -55,6 +151,7 @@
         window.addEventListener('DOMContentLoaded', requestProfileNativePermissions);
 
         function toggleMobileMenu() {
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
@@ -68,14 +165,17 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                 <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link active"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -93,7 +193,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الملف الشخصي وإدارة الحساب <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الملف الشخصي وإدارة الحساب <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -122,7 +222,10 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link active"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -134,7 +237,7 @@
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 <!-- قسم الهوية والصورة الشخصية -->
-                <div class="corporate-card p-6 sm:p-8 space-y-6">
+                <div class="corporate-card p-6 sm:p-8 space-y-6 bg-white shadow-sm">
                     <div class="flex flex-col sm:flex-row items-center gap-6 border-b pb-6">
                         <div class="relative group">
                             <div class="w-28 h-28 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-black overflow-hidden shadow-md" id="profileAvatarContainer">
@@ -149,21 +252,21 @@
                         <div class="text-center sm:text-right space-y-1">
                             <h2 class="text-xl font-black text-slate-900" id="profileNameDisplay">جاري التحميل...</h2>
                             <p class="text-xs text-indigo-600 font-mono font-bold">المدير العام والمؤسس - EIDCO</p>
-                            <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-mono rounded-full font-bold mt-1">حساب موثق وآمن سحابياً (معزول)</span>
+                            <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-mono rounded-full font-bold mt-1 border border-emerald-200">حساب موثق وآمن سحابياً (معزول)</span>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                         <div class="space-y-4">
                             <h3 class="font-bold text-sm text-slate-900">تعديل بيانات الحساب</h3>
-                            <div><label class="block mb-1 text-slate-600 font-bold">الاسم الكامل</label><input type="text" id="adminNameInput" class="corporate-input w-full font-bold"></div>
-                            <button onclick="window.saveProfile()" class="btn-primary w-full py-2.5 text-xs cursor-pointer active:scale-95">حفظ التغييرات السحابية</button>
+                            <div><label class="block mb-1 text-slate-600 font-bold">الاسم الكامل</label><input type="text" id="adminNameInput" class="corporate-input w-full font-bold text-slate-800"></div>
+                            <button onclick="window.saveProfile()" class="btn-primary w-full py-2.5 text-xs cursor-pointer active:scale-95 shadow-md">حفظ التغييرات السحابية</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- قسم نشر الموجز للحسابات والنشاط -->
-                <div class="corporate-card p-6 sm:p-8 space-y-5">
+                <div class="corporate-card p-6 sm:p-8 space-y-5 bg-white shadow-sm">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
                         <div>
                             <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-bullhorn text-indigo-600 ml-2"></i> النشر الموجز للحسابات والنشاط التجاري</h3>
@@ -176,14 +279,14 @@
 
                     <div class="space-y-3">
                         <label class="block text-slate-600 text-xs font-bold">نص الموجز المنشور:</label>
-                        <textarea id="feedTextContent" rows="4" class="corporate-input w-full text-xs font-mono" placeholder="انقر على توليد الموجز أو اكتب تقريرك هنا..."></textarea>
+                        <textarea id="feedTextContent" rows="4" class="corporate-input w-full text-xs font-mono font-bold text-slate-800" placeholder="انقر على توليد الموجز أو اكتب تقريرك هنا..."></textarea>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="window.copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                        <button onclick="window.copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md">
                             <i class="fa-solid fa-copy"></i> نسخ الموجز للحافظة
                         </button>
-                        <button onclick="window.shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-95">
+                        <button onclick="window.shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-md">
                             <i class="fa-brands fa-whatsapp text-sm"></i> مشاركة عبر واتساب / التطبيق
                         </button>
                     </div>
@@ -223,7 +326,6 @@
             onSnapshot, 
             doc, 
             setDoc,
-            updateDoc,
             getDocs,
             query,
             where,
@@ -322,8 +424,8 @@
             }
         }
 
-        // دالة بدء التقاط الصورة بالهاتف نيتف أو ويب
         window.triggerAvatarUpload = function() {
+            triggerHaptic(20);
             if (window.AndroidBridge && typeof window.AndroidBridge.openImagePicker === 'function') {
                 window.AndroidBridge.openImagePicker();
             } else {
@@ -331,8 +433,8 @@
             }
         };
 
-        // دالة استقبال الصورة المباشرة من أندرويد النيتف
         window.handleNativeImageUpload = async function(base64Image) {
+            triggerHaptic(30);
             let img = document.getElementById('profileAvatarImg');
             img.src = base64Image;
             img.classList.remove('hidden');
@@ -353,6 +455,7 @@
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
 
+                showNativeToast("✓ تم تحديث الصورة الشخصية بنجاح");
                 alert('✓ تم رفع وتحديث صورتك الشخصية سحابياً بنجاح');
             } catch(err) {
                 alert('خطأ أثناء حفظ الصورة: ' + err.message);
@@ -360,6 +463,7 @@
         };
 
         window.saveProfile = async function() {
+            triggerHaptic(30);
             let val = document.getElementById('adminNameInput').value.trim();
             if(!val) return alert('الرجاء إدخال اسم صحيح');
 
@@ -381,11 +485,8 @@
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
 
-                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                    window.AndroidBridge.showToast("✓ تم حفظ الاسم سحابياً بنجاح");
-                } else {
-                    alert('✓ تم حفظ الاسم في السحابة بنجاح');
-                }
+                showNativeToast("✓ تم حفظ الاسم سحابياً بنجاح");
+                alert('✓ تم حفظ الاسم في السحابة بنجاح');
             } catch (err) {
                 alert('خطأ أثناء حفظ الاسم: ' + err.message);
             }
@@ -424,6 +525,7 @@
         };
 
         window.generateFinancialSummary = function() {
+            triggerHaptic(20);
             let invoices = state.invoices;
             let transactions = state.transactions;
             let clients = state.clients;
@@ -436,36 +538,46 @@
             let totalExp = transactions.filter(t => t.type === 'مصروف').reduce((s,t) => s + Number(t.amount || 0), 0);
             let netVault = totalInc - totalExp;
 
-            let summary = `📊 *موجز أعمال منظومة EIDCO*
-👤 المدير المسؤول: ${adminName}
-🏢 إجمالي العملاء والشركات: ${clients.length} جهة
-📦 أصناف المخزن المسجلة: ${products.length} صنف
-💰 إجمالي المبيعات: ${totalSales.toLocaleString()} ج.م
-📈 صافي الأرباح: ${totalProfits.toLocaleString()} ج.م
-💵 صافي رصيد الخزنة: ${netVault.toLocaleString()} ج.م
-📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
+            let summary = `📊 *موجز أعمال منظومة EIDCO*\n`;
+            summary += `👤 المدير المسؤول: ${adminName}\n`;
+            summary += `🏢 إجمالي العملاء والشركات: ${clients.length} جهة\n`;
+            summary += `📦 أصناف المخزن المسجلة: ${products.length} صنف\n`;
+            summary += `💰 إجمالي المبيعات: ${totalSales.toLocaleString()} ج.م\n`;
+            summary += `📈 صافي الأرباح: ${totalProfits.toLocaleString()} ج.م\n`;
+            summary += `💵 صافي رصيد الخزنة: ${netVault.toLocaleString()} ج.م\n`;
+            summary += `📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
 
             document.getElementById('feedTextContent').value = summary;
+            showNativeToast("✨ تم توليد الموجز المالي بنجاح");
         };
 
         window.copyFeedText = function() {
+            triggerHaptic(20);
             let txt = document.getElementById('feedTextContent');
             if(!txt.value) return alert('الرجاء توليد أو كتابة الموجز أولاً');
             txt.select();
             navigator.clipboard.writeText(txt.value);
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast("✓ تم نسخ موجز الحسابات للحافظة");
-            } else {
-                alert('✓ تم نسخ موجز الحسابات إلى الحافظة بنجاح');
-            }
+            showNativeToast("✓ تم نسخ موجز الحسابات للحافظة");
+            alert('✓ تم نسخ موجز الحسابات إلى الحافظة بنجاح');
         };
 
-        window.shareFeedWhatsApp = function() {
+        window.shareFeedWhatsApp = async function() {
+            triggerHaptic(25);
             let txt = document.getElementById('feedTextContent').value;
             if(!txt) return alert('الرجاء توليد أو كتابة الموجز أولاً');
 
             if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
                 window.AndroidBridge.shareText(txt);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // موجز الأعمال',
+                        text: txt
+                    });
+                } catch(err) {
+                    let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
+                    window.open(url, '_blank');
+                }
             } else {
                 let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
                 window.open(url, '_blank');

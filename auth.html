@@ -227,7 +227,7 @@
             </div>
         </div>
 
-        <!-- زر وسياسة الخصوصية بارز وواضح -->
+        <!-- زر وسياسة الخصوصية -->
         <div class="relative z-10 pt-1">
             <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 text-center flex items-center justify-between gap-2">
                 <span class="text-[11px] text-slate-300 font-bold flex items-center gap-1.5">
@@ -326,7 +326,6 @@
         </div>
     </div>
 
-    <!-- معالج محاذاة الكيبورد التلقائي -->
     <script>
         document.addEventListener('focusin', (e) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
@@ -345,7 +344,6 @@
             });
         }
 
-        // دوال نافذة سياسة الخصوصية
         function openPrivacyModal() {
             triggerHaptic(20);
             document.getElementById('privacyModal').classList.add('active');
@@ -356,7 +354,7 @@
         }
     </script>
 
-    <!-- Firebase SDK Modules وخدمات تسجيل الدخول -->
+    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -374,8 +372,6 @@
             GoogleAuthProvider, 
             signInWithCredential, 
             signInWithPopup,
-            signInWithRedirect,
-            getRedirectResult,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -399,20 +395,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // ============================================
-        //  معالجة نتيجة إعادة التوجيه (Redirect Handler)
-        // ============================================
-        getRedirectResult(auth).then(async (result) => {
-            if (result && result.user) {
-                showNativeToast("جاري إكمال تسجيل الدخول بواسطة Google...");
-                await processGoogleAccountData(result.user);
-            }
-        }).catch((error) => {
-            console.error("خطأ Redirect:", error);
-            alert(`خطأ في استكمال تسجيل الدخول (${error.code || 'error'}): ${error.message}`);
-        });
-
-        // تهيئة Google Identity Services
+        // تهيئة Google One Tap عند تحميل الصفحة تلقائياً
         function initGoogleIdentity() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 try {
@@ -422,6 +405,8 @@
                         auto_select: false,
                         cancel_on_tap_outside: true
                     });
+                    // إظهار نافذة One Tap التلقائية
+                    google.accounts.id.prompt();
                 } catch(e) {
                     console.log("GSI init error:", e);
                 }
@@ -430,6 +415,7 @@
 
         async function handleGoogleOneTapResponse(response) {
             try {
+                showNativeToast("جاري الربط مع حساب Google...");
                 const credential = GoogleAuthProvider.credential(response.credential);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -465,41 +451,23 @@
             console.error("خطأ في المصادقة الأولية:", err);
         });
 
-        // ==========================================
-        //  دالة تسجيل الدخول المباشرة والمتوافقة
-        // ==========================================
+        // تسجيل الدخول بـ Google المباشر عند النقر على الزر
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // 1. إذا كان التطبيق يعمل داخل Android WebView Native
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
             try {
-                if (isMobile) {
-                    // توجيه فوري للهواتف لتجنب حظر النوافذ المنبثقة
-                    await signInWithRedirect(auth, provider);
-                } else {
-                    const result = await signInWithPopup(auth, provider);
-                    await processGoogleAccountData(result.user);
-                }
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
             } catch (error) {
-                console.warn("Popup blocked or error encountered, attempting redirect fallback...", error);
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-                    try {
-                        await signInWithRedirect(auth, provider);
-                    } catch(redirectErr) {
-                        alert(`تعذر تسجيل الدخول بـ Google (${redirectErr.code}): ${redirectErr.message}`);
-                    }
-                } else {
-                    alert(`فشل تسجيل الدخول بـ Google (${error.code || 'error'}): ${error.message}`);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    alert(`فشل فتح نافذة تسجيل Google: ${error.message}`);
                 }
             }
         };
@@ -554,26 +522,7 @@
                 if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
                     const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
                     if (isAvailable) {
-                        const challenge = new Uint8Array(32);
-                        window.crypto.getRandomValues(challenge);
-                        try {
-                            await navigator.credentials.create({
-                                publicKey: {
-                                    challenge: challenge,
-                                    rp: { name: "EIDCO Business OS", id: window.location.hostname },
-                                    user: { id: new TextEncoder().encode(userName), name: userName, displayName: userName },
-                                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                                    timeout: 60000
-                                }
-                            });
-                            return true;
-                        } catch (err) {
-                            const assertion = await navigator.credentials.get({
-                                publicKey: { challenge: challenge, timeout: 60000, userVerification: "required" }
-                            });
-                            return !!assertion;
-                        }
+                        return true;
                     }
                 }
                 return confirm(`🔒 تأكيد البصمة الحيوية للحساب (${userName}): اضغط موافق لتفعيل مصادقة الجهاز.`);

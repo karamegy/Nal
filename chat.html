@@ -17,6 +17,13 @@
     <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -34,14 +41,10 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -168,8 +171,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
@@ -384,13 +408,13 @@
 
     <script>
         function toggleEmojiPicker() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             const picker = document.getElementById('emojiPickerPopup');
             picker.classList.toggle('active');
         }
 
         function insertEmoji(emoji) {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             const input = document.getElementById('chatMessageInput');
             input.value += emoji;
             input.focus();
@@ -405,7 +429,7 @@
 
         let storyTimer = null;
         function openStoryViewer(author, storyData) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             document.getElementById('storyAuthorTitle').innerText = author;
             let mediaContainer = document.getElementById('storyMediaContainer');
             
@@ -435,17 +459,17 @@
         }
 
         function closeStoryViewer() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             if (storyTimer) clearTimeout(storyTimer);
             document.getElementById('storyViewerModal').classList.remove('active');
         }
 
         function openAddStoryModal() { 
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             document.getElementById('addStoryModal').classList.add('active'); 
         }
         function closeAddStoryModal() { 
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('addStoryModal').classList.remove('active'); 
         }
 
@@ -628,7 +652,7 @@
         }
 
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             window.selectChatMode(clientId, `فواتير العميل: ${clientName}`, clientName.charAt(0));
 
             try {
@@ -683,17 +707,17 @@
         }
 
         window.checkAndOpenLatestStory = function(authorName) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let storyData = activeStoriesMap[authorName];
             if (storyData) {
                 openStoryViewer(authorName, storyData);
             } else {
-                window.NativeBridge.showToast(`لا توجد حالات نشطة لـ (${authorName})`);
+                showNativeToast(`لا توجد حالات نشطة لـ (${authorName})`);
             }
         };
 
         window.selectChatMode = function(mode, name, initial) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             currentChatMode = mode;
             pendingClientReport = null;
             document.getElementById('activeChatName').innerText = name;
@@ -765,7 +789,7 @@
         }
 
         window.sendChatMessage = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let inputEl = document.getElementById('chatMessageInput');
             let txt = inputEl.value.trim();
             if (!txt) return;
@@ -784,14 +808,14 @@
                     createdAt: Date.now()
                 });
                 inputEl.value = '';
-                window.NativeBridge.showToast("✓ تم إرسال الرسالة");
+                showNativeToast("✓ تم إرسال الرسالة");
             } catch (err) {
-                window.NativeBridge.showToast('خطأ أثناء إرسال الرسالة: ' + err.message);
+                showNativeToast('خطأ أثناء إرسال الرسالة: ' + err.message);
             }
         };
 
         window.shareActiveChatNative = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let activeName = document.getElementById('activeChatName').innerText;
             let exportText = `💬 *EIDCO // سِجل المحادثة: ${activeName}*\n\n`;
 
@@ -804,7 +828,18 @@
                 exportText += `${idx+1}. [${senderTag} - ${m.time || ''}]: ${m.text}\n`;
             });
 
-            window.NativeBridge.shareText(exportText, `محادثة EIDCO - ${activeName}`);
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(exportText, `محادثة EIDCO - ${activeName}`);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: `محادثة EIDCO - ${activeName}`, text: exportText });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
+            }
         };
 
         function compressMediaFile(file) {
@@ -844,7 +879,7 @@
                     reader.readAsDataURL(file);
                 } else {
                     if (file.size > 900 * 1024) {
-                        window.NativeBridge.showToast('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة');
+                        showNativeToast('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة');
                         return reject(new Error('File size exceeds Firestore limit'));
                     }
                     let reader = new FileReader();
@@ -857,7 +892,7 @@
         }
 
         window.submitNewStory = async function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let txt = document.getElementById('newStoryTextInput').value.trim();
             let fileInput = document.getElementById('storyMediaInput');
             let adminName = adminAccountData.name || localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
@@ -867,7 +902,7 @@
                 let mediaPayload = txt;
 
                 if (fileInput.files && fileInput.files[0]) {
-                    window.NativeBridge.showToast("⏳ جاري ضغط الملف المرفق...");
+                    showNativeToast("⏳ جاري ضغط الملف المرفق...");
                     let compressed = await compressMediaFile(fileInput.files[0]);
                     mediaPayload = compressed;
                 }
@@ -882,10 +917,10 @@
                 document.getElementById('newStoryTextInput').value = '';
                 document.getElementById('storyMediaInput').value = '';
                 closeAddStoryModal();
-                window.NativeBridge.showToast("✓ تم ضغط ونشر الستوري بنجاح");
+                showNativeToast("✓ تم ضغط ونشر الستوري بنجاح");
             } catch (e) {
                 if (e.message !== 'File size exceeds Firestore limit') {
-                    window.NativeBridge.showToast('خطأ أثناء النشر: ' + e.message);
+                    showNativeToast('خطأ أثناء النشر: ' + e.message);
                 }
             }
         };

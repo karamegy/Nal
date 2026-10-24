@@ -46,28 +46,46 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين
-          mkdir -p www
-          cp -r * www/ 2>/dev/null || true
-          
-          node -e '
-            const fs = require("fs");
-            let cfg = {};
-            if (fs.existsSync("capacitor.config.json")) {
-              try { cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8")); } catch(e){}
-            }
-            cfg.webDir = "www";
-            cfg.appId = "io.github.karamegy.twa";
-            cfg.appName = "EIDCO Business OS";
-            fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
-          '
-
-          # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
+          # 1. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة
+          # 2. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
+
+          # 3. الحفاظ على ملف capacitor.config.json الأصلي (الذي يوجه لرابط الويب الخارجي) وضمان صحته
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "io.github.karamegy.twa",
+            "appName": "EIDCO Business OS",
+            "webDir": ".",
+            "bundledWebRuntime": false,
+            "server": {
+              "url": "https://karamegy.github.io/Nal/auth.html",
+              "androidScheme": "https",
+              "cleartext": true,
+              "allowNavigation": [
+                "karamegy.github.io",
+                "*.firebaseapp.com",
+                "*.googleapis.com"
+              ]
+            },
+            "android": {
+              "allowMixedContent": true,
+              "captureInput": true,
+              "backgroundColor": "#020617"
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 2000,
+                "backgroundColor": "#020617",
+                "androidScaleType": "CENTER_CROP",
+                "splashFullScreen": true,
+                "splashImmersive": true
+              }
+            }
+          }
+          EOF
 
           # 4. تجهيز الأيقونة وتوليد أحجام mipmap لأندرويد
           mkdir -p assets
@@ -225,10 +243,15 @@ jobs:
           }
           EOF
 
-          # 10. المزامنة والبناء المباشر
+          # 10. تنظيف مخلفات الكاش التالفة لـ Gradle
+          rm -rf ~/.gradle/caches/jars-9/ || true
+          rm -rf ~/.gradle/caches/transforms/ || true
+
+          # 11. المزامنة والبناء المباشر
           npx cap sync android
           cd android
           chmod +x gradlew
+          ./gradlew clean --no-daemon
           ./gradlew bundleRelease --no-daemon
           ./gradlew assembleRelease --no-daemon
 

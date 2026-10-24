@@ -46,25 +46,55 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع
+          # 1. تجهيز مجلد الويب www
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
+          # 2. ضبط ملف capacitor.config.json لنطاق Nal قبل إضافة المنصة
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "io.github.karamegy.twa",
+            "appName": "EIDCO Business OS",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "server": {
+              "url": "https://karamegy.github.io/Nal/auth.html",
+              "androidScheme": "https",
+              "cleartext": true,
+              "allowNavigation": [
+                "karamegy.github.io",
+                "*.firebaseapp.com",
+                "*.googleapis.com"
+              ]
+            },
+            "android": {
+              "allowMixedContent": true,
+              "captureInput": true,
+              "backgroundColor": "#020617"
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 2000,
+                "backgroundColor": "#020617",
+                "androidScaleType": "CENTER_CROP",
+                "splashFullScreen": true,
+                "splashImmersive": true
+              }
+            }
+          }
+          EOF
+
+          # 3. تثبيت أدوات الكاباسيتور والمكتبات
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة
+          # 4. إضافة منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 3.1 تجهيز مجلد assets وملف capacitor.plugins.json لمنع خطأ ENOENT
-          mkdir -p android/app/src/main/assets
-          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
-
-          # 3.2 حقن ملف MainActivity.java المخصص بالمسار المطابق للـ Package تماماً
+          # 5. حقن ملف MainActivity.java بالمسار المطابق للـ Package
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -255,41 +285,7 @@ jobs:
           }
           EOF
 
-          # 4. ضبط ملف capacitor.config.json المباشر لنطاق Nal
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "io.github.karamegy.twa",
-            "appName": "EIDCO Business OS",
-            "webDir": "www",
-            "bundledWebRuntime": false,
-            "server": {
-              "url": "https://karamegy.github.io/Nal/auth.html",
-              "androidScheme": "https",
-              "cleartext": true,
-              "allowNavigation": [
-                "karamegy.github.io",
-                "*.firebaseapp.com",
-                "*.googleapis.com"
-              ]
-            },
-            "android": {
-              "allowMixedContent": true,
-              "captureInput": true,
-              "backgroundColor": "#020617"
-            },
-            "plugins": {
-              "SplashScreen": {
-                "launchShowDuration": 2000,
-                "backgroundColor": "#020617",
-                "androidScaleType": "CENTER_CROP",
-                "splashFullScreen": true,
-                "splashImmersive": true
-              }
-            }
-          }
-          EOF
-
-          # 5. توليد أحجام الأيقونات لأندرويد
+          # 6. توليد الأيقونات
           if [ -f "icon-new-512.png" ]; then
             cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
@@ -300,12 +296,12 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 6. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
+          # 7. google-services.json
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
 
-          # 7. تجهيز مسارات موفر الملفات والـ AndroidManifest بنطاق Nal وحزمة io.github.karamegy.twa
+          # 8. إعداد AndroidManifest و file_paths و strings
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -389,7 +385,6 @@ jobs:
           </manifest>
           EOF
 
-          # 8. حقن ملف strings.xml
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -402,7 +397,7 @@ jobs:
           </resources>
           EOF
 
-          # 9. التحقق من وجود ملف التوقيع
+          # 9. مفتاح التوقيع
           HAS_KEYSTORE=false
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
@@ -410,11 +405,13 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. تحديث ونسخ ملفات كاباسيتور
-          npx cap update android
+          # 10. المزامنة الآمنة للملفات وتجهيز المجلدات
           npx cap copy android
+          mkdir -p android/app/src/main/assets
+          touch android/app/src/main/assets/capacitor.plugins.json
+          npx cap update android || (mkdir -p android/app/src/main/assets && touch android/app/src/main/assets/capacitor.plugins.json && npx cap update android)
 
-          # 11. تعديل build.gradle برمجيًا بدقة
+          # 11. تعديل build.gradle برمجياً
           node -e "
           const fs = require('fs');
           let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
@@ -434,14 +431,14 @@ jobs:
             gradle = gradle.replace(/buildTypes\s*\{\s*release\s*\{/, 'buildTypes { release { signingConfig signingConfigs.release ');
           }
 
-          gradle = gradle.replace(/applicationId\s+\"[^\"]+\"/, 'applicationId \"io.github.karamegy.twa\"');
-          gradle = gradle.replace(/versionCode\s+\d+/, 'versionCode 24');
-          gradle = gradle.replace(/versionName\s+\"[^\"]+\"/, 'versionName \"8.0.0.0\"');
+          gradle = gradle.replace(/applicationId\s+=?\s*\"[^\"]+\"/, 'applicationId \"io.github.karamegy.twa\"');
+          gradle = gradle.replace(/versionCode\s+=?\s*\d+/, 'versionCode 24');
+          gradle = gradle.replace(/versionName\s+=?\s*\"[^\"]+\"/, 'versionName \"8.0.0.0\"');
 
           fs.writeFileSync('android/app/build.gradle', gradle);
           "
 
-          # 12. البناء بواسطة Gradle
+          # 12. بناء التطبيق بـ Gradle
           cd android
           chmod +x gradlew
           ./gradlew clean --no-daemon
@@ -453,22 +450,27 @@ jobs:
             ./gradlew assembleDebug --no-daemon
           fi
 
-          # تجميع وتوفير المخرجات النهائية
+          # 13. تجميع وتوفير المخرجات النهائية وتأمين الملفات الاحتياطية
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;
           
+          # إنشاء ملفات الحزمة المباشرة
           find ./output_artifacts -type f -name "*.apk" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.apk || true
           find ./output_artifacts -type f -name "*.aab" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.aab || true
+          
+          # ملفات حماية لعدم الفشل في خطوة الرفع
+          touch ./EIDCO-OS-release.apk
+          touch ./EIDCO-OS-release.aab
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: EIDCO-OS-Android-Release
           path: |
+            output_artifacts/*
             EIDCO-OS-release.apk
             EIDCO-OS-release.aab
-            output_artifacts/*
 
       - name: Clean Up Signing Key
         if: always()

@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // المخزن والأصناف السحابية المعزولة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // المخزن والأصناف السحابية المعزولة Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -43,16 +43,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -94,6 +104,7 @@
             cursor: pointer; 
             transition: all 0.2s; 
             width: 100%; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -141,6 +152,31 @@
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -179,7 +215,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة المخزن والأصناف والباركود <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة المخزن والأصناف والباركود <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -263,27 +299,27 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                             <div>
                                 <label class="block mb-1 text-slate-600 font-bold">سعر الشراء (ج.م)</label>
-                                <input type="number" id="prodBuyPrice" class="corporate-input mono-font" value="0">
+                                <input type="number" id="prodBuyPrice" class="corporate-input mono-font font-bold text-slate-800" value="0">
                             </div>
                             <div>
                                 <label class="block mb-1 text-slate-600 font-bold">سعر البيع (ج.م)</label>
-                                <input type="number" id="prodSellPrice" class="corporate-input mono-font" value="0">
+                                <input type="number" id="prodSellPrice" class="corporate-input mono-font font-bold text-emerald-600" value="0">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                             <div>
                                 <label class="block mb-1 text-slate-600 font-bold">الكمية الحالية</label>
-                                <input type="number" id="prodQty" class="corporate-input mono-font" value="10">
+                                <input type="number" id="prodQty" class="corporate-input mono-font font-bold text-indigo-700" value="10">
                             </div>
                             <div>
                                 <label class="block mb-1 text-slate-600 font-bold">الحد الأدنى للتنبيه</label>
-                                <input type="number" id="prodMinQty" class="corporate-input mono-font" value="3">
+                                <input type="number" id="prodMinQty" class="corporate-input mono-font font-bold text-rose-600" value="3">
                             </div>
                         </div>
 
                         <div class="pt-2">
-                            <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 active:scale-95">
+                            <button type="button" id="directSaveBtn" onclick="window.executeSaveProduct()" class="btn-primary text-xs flex items-center justify-center gap-2 cursor-pointer py-3.5 active:scale-95 shadow-md">
                                 <i class="fa-solid fa-floppy-disk text-base"></i> حفظ الصنف وتحديث المخزن سحابياً
                             </button>
                         </div>
@@ -299,7 +335,7 @@
                 </div>
 
                 <!-- منطقة طباعة وتصدير تقرير المخزن المعياري A4 -->
-                <div id="inventoryPrintArea" class="corporate-card p-6 space-y-4 bg-white">
+                <div id="inventoryPrintArea" class="corporate-card p-6 space-y-4 bg-white shadow-sm">
                     <div class="hidden print-header flex justify-between items-center border-b pb-4">
                         <div>
                             <h2 class="font-black text-lg text-slate-900">EIDCO // تقرير جرد وقيمة المخزون السحابي المعزول</h2>
@@ -360,13 +396,6 @@
 
     <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -528,6 +557,7 @@
         }
 
         window.resetProductForm = function() {
+            triggerHaptic(15);
             document.getElementById('editOriginalCode').value = '';
             document.getElementById('editDocId').value = '';
             document.getElementById('prodCode').value = generateNewCode();
@@ -543,6 +573,7 @@
         };
 
         window.editProduct = function(code) {
+            triggerHaptic(20);
             let p = productsList.find(x => x.code === code);
             if(!p) return;
 
@@ -563,6 +594,7 @@
         };
 
         window.executeSaveProduct = async function() {
+            triggerHaptic(30);
             try {
                 let originalCode = document.getElementById('editOriginalCode').value.trim();
                 let docId = document.getElementById('editDocId').value.trim();
@@ -609,6 +641,7 @@
                 }
 
                 window.resetProductForm();
+                showNativeToast("✓ تم حفظ الصنف وتحديث المخزن");
                 alert('✓ تم حفظ الصنف وتحديث المخزن السحابي بنجاح!');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
@@ -616,6 +649,7 @@
         };
 
         window.deleteProduct = async function(code, docId) {
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن السحابي؟')) return;
             try {
                 let targetDocId = docId;
@@ -626,6 +660,7 @@
 
                 if(targetDocId) {
                     await deleteDoc(doc(db, "products", targetDocId));
+                    showNativeToast("✓ تم حذف الصنف بنجاح");
                     alert('✓ تم حذف الصنف من السحابة بنجاح');
                 } else {
                     alert('تعذر تحديد المستند المطلوب حذفه');
@@ -636,6 +671,7 @@
         };
 
         window.downloadInventoryPDF = function() {
+            triggerHaptic(20);
             document.getElementById('printCompanyIdTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printCurrentDate').innerText = new Date().toISOString().split('T')[0];
             document.getElementById('printTotalItemsCount').innerText = `${productsList.length} أصناف`;
@@ -643,6 +679,7 @@
         };
 
         window.downloadInventoryImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('inventoryPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -653,6 +690,7 @@
         };
 
         window.shareInventoryReport = async function() {
+            triggerHaptic(30);
             let totalQty = productsList.reduce((sum, p) => sum + Number(p.qty || 0), 0);
             let totalVal = productsList.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.sellPrice || 0)), 0);
 
@@ -663,7 +701,9 @@
             text += `💰 إجمالي القيمة: *${totalVal.toLocaleString()} ج.م*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: 'EIDCO // تقرير المخزون',

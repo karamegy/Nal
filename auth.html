@@ -330,8 +330,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential, 
-            signInWithPopup,
-            signInWithRedirect,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -355,7 +353,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // تهيئة Google Identity Services
+        // تهيئة Google Identity Services لاستدعاء نافذة الحسابات المنسدلة (Bottom Sheet)
         function initGoogleIdentity() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 try {
@@ -550,41 +548,42 @@
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
-        // زر تسجيل الدخول المباشر بواسطة Google لفتح شاشة اختيار الحسابات
+        // استدعاء نافذة "اختيار حساب" المنسدلة من أندرويد/جوجل مباشرة دون فتح متصفح خارجي
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             
-            // 1. إذا وجد Bridge للأندرويد
+            // 1. إذا كان التطبيق يعتمد على بيئة أندرويد Capacitor Native
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                try {
+                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+                    const result = await signInWithCredential(auth, credential);
+                    await processGoogleAccountData(result.user);
+                    return;
+                } catch (capErr) {
+                    console.log("Capacitor GoogleAuth err:", capErr);
+                }
+            }
+
+            // 2. إذا وجد Bridge مخصص لأندرويد
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. فتح نافذة اختيار الحسابات المباشرة (Google OAuth Popup / Sheet)
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({
-                    prompt: 'select_account' // إجبار عرض قائمة اختيار الحسابات
-                });
-
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                console.error("خطأ أثناء تسجيل الدخول بـ Google:", error);
-
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-                    try {
-                        const provider = new GoogleAuthProvider();
-                        provider.setCustomParameters({ prompt: 'select_account' });
-                        await signInWithRedirect(auth, provider);
-                    } catch (redirectErr) {
-                        alert("يرجى السماح بالنوافذ المنبثقة (Popups) في المتصفح لإكمال تسجيل الدخول.");
+            // 3. فتح نافذة اختيار الحسابات المنسدلة (Google Bottom Sheet / One-Tap) المعزولة داخل التطبيق
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                // مسح كوكيز التوقف المؤقت لجوجل لإجبار إظهار نافذة الحسابات المنسدلة عند كل كليك
+                document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                        google.accounts.id.prompt();
                     }
-                } else if (window.google && window.google.accounts && window.google.accounts.id) {
-                    google.accounts.id.prompt();
-                } else {
-                    alert("تعذر فتح نافذة تسجيل الدخول: " + (error.message || "يرجى التحقق من اتصال الإنترنت"));
-                }
+                });
+            } else {
+                alert("جاري تحميل خدمات جوجل... يرجى الانتظار لحظات ثم إعادة المحاولة.");
             }
         };
 

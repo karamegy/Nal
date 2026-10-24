@@ -3,13 +3,13 @@
  * EIDCO Business OS - Central Core Engine (eidco-core.js)
  * المكون المركزي لإدارة المزامنة الفورية، الأحداث، والتخزين المؤقت
  * المتوافق مع تطبيقات Native App / WebView / PWABuilder / PWA
- * الإصدار: 3.2.0 Native & Dynamic Core
+ * الإصدار: 3.2.1 Native & Dynamic Core (إصلاحات وتحديث شامل)
  * =================================================================
  */
 
 class EIDCOCore {
     constructor() {
-        this.version = '3.2.0';
+        this.version = '3.2.1';
         
         // استخراج معرف الشركة ديناميكياً من URL أو التخزين المحلي
         const urlParams = new URLSearchParams(window.location.search);
@@ -28,6 +28,7 @@ class EIDCOCore {
                 'batch-invoices.html',
                 'inventory.html',
                 'clients.html',
+                'accounts-tree.html',
                 'documents.html',
                 'chat.html',
                 'profile.html',
@@ -66,21 +67,22 @@ class EIDCOCore {
 
         // المزامنة بين التبويبات المفتوحة لنفس المتصفح
         window.addEventListener('storage', (event) => {
-            if (event.key === 'eidco_cross_tab_sync') {
+            if (event.key === 'eidco_cross_tab_sync' && event.newValue) {
                 try {
                     const data = JSON.parse(event.newValue);
-                    if (data && this.eventListeners[data.event]) {
-                        this.eventListeners[data.event].forEach(callback => callback(data.payload));
+                    if (data && data.event) {
+                        this.dispatchRegisteredEvent(data.event, data.payload);
                     }
                 } catch (e) {
-                    console.error('Error parsing cross-tab payload:', e);
+                    console.error('EIDCO Core: خطأ في قراءة بيانات المزامنة بين التبويبات:', e);
                 }
             }
         });
 
-        // ربط الروابط الداخلية تلقائياً بمعرف الشركة المعتمد
+        // ربط الروابط الداخلية تلقائياً بمعرف الشركة المعتمد عند التحميل ومراقبة التغييرات
         document.addEventListener('DOMContentLoaded', () => {
             this.normalizeInternalLinks();
+            this.observeDynamicLinks();
             this.registerServiceWorker();
         });
     }
@@ -92,11 +94,21 @@ class EIDCOCore {
         const companyId = this.state.companyId;
         document.querySelectorAll('a[href]').forEach(link => {
             let href = link.getAttribute('href');
-            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.includes('companyId=')) {
+            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.startsWith('data:') && !href.includes('companyId=')) {
                 let separator = href.includes('?') ? '&' : '?';
                 link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(companyId));
             }
         });
+    }
+
+    /**
+     * مراقبة العناصر الديناميكية المضافة حديثاً للواجهة لتحديث روابطها تلقائياً
+     */
+    observeDynamicLinks() {
+        const observer = new MutationObserver(() => {
+            this.normalizeInternalLinks();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     /**
@@ -105,7 +117,7 @@ class EIDCOCore {
     registerServiceWorker() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').catch(err => {
-                console.warn('EIDCO Core: ServiceWorker status:', err.message);
+                console.warn('EIDCO Core: حالة ServiceWorker:', err.message);
             });
         }
     }
@@ -121,9 +133,8 @@ class EIDCOCore {
     }
 
     emit(event, payload) {
-        if (this.eventListeners[event]) {
-            this.eventListeners[event].forEach(callback => callback(payload));
-        }
+        this.dispatchRegisteredEvent(event, payload);
+
         // بث الحدث لباقي التبويبات والملفات المفتوحة
         try {
             localStorage.setItem('eidco_cross_tab_sync', JSON.stringify({
@@ -132,7 +143,19 @@ class EIDCOCore {
                 timestamp: Date.now()
             }));
         } catch (e) {
-            console.error('Error broadcasting event cross-tab:', e);
+            console.error('EIDCO Core: خطأ في بث الحدث بين التبويبات:', e);
+        }
+    }
+
+    dispatchRegisteredEvent(event, payload) {
+        if (this.eventListeners[event]) {
+            this.eventListeners[event].forEach(callback => {
+                try {
+                    callback(payload);
+                } catch (e) {
+                    console.error(`EIDCO Core: خطأ أثناء تنفيذ الحدث [${event}]:`, e);
+                }
+            });
         }
     }
 
@@ -146,9 +169,9 @@ class EIDCOCore {
     setLocal(key, data) {
         try {
             localStorage.setItem(`eidco_${key}`, JSON.stringify(data));
-            this.emit('dataSynced', { key, data });
+            this.dispatchRegisteredEvent('dataSynced', { key, data });
         } catch (e) {
-            console.error('Error saving to local storage:', e);
+            console.error('EIDCO Core: خطأ في الحفظ بالتخزين المحلي:', e);
         }
     }
 
@@ -157,7 +180,7 @@ class EIDCOCore {
             const item = localStorage.getItem(`eidco_${key}`);
             return item ? JSON.parse(item) : null;
         } catch (e) {
-            console.error('Error reading from local storage:', e);
+            console.error('EIDCO Core: خطأ في القراءة من التخزين المحلي:', e);
             return null;
         }
     }
@@ -201,7 +224,7 @@ class EIDCOCore {
         try {
             this.state.syncQueue = [];
             localStorage.removeItem('eidco_sync_queue');
-            this.emit('syncComplete', { success: true });
+            this.dispatchRegisteredEvent('syncComplete', { success: true });
         } catch (error) {
             console.error('EIDCO Core: فشل عملية المزامنة السحابية:', error);
         }
@@ -210,3 +233,4 @@ class EIDCOCore {
 
 // تفعيل النسخة العامة لنواة EIDCO المحدثة
 window.EIDCOCoreInstance = new EIDCOCore();
+window.eidcoCore = window.EIDCOCoreInstance;

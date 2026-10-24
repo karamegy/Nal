@@ -57,11 +57,11 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 4. إنشاء مجلد الأصول وملف capacitor.plugins.json فوراً لمنع خطأ ENOENT عند أي تحديث تالي
+          # 4. إنشاء مجلد الأصول وملف capacitor.plugins.json مسبقاً لمنع خطأ ENOENT
           mkdir -p android/app/src/main/assets
           echo "{}" > android/app/src/main/assets/capacitor.plugins.json
 
-          # 5. ضبط ملف capacitor.config.json المباشر للرابط الخارجي (مع مطابقة webDir إلى www)
+          # 5. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -188,7 +188,7 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                  </provider>
+                  </meta-data>
 
               </application>
 
@@ -208,9 +208,13 @@ jobs:
           </resources>
           EOF
 
-          # 10. نسخ ملف التوقيع
+          # 10. نسخ ملف التوقيع وضمان وجود ملف plugins.json مرة أخرى قبل الـ Sync احتياطياً
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
+          fi
+          mkdir -p android/app/src/main/assets
+          if [ ! -f "android/app/src/main/assets/capacitor.plugins.json" ]; then
+            echo "{}" > android/app/src/main/assets/capacitor.plugins.json
           fi
 
           # 11. إعداد Gradle للتوقيع وضبط الإصدارات

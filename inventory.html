@@ -9,9 +9,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -40,6 +43,8 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -47,10 +52,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -62,6 +69,8 @@
 
         /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -154,23 +163,8 @@
     </style>
 
     <script>
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
-
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -178,7 +172,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -233,7 +227,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -396,9 +390,19 @@
 
     <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -442,16 +446,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -460,7 +458,6 @@
         }
 
         let productsList = [];
-        let unsubscriber = null;
 
         signInAnonymously(auth).then(async () => {
             const productsCollection = collection(db, "products");
@@ -477,7 +474,7 @@
                 console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
             }
 
-            unsubscriber = onSnapshot(productsRef, (snapshot) => {
+            onSnapshot(productsRef, (snapshot) => {
                 productsList = snapshot.docs.map(doc => ({
                     docId: doc.id,
                     ...doc.data()
@@ -530,9 +527,9 @@
                 return `
                     <tr class="hover:bg-slate-50 transition ${isLow ? 'bg-rose-50/40' : ''}">
                         <td class="p-3.5 mono-font text-indigo-600 font-bold" dir="ltr">
-                            ${p.code} ${p.barcode ? `<span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-barcode"></i> ${p.barcode}</span>` : ''}
+                            ${escapeHTML(p.code)} ${p.barcode ? `<span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-barcode"></i> ${escapeHTML(p.barcode)}</span>` : ''}
                         </td>
-                        <td class="p-3.5 font-bold text-slate-900">${p.name}</td>
+                        <td class="p-3.5 font-bold text-slate-900">${escapeHTML(p.name)}</td>
                         <td class="p-3.5 mono-font text-slate-600" dir="ltr">${Number(p.buyPrice || 0).toLocaleString()} ج.م</td>
                         <td class="p-3.5 mono-font text-emerald-600 font-bold" dir="ltr">${Number(p.sellPrice || 0).toLocaleString()} ج.م</td>
                         <td class="p-3.5 mono-font font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}" dir="ltr">
@@ -557,7 +554,7 @@
         }
 
         window.resetProductForm = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('editOriginalCode').value = '';
             document.getElementById('editDocId').value = '';
             document.getElementById('prodCode').value = generateNewCode();
@@ -573,11 +570,11 @@
         };
 
         window.editProduct = function(code) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let p = productsList.find(x => x.code === code);
             if(!p) return;
 
-            document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-pen-to-square ml-2 text-indigo-600"></i> تعديل الصنف (${p.name})`;
+            document.getElementById('formTitleText').innerHTML = `<i class="fa-solid fa-pen-to-square ml-2 text-indigo-600"></i> تعديل الصنف (${escapeHTML(p.name)})`;
             document.getElementById('editOriginalCode').value = p.code;
             document.getElementById('editDocId').value = p.docId || '';
             document.getElementById('prodCode').value = p.code;
@@ -594,7 +591,7 @@
         };
 
         window.executeSaveProduct = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             try {
                 let originalCode = document.getElementById('editOriginalCode').value.trim();
                 let docId = document.getElementById('editDocId').value.trim();
@@ -609,6 +606,10 @@
                 if(!code || !name) {
                     alert('⚠️ يرجى إدخال اسم الصنف على الأقل');
                     return;
+                }
+
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) {}
                 }
 
                 let productsCollection = collection(db, "products");
@@ -641,15 +642,14 @@
                 }
 
                 window.resetProductForm();
-                showNativeToast("✓ تم حفظ الصنف وتحديث المخزن");
-                alert('✓ تم حفظ الصنف وتحديث المخزن السحابي بنجاح!');
+                window.NativeBridge.showToast("✓ تم حفظ الصنف وتحديث المخزن");
             } catch (err) {
-                alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
         window.deleteProduct = async function(code, docId) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if(!confirm('هل أنت متأكد من حذف هذا الصنف من المخزن السحابي؟')) return;
             try {
                 let targetDocId = docId;
@@ -660,18 +660,17 @@
 
                 if(targetDocId) {
                     await deleteDoc(doc(db, "products", targetDocId));
-                    showNativeToast("✓ تم حذف الصنف بنجاح");
-                    alert('✓ تم حذف الصنف من السحابة بنجاح');
+                    window.NativeBridge.showToast("✓ تم حذف الصنف بنجاح");
                 } else {
                     alert('تعذر تحديد المستند المطلوب حذفه');
                 }
             } catch(err) {
-                alert('خطأ أثناء الحذف من السحابة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحذف من السحابة: ' + err.message);
             }
         };
 
         window.downloadInventoryPDF = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('printCompanyIdTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printCurrentDate').innerText = new Date().toISOString().split('T')[0];
             document.getElementById('printTotalItemsCount').innerText = `${productsList.length} أصناف`;
@@ -679,18 +678,18 @@
         };
 
         window.downloadInventoryImage = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let element = document.getElementById('inventoryPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-Inventory-${currentCompanyId}-${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = `EIDCO-Inventory-${currentCompanyId}-${Date.now()}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير صورة التقرير بنجاح");
             });
         };
 
         window.shareInventoryReport = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let totalQty = productsList.reduce((sum, p) => sum + Number(p.qty || 0), 0);
             let totalVal = productsList.reduce((sum, p) => sum + (Number(p.qty || 0) * Number(p.sellPrice || 0)), 0);
 
@@ -701,22 +700,7 @@
             text += `💰 إجمالي القيمة: *${totalVal.toLocaleString()} ج.م*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(text);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'EIDCO // تقرير المخزون',
-                        text: text
-                    });
-                } catch (err) {
-                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            window.NativeBridge.shareText(text, 'EIDCO // تقرير المخزون');
         };
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -726,7 +710,7 @@
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

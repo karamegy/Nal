@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // الفواتير الفردية السحابية المعزولة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // الفواتير الفردية السحابية المعزولة Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -52,16 +52,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -105,6 +115,7 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -164,6 +175,31 @@
             .no-print, button { display: none !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -201,7 +237,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الفواتير والمبيعات الفردية <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة الفواتير والمبيعات الفردية <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -248,7 +284,7 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-                <div class="corporate-card p-6 space-y-5 bg-white">
+                <div class="corporate-card p-6 space-y-5 bg-white shadow-sm">
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
@@ -282,18 +318,18 @@
             </div>
             
             <div class="space-y-3 text-xs">
-                <div><label class="block mb-1 text-slate-600 font-bold">اختر العميل</label><select id="invClient" class="corporate-input w-full cursor-pointer"></select></div>
-                <div><label class="block mb-1 text-slate-600 font-bold">اختر الصنف</label><select id="invProduct" class="corporate-input w-full cursor-pointer" onchange="window.updateInvPrice()"></select></div>
+                <div><label class="block mb-1 text-slate-600 font-bold">اختر العميل</label><select id="invClient" class="corporate-input w-full cursor-pointer font-bold text-slate-800"></select></div>
+                <div><label class="block mb-1 text-slate-600 font-bold">اختر الصنف</label><select id="invProduct" class="corporate-input w-full cursor-pointer font-bold text-slate-800" onchange="window.updateInvPrice()"></select></div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block mb-1 text-slate-600 font-bold">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font" value="1" min="1" oninput="window.calcInvTotal()"></div>
-                    <div><label class="block mb-1 text-slate-600 font-bold">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100 cursor-not-allowed" readonly></div>
+                    <div><label class="block mb-1 text-slate-600 font-bold">الكمية</label><input type="number" id="invQty" class="corporate-input w-full mono-font font-bold text-slate-900" value="1" min="1" oninput="window.calcInvTotal()"></div>
+                    <div><label class="block mb-1 text-slate-600 font-bold">سعر الوحدة</label><input type="number" id="invPriceUnit" class="corporate-input w-full mono-font bg-slate-100 cursor-not-allowed font-bold text-emerald-600" readonly></div>
                 </div>
                 <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex justify-between font-bold">
                     <span>الإجمالي والربح:</span><span id="invTotalDisplay" class="text-indigo-600 font-mono" dir="ltr">0.00 ج.م</span>
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer active:scale-95">حفظ وتحديث المخزن سحابياً</button>
+                <button onclick="window.saveInvoice()" class="btn-primary flex-1 py-2.5 text-xs cursor-pointer active:scale-95 shadow-md">حفظ وتحديث المخزن سحابياً</button>
                 <button onclick="window.closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 flex-1 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إلغاء</button>
             </div>
         </div>
@@ -347,13 +383,6 @@
 
     <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة تلقائياً -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -497,7 +526,7 @@
                             </button>
                         ` : ''}
                         <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200 active:scale-95" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
-                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200 active:scale-95" title="إرسال واتساب"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200 active:scale-95" title="إرسال واتساب / مشاركة"><i class="fa-brands fa-whatsapp text-sm"></i></button>
                         <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200 active:scale-95" title="حذف الفاتورة">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -507,6 +536,7 @@
         };
 
         window.openNewInvoiceModal = function() {
+            triggerHaptic(20);
             if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام سحابياً أولاً.');
             
             document.getElementById('invClient').innerHTML = state.clients.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
@@ -517,6 +547,7 @@
         };
 
         window.closeModal = function() { 
+            triggerHaptic(15);
             document.getElementById('invoiceModal').classList.remove('active'); 
         };
 
@@ -535,6 +566,7 @@
         };
 
         window.saveInvoice = async function() {
+            triggerHaptic(30);
             let code = document.getElementById('invProduct').value;
             let prod = state.products.find(p => p.code === code);
             let qty = Number(document.getElementById('invQty').value) || 1;
@@ -582,6 +614,7 @@
                 });
 
                 window.closeModal(); 
+                showNativeToast("✓ تم إصدار الفاتورة وتحديث المخزن والخزنة");
                 alert('✓ تم إصدار الفاتورة وتحديث المخزن والخزنة سحابياً بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الفاتورة في السحابة: ' + err.message);
@@ -589,6 +622,7 @@
         };
 
         window.openInvoicePreview = function(id) {
+            triggerHaptic(20);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -611,14 +645,17 @@
         };
 
         window.closePreviewModal = function() {
+            triggerHaptic(15);
             document.getElementById('previewModal').classList.remove('active');
         };
 
         window.printInvoicePDF = function() {
+            triggerHaptic(20);
             window.print();
         };
 
         window.downloadInvoiceImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -628,7 +665,8 @@
             });
         };
 
-        window.sendInvoiceWhatsApp = function(id) {
+        window.sendInvoiceWhatsApp = async function(id) {
+            triggerHaptic(25);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -643,11 +681,26 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا! 🙏`;
 
-            let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-            window.open(whatsappUrl, '_blank');
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'EIDCO // فاتورة مبيعات',
+                        text: text
+                    });
+                } catch (err) {
+                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                    window.open(whatsappUrl, '_blank');
+                }
+            } else {
+                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                window.open(whatsappUrl, '_blank');
+            }
         };
 
         window.deleteInvoice = async function(id, docId) {
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة سحابياً.')) return;
             
             if (!auth.currentUser) {
@@ -674,6 +727,7 @@
                     await deleteDoc(doc(db, "transactions", tx.docId));
                 }
                 
+                showNativeToast("✓ تم حذف الفاتورة وتحديث النظام");
                 alert('✓ تم حذف الفاتورة وتحديث النظام سحابياً بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حذف الفاتورة بالسحابة: ' + err.message);
@@ -681,12 +735,14 @@
         };
 
         window.sendToETA = async function(invoiceId, docId) {
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === invoiceId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
 
             if (!confirm(`هل أنت متأكد من إرسال الفاتورة (${invoiceId}) إلى مصلحة الضرائب المصرية؟`)) return;
 
             try {
+                showNativeToast("⏳ جاري الإرسال لمصلحة الضرائب...");
                 alert('⏳ جاري إرسال الفاتورة إلى خادم مصلحة الضرائب...');
 
                 const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
@@ -715,6 +771,7 @@
                             etaResponse: result.response 
                         });
                     }
+                    showNativeToast("✅ تم إرسال الفاتورة بنجاح للضرائب");
                     alert('✅ تم إرسال الفاتورة بنجاح إلى مصلحة الضرائب وتحديث حالة المستند!');
                 } else {
                     console.error('ETA Rejection:', result.error);

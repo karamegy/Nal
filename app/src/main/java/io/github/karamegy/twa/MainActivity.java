@@ -19,10 +19,17 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,10 +39,21 @@ public class MainActivity extends BridgeActivity {
     private ValueCallback<Uri[]> filePathCallback;
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int PERMISSION_REQUEST_CODE = 2002;
+    private static final int RC_SIGN_IN = 9001;
+
+    private GoogleSignInClient mGoogleSignInClient;
+    private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-web.apps.googleusercontent.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // تهيئة إعدادات Google Sign In النايتف
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(GOOGLE_WEB_CLIENT_ID)
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
         // ربط الإعدادات بـ WebView الخاص بـ Capacitor
         WebView webView = this.bridge.getWebView();
@@ -112,6 +130,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        // معالجة اختيار الملفات
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
             Uri[] results = null;
@@ -123,6 +143,25 @@ public class MainActivity extends BridgeActivity {
             }
             filePathCallback.onReceiveValue(results);
             filePathCallback = null;
+        }
+
+        // معالجة نتيجة تسجيل الدخول بـ Google النايتف
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null && account.getIdToken() != null) {
+                    final String idToken = account.getIdToken();
+                    runOnUiThread(() -> {
+                        WebView webView = bridge.getWebView();
+                        if (webView != null) {
+                            webView.evaluateJavascript("javascript:window.handleGoogleIdToken('" + idToken + "');", null);
+                        }
+                    });
+                }
+            } catch (ApiException e) {
+                Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل النايتف: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -169,6 +208,18 @@ public class MainActivity extends BridgeActivity {
             sendIntent.setType("text/plain");
             Intent shareIntent = Intent.createChooser(sendIntent, "مشاركة تقرير EIDCO");
             mContext.startActivity(shareIntent);
+        }
+
+        @JavascriptInterface
+        public void launchNativeGoogleSignIn() {
+            runOnUiThread(() -> {
+                if (mGoogleSignInClient != null) {
+                    mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
+                        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                        startActivityForResult(signInIntent, RC_SIGN_IN);
+                    });
+                }
+            });
         }
 
         @JavascriptInterface

@@ -56,9 +56,13 @@ jobs:
           # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة
+          # 3. إعادة إنشاء منصة أندرويد نظيفة وتجهيز المجلدات المطلوبة فوراً
           rm -rf android
           npx cap add android
+
+          # 🛑 تجهيز مجلد assets وملف capacitor.plugins.json هنا لمنع خطأ ENOENT أثناء التحديث
+          mkdir -p android/app/src/main/assets
+          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
 
           # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
           cat << 'EOF' > capacitor.config.json
@@ -219,11 +223,7 @@ jobs:
           npx cap update android
           npx cap copy android
 
-          # 11. إنشاء ملف capacitor.plugins.json وتأمينه
-          mkdir -p android/app/src/main/assets
-          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
-
-          # 12. تعديل build.gradle برمجيًا بدقة لمنع خطأ الكتل المتكررة
+          # 11. تعديل build.gradle برمجيًا بدقة لمنع خطأ الكتل المتكررة
           node -e "
           const fs = require('fs');
           let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
@@ -260,7 +260,7 @@ jobs:
           fs.writeFileSync('android/app/build.gradle', gradle);
           "
 
-          # 13. البناء بواسطة Gradle
+          # 12. البناء بواسطة Gradle
           cd android
           chmod +x gradlew
           ./gradlew clean --no-daemon

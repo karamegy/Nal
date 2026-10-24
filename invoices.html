@@ -52,8 +52,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -71,15 +69,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
         header {
             flex-shrink: 0;
         }
 
-        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -193,8 +187,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -217,8 +232,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -271,8 +286,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -540,7 +555,7 @@
         };
 
         window.openNewInvoiceModal = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام سحابياً أولاً.');
             
             document.getElementById('invClient').innerHTML = state.clients.map(c => `<option value="${escapeHTML(c.name)}">${escapeHTML(c.name)}</option>`).join('');
@@ -551,7 +566,7 @@
         };
 
         window.closeModal = function() { 
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('invoiceModal').classList.remove('active'); 
         };
 
@@ -570,7 +585,7 @@
         };
 
         window.saveInvoice = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let code = document.getElementById('invProduct').value;
             let prod = state.products.find(p => p.code === code);
             let qty = Number(document.getElementById('invQty').value) || 1;
@@ -618,14 +633,14 @@
                 });
 
                 window.closeModal(); 
-                window.NativeBridge.showToast("✓ تم إصدار الفاتورة وتحديث المخزن والخزنة");
+                showNativeToast("✓ تم إصدار الفاتورة وتحديث المخزن والخزنة");
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء حفظ الفاتورة في السحابة: ' + err.message);
+                showNativeToast('حدث خطأ أثناء حفظ الفاتورة في السحابة: ' + err.message);
             }
         };
 
         window.openInvoicePreview = function(id) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -648,28 +663,37 @@
         };
 
         window.closePreviewModal = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('previewModal').classList.remove('active');
         };
 
         window.printInvoicePDF = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             window.print();
         };
 
         window.downloadInvoiceImage = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Invoice-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast("تم تصدير صورة الفاتورة بنجاح");
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("تم تصدير صورة الفاتورة بنجاح");
             });
         };
 
         window.sendInvoiceWhatsApp = async function(id) {
-            window.NativeBridge.vibrate(25);
+            triggerHaptic(25);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -684,11 +708,22 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا! 🙏`;
 
-            window.NativeBridge.shareText(text, 'EIDCO // فاتورة مبيعات');
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(text, 'EIDCO // فاتورة مبيعات');
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'EIDCO // فاتورة مبيعات', text: text });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
 
         window.deleteInvoice = async function(id, docId) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وإزالة الإيراد المرتبط بها من الخزنة سحابياً.')) return;
             
             if (!auth.currentUser) {
@@ -715,21 +750,21 @@
                     await deleteDoc(doc(db, "transactions", tx.docId));
                 }
                 
-                window.NativeBridge.showToast("✓ تم حذف الفاتورة وتحديث النظام");
+                showNativeToast("✓ تم حذف الفاتورة وتحديث النظام");
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء حذف الفاتورة بالسحابة: ' + err.message);
+                showNativeToast('حدث خطأ أثناء حذف الفاتورة بالسحابة: ' + err.message);
             }
         };
 
         window.sendToETA = async function(invoiceId, docId) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === invoiceId);
             if (!inv) return alert('⚠️ الفاتورة غير موجودة محلياً');
 
             if (!confirm(`هل أنت متأكد من إرسال الفاتورة (${invoiceId}) إلى مصلحة الضرائب المصرية؟`)) return;
 
             try {
-                window.NativeBridge.showToast("⏳ جاري الإرسال لمصلحة الضرائب...");
+                showNativeToast("⏳ جاري الإرسال لمصلحة الضرائب...");
 
                 const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
 
@@ -757,7 +792,7 @@
                             etaResponse: result.response 
                         });
                     }
-                    window.NativeBridge.showToast("✅ تم إرسال الفاتورة بنجاح للضرائب");
+                    showNativeToast("✅ تم إرسال الفاتورة بنجاح للضرائب");
                 } else {
                     console.error('ETA Rejection:', result.error);
                     alert('❌ رفضت مصلحة الضرائب الفاتورة: ' + (typeof result.error === 'object' ? JSON.stringify(result.error) : result.error));

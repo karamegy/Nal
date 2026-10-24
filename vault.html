@@ -2,14 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // الخزنة النقدية السحابية المعزولة</title>
     
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+
+    <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
@@ -28,25 +32,52 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; width: 100%; outline: none; box-sizing: border-box; transition: all 0.2s; }
+        .corporate-input:focus { outline: none; border-color: var(--primary); background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
-        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .custom-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
         .custom-modal.active { display: flex !important; }
         table th, table td { white-space: nowrap; }
     </style>
+
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+
+        // إرسال توست نيتف
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        // اهتزاز لمسي نيتف للأزرار والعمليات المالية
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
             <nav class="space-y-1.5 flex-1 overflow-y-auto">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
@@ -70,7 +101,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الصندوق والخزنة النقدية <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
@@ -80,10 +111,10 @@
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة سحابياً فوراً">
+                            <button onclick="window.purgeDeletedInvoicesTransactions()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95" title="حذف الفواتير والمعاملات الوهمية أو المحذوفة سحابياً فوراً">
                                 <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">تطهير</span>
                             </button>
-                            <button onclick="window.openTxModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer py-2 px-3 sm:px-4"><i class="fa-solid fa-wallet"></i> حركة جديدة</button>
+                            <button onclick="window.openTxModal()" class="btn-primary text-xs flex items-center gap-2 cursor-pointer py-2 px-3 sm:px-4 active:scale-95"><i class="fa-solid fa-wallet"></i> حركة جديدة</button>
                         </div>
                     </div>
                 </div>
@@ -171,24 +202,17 @@
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-600 font-bold">البيان</label>
-                    <input type="text" id="txDesc" class="corporate-input" placeholder="سبب الحركة النقدية أو البيان">
+                    <input type="text" id="txDesc" class="corporate-input font-bold" placeholder="سبب الحركة النقدية أو البيان">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="window.saveTx()" class="btn-primary flex-1 py-2 text-xs cursor-pointer">حفظ الحركة سحابياً</button>
-                <button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-300 transition">إلغاء</button>
+                <button onclick="window.saveTx()" class="btn-primary flex-1 py-2 text-xs cursor-pointer active:scale-95">حفظ الحركة سحابياً</button>
+                <button onclick="window.closeModal()" class="bg-slate-200 text-slate-700 flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-300 transition active:scale-95">إلغاء</button>
             </div>
         </div>
     </div>
 
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -216,7 +240,8 @@
             onSnapshot,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -232,6 +257,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        // تفعيل تخزين الخزنة أوفلاين
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -297,20 +325,19 @@
 
             tbody.innerHTML = transactionsList.map(t => {
                 let safeDate = (t.date && t.date !== 'undefined') ? t.date : new Date().toISOString().split('T')[0];
-                // معالجة رقم الحركة لضمان عدم ظهور undefined نهائياً واستخراج معرف بديل إن وجد
                 let displayId = t.id || t.invoiceId || (t.docId ? 'TX-' + t.docId.substring(0, 5) : 'TX-000');
                 return `
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-slate-50 transition">
                         <td class="p-4 mono-font text-indigo-600 font-bold">${displayId}</td>
                         <td class="p-4 font-bold ${t.type==='إيراد'?'text-cyan-600':'text-purple-600'}">${t.type}</td>
                         <td class="p-4 mono-font font-bold">${Number(t.amount || 0).toLocaleString()} ج.م</td>
-                        <td class="p-4 text-slate-600">${t.desc || ''}</td>
+                        <td class="p-4 text-slate-600 font-semibold">${t.desc || ''}</td>
                         <td class="p-4 mono-font text-slate-500">${safeDate}</td>
                         <td class="p-4 text-center space-x-2 space-x-reverse">
-                            <button onclick="window.editTx('${displayId}', '${t.docId || ''}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="تعديل">
+                            <button onclick="window.editTx('${displayId}', '${t.docId || ''}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer active:scale-95" title="تعديل">
                                 <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
                             </button>
-                            <button onclick="window.deleteTx('${displayId}', '${t.docId || ''}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer" title="حذف">
+                            <button onclick="window.deleteTx('${displayId}', '${t.docId || ''}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl text-xs font-bold transition inline-block cursor-pointer active:scale-95" title="حذف">
                                 <i class="fa-solid fa-trash ml-1"></i> حذف
                             </button>
                         </td>
@@ -320,6 +347,7 @@
         };
 
         window.openTxModal = function() {
+            triggerHaptic(30);
             document.getElementById('modalTitle').innerText = 'تسجيل حركة نقدية جديدة سحابياً';
             document.getElementById('editTxId').value = '';
             document.getElementById('editDocId').value = '';
@@ -330,10 +358,12 @@
         };
 
         window.closeModal = function() {
+            triggerHaptic(20);
             document.getElementById('txModal').classList.remove('active');
         };
 
         window.editTx = function(id, docId) {
+            triggerHaptic(30);
             let t = transactionsList.find(x => (docId && x.docId === docId) || x.id === id);
             if(!t) return;
 
@@ -349,7 +379,7 @@
         };
 
         window.saveTx = async function() {
-            let editId = document.getElementById('editTxId').value;
+            triggerHaptic(40);
             let editDocId = document.getElementById('editDocId').value;
             let type = document.getElementById('txType').value;
             let amount = Number(document.getElementById('txAmount').value);
@@ -385,6 +415,7 @@
                 }
 
                 window.closeModal();
+                showNativeToast("✓ تم تسجيل الحركة المالية سحابياً");
                 alert('✓ تم حفظ وتحديث المعاملات النقدية في السحابة بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
@@ -392,6 +423,7 @@
         };
 
         window.deleteTx = async function(id, docId) {
+            triggerHaptic(60);
             if(!confirm('هل أنت متأكد من حذف هذه الحركة نهائياً من السحابة؟')) return;
 
             if (!auth.currentUser) {
@@ -407,6 +439,7 @@
 
                 if(targetDocId) {
                     await deleteDoc(doc(db, "transactions", targetDocId));
+                    showNativeToast("✓ تم حذف الحركة المالية بنجاح");
                     alert('✓ تم الحذف سحابياً بنجاح.');
                 } else {
                     alert('تعذر تحديد المستند المطلوب حذفه.');
@@ -417,6 +450,7 @@
         };
 
         window.purgeDeletedInvoicesTransactions = async function() {
+            triggerHaptic(80);
             if(!confirm('هل تريد حقاً تطهير الخزنة وحذف أي معاملات مرتبطة بفواتير محذوفة من السحابة؟')) return;
 
             if (!auth.currentUser) {
@@ -435,12 +469,14 @@
                         }
                     }
                 }
+                showNativeToast("✓ تم تطهير حركات الخزنة بنجاح");
                 alert('✓ تم تطهير المعاملات وإزالة الحركات المرتبطة بالفواتير المحذوفة سحابياً بنجاح!');
             } catch(err) {
                 alert('حدث خطأ أثناء تطهير المعاملات سحابياً: ' + err.message);
             }
         };
     </script>
+
     <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
@@ -483,6 +519,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

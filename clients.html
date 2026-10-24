@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // حسابات العملاء والمديونيات السحابية المعزولة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // حسابات العملاء والمديونيات السحابية المعزولة Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -11,12 +11,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
+        }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
+            });
         }
     </script>
 
@@ -43,16 +50,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع رفع وانكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على مسافة برؤية الحقول أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -93,6 +110,7 @@
             cursor: pointer; 
             transition: all 0.2s; 
             width: 100%; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -171,6 +189,31 @@
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
+
+    <script>
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -208,7 +251,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة حسابات العملاء والمديونيات <span class="hidden sm:inline text-slate-500 font-normal">(معزولة ومزامنة لحظياً)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">إدارة حسابات العملاء والمديونيات <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -451,13 +494,6 @@
 
     <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -556,7 +592,7 @@
 
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
-            const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", companyId));
+            const batchInvoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId), where("isBatch", "==", true));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
             const paymentsRef = query(collection(db, "client_payments"), where("companyId", "==", companyId));
 
@@ -566,13 +602,9 @@
             }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
-                state.invoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-                renderClients();
-                if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
-            }));
-
-            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
-                state.batchInvoices = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                let allInvs = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                state.invoices = allInvs.filter(i => !i.isBatch);
+                state.batchInvoices = allInvs.filter(i => i.isBatch);
                 renderClients();
                 if (currentActiveClient) window.openClientStatement(currentActiveClient.name);
             }));
@@ -648,10 +680,17 @@
             }).join('');
         };
 
-        window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
-        window.closeClientModal = function() { document.getElementById('clientModal').classList.remove('active'); };
+        window.openClientModal = function() { 
+            triggerHaptic(20);
+            document.getElementById('clientModal').classList.add('active'); 
+        };
+        window.closeClientModal = function() { 
+            triggerHaptic(15);
+            document.getElementById('clientModal').classList.remove('active'); 
+        };
 
         window.saveClient = async function() {
+            triggerHaptic(30);
             let name = document.getElementById('clientNameInput').value.trim();
             let phone = document.getElementById('clientPhoneInput').value.trim();
             let address = document.getElementById('clientAddressInput').value.trim();
@@ -671,6 +710,7 @@
                 document.getElementById('clientNameInput').value = '';
                 document.getElementById('clientPhoneInput').value = '';
                 document.getElementById('clientAddressInput').value = '';
+                showNativeToast("✓ تم إضافة العميل بنجاح");
                 alert('✓ تم إضافة العميل في السحابة بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ العميل بالسحابة: ' + err.message);
@@ -678,6 +718,7 @@
         };
 
         window.deleteClient = async function(docId, name) {
+            triggerHaptic(40);
             if(!confirm(`هل أنت متأكد من حذف العميل (${name}) من قاعدة البيانات السحابية؟`)) return;
             try {
                 if (docId) {
@@ -686,6 +727,7 @@
                     let c = state.clients.find(x => x.name === name);
                     if (c && c.docId) await deleteDoc(doc(db, "clients", c.docId));
                 }
+                showNativeToast("✓ تم حذف العميل سحابياً");
                 alert('✓ تم حذف العميل سحابياً بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء حذف العميل بالسحابة: ' + err.message);
@@ -693,6 +735,7 @@
         };
 
         window.openClientStatement = function(clientName) {
+            triggerHaptic(20);
             currentActiveClient = state.clients.find(c => c.name === clientName);
             if(!currentActiveClient) return;
 
@@ -739,7 +782,7 @@
                 rowsHtml += `
                     <tr class="bg-indigo-50/40">
                         <td class="p-2.5 mono-font font-bold text-indigo-800" dir="ltr">${b.batchNumber || b.id || 'BATCH'}</td>
-                        <td class="p-2.5 font-bold text-indigo-900">فاتورة مجمعة (${b.invoicesCount || (b.invoices ? b.invoices.length : 1)} فواتير)</td>
+                        <td class="p-2.5 font-bold text-indigo-900">فاتورة مجمعة (${b.invoicesCount || (b.invoices ? b.invoices.length : (b.items ? b.items.length : 1))} أصناف)</td>
                         <td class="p-2.5 mono-font font-bold text-indigo-800" dir="ltr">+${amount.toLocaleString()} ج.م</td>
                         <td class="p-2.5 mono-font text-slate-500" dir="ltr">${b.date || '---'}</td>
                         <td class="p-2.5 text-center no-print"><span class="text-slate-400 font-mono">مجمعة</span></td>
@@ -775,11 +818,13 @@
         };
 
         window.closeStatementModal = function() {
+            triggerHaptic(15);
             document.getElementById('statementModal').classList.remove('active');
             currentActiveClient = null;
         };
 
         window.recordClientPayment = async function() {
+            triggerHaptic(30);
             if(!currentActiveClient) return;
             let amount = Number(document.getElementById('paymentAmountInput').value);
             let method = document.getElementById('paymentMethodInput').value;
@@ -813,6 +858,7 @@
                 });
 
                 document.getElementById('paymentAmountInput').value = '';
+                showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
                 alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وكشف الحساب سحابياً بنجاح بدون تكرار');
             } catch (err) {
                 alert('حدث خطأ أثناء إدخال الدفعة بالسحابة: ' + err.message);
@@ -820,6 +866,7 @@
         };
 
         window.deletePayment = async function(payDocId) {
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف دفعة السداد هذه من السحابة؟')) return;
             try {
                 let pay = state.payments.find(p => p.docId === payDocId);
@@ -831,6 +878,7 @@
                         await deleteDoc(doc(db, "transactions", tx.docId));
                     }
                 }
+                showNativeToast("✓ تم حذف الدفعة سحابياً");
                 alert('✓ تم حذف دفعة السداد من السحابة بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
@@ -838,6 +886,7 @@
         };
 
         window.editPayment = async function(payDocId, oldAmount) {
+            triggerHaptic(30);
             let newAmountStr = prompt('أدخل مبلغ دفعة السداد الجديد (ج.م):', oldAmount);
             if(newAmountStr === null) return;
             let newAmount = Number(newAmountStr);
@@ -853,6 +902,7 @@
                         await updateDoc(doc(db, "transactions", tx.docId), { amount: newAmount });
                     }
                 }
+                showNativeToast("✓ تم تعديل الدفعة بنجاح");
                 alert('✓ تم تعديل مبلغ الدفعة سحابياً بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء التعديل بالسحابة: ' + err.message);
@@ -860,6 +910,7 @@
         };
 
         window.previewInvoice = function(invKey) {
+            triggerHaptic(20);
             let inv = state.invoices.find(i => i.id === invKey || i.docId === invKey);
             if(!inv) return alert('عذراً، لم يتم العثور على بيانات الفاتورة سحابياً');
 
@@ -890,6 +941,7 @@
         };
 
         window.closeInvoicePreviewModal = function() {
+            triggerHaptic(15);
             document.getElementById('invoicePreviewModal').classList.remove('active');
             if(currentActiveClient) {
                 window.openClientStatement(currentActiveClient.name);
@@ -897,6 +949,7 @@
         };
 
         window.downloadSingleInvoiceImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('singleInvoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -907,6 +960,7 @@
         };
 
         window.downloadStatementImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('statementPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -917,11 +971,12 @@
         };
 
         window.downloadStatementPDF = function() {
+            triggerHaptic(20);
             window.print();
         };
 
-        // مشاركة مباشرة عبر أندرويد وواتساب
         window.sendStatementWhatsApp = async function() {
+            triggerHaptic(30);
             if(!currentActiveClient) return;
             
             let clientInvoices = state.invoices.filter(i => isClientMatch(i.client || i.clientName, i.clientId, currentActiveClient));
@@ -943,7 +998,9 @@
             text += `📌 *الرصيد المتبقي (المديونية): ${dueBalance.toLocaleString()} ج.م*\n\n`;
             text += `شكراً لتعاملكم المستمر معنا! 🙏`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: `كشف حساب ${currentActiveClient.name}`,

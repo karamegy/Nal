@@ -204,6 +204,28 @@
     </style>
 
     <script>
+        // طلب كل أذونات النظام الحيوية (GPS & Notifications) تلقائياً
+        async function requestAllAppPermissions() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        console.log("✓ تم منح إذن الموقع الجغرافي بنجاح:", pos.coords.latitude, pos.coords.longitude);
+                    },
+                    err => {
+                        console.warn("⚠️ لم يتم منح إذن الموقع:", err.message);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                try {
+                    await Notification.requestPermission();
+                } catch(e) {}
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', requestAllAppPermissions);
+
         function toggleMobileMenu() {
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {

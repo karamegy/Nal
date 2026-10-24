@@ -2,80 +2,199 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EIDCO // جهاز التحكم عن بُعد (Remote)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EIDCO // جهاز التحكم عن بُعد والواي فاي (Wi-Fi Remote OS)</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#020617">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #020617; color: #f8fafc; }
+        :root { --primary: #4f46e5; }
+        * { -webkit-tap-highlight-color: transparent; select: none; user-select: none; box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background-color: #020617; color: #f8fafc; min-height: 100vh; overscroll-behavior-y: contain; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        
+        .remote-btn {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .remote-btn:active {
+            transform: scale(0.92);
+            filter: brightness(1.2);
+        }
+        .dpad-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #f8fafc;
+        }
+        .dpad-btn:active {
+            background: #4f46e5;
+            border-color: #6366f1;
+        }
+        .custom-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .custom-modal.active { display: flex !important; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-5">
 
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+    <div class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-[32px] p-5 shadow-2xl space-y-4 backdrop-blur-xl relative overflow-hidden">
         
-        <!-- الهيدر والمعلومات -->
-        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xs"><i class="fa-solid fa-gamepad"></i></div>
+        <!-- الهيدر والمعلومات والاتصال بالواي فاي -->
+        <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-sm shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
                 <div>
-                    <h1 class="text-sm font-black text-white">EIDCO TV REMOTE</h1>
-                    <p class="text-[10px] text-indigo-400 font-mono" id="remoteCompanyId">الشركة: ...</p>
+                    <h1 class="text-xs sm:text-sm font-black text-white tracking-wide">EIDCO REMOTE</h1>
+                    <p class="text-[9px] text-indigo-400 font-mono font-bold" id="remoteCompanyId">الشركة: جاري التحميل...</p>
                 </div>
             </div>
-            <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-1 rounded-full font-bold">● متصل</span>
+            <div class="flex items-center gap-1.5">
+                <button onclick="openWifiModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 p-2 rounded-xl text-xs border border-amber-500/30 cursor-pointer shadow active:scale-90 transition" title="إعدادات إتصال الواي فاي المباشر">
+                    <i class="fa-solid fa-wifi"></i>
+                </button>
+                <span id="connectionBadge" class="text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 px-2.5 py-1 rounded-full font-bold font-mono flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span id="connStatusText">سحابي</span>
+                </span>
+            </div>
         </div>
 
-        <!-- أزرار الطاقة والصوت -->
-        <div class="grid grid-cols-3 gap-3">
-            <button onclick="sendCommand('power')" class="bg-rose-600 hover:bg-rose-700 text-white p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs shadow-lg active:scale-95 transition">
-                <i class="fa-solid fa-power-off text-lg"></i> تشغيل/إطفاء
+        <!-- أزرار التحكم الرئيسية (طاقة / صوت / نطق) -->
+        <div class="grid grid-cols-3 gap-2.5">
+            <button onclick="sendCommand('power')" class="remote-btn bg-gradient-to-br from-rose-600 to-red-700 text-white p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold text-[11px] shadow-lg shadow-rose-900/30 border border-rose-500/30 cursor-pointer">
+                <i class="fa-solid fa-power-off text-base"></i> تشغيل/إطفاء
             </button>
-            <button onclick="sendCommand('mute')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs border border-slate-700 active:scale-95 transition">
-                <i class="fa-solid fa-volume-xmark text-lg text-emerald-400"></i> كتم الصوت
+            <button onclick="sendCommand('mute')" class="remote-btn bg-slate-800 hover:bg-slate-700 text-slate-200 p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold text-[11px] border border-slate-700 cursor-pointer">
+                <i class="fa-solid fa-volume-xmark text-base text-emerald-400"></i> كتم الصوت
             </button>
-            <button onclick="sendCommand('speech')" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 p-4 rounded-2xl flex flex-col items-center gap-1 font-bold text-xs border border-indigo-700 active:scale-95 transition">
-                <i class="fa-solid fa-microphone-lines text-lg text-cyan-400"></i> نطق الشاشة
+            <button onclick="sendCommand('speech')" class="remote-btn bg-indigo-950/90 hover:bg-indigo-900 text-indigo-200 p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold text-[11px] border border-indigo-700/60 cursor-pointer">
+                <i class="fa-solid fa-microphone-lines text-base text-cyan-400"></i> نطق الشاشة
             </button>
         </div>
 
-        <!-- أزرار اختيار القنوات -->
+        <!-- لوحة التحكم المباشرة بالأتجاهات (D-Pad Controller) -->
+        <div class="p-4 bg-slate-950/70 rounded-3xl border border-slate-800/80 flex flex-col items-center justify-center space-y-2 relative">
+            <span class="text-[9px] text-slate-500 font-mono font-bold block mb-1">لوحة التصفح D-PAD (واي فاي + سحابة)</span>
+            
+            <button onclick="sendCommand('nav_up')" class="remote-btn dpad-btn w-12 h-11 rounded-xl flex items-center justify-center cursor-pointer shadow">
+                <i class="fa-solid fa-chevron-up text-sm"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <button onclick="sendCommand('nav_right')" class="remote-btn dpad-btn w-12 h-11 rounded-xl flex items-center justify-center cursor-pointer shadow">
+                    <i class="fa-solid fa-chevron-right text-sm"></i>
+                </button>
+                <button onclick="sendCommand('nav_ok')" class="remote-btn bg-indigo-600 hover:bg-indigo-500 text-white w-14 h-14 rounded-full flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-600/40 border-2 border-indigo-400 cursor-pointer">
+                    OK
+                </button>
+                <button onclick="sendCommand('nav_left')" class="remote-btn dpad-btn w-12 h-11 rounded-xl flex items-center justify-center cursor-pointer shadow">
+                    <i class="fa-solid fa-chevron-left text-sm"></i>
+                </button>
+            </div>
+
+            <button onclick="sendCommand('nav_down')" class="remote-btn dpad-btn w-12 h-11 rounded-xl flex items-center justify-center cursor-pointer shadow">
+                <i class="fa-solid fa-chevron-down text-sm"></i>
+            </button>
+        </div>
+
+        <!-- أزرار اختيار القنوات والصفحات -->
         <div class="space-y-2">
-            <h2 class="text-xs font-bold text-slate-400">اختر القناة:</h2>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendChannel('metrics')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">01</span>
-                    📊 المؤشرات
+            <h2 class="text-[11px] font-bold text-slate-400 flex items-center justify-between px-1">
+                <span>اختر القناة / الشاشة:</span>
+                <i class="fa-solid fa-tv text-indigo-400"></i>
+            </h2>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <button onclick="sendChannel('metrics')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">01</span>
+                    <span class="truncate">📊 المؤشرات</span>
                 </button>
-                <button onclick="sendChannel('invoices')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">02</span>
-                    🧾 الفواتير
+                <button onclick="sendChannel('invoices')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">02</span>
+                    <span class="truncate">🧾 الفواتير</span>
                 </button>
-                <button onclick="sendChannel('inventory')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">03</span>
-                    📦 المخزن
+                <button onclick="sendChannel('inventory')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">03</span>
+                    <span class="truncate">📦 المخزن</span>
                 </button>
-                <button onclick="sendChannel('fleet')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">04</span>
-                    🚛 الأسطول
+                <button onclick="sendChannel('fleet')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">04</span>
+                    <span class="truncate">🚛 الأسطول</span>
                 </button>
-                <button onclick="sendChannel('clients')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">05</span>
-                    👥 العملاء
+                <button onclick="sendChannel('clients')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">05</span>
+                    <span class="truncate">👥 العملاء</span>
                 </button>
-                <button onclick="sendChannel('profile')" class="bg-slate-800 hover:bg-indigo-600 text-white p-3.5 rounded-2xl flex items-center gap-3 font-bold text-xs border border-slate-700 active:scale-95 transition text-right">
-                    <span class="w-7 h-7 bg-indigo-900 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono">06</span>
-                    👤 البروفايل
+                <button onclick="sendChannel('profile')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">06</span>
+                    <span class="truncate">👤 البروفايل</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- خانة إرسال إعلان / خبر عاجل للشاشة -->
+        <div class="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-2">
+            <label class="block text-[10px] text-amber-400 font-bold"><i class="fa-solid fa-bullhorn ml-1"></i> إرسال خبر عاجل للشاشة المجاورة:</label>
+            <div class="flex gap-2">
+                <input type="text" id="tickerTextInput" placeholder="اكتب رسالة لتظهر على الشاشة..." class="bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs w-full focus:outline-none focus:border-indigo-500">
+                <button onclick="sendTickerMessage()" class="remote-btn bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer">
+                    إرسال
                 </button>
             </div>
         </div>
 
     </div>
 
+    <!-- نافذة ربط شاشة الواي فاي المباشر (Wi-Fi Local IP Modal) -->
+    <div id="wifiModal" class="custom-modal">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-xs w-full space-y-4 text-right shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="font-bold text-xs text-white"><i class="fa-solid fa-wifi text-amber-400 ml-1"></i> ربط الواي فاي المحلي (Wi-Fi Sync)</h3>
+                <button onclick="closeWifiModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-[10px] text-slate-400 leading-relaxed">
+                أدخل عنوان IP الشاشة المحلي الموجودة معك على نفس شبكة الواي فاي للربط السريع جداً (Direct LAN):
+            </p>
+            <div class="space-y-2 text-xs">
+                <div>
+                    <label class="block text-[10px] text-slate-300 font-bold mb-1">عنوان IP الشاشة (مع الـ Port):</label>
+                    <input type="text" id="tvWifiIpInput" placeholder="مثال: 192.168.1.15:8080" class="bg-slate-950 border border-slate-700 text-amber-300 rounded-xl px-3 py-2 text-xs mono-font w-full">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveWifiIpSetting()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex-1 py-2 rounded-xl text-xs cursor-pointer">
+                    حفظ واختبار الربط
+                </button>
+                <button onclick="clearWifiIpSetting()" class="bg-slate-800 text-slate-400 hover:bg-slate-700 py-2 px-3 rounded-xl text-xs font-bold cursor-pointer">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Modules والتحكم المزدوج المحلي والسحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -88,24 +207,121 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        signInAnonymously(auth).catch(err => console.error("فشل مصادقة الريموت:", err));
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         document.getElementById('remoteCompanyId').innerText = `الشركة: ${currentCompanyId}`;
 
-        window.sendChannel = async function(channelName) {
-            await setDoc(doc(db, "tv_remote", currentCompanyId), {
+        // إعداد BroadcastChannel للتواصل الفوري في الشبكة/الجهاز
+        const localTvChannel = new BroadcastChannel('eidco_tv_channel_' + currentCompanyId);
+
+        // الاستجابة اللمسية بالاهتزاز
+        function triggerHapticFeedback() {
+            if ("vibrate" in navigator) navigator.vibrate(35);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(35);
+            }
+        }
+
+        // تحديث واجهة حالة الواي فاي
+        function updateWifiBadge() {
+            let savedIp = localStorage.getItem('eidco_tv_wifi_ip');
+            let badgeText = document.getElementById('connStatusText');
+            if (savedIp) {
+                badgeText.innerText = "واي فاي ⚡";
+            } else {
+                badgeText.innerText = "سحابي ☁️";
+            }
+        }
+        updateWifiBadge();
+
+        window.openWifiModal = function() {
+            let savedIp = localStorage.getItem('eidco_tv_wifi_ip') || '';
+            document.getElementById('tvWifiIpInput').value = savedIp;
+            document.getElementById('wifiModal').classList.add('active');
+        };
+
+        window.closeWifiModal = function() {
+            document.getElementById('wifiModal').classList.remove('active');
+        };
+
+        window.saveWifiIpSetting = function() {
+            let ipVal = document.getElementById('tvWifiIpInput').value.trim();
+            if(ipVal) {
+                localStorage.setItem('eidco_tv_wifi_ip', ipVal);
+                alert("✓ تم حفظ عنوان IP الشاشة للربط المباشر عبر الواي فاي!");
+            } else {
+                localStorage.removeItem('eidco_tv_wifi_ip');
+            }
+            updateWifiBadge();
+            closeWifiModal();
+        };
+
+        window.clearWifiIpSetting = function() {
+            localStorage.removeItem('eidco_tv_wifi_ip');
+            document.getElementById('tvWifiIpInput').value = '';
+            updateWifiBadge();
+            closeWifiModal();
+        };
+
+        // دالة الإرسال المزدوج المباشر (Wi-Fi Direct LAN + Broadcast + Firebase)
+        async function dispatchRemotePayload(payload) {
+            triggerHapticFeedback();
+            payload.companyId = currentCompanyId;
+            payload.updatedAt = Date.now();
+
+            // 1. الإرسال عبر BroadcastChannel المحلي القريب
+            try {
+                localTvChannel.postMessage(payload);
+            } catch(e) {}
+
+            // 2. الإرسال المباشر لعنوان IP الواي فاي في الشبكة المحلية إذا تم ضبطه
+            let wifiIp = localStorage.getItem('eidco_tv_wifi_ip');
+            if (wifiIp) {
+                let targetUrl = wifiIp.startsWith('http') ? wifiIp : 'http://' + wifiIp;
+                fetch(targetUrl + '/api/remote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    mode: 'no-cors'
+                }).catch(() => {});
+            }
+
+            // 3. الإرسال عبر السحابة اللحظية لتأكيد وصول الخدمة
+            try {
+                await setDoc(doc(db, "tv_remote", currentCompanyId), payload);
+            } catch(e) {
+                console.error("فشل التحديث السحابي:", e);
+            }
+        }
+
+        window.sendChannel = function(channelName) {
+            dispatchRemotePayload({
                 action: 'change_channel',
-                channel: channelName,
-                updatedAt: Date.now()
+                channel: channelName
             });
         };
 
-        window.sendCommand = async function(actionName) {
-            await setDoc(doc(db, "tv_remote", currentCompanyId), {
-                action: actionName,
-                updatedAt: Date.now()
+        window.sendCommand = function(actionName) {
+            dispatchRemotePayload({
+                action: actionName
             });
+        };
+
+        window.sendTickerMessage = function() {
+            let inputEl = document.getElementById('tickerTextInput');
+            let text = inputEl.value.trim();
+            if(!text) return;
+
+            dispatchRemotePayload({
+                action: 'broadcast_ticker',
+                message: text
+            });
+            inputEl.value = '';
+            alert("✓ تم بث الخبر العاجل عبر الواي فاي والسحابة لشاشة TV بنجاح!");
         };
     </script>
 </body>

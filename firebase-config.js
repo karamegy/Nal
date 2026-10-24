@@ -1,3 +1,12 @@
+/**
+ * =================================================================
+ * EIDCO Business OS - Firebase Central Configuration (firebase-config.js)
+ * إعدادات الاتصال الموحدة بقاعدة بيانات سحابة فايربيس (Firestore & Auth)
+ * مدعوم بـ Offline Persistence & Persistent Multiple Tab Management
+ * الإصدار: 3.2.1 Native & Web Core
+ * =================================================================
+ */
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     initializeFirestore, 
@@ -20,10 +29,10 @@ const firebaseConfig = {
   appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
 };
 
-// 1. تهيئة تطبيق Firebase
+// 1. تهيئة تطبيق Firebase المركزي
 export const app = initializeApp(firebaseConfig);
 
-// 2. تهيئة قواعد البيانات Firestore مع دعم التخزين المحلي والمزامنة متعددة التبويبات أوفلاين
+// 2. تهيئة قواعد البيانات Firestore مع دعم التخزين المحلي والمزامنة أوفلاين
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()

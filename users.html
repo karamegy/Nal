@@ -16,6 +16,10 @@
     <script src="./eidco-core.js"></script>
 
     <script>
+        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
+        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
+        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
+
         // التحقق الأمني الذكي للمدير المؤسس ومعرف الشركة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
@@ -152,9 +156,14 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
+
         function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
             }
@@ -162,8 +171,9 @@
 
         function triggerHaptic(duration = 35) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
             }
         }
 

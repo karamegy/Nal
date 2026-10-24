@@ -16,10 +16,6 @@
     <script src="./eidco-core.js"></script>
 
     <script>
-        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
-        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
-        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
-
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -127,14 +123,9 @@
     </style>
 
     <script>
-        function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
-        }
-
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
-                bridge.showToast(message);
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
             } else {
                 console.log("Toast:", message);
             }
@@ -142,9 +133,8 @@
 
         function triggerHaptic(duration = 35) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
             }
         }
 
@@ -305,13 +295,11 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية وتمرير معرف الشركة بشكل موحد -->
+    <!-- دوال القائمة الجانبية وتمرير معرف الشركة -->
     <script>
-        const DEFAULT_COMPANY_ID = 'company_founder_karm';
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -345,8 +333,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        const DEFAULT_COMPANY_ID = 'company_founder_karm';
-
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -364,7 +350,7 @@
         enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let state = {
@@ -438,15 +424,10 @@
             }
         }
 
-        function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
-        }
-
         window.triggerAvatarUpload = function() {
             triggerHaptic(20);
-            const bridge = getActiveBridge();
-            if (typeof bridge.openImagePicker === 'function') {
-                bridge.openImagePicker();
+            if (window.AndroidBridge && typeof window.AndroidBridge.openImagePicker === 'function') {
+                window.AndroidBridge.openImagePicker();
             } else {
                 document.getElementById('imageUploadInput').click();
             }
@@ -585,9 +566,8 @@
             let txt = document.getElementById('feedTextContent').value;
             if(!txt) return alert('الرجاء توليد أو كتابة الموجز أولاً');
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(txt);
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(txt);
             } else if (navigator.share) {
                 try {
                     await navigator.share({
@@ -611,7 +591,7 @@
 
     <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

@@ -371,6 +371,7 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential, 
+            signInWithPopup,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -426,7 +427,7 @@
             initGoogleIdentity();
         });
 
-        // دالة زر تسجيل الدخول بواسطة Google
+        // دالة زر تسجيل الدخول بواسطة Google المحدثة
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
@@ -436,13 +437,26 @@
                 return;
             }
 
-            // 2. إذا كان التطبيق PWA / TWA على الموبايل (إظهار نافذة One Tap المدمجة)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        alert("يرجى التأكد من سماح الجهاز بإظهار نافذة Google One Tap");
-                    }
-                });
+            // 2. المحاولة المباشرة بالـ Popup لـ PWA / Web
+            try {
+                showNativeToast("جاري فتح حسابات Google...");
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                console.error("Google Popup Auth Error:", error);
+
+                // 3. محاولة احتياطية بإظهار نافذة GSI One Tap في حال فشل النافذة المنبثقة
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    google.accounts.id.prompt((notification) => {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                            alert("تعذر فتح نافذة تسجيل Google. يرجى التأكد من سماح المتصفح بالنوافذ المنبثقة.");
+                        }
+                    });
+                } else if (error.code !== 'auth/popup-closed-by-user') {
+                    alert('خطأ أثناء تسجيل الدخول بـ Google: ' + error.message);
+                }
             }
         };
 

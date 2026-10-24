@@ -46,19 +46,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع لكي تستقر إضافات كاباسيتور وملفاتها
+          # 1. تجهيز مجلد الويب www ونسخ كافة ملفات المشروع
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
 
           # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة وتجهيز مجلد الـ assets مسبقاً لتجنب خطأ capacitor.plugins.json
+          # 3. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
-          mkdir -p android/app/src/main/assets
 
-          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي مع توجيه الـ webDir إلى www
+          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي (مع مطابقة webDir إلى www)
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -92,7 +91,11 @@ jobs:
           }
           EOF
 
-          # 5. توليد أحجام الأيقونات لأندرويد
+          # 5. إنشاء مجلد الأصول وملف capacitor.plugins.json مسبقاً لمنع خطأ ENOENT تماماً
+          mkdir -p android/app/src/main/assets
+          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
+
+          # 6. توليد أحجام الأيقونات لأندرويد
           if [ -f "icon-new-512.png" ]; then
             cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
@@ -103,12 +106,12 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 6. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
+          # 7. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
 
-          # 7. تجهيز مسارات موفر الملفات والـ AndroidManifest
+          # 8. تجهيز مسارات موفر الملفات والـ AndroidManifest
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -192,7 +195,7 @@ jobs:
           </manifest>
           EOF
 
-          # 8. حقن ملف strings.xml
+          # 9. حقن ملف strings.xml
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -205,12 +208,12 @@ jobs:
           </resources>
           EOF
 
-          # 9. نسخ ملف التوقيع
+          # 10. نسخ ملف التوقيع
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
 
-          # 10. إعداد Gradle للتوقيع وضبط الإصدارات (minSdk 24 لمنع التعارض)
+          # 11. إعداد Gradle للتوقيع وضبط الإصدارات
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -242,11 +245,10 @@ jobs:
           }
           EOF
 
-          # 11. تنظيف مخلفات الكاش التالفة لـ Gradle
+          # 12. تنظيف مخلفات الكاش وتحديث كاباسيتور والبناء بنجاح تام
           rm -rf ~/.gradle/caches/jars-9/ || true
           rm -rf ~/.gradle/caches/transforms/ || true
 
-          # 12. المزامنة والبناء المباشر (توليد ملفات الإضافات بنجاح)
           npx cap sync android
           cd android
           chmod +x gradlew

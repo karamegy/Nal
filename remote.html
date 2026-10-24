@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // جهاز التحكم عن بُعد والواي فاي (Wi-Fi Remote OS)</title>
     
     <link rel="manifest" href="manifest.json">
@@ -13,14 +13,39 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
 
+    <script src="./eidco-core.js"></script>
+
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root { --primary: #4f46e5; }
-        * { -webkit-tap-highlight-color: transparent; select: none; user-select: none; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background-color: #020617; color: #f8fafc; min-height: 100vh; overscroll-behavior-y: contain; }
+        
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            box-sizing: border-box; 
+        }
+
+        html, body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #020617 !important; 
+            color: #f8fafc; 
+            min-height: 100dvh; 
+            margin: 0;
+            padding-bottom: env(safe-area-inset-bottom, 1.5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            overscroll-behavior-y: contain; 
+            -webkit-font-smoothing: antialiased;
+        }
+
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         
         .remote-btn {
@@ -30,6 +55,7 @@
             transform: scale(0.92);
             filter: brightness(1.2);
         }
+        
         .dpad-btn {
             background: #1e293b;
             border: 1px solid #334155;
@@ -39,6 +65,7 @@
             background: #4f46e5;
             border-color: #6366f1;
         }
+
         .custom-modal {
             display: none;
             position: fixed;
@@ -51,11 +78,35 @@
             padding: 1rem;
         }
         .custom-modal.active { display: flex !important; }
+
+        input, textarea {
+            scroll-margin-bottom: 120px;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+    </script>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-5">
 
-    <div class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-[32px] p-5 shadow-2xl space-y-4 backdrop-blur-xl relative overflow-hidden">
+    <div class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-[32px] p-5 shadow-2xl space-y-4 backdrop-blur-xl relative overflow-hidden my-auto">
         
         <!-- الهيدر والمعلومات والاتصال بالواي فاي -->
         <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
@@ -154,8 +205,8 @@
         <div class="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-2">
             <label class="block text-[10px] text-amber-400 font-bold"><i class="fa-solid fa-bullhorn ml-1"></i> إرسال خبر عاجل للشاشة المجاورة:</label>
             <div class="flex gap-2">
-                <input type="text" id="tickerTextInput" placeholder="اكتب رسالة لتظهر على الشاشة..." class="bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs w-full focus:outline-none focus:border-indigo-500">
-                <button onclick="sendTickerMessage()" class="remote-btn bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer">
+                <input type="text" id="tickerTextInput" placeholder="اكتب رسالة لتظهر على الشاشة..." class="bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-1.5 text-xs w-full focus:outline-none focus:border-indigo-500 font-bold">
+                <button onclick="sendTickerMessage()" class="remote-btn bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer shadow">
                     إرسال
                 </button>
             </div>
@@ -180,7 +231,7 @@
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button onclick="saveWifiIpSetting()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex-1 py-2 rounded-xl text-xs cursor-pointer">
+                <button onclick="saveWifiIpSetting()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex-1 py-2 rounded-xl text-xs cursor-pointer shadow">
                     حفظ واختبار الربط
                 </button>
                 <button onclick="clearWifiIpSetting()" class="bg-slate-800 text-slate-400 hover:bg-slate-700 py-2 px-3 rounded-xl text-xs font-bold cursor-pointer">
@@ -213,45 +264,48 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
-        document.getElementById('remoteCompanyId').innerText = `الشركة: ${currentCompanyId}`;
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
+
+        const companyIdEl = document.getElementById('remoteCompanyId');
+        if(companyIdEl) {
+            companyIdEl.innerText = `الشركة: ${currentCompanyId}`;
+        }
 
         // إعداد BroadcastChannel للتواصل الفوري في الشبكة/الجهاز
         const localTvChannel = new BroadcastChannel('eidco_tv_channel_' + currentCompanyId);
-
-        // الاستجابة اللمسية بالاهتزاز
-        function triggerHapticFeedback() {
-            if ("vibrate" in navigator) navigator.vibrate(35);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(35);
-            }
-        }
 
         // تحديث واجهة حالة الواي فاي
         function updateWifiBadge() {
             let savedIp = localStorage.getItem('eidco_tv_wifi_ip');
             let badgeText = document.getElementById('connStatusText');
-            if (savedIp) {
-                badgeText.innerText = "واي فاي ⚡";
-            } else {
-                badgeText.innerText = "سحابي ☁️";
+            if (badgeText) {
+                if (savedIp) {
+                    badgeText.innerText = "واي فاي ⚡";
+                } else {
+                    badgeText.innerText = "سحابي ☁️";
+                }
             }
         }
         updateWifiBadge();
 
         window.openWifiModal = function() {
+            triggerHaptic(20);
             let savedIp = localStorage.getItem('eidco_tv_wifi_ip') || '';
             document.getElementById('tvWifiIpInput').value = savedIp;
             document.getElementById('wifiModal').classList.add('active');
         };
 
         window.closeWifiModal = function() {
+            triggerHaptic(15);
             document.getElementById('wifiModal').classList.remove('active');
         };
 
         window.saveWifiIpSetting = function() {
+            triggerHaptic(25);
             let ipVal = document.getElementById('tvWifiIpInput').value.trim();
             if(ipVal) {
                 localStorage.setItem('eidco_tv_wifi_ip', ipVal);
+                showNativeToast("✓ تم حفظ عنوان IP للربط المباشر عبر الواي فاي");
                 alert("✓ تم حفظ عنوان IP الشاشة للربط المباشر عبر الواي فاي!");
             } else {
                 localStorage.removeItem('eidco_tv_wifi_ip');
@@ -261,6 +315,7 @@
         };
 
         window.clearWifiIpSetting = function() {
+            triggerHaptic(15);
             localStorage.removeItem('eidco_tv_wifi_ip');
             document.getElementById('tvWifiIpInput').value = '';
             updateWifiBadge();
@@ -269,7 +324,7 @@
 
         // دالة الإرسال المزدوج المباشر (Wi-Fi Direct LAN + Broadcast + Firebase)
         async function dispatchRemotePayload(payload) {
-            triggerHapticFeedback();
+            triggerHaptic(30);
             payload.companyId = currentCompanyId;
             payload.updatedAt = Date.now();
 
@@ -292,6 +347,9 @@
 
             // 3. الإرسال عبر السحابة اللحظية لتأكيد وصول الخدمة
             try {
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) {}
+                }
                 await setDoc(doc(db, "tv_remote", currentCompanyId), payload);
             } catch(e) {
                 console.error("فشل التحديث السحابي:", e);
@@ -303,6 +361,7 @@
                 action: 'change_channel',
                 channel: channelName
             });
+            showNativeToast(`📺 تم التبديل إلى القناة: ${channelName}`);
         };
 
         window.sendCommand = function(actionName) {
@@ -314,13 +373,14 @@
         window.sendTickerMessage = function() {
             let inputEl = document.getElementById('tickerTextInput');
             let text = inputEl.value.trim();
-            if(!text) return;
+            if(!text) return alert("يرجى إدخال النص المطلوب أولاً");
 
             dispatchRemotePayload({
                 action: 'broadcast_ticker',
                 message: text
             });
             inputEl.value = '';
+            showNativeToast("📢 تم بث الخبر العاجل للشاشة بنجاح");
             alert("✓ تم بث الخبر العاجل عبر الواي فاي والسحابة لشاشة TV بنجاح!");
         };
     </script>

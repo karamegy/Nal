@@ -56,15 +56,15 @@ jobs:
           # 2. تثبيت أدوات الكاباسيتور والمكتبات المطلوبة
           npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة وتجهيز المجلدات والملفات المخصصة
+          # 3. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
 
-          # 🛑 3.1 تأمين مجلد assets وملف capacitor.plugins.json لمنع خطأ ENOENT
+          # 3.1 تجهيز مجلد assets وملف capacitor.plugins.json لمنع خطأ ENOENT
           mkdir -p android/app/src/main/assets
           echo "{}" > android/app/src/main/assets/capacitor.plugins.json
 
-          # 🛑 3.2 حقن ملف MainActivity.java المخصص بالمسار المطابق للـ Package
+          # 3.2 حقن ملف MainActivity.java المخصص بالمسار المطابق للـ Package تماماً
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -255,7 +255,7 @@ jobs:
           }
           EOF
 
-          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
+          # 4. ضبط ملف capacitor.config.json المباشر لنطاق Nal
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -305,7 +305,7 @@ jobs:
             cp google-services.json android/app/
           fi
 
-          # 7. تجهيز مسارات موفر الملفات والـ AndroidManifest
+          # 7. تجهيز مسارات موفر الملفات والـ AndroidManifest بنطاق Nal وحزمة io.github.karamegy.twa
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -414,7 +414,7 @@ jobs:
           npx cap update android
           npx cap copy android
 
-          # 11. تعديل build.gradle برمجيًا بدقة لمنع خطأ الكتل المتكررة
+          # 11. تعديل build.gradle برمجيًا بدقة
           node -e "
           const fs = require('fs');
           let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');

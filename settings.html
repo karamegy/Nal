@@ -13,20 +13,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
-        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
-        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
-        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
-
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
         }
     </script>
 
@@ -54,10 +46,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh; 
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain; 
             -webkit-font-smoothing: antialiased; 
         }
@@ -70,7 +64,7 @@
             scroll-margin-bottom: 120px;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         
         .corporate-card { 
             background: var(--card-bg); 
@@ -136,7 +130,7 @@
 
     <script>
         function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
@@ -156,6 +150,16 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
@@ -163,7 +167,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
@@ -178,8 +182,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -217,7 +221,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -228,8 +232,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-600"></i> شجرة الحسابات</a>
-                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -400,7 +404,7 @@
         ];
 
         function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showStatus(text, isError = false) {
@@ -418,8 +422,12 @@
                 const snap = await getDocs(settingsQuery);
                 if (!snap.empty) {
                     let settingsData = snap.docs[0].data();
-                    if(settingsData.etaClientId) document.getElementById('etaClientIdInput').value = settingsData.etaClientId;
-                    if(settingsData.etaClientSecret) document.getElementById('etaClientSecretInput').value = settingsData.etaClientSecret;
+                    if(settingsData.etaClientId && document.getElementById('etaClientIdInput')) {
+                        document.getElementById('etaClientIdInput').value = settingsData.etaClientId;
+                    }
+                    if(settingsData.etaClientSecret && document.getElementById('etaClientSecretInput')) {
+                        document.getElementById('etaClientSecretInput').value = settingsData.etaClientSecret;
+                    }
                 }
             } catch (e) {
                 console.error("خطأ في جلب إعدادات الضرائب سحابياً:", e);
@@ -554,7 +562,7 @@
                 const bridge = getActiveBridge();
 
                 if (typeof bridge.shareText === 'function') {
-                    bridge.shareText(summaryText);
+                    bridge.shareText(summaryText, `EIDCO Backup - ${currentCompanyId}`);
                 } else if (navigator.share) {
                     try {
                         await navigator.share({

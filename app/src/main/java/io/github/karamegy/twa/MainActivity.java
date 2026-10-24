@@ -1,6 +1,7 @@
 package io.github.karamegy.twa;
 
 import android.Manifest;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,6 +11,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
@@ -33,6 +36,9 @@ import com.google.android.gms.tasks.Task;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BridgeActivity {
 
@@ -48,16 +54,15 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // تهيئة إعدادات Google Sign In النايتف
+        // تهيئة إعدادات Google Sign In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(GOOGLE_WEB_CLIENT_ID)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // ربط الإعدادات بـ WebView الخاص بـ Capacitor
+        // تهيئة إعدادات WebView
         WebView webView = this.bridge.getWebView();
-
         if (webView != null) {
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
@@ -68,10 +73,8 @@ public class MainActivity extends BridgeActivity {
             settings.setGeolocationEnabled(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
 
-            // تفعيل جسر الأندرويد لصفحات الـ HTML
             webView.addJavascriptInterface(new WebAppInterface(this), "AndroidBridge");
 
-            // تخصيص WebChromeClient لمعالجة اختيار الملفات والموقع الجغرافي
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
@@ -98,31 +101,34 @@ public class MainActivity extends BridgeActivity {
             });
         }
 
-        // طلب أذونات النظام عند بدء التشغيل
         requestAppPermissions();
     }
 
     private void requestAppPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            String[] permissions = {
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.VIBRATE,
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    Manifest.permission.CAMERA
-            };
+            List<String> permissions = new ArrayList<>();
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+            permissions.add(Manifest.permission.VIBRATE);
+            permissions.add(Manifest.permission.CAMERA);
 
-            boolean needRequest = false;
-            for (String perm : permissions) {
-                if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-                    needRequest = true;
-                    break;
+            // أذونات التخزين المتوافقة مع الإصدارات المختلفة
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
                 }
             }
 
-            if (needRequest) {
-                ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+            List<String> listPermissionsNeeded = new ArrayList<>();
+            for (String perm : permissions) {
+                if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                    listPermissionsNeeded.add(perm);
+                }
+            }
+
+            if (!listPermissionsNeeded.isEmpty()) {
+                ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
             }
         }
     }
@@ -131,21 +137,29 @@ public class MainActivity extends BridgeActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // معالجة اختيار الملفات
+        // معالجة اختيار الملفات (ملف واحد أو عدة ملفات)
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
             Uri[] results = null;
+
             if (resultCode == RESULT_OK && data != null) {
                 String dataString = data.getDataString();
                 if (dataString != null) {
                     results = new Uri[]{Uri.parse(dataString)};
+                } else if (data.getClipData() != null) {
+                    int count = data.getClipData().getItemCount();
+                    results = new Uri[count];
+                    for (int i = 0; i < count; i++) {
+                        results[i] = data.getClipData().getItemAt(i).getUri();
+                    }
                 }
             }
+
             filePathCallback.onReceiveValue(results);
             filePathCallback = null;
         }
 
-        // معالجة نتيجة تسجيل الدخول بـ Google النايتف
+        // معالجة تسجيل الدخول بـ Google
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -160,7 +174,7 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             } catch (ApiException e) {
-                Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل النايتف: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -225,13 +239,37 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void downloadFile(String filename, String base64Data) {
             try {
-                byte[] pdfAsBytes = android.util.Base64.decode(base64Data.replaceFirst("^data:image/[^;]+;base64,", ""), android.util.Base64.DEFAULT);
-                File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                File file = new File(path, filename);
-                FileOutputStream os = new FileOutputStream(file, false);
-                os.write(pdfAsBytes);
-                os.flush();
-                os.close();
+                // إزالة بادئة Data URI بشكل آمن لجميع أنواع الملفات (PDF, Images, Zip, etc.)
+                String cleanBase64 = base64Data;
+                if (cleanBase64.contains(",")) {
+                    cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
+                }
+                byte[] pdfAsBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+
+                // حفظ الملف بالتوافق مع Scoped Storage في Android 10+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+                    Uri uri = mContext.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (OutputStream os = mContext.getContentResolver().openOutputStream(uri)) {
+                            if (os != null) {
+                                os.write(pdfAsBytes);
+                                os.flush();
+                            }
+                        }
+                    }
+                } else {
+                    File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    File file = new File(path, filename);
+                    try (FileOutputStream os = new FileOutputStream(file, false)) {
+                        os.write(pdfAsBytes);
+                        os.flush();
+                    }
+                }
+
                 Toast.makeText(mContext, "تم حفظ الملف بنجاح في التنزيلات: " + filename, Toast.LENGTH_LONG).show();
             } catch (Exception e) {
                 Toast.makeText(mContext, "خطأ أثناء حفظ الملف: " + e.getMessage(), Toast.LENGTH_SHORT).show();

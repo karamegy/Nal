@@ -117,7 +117,7 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(2, 6, 23, 0.9); 
+            background: rgba(2, 6, 23, 0.85); 
             backdrop-filter: blur(8px);
             z-index: 1000; 
             align-items: center; 
@@ -332,6 +332,7 @@
             signInWithCredential, 
             signInWithPopup,
             signInWithRedirect,
+            getRedirectResult,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -354,6 +355,18 @@
         const messagesRef = collection(db, "messages");
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+
+        // ============================================
+        //  معالجة نتيجة إعادة التوجيه (Redirect Handler)
+        // ============================================
+        getRedirectResult(auth).then(async (result) => {
+            if (result && result.user) {
+                showNativeToast("جاري إكمال تسجيل الدخول بواسطة Google...");
+                await processGoogleAccountData(result.user);
+            }
+        }).catch((error) => {
+            console.error("خطأ في استقبال Redirect Result:", error);
+        });
 
         // تهيئة Google Identity Services
         function initGoogleIdentity() {
@@ -407,6 +420,50 @@
         }).catch(err => {
             console.error("خطأ في المصادقة الأولية:", err);
         });
+
+        // ==========================================
+        //  دالة تسجيل الدخول بـ Google الرسمية
+        // ==========================================
+        window.signInWithGoogle = async function() {
+            triggerHaptic(25);
+
+            // 1. إذا وجد Bridge للأندرويد Native
+            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+                window.AndroidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 2. محاولة إظهار نافذة اختيار الحساب الأصيلة من Google (One Tap / Account Picker)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // إذا تم حجب Prompt، يتم استخدام Popup أو Redirect المباشر
+                        triggerFirebaseGoogleAuth();
+                    }
+                });
+            } else {
+                triggerFirebaseGoogleAuth();
+            }
+        };
+
+        async function triggerFirebaseGoogleAuth() {
+            const provider = new GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: 'select_account' });
+
+            try {
+                // تجربة النافذة المنبثقة أولاً
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                console.warn("Popup blocked or failed, switching to redirect:", error);
+                // إذا تم حظر Popup أو تعطل بالهاتف، يتم التحويل المباشر لصفحة جوجل
+                try {
+                    await signInWithRedirect(auth, provider);
+                } catch(redirectError) {
+                    alert("تعذر فتح تسجيل الدخول: " + redirectError.message);
+                }
+            }
+        }
 
         // دوال الشكاوى
         window.openComplaintsModal = function() {
@@ -512,7 +569,7 @@
             } else {
                 finalUserName = userDisplayName;
                 let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
+                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
 
                 if (userEmail === 'haretg@gmail.com') {
                     assignedCompanyId = 'company_founder_karm';
@@ -549,44 +606,6 @@
             showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
-
-        // زر تسجيل الدخول المباشر بواسطة Google لفتح شاشة اختيار الحسابات
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-            
-            // 1. إذا وجد Bridge للأندرويد
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
-                window.AndroidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 2. فتح نافذة اختيار الحسابات المباشرة (Google OAuth Popup / Sheet)
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({
-                    prompt: 'select_account' // إجبار عرض قائمة اختيار الحسابات
-                });
-
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                console.error("خطأ أثناء تسجيل الدخول بـ Google:", error);
-
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-                    try {
-                        const provider = new GoogleAuthProvider();
-                        provider.setCustomParameters({ prompt: 'select_account' });
-                        await signInWithRedirect(auth, provider);
-                    } catch (redirectErr) {
-                        alert("يرجى السماح بالنوافذ المنبثقة (Popups) في المتصفح لإكمال تسجيل الدخول.");
-                    }
-                } else if (window.google && window.google.accounts && window.google.accounts.id) {
-                    google.accounts.id.prompt();
-                } else {
-                    alert("تعذر فتح نافذة تسجيل الدخول: " + (error.message || "يرجى التحقق من اتصال الإنترنت"));
-                }
-            }
-        };
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);

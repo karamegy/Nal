@@ -175,7 +175,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -231,7 +232,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                        <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
@@ -321,8 +323,8 @@
                     <!-- رفع الملف المرفق -->
                     <div class="grid grid-cols-1 md:grid-cols-1 gap-4 text-xs">
                         <div>
-                            <label class="block mb-1 text-slate-700 font-bold">رفـع المستند أو إيصال الدفع (صورة أو ملف PDF سحابي)</label>
-                            <input type="file" id="docFileInput" class="corporate-input text-slate-500 py-2 bg-slate-50 cursor-pointer">
+                            <label class="block mb-1 text-slate-700 font-bold">رفـع المستند أو إيصال الدفع (صورة أو ملف PDF سحابي - أقصى حد 700KB)</label>
+                            <input type="file" id="docFileInput" accept="image/*,application/pdf" class="corporate-input text-slate-500 py-2 bg-slate-50 cursor-pointer">
                         </div>
                     </div>
 
@@ -415,6 +417,16 @@
             if (drawer) drawer.classList.toggle('hidden');
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         window.togglePaymentFields = function(category) {
             const extraFields = document.getElementById('paymentExtraFields');
             if (category === 'المدفوعات والتحويلات البنكية') {
@@ -500,7 +512,7 @@
                     let optionsHtml = `<option value="">-- عام (بدون عميل محدد) --</option>`;
                     clientsList.forEach(c => {
                         let cName = c.name || c.clientName || c.companyName || 'عميل بدون اسم';
-                        optionsHtml += `<option value="${c.clientId}" data-name="${cName}">${cName} ${c.phone ? '(' + c.phone + ')' : ''}</option>`;
+                        optionsHtml += `<option value="${c.clientId}" data-name="${escapeHTML(cName)}">${escapeHTML(cName)} ${c.phone ? '(' + escapeHTML(c.phone) + ')' : ''}</option>`;
                     });
                     clientSelect.innerHTML = optionsHtml;
                 }
@@ -519,12 +531,12 @@
                 documentsList = snapshot.docs
                     .map(d => ({ docId: d.id, ...d.data() }))
                     .filter(d => d.category !== 'المدفوعات والتحويلات البنكية');
-                renderTree();
+                window.renderTree();
             });
 
             onSnapshot(clientPaymentsRef, (snapshot) => {
                 clientPaymentsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTree();
+                window.renderTree();
             });
         }).catch(err => {
             console.error("خطأ المصادقة السحابية في Firebase:", err);
@@ -575,6 +587,7 @@
                         await addDoc(collection(db, "client_payments"), {
                             companyId: currentCompanyId,
                             id: payId,
+                            clientId: selectedClientId,
                             clientName: selectedClientName,
                             amount: numAmount,
                             method: paymentMethod,
@@ -585,6 +598,7 @@
 
                         await addDoc(collection(db, "transactions"), {
                             companyId: currentCompanyId,
+                            paymentId: payId,
                             type: 'إيراد',
                             amount: numAmount,
                             desc: `تحصيل دفعة (${paymentMethod}) من العميل ${selectedClientName}`,
@@ -629,6 +643,9 @@
 
             if (fileInput.files && fileInput.files[0]) {
                 let file = fileInput.files[0];
+                if (file.size > 800 * 1024) {
+                    return alert('⚠️ حجم الملف المرفق كبير جداً! الحد الأقصى المسموح به هو 700 كيلوبايت لضمان الحفظ السريع بسحابة Firebase.');
+                }
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     processFileAndSave(e.target.result);
@@ -688,21 +705,21 @@
             let isPaymentCat = (i.category === 'المدفوعات والتحويلات البنكية');
 
             let metaHtml = `
-                <div><span class="text-slate-500 block font-bold">القسم الشجري:</span> <span class="text-indigo-900 font-bold">${i.category}</span></div>
-                <div><span class="text-slate-500 block font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">${i.clientName || 'عام (بدون عميل)'}</span></div>
-                <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font" dir="ltr">${i.date || '---'}</span></div>
-                <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${i.tag || 'عادي'}</span></div>
+                <div><span class="text-slate-500 block font-bold">القسم الشجري:</span> <span class="text-indigo-900 font-bold">${escapeHTML(i.category)}</span></div>
+                <div><span class="text-slate-500 block font-bold">العميل المرتبط:</span> <span class="text-indigo-700 font-bold">${escapeHTML(i.clientName) || 'عام (بدون عميل)'}</span></div>
+                <div><span class="text-slate-500 block font-bold">تاريخ الإضافة:</span> <span class="mono-font" dir="ltr">${escapeHTML(i.date || '---')}</span></div>
+                <div><span class="text-slate-500 block font-bold">درجة الأهمية:</span> <span class="font-bold">${escapeHTML(i.tag || 'عادي')}</span></div>
             `;
 
             if (isPaymentCat) {
                 metaHtml += `
                     <div><span class="text-slate-500 block font-bold">المبلغ المدفوع:</span> <span class="mono-font text-emerald-600 font-black" dir="ltr">${Number(i.amount || 0).toLocaleString()} ج.م</span></div>
-                    <div><span class="text-slate-500 block font-bold">طريقة التحويل:</span> <span class="font-bold text-indigo-700">${i.paymentMethod || i.method || 'كاش'}</span></div>
-                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font" dir="ltr">${i.paymentRef || i.ref || '---'}</span></div>
+                    <div><span class="text-slate-500 block font-bold">طريقة التحويل:</span> <span class="font-bold text-indigo-700">${escapeHTML(i.paymentMethod || i.method || 'كاش')}</span></div>
+                    <div><span class="text-slate-500 block font-bold">رقم المرجع / IPN:</span> <span class="mono-font" dir="ltr">${escapeHTML(i.paymentRef || i.ref || '---')}</span></div>
                 `;
             } else {
                 metaHtml += `
-                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800" dir="ltr">${i.expiryDate || '---'}</span></div>
+                    <div><span class="text-slate-500 block font-bold">تاريخ الاستحقاق:</span> <span class="mono-font font-bold text-slate-800" dir="ltr">${escapeHTML(i.expiryDate || '---')}</span></div>
                 `;
             }
             metaContainer.innerHTML = metaHtml;
@@ -718,7 +735,7 @@
                 body.innerHTML = `<a href="${i.fileData}" target="_blank" class="btn-primary inline-block py-2.5 px-6 text-xs text-center">فتح أو تحميل الملف المرفق السحابي</a>`;
             }
 
-            document.getElementById('previewAdminInfo').innerText = `المسؤول المسجل: ${i.admin || 'مسؤول الحساب'}`;
+            document.getElementById('previewAdminInfo').innerText = `المسؤول المسجل: ${escapeHTML(i.admin || 'مسؤول الحساب')}`;
             document.getElementById('previewModal').classList.add('active');
         };
 
@@ -783,7 +800,8 @@
 
         window.renderTree = function() {
             let container = document.getElementById('documentTreeContainer');
-            let search = document.getElementById('searchDocsInput').value.toLowerCase().trim();
+            let searchInput = document.getElementById('searchDocsInput');
+            let search = searchInput ? searchInput.value.toLowerCase().trim() : '';
             let categories = [
                 "المستندات الإدارية",
                 "العقود والاتفاقيات",
@@ -795,8 +813,8 @@
             let paymentsAsTreeItems = clientPaymentsList.map(pay => ({
                 docId: pay.docId,
                 category: 'المدفوعات والتحويلات البنكية',
-                title: `دفعة سداد: ${pay.clientName}`,
-                clientName: pay.clientName,
+                title: `دفعة سداد: ${pay.clientName || 'عميل'}`,
+                clientName: pay.clientName || '',
                 amount: pay.amount,
                 paymentMethod: pay.method || 'تحويل مباشر / كاش',
                 paymentRef: pay.id || pay.ref || '---',
@@ -854,14 +872,14 @@
                                                 </div>
                                                 <div class="truncate">
                                                     <span class="font-bold text-slate-900 block truncate">
-                                                        ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''}
+                                                        ${escapeHTML(i.title)}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + escapeHTML(i.clientName) + ')</span>' : ''}
                                                     </span>
                                                     <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                                        <span>التاريخ: ${i.date || '---'}</span>
+                                                        <span>التاريخ: ${escapeHTML(i.date || '---')}</span>
                                                         <span>•</span>
-                                                        <span class="text-indigo-700 font-bold">الطريقة: ${i.paymentMethod}</span>
+                                                        <span class="text-indigo-700 font-bold">الطريقة: ${escapeHTML(i.paymentMethod)}</span>
                                                         <span>•</span>
-                                                        <span>المرجع: ${i.paymentRef}</span>
+                                                        <span>المرجع: ${escapeHTML(i.paymentRef)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -887,19 +905,19 @@
                                                 </div>
                                                 <div class="truncate">
                                                     <span class="font-bold text-slate-900 block truncate">
-                                                        ${i.title}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + i.clientName + ')</span>' : ''}
+                                                        ${escapeHTML(i.title)}${i.clientName ? '<span class="text-indigo-600 font-semibold text-[11px]">(' + escapeHTML(i.clientName) + ')</span>' : ''}
                                                     </span>
                                                     <div class="flex items-center gap-2.5 text-[11px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                                        <span>الإضافة: ${i.date || '---'}</span>
+                                                        <span>الإضافة: ${escapeHTML(i.date || '---')}</span>
                                                         <span>•</span>
                                                         <span class="${isExpired ? 'text-rose-600 font-bold' : 'text-slate-600'}">
-                                                            الانتهاء: ${i.expiryDate}${isExpired ? '(منتهي الصلاحية!)' : ''}
+                                                            الانتهاء: ${escapeHTML(i.expiryDate)}${isExpired ? '(منتهي الصلاحية!)' : ''}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2.5 shrink-0">
-                                                <span class="text-[10px] px-2.5 py-1 rounded-md font-bold ${tagColor}">${i.tag}</span>
+                                                <span class="text-[10px] px-2.5 py-1 rounded-md font-bold ${tagColor}">${escapeHTML(i.tag)}</span>
                                                 <button onclick="window.previewDocument('${i.docId}', false)" class="bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">
                                                     <i class="fa-solid fa-eye ml-1"></i> التفاصيل
                                                 </button>
@@ -915,7 +933,7 @@
                     </div>
                 `;
             }).join('');
-        }
+        };
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->

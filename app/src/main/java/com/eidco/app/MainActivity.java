@@ -1,4 +1,4 @@
-package com.eidco.app;
+package io.github.karamegy.twa;
 
 import android.Manifest;
 import android.content.Context;
@@ -10,27 +10,25 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.provider.MediaStore;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.getcapacitor.BridgeActivity;
+
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BridgeActivity {
 
-    private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int PERMISSION_REQUEST_CODE = 2002;
@@ -39,65 +37,53 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        webView = new WebView(this);
-        setContentView(webView);
+        // ربط الإعدادات بـ WebView الخاص بـ Capacitor
+        WebView webView = this.bridge.getWebView();
 
-        // طلب كافة الأذونات المطلوبة للتطبيق عند التشغيل
+        if (webView != null) {
+            WebSettings settings = webView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setAllowFileAccess(true);
+            settings.setAllowContentAccess(true);
+            settings.setDatabaseEnabled(true);
+            settings.setGeolocationEnabled(true);
+            settings.setMediaPlaybackRequiresUserGesture(false);
+
+            // تفعيل جسر الأندرويد لصفحات الـ HTML
+            webView.addJavascriptInterface(new WebAppInterface(this), "AndroidBridge");
+
+            // تخصيص WebChromeClient لمعالجة اختيار الملفات والموقع الجغرافي
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                    callback.invoke(origin, true, false);
+                }
+
+                @Override
+                public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                    if (MainActivity.this.filePathCallback != null) {
+                        MainActivity.this.filePathCallback.onReceiveValue(null);
+                    }
+                    MainActivity.this.filePathCallback = filePathCallback;
+
+                    Intent intent = fileChooserParams.createIntent();
+                    try {
+                        startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                    } catch (Exception e) {
+                        MainActivity.this.filePathCallback = null;
+                        Toast.makeText(MainActivity.this, "تعذر فتح مستعرض الملفات", Toast.LENGTH_SHORT).show();
+                        return false;
+                    }
+                    return true;
+                }
+            });
+        }
+
+        // طلب أذونات النظام عند بدء التشغيل
         requestAppPermissions();
-
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setDatabaseEnabled(true);
-        settings.setGeolocationEnabled(true); // تفعيل الموقع الجغرافي لصفحة الخريطة map.html
-        settings.setMediaPlaybackRequiresUserGesture(false); // السماح بتشغيل الصوتيات والنطق في tv.html تلقائياً
-
-        // تفعيل جسر الأندرويد لجسر التواصل مع صفحات الـ HTML
-        webView.addJavascriptInterface(new WebAppInterface(this), "AndroidBridge");
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                view.loadUrl(url);
-                return true;
-            }
-        });
-
-        // إعداد WebChromeClient لمنح أذونات رفع الملفات، الكاميرا والموقع الجغرافي داخل صفحات WebView
-        webView.setWebChromeClient(new WebChromeClient() {
-            // منح إذن التتبع الجغرافي لخريطة الأسطول (map.html)
-            @Override
-            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
-            }
-
-            // معالجة اختيار ورفع الملفات والصور (documents.html, profile.html)
-            @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (MainActivity.this.filePathCallback != null) {
-                    MainActivity.this.filePathCallback.onReceiveValue(null);
-                }
-                MainActivity.this.filePathCallback = filePathCallback;
-
-                Intent intent = fileChooserParams.createIntent();
-                try {
-                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
-                } catch (Exception e) {
-                    MainActivity.this.filePathCallback = null;
-                    Toast.makeText(MainActivity.this, "تعذر فتح مستعرض الملفات", Toast.LENGTH_SHORT).show();
-                    return false;
-                }
-                return true;
-            }
-        });
-
-        // توجيه التطبيق عند الفتح إلى صفحة الدخول auth.html مباشرة
-        webView.loadUrl("https://karamegy.github.io/Nal/auth.html");
     }
 
-    // طلب أذونات النظام الحساسة (الموقع، التخزين، الاهتزاز والإشعارات)
     private void requestAppPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String[] permissions = {
@@ -140,16 +126,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    // الواجهة البرمجية (Bridge) المربوطة مع الـ JavaScript في جميع صفحات الـ HTML
     public class WebAppInterface {
         Context mContext;
 
@@ -195,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
             mContext.startActivity(shareIntent);
         }
 
-        // حفظ وتنزيل الصور والتقارير المطبوعة (vault.html, invoices.html)
         @JavascriptInterface
         public void downloadFile(String filename, String base64Data) {
             try {

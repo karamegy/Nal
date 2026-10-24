@@ -43,17 +43,18 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ ملفات المشروع
+          # 1. تجهيز مجلد الويب www ونسخ الملفات
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 1.1 إنشاء ملف assetlinks.json التلقائي للبصمة والنطاق
+          # 1.1 إنشاء ملف assetlinks.json للتأكيد الآلي للنطاق والبصمة
           mkdir -p www/.well-known
           cat << 'EOF' > www/.well-known/assetlinks.json
           [
@@ -69,7 +70,7 @@ jobs:
           ]
           EOF
 
-          # 2. ضبط ملف capacitor.config.json لنطاق Nal وحزمة io.github.karamegy.twa
+          # 2. إعداد ملف capacitor.config.json الخاص بمشروع EIDCO ونطاق Nal
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -103,8 +104,8 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت مكتبات الكاباسيتور
-          npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/assets --save-dev --legacy-peer-deps
+          # 3. تثبيت مكتبات الكاباسيتور بإنضباط لنسخ v6 المتوافقة مع JDK 17
+          npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets@6 --save-dev --legacy-peer-deps
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
@@ -301,23 +302,24 @@ jobs:
           }
           EOF
 
-          # 6. توليد الأيقونات
+          # 6. تجهيز الأيقونة
+          mkdir -p assets
           if [ -f "icon-new-512.png" ]; then
             cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
             cp logo.png assets/icon.png 2>/dev/null || true
           fi
-          
+
           if [ -f "assets/icon.png" ]; then
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. نسخ google-services.json إذا وُجد
+          # 7. نسخ google-services.json إلى مشروع الأندرويد إذا وجد
           if [ -f "google-services.json" ]; then
-            cp google-services.json android/app/
+            cp google-services.json android/app/ 2>/dev/null || true
           fi
 
-          # 8. إعداد AndroidManifest و file_paths و strings
+          # 8. تجهيز AndroidManifest و file_paths و strings
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -340,7 +342,6 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.USE_BIOMETRIC" />
               <uses-permission android:name="android.permission.USE_FINGERPRINT" />
-
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
@@ -363,7 +364,7 @@ jobs:
                   android:supportsRtl="true"
                   android:usesCleartextTraffic="true"
                   android:theme="@style/AppTheme"
-                  tools:overrideLibrary="com.getcapacitor.android, com.capacitorjs.plugins.filesystem, com.capacitorjs.plugins.share">
+                  tools:overrideLibrary="com.getcapacitor.android">
 
                   <activity
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -413,7 +414,7 @@ jobs:
           </resources>
           EOF
 
-          # 9. مفتاح التوقيع
+          # 9. نسخ ملف التوقيع
           HAS_KEYSTORE=false
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
@@ -421,52 +422,52 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. المزامنة والنسخ الآمن مع تأمين مجلد assets وملف capacitor.plugins.json
-          npx cap copy android
-          mkdir -p android/app/src/main/assets
-          touch android/app/src/main/assets/capacitor.plugins.json
-          npx cap update android || (mkdir -p android/app/src/main/assets && touch android/app/src/main/assets/capacitor.plugins.json && npx cap update android)
+          # 10. مزامنة Capacitor مع منصة أندرويد
+          npx cap sync android
 
-          # 11. تعديل build.gradle برمجياً
-          node -e "
-          const fs = require('fs');
-          let gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+          # 11. إضافة إعدادات التوقيع والإصدارات بنمط الإلحاق (>> ) للحفاظ على روابط كاباسيتور الأصلية
+          cat << EOF >> android/app/build.gradle
 
-          if (process.env.HAS_KEYSTORE === 'true') {
-            const signingBlock = \`
+          android {
+              defaultConfig {
+                  applicationId "io.github.karamegy.twa"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 24
+                  versionName "8.0.0.0"
+              }
               signingConfigs {
                   release {
-                      storeFile file('signing.keystore')
-                      storePassword '\${process.env.KEYSTORE_PASSWORD}'
-                      keyAlias '\${process.env.KEY_ALIAS}'
-                      keyPassword '\${process.env.KEY_PASSWORD}'
+                      if (file('signing.keystore').exists()) {
+                          storeFile file('signing.keystore')
+                          storePassword '$KEYSTORE_PASSWORD'
+                          keyAlias '$KEY_ALIAS'
+                          keyPassword '$KEY_PASSWORD'
+                      }
                   }
               }
-            \`;
-            gradle = gradle.replace(/android\s*\{/, 'android {' + signingBlock);
-            gradle = gradle.replace(/buildTypes\s*\{\s*release\s*\{/, 'buildTypes { release { signingConfig signingConfigs.release ');
+              buildTypes {
+                  release {
+                      if (file('signing.keystore').exists()) {
+                          signingConfig signingConfigs.release
+                      }
+                      minifyEnabled false
+                  }
+              }
           }
+          EOF
 
-          gradle = gradle.replace(/applicationId\s+=?\s*\"[^\"]+\"/, 'applicationId \"io.github.karamegy.twa\"');
-          gradle = gradle.replace(/versionCode\s+=?\s*\d+/, 'versionCode 24');
-          gradle = gradle.replace(/versionName\s+=?\s*\"[^\"]+\"/, 'versionName \"8.0.0.0\"');
-
-          fs.writeFileSync('android/app/build.gradle', gradle);
-          "
-
-          # 12. بناء التطبيق بـ Gradle
+          # 12. البناء بأمر موحد بدون Daemon وبدون Parallel لمنع قفل الملفات وحل خطأ JAR
           cd android
           chmod +x gradlew
-          ./gradlew clean --no-daemon
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
-            ./gradlew assembleRelease --no-daemon || ./gradlew assembleDebug --no-daemon
-            ./gradlew bundleRelease --no-daemon || true
+            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
-            ./gradlew assembleDebug --no-daemon
+            ./gradlew assembleDebug --no-daemon --no-parallel
           fi
 
-          # 13. تجميع المخرجات وتأمين الملفات
+          # 13. تجميع وتوفير المخرجات النهائية
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;

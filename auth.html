@@ -323,6 +323,7 @@
     </div>
 
     <script>
+        // إغلاق النوافذ عند الضغط خارج محتواها
         function closeModalOnOutsideClick(event, modalId) {
             if (event.target.id === modalId) {
                 triggerHaptic(15);
@@ -347,6 +348,7 @@
             });
         }
 
+        // تفعيل زر تثبيت الـ PWA تلقائياً
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -419,16 +421,17 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // Handle redirect result for native WebView fallback
+        // استماع تلقائي عند العودة من تحويل Google (Redirect)
         getRedirectResult(auth).then(async (result) => {
             if (result && result.user) {
                 showNativeToast("جاري استكمال تسجيل الدخول بـ Google...");
                 await processGoogleAccountData(result.user);
             }
         }).catch((error) => {
-            console.error("Redirect Auth Error:", error);
+            console.error("خطأ التوجيه:", error);
         });
 
+        // 1. تهيئة خيار Google One Tap و Native GoogleAuth
         function initGoogleAuthServices() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 google.accounts.id.initialize({
@@ -467,10 +470,11 @@
             }
         }
 
+        // 2. زر تسجيل الدخول الموحد بـ Google
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // 1. Native Capacitor Google Auth
+            // أ) إذا كان التطبيق يعتمد على Capacitor Native (موبايل)
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -480,30 +484,37 @@
                     await processGoogleAccountData(result.user);
                     return;
                 } catch (error) {
-                    console.error("Capacitor Google Sign-In Error:", error);
+                    console.error("Capacitor Native Google Sign-In Error:", error);
                 }
             }
 
-            // 2. Custom Android Bridge
+            // ب) إذا كان هناك جسر AndroidBridge مباشر
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 3. Native Android WebView Redirect Fallback
+            // جـ) الدخول عبر المتصفح مع Fallback تلقائي للتحويل في حال فشل النافذة المنبثقة
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
 
             try {
-                showNativeToast("جاري فتح تسجيل الدخول...");
-                // Direct redirect for WebViews to avoid popup blocked/network error
-                await signInWithRedirect(auth, provider);
+                showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
             } catch (err) {
-                console.error("Google Sign-In Error:", err);
-                alert("تعذر فتح تسجيل الدخول: " + err.message);
+                console.warn("Popup blocked or network failed, falling back to redirect...", err);
+                // في حال خطأ الشبكة أو حظر النافذة من متصفح الهواتف، يتم التحويل التلقائي
+                if (err.code === 'auth/network-request-failed' || err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+                    showNativeToast("جاري تحويلك إلى صفحة Google...");
+                    await signInWithRedirect(auth, provider);
+                } else {
+                    alert("تعذر فتح نافذة Google: " + err.message);
+                }
             }
         };
 
+        // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {
             onSnapshot(accountsRef, (snapshot) => {
                 let accountsData = snapshot.docs.map(docSnap => ({
@@ -526,6 +537,7 @@
             console.error("خطأ في المصادقة الأولية:", err);
         });
 
+        // دوال الشكاوى
         window.openComplaintsModal = function() {
             triggerHaptic(20);
             let currentInputName = document.getElementById('usernameInput').value.trim();
@@ -584,6 +596,7 @@
             }
         }
 
+        // 3. معالجة وتخزين بيانات حساب Google وإنشاء معرف الشركة (companyId)
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
@@ -621,7 +634,7 @@
                 let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
                 if (!pinCodeInput) pinCodeInput = "1234";
 
-                await setDoc(doc(doc(db, "accounts", assignedCompanyId)), {
+                await setDoc(doc(db, "accounts", assignedCompanyId), {
                     name: finalUserName,
                     pin: pinCodeInput,
                     role: userRole,

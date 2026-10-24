@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // شجرة المستندات والأرشيف المالي والمدفوعات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // شجرة المستندات والأرشيف المالي والمدفوعات Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -44,16 +44,26 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -94,6 +104,7 @@
             cursor: pointer; 
             transition: all 0.2s; 
             width: 100%; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -156,6 +167,29 @@
             .print-header { display: flex !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -198,7 +232,7 @@
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">
                                 شجرة المستندات وتحويلات العملاء 
-                                <span class="hidden sm:inline text-slate-500 font-normal">(حفظ صورة / PDF بمعيار A4 وإرسال واتساب)</span>
+                                <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span>
                             </h1>
                         </div>
                     </div>
@@ -258,7 +292,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">قسم المجلد / نوع الإدخال الشجري</label>
-                            <select id="docCategory" class="corporate-input" onchange="window.togglePaymentFields(this.value)">
+                            <select id="docCategory" class="corporate-input font-bold text-indigo-900" onchange="window.togglePaymentFields(this.value)">
                                 <option value="المستندات الإدارية">📁 المستندات الإدارية والتأسيسية</option>
                                 <option value="العقود والاتفاقيات">📁 العقود والاتفاقيات التجارية</option>
                                 <option value="المستندات المالية">📁 المستندات والحسابات المالية العامة</option>
@@ -302,11 +336,11 @@
                     <div id="paymentExtraFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 hidden">
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">قيمة المبلغ المدفوع (ج.م)</label>
-                            <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white" placeholder="0.00" dir="ltr">
+                            <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white font-bold text-indigo-700" placeholder="0.00" dir="ltr">
                         </div>
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">طريقة الدفع أو التحويل المالي</label>
-                            <select id="paymentMethod" class="corporate-input bg-white">
+                            <select id="paymentMethod" class="corporate-input bg-white font-bold text-slate-800">
                                 <option value="كاش">💵 دفع نقدي (كاش الخزنة)</option>
                                 <option value="تحويل بنكي">🏦 تحويل بنكي مباشر</option>
                                 <option value="انستا باي">⚡ تحويل إنستا باي (InstaPay)</option>
@@ -412,11 +446,6 @@
 
     <!-- دوال القائمة الجانبية وتجهيز الصفحة -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
-        }
-
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -428,6 +457,7 @@
         }
 
         window.togglePaymentFields = function(category) {
+            triggerHaptic(15);
             const extraFields = document.getElementById('paymentExtraFields');
             if (category === 'المدفوعات والتحويلات البنكية') {
                 extraFields.classList.remove('hidden');
@@ -543,6 +573,7 @@
         });
 
         window.saveDocument = async function() {
+            triggerHaptic(30);
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
             let clientSelect = document.getElementById('docClientSelect');
@@ -611,6 +642,8 @@
                         document.getElementById('paymentAmount').value = '';
                         document.getElementById('paymentRef').value = '';
                         fileInput.value = '';
+
+                        showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
                         alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وكشف الحساب بنجاح دون أي تكرار.');
                     } catch (err) {
                         alert('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
@@ -634,6 +667,8 @@
                         document.getElementById('docClientSelect').value = '';
                         document.getElementById('docExpiryDate').value = '';
                         fileInput.value = '';
+
+                        showNativeToast("✓ تم حفظ المستند بالأرشيف");
                         alert('✓ تم حفظ المستند في الأرشيف الشجري بنجاح.');
                     }).catch(err => {
                         alert('خطأ أثناء حفظ المستند بالسحابة: ' + err.message);
@@ -657,11 +692,13 @@
         };
 
         window.deleteDocument = async function(docId, isPayment, event) {
+            triggerHaptic(40);
             if (event) event.stopPropagation();
             if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً؟')) return;
             try {
                 let colName = isPayment ? "client_payments" : "documents_tree";
                 await deleteDoc(doc(db, colName, docId));
+                showNativeToast("✓ تم الحذف بنجاح");
                 alert('✓ تم الحذف بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء الحذف: ' + err.message);
@@ -669,6 +706,7 @@
         };
 
         window.previewDocument = function(docId, isPayment) {
+            triggerHaptic(20);
             let i = null;
             if (isPayment) {
                 let pay = clientPaymentsList.find(p => p.docId === docId);
@@ -740,10 +778,12 @@
         };
 
         window.closePreviewModal = function() {
+            triggerHaptic(15);
             document.getElementById('previewModal').classList.remove('active');
         };
 
         window.downloadDocAsImage = function() {
+            triggerHaptic(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
             
@@ -758,11 +798,13 @@
         };
 
         window.downloadDocAsPDF = function() {
+            triggerHaptic(20);
             window.print();
         };
 
         // مشاركة مباشرة عبر أندرويد وواتساب
         window.sendDocWhatsApp = async function() {
+            triggerHaptic(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let i = activePreviewItem;
             let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢\n\n` +
@@ -782,7 +824,9 @@
 
             msg += `\n_تم الإرسال عبر نظام EIDCO Business OS_`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(msg);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: i.title,

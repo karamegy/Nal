@@ -11,7 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
 
     <script>
       if ('serviceWorker' in navigator) {
@@ -21,6 +21,9 @@
       }
     </script>
 
+    <!-- Google Identity Services SDK لعرض نافذة اختيار الحساب المباشرة -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,22 +32,31 @@
         :root { 
             --primary: #4f46e5; 
             --primary-hover: #4338ca; 
-            --bg-main: #0f172a; 
-            --card-bg: #1e293b; 
-            --border-color: #334155; 
+            --bg-main: #020617; 
+            --card-bg: #0f172a; 
+            --border-color: #1e293b; 
             --text-main: #f8fafc; 
             --text-muted: #94a3b8; 
         }
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
         html, body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
             display: flex; 
@@ -54,11 +66,7 @@
             box-sizing: border-box; 
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
-        }
-
-        /* المحافظة على مسافة برؤية الحقول أثناء ظهور الكيبورد */
-        input, textarea, select {
-            scroll-margin-bottom: 120px;
+            overflow-x: hidden;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; }
@@ -67,20 +75,21 @@
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
             border-radius: 24px; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); 
             width: 100%; 
             box-sizing: border-box; 
         }
 
         .corporate-input { 
-            background: #0f172a; 
-            border: 1px solid var(--border-color); 
+            background: #020617; 
+            border: 1px solid #334155; 
             color: #fff; 
             border-radius: 12px; 
             padding: 12px 16px; 
             transition: all 0.2s; 
             box-sizing: border-box; 
             width: 100%; 
+            font-size: 14px;
         }
         .corporate-input:focus { 
             outline: none; 
@@ -100,17 +109,16 @@
             display: inline-flex; 
             align-items: center; 
             justify-content: center; 
-            user-select: none;
         }
-        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
         .custom-modal { 
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.85); 
-            backdrop-filter: blur(4px);
+            background: rgba(2, 6, 23, 0.9); 
+            backdrop-filter: blur(8px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
@@ -119,6 +127,14 @@
             overflow-y: auto;
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         @keyframes pulseRing {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
@@ -150,7 +166,7 @@
     <div class="corporate-card p-6 sm:p-8 max-w-lg w-full space-y-6 text-right relative overflow-hidden my-auto">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
-        <!-- زر التثبيت البرمجي الظاهر عند جهوزية المتصفح -->
+        <!-- زر التثبيت البرمجي -->
         <div id="installContainer" class="hidden text-center relative z-10">
             <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-5 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
                 <i class="fa-solid fa-download text-amber-300 text-sm"></i> تثبيت تطبيق EIDCO الرسمي على الهاتف
@@ -167,26 +183,27 @@
             </div>
         </div>
 
+        <!-- خيارات الدخول السريع بواسطة Google ورقم الهاتف -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-2">
-            <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
-                <i class="fa-brands fa-google text-rose-500 text-sm"></i> تسجيل بـ Google
+            <button onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
+                <i class="fa-brands fa-google text-rose-500 text-base"></i> تسجيل بـ Google
             </button>
-            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
-                <i class="fa-solid fa-phone text-emerald-400 text-sm"></i> تسجيل برقم الهاتف
+            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
+                <i class="fa-solid fa-phone text-emerald-400 text-base"></i> تسجيل برقم الهاتف
             </button>
         </div>
 
-        <!-- زر الشكاوي والدعم الفني -->
+        <!-- زر الشكاوى والدعم الفني -->
         <div class="relative z-10">
-            <button onclick="openComplaintsModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
+            <button onclick="openComplaintsModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> هل تواجه مشكلة؟ إرسال شكوى أو بلاغ للإدارة
             </button>
         </div>
 
         <div class="relative flex py-1 items-center z-10">
-            <div class="flex-grow border-t border-slate-700"></div>
+            <div class="flex-grow border-t border-slate-800"></div>
             <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والرقم السري والبصمة</span>
-            <div class="flex-grow border-t border-slate-700"></div>
+            <div class="flex-grow border-t border-slate-800"></div>
         </div>
 
         <div class="space-y-3 relative z-10">
@@ -200,7 +217,7 @@
             </div>
         </div>
 
-        <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
+        <div class="p-5 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
             <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
                 <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
             </div>
@@ -225,7 +242,7 @@
 
     <!-- نافذة إرسال شكوى جديدة -->
     <div id="complaintsModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-headset ml-2 text-amber-400"></i> نظام الشكاوى والدعم الفني</h3>
                 <button onclick="closeComplaintsModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
@@ -255,7 +272,7 @@
 
     <!-- نافذة تسجيل الهاتف -->
     <div id="phoneAuthModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700">
+        <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-phone ml-2 text-emerald-400"></i> تسجيل الدخول برقم الهاتف</h3>
                 <button onclick="closePhoneAuthModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
@@ -276,6 +293,27 @@
         </div>
     </div>
 
+    <!-- معالج محاذاة الكيبورد التلقائي -->
+    <script>
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const activeModal = document.querySelector('.custom-modal.active');
+                if (activeModal) {
+                    activeModal.style.height = `${window.visualViewport.height}px`;
+                }
+            });
+        }
+    </script>
+
+    <!-- Firebase SDK Modules وخدمات تسجيل الدخول -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -314,7 +352,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // المصادقة التلقائية أولاً لتلبية متطلبات قواعد الأمان (isAuthenticated)
+        // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {
             onSnapshot(accountsRef, (snapshot) => {
                 let accountsData = snapshot.docs.map(docSnap => ({
@@ -337,7 +375,7 @@
             console.error("خطأ في المصادقة الأولية:", err);
         });
 
-        // دوال نافذة الشكاوى
+        // دوال الشكاوى
         window.openComplaintsModal = function() {
             triggerHaptic(20);
             let currentInputName = document.getElementById('usernameInput').value.trim();
@@ -374,7 +412,7 @@
                 });
 
                 showNativeToast("✓ تم إرسال الشكوى للإدارة بنجاح");
-                alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية، سيتم مراجعتها واتخاذ اللازم.');
+                alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية.');
                 document.getElementById('complaintMessage').value = '';
                 window.closeComplaintsModal();
             } catch(err) {
@@ -415,107 +453,18 @@
             }
         }
 
-        // دالة معالجة تسجيل الدخول عبر Google (متوافقة تماماً مع Capacitor Bridge والويب)
+        // دالة معالجة دخول Google الموحدة
         window.handleNativeGoogleSignIn = async function(idToken) {
             try {
                 const credential = GoogleAuthProvider.credential(idToken);
                 const result = await signInWithCredential(auth, credential);
-                const user = result.user;
-
-                let userEmail = user.email || '';
-                let userDisplayName = user.displayName || userEmail.split('@')[0];
-                let userPhotoUrl = user.photoURL || '';
-
-                const querySnapshot = await getDocs(accountsRef);
-                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-
-                if (existingAccount && existingAccount.isBanned) {
-                    alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                    return;
-                }
-
-                let assignedCompanyId;
-                let finalUserName;
-                let userRole = 'محاسب أول';
-
-                if (existingAccount) {
-                    finalUserName = existingAccount.name;
-                    assignedCompanyId = existingAccount.companyId;
-                    userRole = existingAccount.role || 'محاسب أول';
-                } else {
-                    finalUserName = userDisplayName;
-                    let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                    assignedCompanyId = 'company_google_' + (cleanEmailKey || user.uid.substring(0, 8));
-
-                    if (userEmail === 'haretg@gmail.com') {
-                        assignedCompanyId = 'company_founder_karm';
-                        finalUserName = FOUNDER_NAME;
-                        userRole = 'مدير نظام رئيسي';
-                    }
-
-                    let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
-                    if (!pinCodeInput) pinCodeInput = "1234";
-
-                    await setDoc(doc(db, "accounts", assignedCompanyId), {
-                        name: finalUserName,
-                        pin: pinCodeInput,
-                        role: userRole,
-                        companyId: assignedCompanyId,
-                        email: userEmail,
-                        avatar: userPhotoUrl,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
-                }
-
-                let verified = await promptDeviceVerification(finalUserName);
-                if (!verified) return;
-
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                showNativeToast("✓ تم تسجيل الدخول بنجاح");
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-
+                await processGoogleAccountData(result.user);
             } catch (error) {
                 alert('خطأ أثناء إكمال المصادقة عبر Google: ' + error.message);
             }
         };
 
-        // دالة بدء تسجيل الدخول بـ Google
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
-                window.AndroidBridge.launchNativeGoogleSignIn();
-            } else {
-                try {
-                    const provider = new GoogleAuthProvider();
-                    provider.addScope('email');
-                    provider.addScope('profile');
-                    provider.setCustomParameters({ 'prompt': 'select_account' });
-
-                    const result = await signInWithPopup(auth, provider);
-                    const credential = GoogleAuthProvider.credentialFromResult(result);
-                    
-                    if (credential && credential.idToken) {
-                        await window.handleNativeGoogleSignIn(credential.idToken);
-                    } else {
-                        await processWebGoogleUser(result.user);
-                    }
-                } catch (error) {
-                    alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
-                }
-            }
-        };
-
-        async function processWebGoogleUser(user) {
+        async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
             let userPhotoUrl = user.photoURL || '';
@@ -577,6 +526,42 @@
 
             showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+        }
+
+        // بدء الدخول بـ Google
+        window.signInWithGoogle = async function() {
+            triggerHaptic(25);
+            
+            // 1. استخدام Native Bridge إذا كان معرّفاً بالأندرويد الأهلي
+            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+                window.AndroidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 2. استخدام Google One-Tap Popup من المكتبة فور توفرها
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        fallbackGooglePopup();
+                    }
+                });
+            } else {
+                fallbackGooglePopup();
+            }
+        };
+
+        async function fallbackGooglePopup() {
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.addScope('email');
+                provider.addScope('profile');
+                provider.setCustomParameters({ 'prompt': 'select_account' });
+
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                alert('فشل تسجيل الدخول بواسطة Google: ' + error.message);
+            }
         }
 
         window.openPhoneAuthModal = function() {

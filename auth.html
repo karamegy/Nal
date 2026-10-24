@@ -371,7 +371,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential, 
-            signInWithPopup,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -395,38 +394,57 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // تهيئة Google One Tap عند تحميل الصفحة تلقائياً
+        // دالة موحدة لاستقبال Token وتسجيل الدخول بـ Firebase مباشرة
+        window.handleGoogleIdToken = async function(idToken) {
+            try {
+                showNativeToast("جاري التحقق من حساب Google...");
+                const credential = GoogleAuthProvider.credential(idToken);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (error) {
+                alert('خطأ في مصادقة جوجل: ' + error.message);
+            }
+        };
+
+        // تهيئة Google Identity Services
         function initGoogleIdentity() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 try {
                     google.accounts.id.initialize({
                         client_id: GOOGLE_CLIENT_ID,
-                        callback: handleGoogleOneTapResponse,
+                        callback: (response) => window.handleGoogleIdToken(response.credential),
                         auto_select: false,
                         cancel_on_tap_outside: true
                     });
-                    // إظهار نافذة One Tap التلقائية
-                    google.accounts.id.prompt();
                 } catch(e) {
                     console.log("GSI init error:", e);
                 }
             }
         }
 
-        async function handleGoogleOneTapResponse(response) {
-            try {
-                showNativeToast("جاري الربط مع حساب Google...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                alert('خطأ أثناء إكمال الدخول: ' + error.message);
-            }
-        }
-
         window.addEventListener('load', () => {
             initGoogleIdentity();
         });
+
+        // دالة زر تسجيل الدخول بواسطة Google
+        window.signInWithGoogle = async function() {
+            triggerHaptic(25);
+
+            // 1. إذا كان التطبيق يعمل كـ Native Android داخل WebView
+            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+                window.AndroidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 2. إذا كان التطبيق PWA / TWA على الموبايل (إظهار نافذة One Tap المدمجة)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        alert("يرجى التأكد من سماح الجهاز بإظهار نافذة Google One Tap");
+                    }
+                });
+            }
+        };
 
         // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {
@@ -450,27 +468,6 @@
         }).catch(err => {
             console.error("خطأ في المصادقة الأولية:", err);
         });
-
-        // تسجيل الدخول بـ Google المباشر عند النقر على الزر
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
-                window.AndroidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                if (error.code !== 'auth/popup-closed-by-user') {
-                    alert(`فشل فتح نافذة تسجيل Google: ${error.message}`);
-                }
-            }
-        };
 
         // دوال الشكاوى
         window.openComplaintsModal = function() {

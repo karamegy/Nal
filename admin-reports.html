@@ -9,15 +9,64 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
     <script src="./eidco-core.js"></script>
 
     <script>
+        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي (Native Bridge Helper)
+        window.NativeBridge = {
+            vibrate: function(ms = 40) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                    window.AndroidBridge.vibrate(ms);
+                } else if (navigator.vibrate) {
+                    navigator.vibrate(ms);
+                }
+            },
+            showToast: function(msg) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                    window.AndroidBridge.showToast(msg);
+                } else {
+                    console.log("[Toast]: " + msg);
+                }
+            },
+            keepScreenOn: function(enable = true) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.keepScreenOn === 'function') {
+                    window.AndroidBridge.keepScreenOn(enable);
+                }
+            },
+            shareText: function(text) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                    window.AndroidBridge.shareText(text);
+                } else if (navigator.share) {
+                    navigator.share({ text: text }).catch(() => {});
+                } else {
+                    alert(text);
+                }
+            },
+            downloadFile: function(filename, base64Data) {
+                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                    window.AndroidBridge.downloadFile(filename, base64Data);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        };
+
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
+
+        // إبقاء الشاشة مضاءة أثناء مراقبة البلاغات
+        window.addEventListener('DOMContentLoaded', () => {
+            window.NativeBridge.keepScreenOn(true);
+        });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,25 +77,34 @@
         :root { 
             --primary: #4f46e5; 
             --primary-hover: #4338ca; 
-            --bg-main: #f8fafc; 
-            --card-bg: #ffffff; 
-            --border-color: #e2e8f0; 
-            --text-main: #0f172a; 
-            --text-muted: #64748b; 
+            --bg-main: #020617; 
+            --card-bg: #0f172a; 
+            --border-color: #1e293b; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8; 
         }
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
-        body { 
+        /* السماح بالتفاعل الكامل مع حقول الكتابة والمدخلات */
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        html, body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
             min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
@@ -59,9 +117,24 @@
             background: var(--card-bg); 
             border: 1px solid var(--border-color); 
             border-radius: 20px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); 
             width: 100%; 
             box-sizing: border-box; 
+        }
+
+        .corporate-input { 
+            background: #020617; 
+            border: 1px solid #334155; 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            transition: all 0.2s; 
+            font-size: 14px; /* يمنع التكبير التلقائي في الشاشات الذكية عند التركيز */
+        }
+        .corporate-input:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); 
         }
 
         .btn-primary { 
@@ -79,7 +152,7 @@
             text-decoration: none; 
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
         .nav-link { 
             display: flex; 
@@ -93,27 +166,29 @@
             transition: all 0.2s; 
             text-decoration: none; 
         }
-        .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
+        .nav-link:hover, .nav-link.active { background-color: #1e1b4b; color: #818cf8; }
         
         table th, table td { white-space: nowrap; }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        /* تنسيق القائمة الجانبية للجوال عند الفتح */
+        /* القائمة الجانبية للجوال */
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
             top: 0 !important;
             right: 0 !important;
             height: 100vh !important;
+            height: 100dvh !important;
             z-index: 100 !important;
-            box-shadow: -10px 0 25px rgba(0,0,0,0.3);
+            box-shadow: -10px 0 25px rgba(0,0,0,0.5);
         }
     </style>
 
     <script>
         function toggleMobileSidebar() {
+            window.NativeBridge.vibrate(20);
             const sidebar = document.getElementById('appSidebar');
             if (sidebar) {
                 sidebar.classList.toggle('mobile-open');
@@ -121,17 +196,22 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
 
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية -->
-        <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
+        <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-slate-900 border-l border-slate-800 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center justify-between mb-8 px-2">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                    <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-cube text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-white text-base">EIDCO // عيدكو</h2>
+                        <span class="text-[10px] text-indigo-400 font-mono font-bold">BUSINESS OS</span>
+                    </div>
                 </div>
-                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
+                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -145,6 +225,7 @@
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين</a>
+                <a href="admin-accounts.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i> إدارة الحسابات والشركات</a>
                 <a href="admin-reports.html" class="nav-link active"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -153,49 +234,59 @@
         </aside>
 
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+            <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex justify-between items-center gap-3">
                     <div class="flex items-center gap-3">
-                        <!-- زر القائمة للجوال -->
-                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 active:scale-95 shrink-0">
+                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-slate-800 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-slate-700 shadow-sm transition hover:bg-slate-700 active:scale-95 shrink-0">
                             <i class="fa-solid fa-bars text-lg"></i>
                         </button>
-                        <h1 class="font-black text-slate-900 text-xs sm:text-sm">إدارة الشكاوى والبلاغات وضبط الحسابات المخالفة</h1>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="font-black text-white text-xs sm:text-sm">إدارة الشكاوى والبلاغات وضبط الحسابات المخالفة</h1>
+                                <span id="nativeStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                    <i class="fa-solid fa-mobile-screen ml-1"></i> Native Active
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold truncate">معرف الشركة: جاري التحميل...</span>
+                    <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold truncate">معرف الشركة: جاري التحميل...</span>
                 </div>
             </header>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <div class="corporate-card p-5 space-y-3 bg-amber-50/60 border-amber-200">
+                <div class="corporate-card p-5 space-y-3 bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/30">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-shield-halved text-xl"></i>
+                        </div>
                         <div>
-                            <h3 class="font-black text-slate-900 text-sm">لوحة الإشراف الرقابي للمدير</h3>
-                            <p class="text-xs text-slate-600">يمكنك هنا مراجعة الشكاوى ومستندات الدعم الفني الواردة من المستخدمين، واتخاذ إجراء فوري بحظر الحساب المخالف أو إغلاق الشكوى.</p>
+                            <h3 class="font-black text-white text-sm">لوحة الإشراف الرقابي للمدير</h3>
+                            <p class="text-xs text-slate-400">مراجعة البلاغات والشكاوى الواردة من المستخدمين، مع إمكانية حظر الحسابات المخالفة فورياً أو معالجة البلاغ وإغلاقه.</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="corporate-card p-6 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-                        <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-list-check ml-2 text-indigo-600"></i> قائمة البلاغات والشكاوى المسجلة سحابياً (مجموعة messages)</h3>
-                        <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
+                <div class="corporate-card p-4 sm:p-6 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="font-black text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-indigo-400"></i> قائمة البلاغات والشكاوى (Firebase messages)
+                        </h3>
+                        <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
                     </div>
 
-                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
                         <table class="w-full text-right text-xs">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                    <th class="p-3 font-bold">اسم المُشتكي / الجهة</th>
-                                    <th class="p-3 font-bold">وسيلة التواصل</th>
-                                    <th class="p-3 font-bold">تفاصيل الشكوى أو المشكلة</th>
-                                    <th class="p-3 font-bold">التاريخ</th>
-                                    <th class="p-3 font-bold text-center">الإجراءات والسيطرة</th>
+                                <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
+                                    <th class="p-3.5 font-bold">اسم المُشتكي / الجهة</th>
+                                    <th class="p-3.5 font-bold">وسيلة التواصل</th>
+                                    <th class="p-3.5 font-bold">تفاصيل الشكوى أو المشكلة</th>
+                                    <th class="p-3.5 font-bold">التاريخ</th>
+                                    <th class="p-3.5 font-bold text-center">الإجراءات والسيطرة</th>
                                 </tr>
                             </thead>
-                            <tbody id="reportsTableBody" class="divide-y divide-slate-100">
+                            <tbody id="reportsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
                                 <tr>
                                     <td colspan="5" class="p-4 text-center text-slate-400">جاري قراءة سجل الشكاوى من سحابة Firebase...</td>
                                 </tr>
@@ -207,7 +298,27 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Modules مع دعم Offline Persistence -->
+    <!-- معالج محاذاة الكيبورد التلقائي (Keyboard Viewport Handler) -->
+    <script>
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const sidebar = document.getElementById('appSidebar');
+                if (sidebar && sidebar.classList.contains('mobile-open')) {
+                    sidebar.style.height = `${window.visualViewport.height}px`;
+                }
+            });
+        }
+    </script>
+
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والجسر الأهلي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -234,23 +345,25 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل التخزين المؤقت IndexedDB لدعم التحميل في تطبيقات Native WebView أوفلاين
+        // التحقق من وجود الجسر البرمجي للأندرويد
+        if (window.AndroidBridge) {
+            const badge = document.getElementById('nativeStatusBadge');
+            if (badge) badge.classList.remove('hidden');
+        }
+
+        // تفعيل التخزين المؤقت IndexedDB لدعم العمل أوفلاين
         enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
+            console.warn('Persistence check:', err.code);
         });
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
         if (badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
-        // تمرير معرف الشركة للروابط
+        // تمرير معرف الشركة لروابط الملاحة
         document.querySelectorAll('a[href]').forEach(link => {
             let href = link.getAttribute('href');
             if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
@@ -260,25 +373,35 @@
         });
 
         window.banReportedUser = async function(reportId, targetUsername) {
-            if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername}) نهائياً؟`)) return;
+            window.NativeBridge.vibrate(40);
+            if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername || 'المُشتكي'}) نهائياً؟`)) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
-                await updateDoc(doc(db, "accounts", targetUsername), { isBanned: true });
+                if (targetUsername) {
+                    let cleanKey = targetUsername.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                    let docId = currentCompanyId + "_" + cleanKey;
+                    await updateDoc(doc(db, "accounts", docId), { isBanned: true }).catch(async () => {
+                        await updateDoc(doc(db, "accounts", targetUsername), { isBanned: true });
+                    });
+                }
                 await deleteDoc(doc(db, "messages", reportId));
-                alert(`✓ تم حظر الحساب (${targetUsername}) بنجاح وإغلاق البلاغ.`);
+                window.NativeBridge.vibrate(80);
+                window.NativeBridge.showToast(`تم حظر الحساب (${targetUsername || ''}) وإغلاق البلاغ`);
             } catch (e) {
-                alert("حدث خطأ أثناء تنفيذ الإجراء: " + e.message);
+                window.NativeBridge.showToast("خطأ أثناء التنفيذ: " + e.message);
             }
         };
 
         window.dismissReport = async function(reportId) {
+            window.NativeBridge.vibrate(30);
             if (!confirm("هل تريد إغلاق وحذف هذه الشكوى؟")) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
                 await deleteDoc(doc(db, "messages", reportId));
-                alert("✓ تم إغلاق الشكوى بنجاح.");
+                window.NativeBridge.vibrate(50);
+                window.NativeBridge.showToast("تم إغلاق البلاغ وحذفه بنجاح");
             } catch (e) {
-                alert("حدث خطأ أثناء حذف البلاغ: " + e.message);
+                window.NativeBridge.showToast("خطأ أثناء الحذف: " + e.message);
             }
         };
 
@@ -289,7 +412,7 @@
                 let tbody = document.getElementById('reportsTableBody');
                 let allDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                let complaintsList = allDocs.filter(m => m.type === 'شكوى نظام' || m.message);
+                let complaintsList = allDocs.filter(m => m.type === 'شكوى نظام' || m.message || m.reason);
 
                 document.getElementById('reportsCountBadge').innerText = complaintsList.length + ' بلاغ نشط';
 
@@ -300,18 +423,24 @@
 
                 let html = '';
                 complaintsList.forEach(r => {
+                    let sender = r.senderName || r.complainant || 'مستخدم';
                     html += `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 font-bold text-slate-900">${r.senderName || r.complainant || 'مستخدم'}</td>
-                            <td class="p-3 mono-font text-indigo-600 font-bold">${r.contactInfo || '---'}</td>
-                            <td class="p-3 text-slate-700 max-w-xs truncate" title="${r.message || r.reason || ''}">${r.message || r.reason || 'بدون تفاصيل'}</td>
-                            <td class="p-3 mono-font text-slate-500">${r.date || 'اليوم'}</td>
-                            <td class="p-3 text-center space-x-1 space-x-reverse">
-                                <button onclick="window.banReportedUser('${r.id}', '${r.senderName || ''}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 rounded-lg font-bold transition cursor-pointer">
+                        <tr class="hover:bg-slate-900/60 transition">
+                            <td class="p-3.5 font-bold text-white flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30 shrink-0">
+                                    ${sender.charAt(0)}
+                                </div>
+                                <span class="truncate max-w-[150px]">${sender}</span>
+                            </td>
+                            <td class="p-3.5 mono-font text-indigo-300 font-bold">${r.contactInfo || '---'}</td>
+                            <td class="p-3.5 text-slate-200 max-w-xs truncate" title="${r.message || r.reason || ''}">${r.message || r.reason || 'بدون تفاصيل'}</td>
+                            <td class="p-3.5 mono-font text-slate-500 text-[11px]">${r.date || 'اليوم'}</td>
+                            <td class="p-3.5 text-center space-x-1 space-x-reverse">
+                                <button onclick="window.banReportedUser('${r.id}', '${sender}')" class="px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 active:scale-95 text-rose-300 border border-rose-500/30 rounded-xl font-bold transition cursor-pointer text-xs">
                                     <i class="fa-solid fa-ban ml-1"></i> حظر المُشتكي
                                 </button>
-                                <button onclick="window.dismissReport('${r.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg font-bold transition cursor-pointer">
-                                    إغلاق / حذف
+                                <button onclick="window.dismissReport('${r.id}')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 rounded-xl font-bold transition cursor-pointer text-xs">
+                                    <i class="fa-solid fa-xmark ml-1"></i> إغلاق الشكوى
                                 </button>
                             </td>
                         </tr>
@@ -322,13 +451,13 @@
                 console.error("خطأ المزامنة اللحظية:", err);
             });
         }).catch(err => {
-            console.error("خطأ بالمصادقة في صفحة الشكاوى:", err);
+            console.error("خطأ المصادقة:", err);
         });
     </script>
     
-    <!-- الزر العائم المتحرك لبث EIDCO TV -->
+    <!-- الزر العائم لبث EIDCO TV 4K -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

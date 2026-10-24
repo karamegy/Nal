@@ -2,30 +2,20 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // الشات العام والاتصالات المعزولة Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
-
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -44,7 +34,15 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
         body { 
@@ -52,9 +50,11 @@
             background-color: var(--bg-main); 
             color: var(--text-main); 
             min-height: 100vh; 
+            min-height: 100dvh;
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -116,8 +116,8 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.75); 
-            backdrop-filter: blur(6px); 
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(8px); 
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
@@ -125,6 +125,14 @@
             box-sizing: border-box; 
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         .story-bubble { transition: all 0.2s ease; cursor: pointer; flex-shrink: 0; }
         .story-bubble:hover { transform: scale(1.05); }
@@ -161,30 +169,13 @@
 
     <script>
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
-
-        // توست نيتف للتطبيق الأهلي
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Native Toast:", message);
-            }
-        }
-
-        // اهتزاز لمسي نيتف
-        function triggerHaptic(duration = 30) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
@@ -237,7 +228,7 @@
                             <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
                             <div><h2 class="font-black text-slate-900 text-sm">EIDCO // عيدكو</h2><span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -290,7 +281,7 @@
                 </div>
 
                 <!-- صندوق الشات المصغر والمنسق -->
-                <div class="corporate-card flex flex-col h-[620px] overflow-hidden bg-white shadow-lg mx-auto w-full max-w-4xl relative">
+                <div class="corporate-card flex flex-col h-[580px] max-h-[70dvh] overflow-hidden bg-white shadow-lg mx-auto w-full max-w-4xl relative">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md overflow-hidden" id="activeChatAvatarBox">
@@ -304,7 +295,7 @@
                                 </span>
                             </div>
                         </div>
-                        <button onclick="shareActiveChatNative()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95" title="مشاركة المحادثة أندرويد">
+                        <button onclick="shareActiveChatNative()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer" title="مشاركة المحادثة أندرويد">
                             <i class="fa-solid fa-share-nodes"></i>
                         </button>
                     </div>
@@ -352,7 +343,7 @@
 
     <!-- نافذة عرض الستوري -->
     <div id="storyViewerModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-slate-900 text-white shadow-2xl relative text-center">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-slate-900 text-white shadow-2xl relative text-center custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span id="storyAuthorTitle" class="font-bold text-xs text-amber-400">صاحب الستوري</span>
                 <button onclick="closeStoryViewer()" class="text-slate-400 hover:text-white font-bold cursor-pointer"><i class="fa-solid fa-xmark text-sm"></i></button>
@@ -369,7 +360,7 @@
 
     <!-- نافذة إضافة ستوري جديد مع الضغط التلقائي للصور والفيديوهات -->
     <div id="addStoryModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 bg-white shadow-2xl relative text-right custom-modal-content">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-black text-sm text-indigo-600"><i class="fa-solid fa-plus-circle ml-1"></i> نشر ستوري جديد (بضغط ذكي لحماية القراءات)</h3>
                 <button onclick="closeAddStoryModal()" class="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
@@ -393,13 +384,13 @@
 
     <script>
         function toggleEmojiPicker() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             const picker = document.getElementById('emojiPickerPopup');
             picker.classList.toggle('active');
         }
 
         function insertEmoji(emoji) {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             const input = document.getElementById('chatMessageInput');
             input.value += emoji;
             input.focus();
@@ -414,7 +405,7 @@
 
         let storyTimer = null;
         function openStoryViewer(author, storyData) {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             document.getElementById('storyAuthorTitle').innerText = author;
             let mediaContainer = document.getElementById('storyMediaContainer');
             
@@ -444,17 +435,17 @@
         }
 
         function closeStoryViewer() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             if (storyTimer) clearTimeout(storyTimer);
             document.getElementById('storyViewerModal').classList.remove('active');
         }
 
         function openAddStoryModal() { 
-            triggerHaptic(25);
+            window.NativeBridge.vibrate(25);
             document.getElementById('addStoryModal').classList.add('active'); 
         }
         function closeAddStoryModal() { 
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             document.getElementById('addStoryModal').classList.remove('active'); 
         }
 
@@ -470,7 +461,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -511,17 +502,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل IndexedDB للعمل السريع والتخزين أوفلاين في التطبيق الأهلي Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -644,7 +628,7 @@
         }
 
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
-            triggerHaptic(25);
+            window.NativeBridge.vibrate(25);
             window.selectChatMode(clientId, `فواتير العميل: ${clientName}`, clientName.charAt(0));
 
             try {
@@ -699,18 +683,17 @@
         }
 
         window.checkAndOpenLatestStory = function(authorName) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let storyData = activeStoriesMap[authorName];
             if (storyData) {
                 openStoryViewer(authorName, storyData);
             } else {
-                showNativeToast(`لا توجد حالات نشطة لـ (${authorName})`);
-                alert(`لا توجد حالات نشطة خلال الـ 24 ساعة الأخيرة لـ (${authorName}).`);
+                window.NativeBridge.showToast(`لا توجد حالات نشطة لـ (${authorName})`);
             }
         };
 
         window.selectChatMode = function(mode, name, initial) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             currentChatMode = mode;
             pendingClientReport = null;
             document.getElementById('activeChatName').innerText = name;
@@ -782,7 +765,7 @@
         }
 
         window.sendChatMessage = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let inputEl = document.getElementById('chatMessageInput');
             let txt = inputEl.value.trim();
             if (!txt) return;
@@ -801,14 +784,14 @@
                     createdAt: Date.now()
                 });
                 inputEl.value = '';
-                showNativeToast("✓ تم إرسال الرسالة");
+                window.NativeBridge.showToast("✓ تم إرسال الرسالة");
             } catch (err) {
-                alert('خطأ أثناء إرسال الرسالة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء إرسال الرسالة: ' + err.message);
             }
         };
 
         window.shareActiveChatNative = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let activeName = document.getElementById('activeChatName').innerText;
             let exportText = `💬 *EIDCO // سِجل المحادثة: ${activeName}*\n\n`;
 
@@ -821,20 +804,7 @@
                 exportText += `${idx+1}. [${senderTag} - ${m.time || ''}]: ${m.text}\n`;
             });
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(exportText);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: `محادثة EIDCO - ${activeName}`,
-                        text: exportText
-                    });
-                } catch (err) {
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
-                }
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(exportText)}`, '_blank');
-            }
+            window.NativeBridge.shareText(exportText, `محادثة EIDCO - ${activeName}`);
         };
 
         function compressMediaFile(file) {
@@ -874,7 +844,7 @@
                     reader.readAsDataURL(file);
                 } else {
                     if (file.size > 900 * 1024) {
-                        alert('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة. يرجى اختيار فيديو بحجم أقل من 900KB.');
+                        window.NativeBridge.showToast('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة');
                         return reject(new Error('File size exceeds Firestore limit'));
                     }
                     let reader = new FileReader();
@@ -887,7 +857,7 @@
         }
 
         window.submitNewStory = async function() {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             let txt = document.getElementById('newStoryTextInput').value.trim();
             let fileInput = document.getElementById('storyMediaInput');
             let adminName = adminAccountData.name || localStorage.getItem('eidco_v14_admin') || 'مسؤول الشركة';
@@ -897,7 +867,7 @@
                 let mediaPayload = txt;
 
                 if (fileInput.files && fileInput.files[0]) {
-                    showNativeToast("⏳ جاري ضغط الملف المرفق...");
+                    window.NativeBridge.showToast("⏳ جاري ضغط الملف المرفق...");
                     let compressed = await compressMediaFile(fileInput.files[0]);
                     mediaPayload = compressed;
                 }
@@ -912,11 +882,10 @@
                 document.getElementById('newStoryTextInput').value = '';
                 document.getElementById('storyMediaInput').value = '';
                 closeAddStoryModal();
-                showNativeToast("✓ تم نشر الستوري بنجاح");
-                alert('✓ تم ضغط ونشر الستوري بنجاح.');
+                window.NativeBridge.showToast("✓ تم ضغط ونشر الستوري بنجاح");
             } catch (e) {
                 if (e.message !== 'File size exceeds Firestore limit') {
-                    alert('خطأ أثناء النشر: ' + e.message);
+                    window.NativeBridge.showToast('خطأ أثناء النشر: ' + e.message);
                 }
             }
         };
@@ -924,7 +893,7 @@
 
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

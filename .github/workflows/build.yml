@@ -57,7 +57,11 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي (مع مطابقة webDir إلى www)
+          # 4. إنشاء مجلد الأصول وملف capacitor.plugins.json فوراً لمنع خطأ ENOENT عند أي تحديث تالي
+          mkdir -p android/app/src/main/assets
+          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
+
+          # 5. ضبط ملف capacitor.config.json المباشر للرابط الخارجي (مع مطابقة webDir إلى www)
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -90,10 +94,6 @@ jobs:
             }
           }
           EOF
-
-          # 5. إنشاء مجلد الأصول وملف capacitor.plugins.json مسبقاً لمنع خطأ ENOENT تماماً
-          mkdir -p android/app/src/main/assets
-          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
 
           # 6. توليد أحجام الأيقونات لأندرويد
           if [ -f "icon-new-512.png" ]; then

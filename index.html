@@ -788,24 +788,25 @@
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", companyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", companyId));
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", companyId));
-            const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", companyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", companyId));
 
             try {
-                const [accountsSnap, clientsSnap, productsSnap, invoicesSnap, batchInvoicesSnap, transactionsSnap] = await Promise.all([
+                const [accountsSnap, clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
                     getDocs(accountsRef),
                     getDocs(clientsRef),
                     getDocs(productsRef),
                     getDocs(invoicesRef),
-                    getDocs(batchInvoicesRef),
                     getDocs(transactionsRef)
                 ]);
 
                 state.accounts = accountsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
                 state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
                 state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.batchInvoices = batchInvoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                
+                let allInvs = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = allInvs.filter(i => !i.isBatch);
+                state.batchInvoices = allInvs.filter(i => i.isBatch);
+
                 state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
                 updateAdminHeader();
@@ -832,21 +833,14 @@
             }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
-                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                let allInvs = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                state.invoices = allInvs.filter(i => !i.isBatch);
+                state.batchInvoices = allInvs.filter(i => i.isBatch);
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
                 renderRssTicker();
             }, (err) => {
                 state.invoices = [];
-                updateStatsAndDashboard();
-            }));
-
-            unsubscribers.push(onSnapshot(batchInvoicesRef, (snapshot) => {
-                state.batchInvoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                updateStatsAndDashboard();
-                renderAnalyticsChart();
-                renderRssTicker();
-            }, (err) => {
                 state.batchInvoices = [];
                 updateStatsAndDashboard();
             }));
@@ -1083,9 +1077,12 @@
                     }
                 }
                 let targetDocId = docId || (inv ? inv.docId : null);
-                if(targetDocId) await deleteDoc(doc(db, "batch_invoices", targetDocId));
-                let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
-                if(tx && tx.docId) await deleteDoc(doc(db, "transactions", tx.docId));
+                if(targetDocId) await deleteDoc(doc(db, "invoices", targetDocId));
+                
+                let txSnap = await getDocs(query(collection(db, "transactions"), where("companyId", "==", currentCompanyId)));
+                let tx = txSnap.docs.find(t => t.data().desc && t.data().desc.includes(id));
+                if(tx) await deleteDoc(doc(db, "transactions", tx.id));
+
                 alert('✓ تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
             } catch (err) {
                 alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);

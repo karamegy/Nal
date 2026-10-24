@@ -353,9 +353,11 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // تهيئة Google Identity Services لاستدعاء نافذة الحسابات المنسدلة (Bottom Sheet)
+        let tokenClient = null;
+
+        // تهيئة Google Identity Services SDK لاستدعاء نافذة الحسابات المباشرة
         function initGoogleIdentity() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
+            if (window.google && window.google.accounts) {
                 try {
                     google.accounts.id.initialize({
                         client_id: GOOGLE_CLIENT_ID,
@@ -364,7 +366,29 @@
                         cancel_on_tap_outside: true
                     });
                 } catch(e) {
-                    console.log("GSI init error:", e);
+                    console.log("GSI ID init error:", e);
+                }
+
+                try {
+                    if (google.accounts.oauth2) {
+                        tokenClient = google.accounts.oauth2.initTokenClient({
+                            client_id: GOOGLE_CLIENT_ID,
+                            scope: 'email profile openid',
+                            callback: async (tokenResponse) => {
+                                if (tokenResponse && tokenResponse.access_token) {
+                                    try {
+                                        const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                                        const result = await signInWithCredential(auth, credential);
+                                        await processGoogleAccountData(result.user);
+                                    } catch (err) {
+                                        alert('خطأ في إكمال الدخول: ' + err.message);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch(e) {
+                    console.log("GSI OAuth2 init error:", e);
                 }
             }
         }
@@ -548,11 +572,16 @@
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 
-        // استدعاء نافذة "اختيار حساب" المنسدلة من أندرويد/جوجل مباشرة دون فتح متصفح خارجي
+        // فتح نافذة اختيار حساب جوجل المباشرة من داخل الصفحة بدون فتح المتصفح الخارجي
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             
-            // 1. إذا كان التطبيق يعتمد على بيئة أندرويد Capacitor Native
+            // 1. إذا كان يعمل داخل تطبيق أندرويد بحزمة Native / Bridge
+            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+                window.AndroidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
                 try {
                     const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -565,26 +594,39 @@
                 }
             }
 
-            // 2. إذا وجد Bridge مخصص لأندرويد
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
-                window.AndroidBridge.launchNativeGoogleSignIn();
-                return;
+            // 2. إظهار نافذة اختيار حساب جوجل المباشرة من المكتبة الرسمية داخل التطبيق
+            if (window.google && window.google.accounts) {
+                if (!tokenClient && window.google.accounts.oauth2) {
+                    tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: GOOGLE_CLIENT_ID,
+                        scope: 'email profile openid',
+                        callback: async (tokenResponse) => {
+                            if (tokenResponse && tokenResponse.access_token) {
+                                try {
+                                    const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                                    const result = await signInWithCredential(auth, credential);
+                                    await processGoogleAccountData(result.user);
+                                } catch (err) {
+                                    alert('خطأ في إكمال الدخول: ' + err.message);
+                                }
+                            }
+                        }
+                    });
+                }
+
+                if (tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: 'select_account' });
+                    return;
+                }
+
+                if (window.google.accounts.id) {
+                    document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                    google.accounts.id.prompt();
+                    return;
+                }
             }
 
-            // 3. فتح نافذة اختيار الحسابات المنسدلة (Google Bottom Sheet / One-Tap) المعزولة داخل التطبيق
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                // مسح كوكيز التوقف المؤقت لجوجل لإجبار إظهار نافذة الحسابات المنسدلة عند كل كليك
-                document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-                
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        document.cookie = "g_state=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-                        google.accounts.id.prompt();
-                    }
-                });
-            } else {
-                alert("جاري تحميل خدمات جوجل... يرجى الانتظار لحظات ثم إعادة المحاولة.");
-            }
+            alert("جاري تحميل خدمات جوجل... يرجى إعادة المحاولة خلال ثوانٍ.");
         };
 
         window.openPhoneAuthModal = function() {

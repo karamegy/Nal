@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // لوحة التحكم الشاملة للمنصة السحابية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // لوحة التحكم الشاملة للمنصة السحابية Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -46,14 +46,24 @@
 
         html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem);
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
+        header {
+            flex-shrink: 0;
+        }
+
+        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -85,6 +95,7 @@
             display: inline-flex; 
             align-items: center; 
             justify-content: center; 
+            user-select: none;
         }
         .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
 
@@ -143,6 +154,31 @@
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; font-size: 11px !important; }
         }
     </style>
+
+    <script>
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileMenu() {
+            triggerHaptic(20);
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
@@ -180,7 +216,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز القيادة والتحكم الشامل للمنصة <span class="hidden sm:inline text-slate-500 font-normal">(معزول ومزامن سحابياً)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز القيادة والتحكم الشامل للمنصة <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -327,13 +363,6 @@
 
     <!-- دوال القائمة الجانبية وتزامن الرابط -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -601,6 +630,7 @@
         }
 
         window.fixCorruptedData = async function() {
+            triggerHaptic(30);
             if(!confirm('هل تريد إصلاح وتصحيح الأرقام المضخمة وإعادة ضبط الحسابات في سحابة Firebase المعزولة؟')) return;
 
             if (!auth.currentUser) {
@@ -619,6 +649,7 @@
                     }
                 }
 
+                showNativeToast("✓ تم إصلاح الأرقام وضبط الحسابات");
                 alert('✓ تم إصلاح جميع الأرقام الوهمية وضبط الحسابات السحابية بنجاح!');
             } catch (err) {
                 alert('حدث خطأ أثناء إصلاح البيانات بالسحابة: ' + err.message);
@@ -627,6 +658,7 @@
 
         // تصدير PDF بمعيار A4
         window.downloadDashboardPDF = function() {
+            triggerHaptic(20);
             document.getElementById('printDashCompanyTag').innerText = `معرف الشركة: ${currentCompanyId}`;
             document.getElementById('printDashCurrentDate').innerText = new Date().toISOString().split('T')[0];
             window.print();
@@ -634,6 +666,7 @@
 
         // تصدير التقرير كصورة عالي الدقة PNG
         window.downloadDashboardImage = function() {
+            triggerHaptic(30);
             let element = document.getElementById('dashboardPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let link = document.createElement('a');
@@ -645,6 +678,7 @@
 
         // مشاركة مباشرة عبر أندرويد وواتساب
         window.shareDashboardReport = async function() {
+            triggerHaptic(30);
             let vaultVal = document.getElementById('dashVault').innerText;
             let salesVal = document.getElementById('dashSales').innerText;
             let profitsVal = document.getElementById('dashProfits').innerText;
@@ -658,7 +692,9 @@
             text += `📦 الأصناف بالمخزن: *${productsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            if (navigator.share) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(text);
+            } else if (navigator.share) {
                 try {
                     await navigator.share({
                         title: 'EIDCO // ملخص لوحة التحكم',

@@ -164,6 +164,8 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والأرشيف</a>
                 <a href="chat.html" class="nav-link active"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -211,6 +213,8 @@
                         <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                        <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والأرشيف</a>
                         <a href="chat.html" class="nav-link active"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
@@ -379,10 +383,10 @@
             let mediaContainer = document.getElementById('storyMediaContainer');
             
             if (typeof storyData === 'string') {
-                mediaContainer.innerHTML = `<p class="text-sm font-bold text-slate-100 leading-relaxed px-2 whitespace-pre-line">${storyData}</p>`;
-            } else if (storyData.type === 'image') {
+                mediaContainer.innerHTML = `<p class="text-sm font-bold text-slate-100 leading-relaxed px-2 whitespace-pre-line">${escapeHTML(storyData)}</p>`;
+            } else if (storyData && storyData.type === 'image') {
                 mediaContainer.innerHTML = `<img src="${storyData.url}" class="max-h-[300px] rounded-xl object-contain shadow-lg" alt="Story Image">`;
-            } else if (storyData.type === 'video') {
+            } else if (storyData && storyData.type === 'video') {
                 mediaContainer.innerHTML = `<video src="${storyData.url}" controls autoplay class="max-h-[300px] rounded-xl shadow-lg w-full"></video>`;
             }
 
@@ -410,6 +414,16 @@
 
         function openAddStoryModal() { document.getElementById('addStoryModal').classList.add('active'); }
         function closeAddStoryModal() { document.getElementById('addStoryModal').classList.remove('active'); }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -475,6 +489,7 @@
         let clientsList = [];
         let adminAccountData = {};
         let unsubscribeMessages = null;
+        let pendingClientReport = null;
 
         signInAnonymously(auth).then(async () => {
             loadAdminAccount();
@@ -499,7 +514,7 @@
                 let totalProducts = productsSnap.size;
 
                 let summaryText = `📊 *ملخص العمليات والفواتير السحابية (EIDCO)* 🚀\n` +
-                                  `👤 المدير / المسؤول: ${localStorage.getItem('eidco_v14_admin') || 'كرم حمدي عبدالعظيم'}\n` +
+                                  `👤 المدير / المسؤول: ${localStorage.getItem('eidco_v14_admin') || 'إدارة النظام'}\n` +
                                   `📄 الفواتير الفردية: ${totalIndInvoices} فاتورة\n` +
                                   `📑 الفواتير المجمعة: ${totalBatchInvoices} فاتورة\n` +
                                   `🏢 إجمالي العملاء: ${totalClients} جهة\n` +
@@ -543,7 +558,7 @@
 
             container.innerHTML = `
                 <div onclick="window.selectChatMode('admin_${acc.companyId || 'profile'}', '${name}', '${name.charAt(0)}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
-                    <div class="relative" onclick="event.stopPropagation(); checkAndOpenLatestStory('${name}')">
+                    <div class="relative" onclick="event.stopPropagation(); window.checkAndOpenLatestStory('${name}')">
                         <div class="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-indigo-400 overflow-hidden">
                             ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
                         </div>
@@ -569,17 +584,20 @@
                 return;
             }
 
-            container.innerHTML = clientsList.map(c => `
-                <div onclick="window.selectClientAndShowInvoices('${c.id || c.docId}', '${c.name || c.clientName || 'عميل'}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
+            container.innerHTML = clientsList.map(c => {
+                let name = c.name || c.clientName || 'عميل';
+                return `
+                <div onclick="window.selectClientAndShowInvoices('${c.id || c.docId}', '${name}')" class="story-bubble flex flex-col items-center gap-1.5 shrink-0">
                     <div class="relative">
                         <div class="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-md ring-2 ring-slate-400">
-                            ${(c.name || c.clientName || 'ع').charAt(0)}
+                            ${name.charAt(0)}
                         </div>
                         <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                     </div>
-                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${c.name || c.clientName || 'عميل'}</span>
+                    <span class="text-[11px] font-bold text-slate-800 truncate max-w-[70px] text-center">${name}</span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         window.selectClientAndShowInvoices = async function(clientId, clientName) {
@@ -630,14 +648,8 @@
                     reportContent += `\n- لا توجد فواتير مجمعة مسجلة لهذا العميل.\n`;
                 }
 
-                let area = document.getElementById('chatMessagesArea');
-                area.innerHTML += `
-                    <div class="flex flex-col items-start my-2">
-                        <div class="max-w-[90%] px-4 py-3 rounded-2xl text-xs whitespace-pre-line leading-relaxed bg-white border border-indigo-200 shadow-sm text-slate-900">${reportContent}</div>
-                        <span class="text-[9px] text-slate-400 mt-0.5 mono-font">تقرير سحابي فوري</span>
-                    </div>
-                `;
-                area.scrollTop = area.scrollHeight;
+                pendingClientReport = reportContent;
+                renderMessages();
 
             } catch (err) {
                 console.error("خطأ في جلب فواتير العميل:", err);
@@ -669,6 +681,7 @@
 
         window.selectChatMode = function(mode, name, initial) {
             currentChatMode = mode;
+            pendingClientReport = null;
             document.getElementById('activeChatName').innerText = name;
             
             let textEl = document.getElementById('activeChatAvatarText');
@@ -684,7 +697,6 @@
                 textEl.innerText = initial;
             }
 
-            if (!mode.startsWith('admin_') && mode !== 'global') return;
             loadMessages(mode);
         };
 
@@ -704,12 +716,23 @@
 
         function renderMessages() {
             let area = document.getElementById('chatMessagesArea');
-            if (messagesList.length === 0) {
+            let html = '';
+
+            if (pendingClientReport) {
+                html += `
+                    <div class="flex flex-col items-start my-2">
+                        <div class="max-w-[90%] px-4 py-3 rounded-2xl text-xs whitespace-pre-line leading-relaxed bg-white border border-indigo-200 shadow-sm text-slate-900">${escapeHTML(pendingClientReport)}</div>
+                        <span class="text-[9px] text-slate-400 mt-0.5 mono-font">تقرير سحابي فوري</span>
+                    </div>
+                `;
+            }
+
+            if (messagesList.length === 0 && !pendingClientReport) {
                 area.innerHTML = `<div class="text-center text-slate-400 py-24">لا توجد رسائل في هذه المحادثة بعد. ابدأ المراسلة!</div>`;
                 return;
             }
 
-            area.innerHTML = messagesList.map(m => {
+            html += messagesList.map(m => {
                 let isSystem = m.sender === 'system';
                 let isMe = m.sender === 'me';
                 let alignment = isSystem ? 'items-center text-center' : (isMe ? 'items-end' : 'items-start');
@@ -717,11 +740,13 @@
                 
                 return `
                     <div class="flex flex-col ${alignment}">
-                        <div class="max-w-[85%] px-4 py-3 rounded-2xl text-xs whitespace-pre-line leading-relaxed ${bgStyle}">${m.text}</div>
+                        <div class="max-w-[85%] px-4 py-3 rounded-2xl text-xs whitespace-pre-line leading-relaxed ${bgStyle}">${escapeHTML(m.text)}</div>
                         <span class="text-[9px] text-slate-400 mt-0.5 mono-font">${m.time || ''}</span>
                     </div>
                 `;
             }).join('');
+
+            area.innerHTML = html;
             area.scrollTop = area.scrollHeight;
         }
 
@@ -750,7 +775,7 @@
         };
 
         function compressMediaFile(file) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 if (file.type.startsWith('image')) {
                     let reader = new FileReader();
                     reader.onload = function(e) {
@@ -785,6 +810,11 @@
                     };
                     reader.readAsDataURL(file);
                 } else {
+                    // فحص حجم الفيديو لتفادي تجاوز حد الـ 1MB في Firestore
+                    if (file.size > 900 * 1024) {
+                        alert('⚠️ حجم ملف الفيديو كبير جداً بالنسبة للسحابة. يرجى اختيار فيديو أقصر أو بحجم أقل من 900KB.');
+                        return reject(new Error('File size exceeds Firestore limit'));
+                    }
                     let reader = new FileReader();
                     reader.onload = function(e) {
                         resolve({ type: 'video', url: e.target.result });
@@ -820,7 +850,9 @@
                 closeAddStoryModal();
                 alert('✓ تم ضغط ونشر الستوري بنجاح.');
             } catch (e) {
-                alert('خطأ أثناء النشر: ' + e.message);
+                if (e.message !== 'File size exceeds Firestore limit') {
+                    alert('خطأ أثناء النشر: ' + e.message);
+                }
             }
         };
     </script>

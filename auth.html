@@ -389,59 +389,52 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // 1. تهيئة مكتبة جوجل فور فتح الصفحة لإعداد قائمة الحسابات العائمة
-        function initGoogleOneTap() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.initialize({
+        let tokenClient;
+
+        // 1. تهيئة Google Token Client المخصص للنقرات بدون أي Cooldown
+        function initGoogleAuthClient() {
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleIdToken,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
+                    scope: 'email profile openid',
+                    callback: async (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            console.error('Google Auth Error:', tokenResponse);
+                            return;
+                        }
+                        try {
+                            showNativeToast("جاري التحقق من حساب Google...");
+                            const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                            const result = await signInWithCredential(auth, credential);
+                            await processGoogleAccountData(result.user);
+                        } catch (error) {
+                            alert('خطأ في مصادقة جوجل: ' + error.message);
+                        }
+                    }
                 });
             }
         }
 
-        // تشغيل التهيئة فور استكمال تحميل الصفحة
         window.addEventListener('load', () => {
-            initGoogleOneTap();
+            initGoogleAuthClient();
         });
 
-        // 2. استقبال الحساب عند اختياره من القائمة العائمة
-        async function handleGoogleIdToken(response) {
-            try {
-                showNativeToast("جاري التحقق من حساب Google...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                alert('خطأ في مصادقة جوجل: ' + error.message);
-            }
-        }
-
-        // 3. عند الضغط على الزر: إظهار النافذة العائمة (اختيار حساب) فوراً فوق الصفحة
+        // 2. دالة النقر على الزر - تفتح نافذة الحسابات فوراً بدون مغادرة الصفحة
         window.signInWithGoogle = function() {
             triggerHaptic(25);
 
-            // لو التطبيق شغال داخل Native Android WebView
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // فتح قائمة الحسابات العائمة (One Tap Prompt) كما في الصورة
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-                        // إذا منع المتصفح الإظهار التلقائي، يعاد التظهير بشكل مباشر
-                        google.accounts.id.initialize({
-                            client_id: GOOGLE_CLIENT_ID,
-                            callback: handleGoogleIdToken
-                        });
-                        google.accounts.id.prompt();
-                    }
-                });
+            if (tokenClient) {
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
+            } else if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                initGoogleAuthClient();
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
             } else {
-                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد لحظات.");
+                alert("جاري تحميل خدمات Google، يرجى المحاولة بعد ثوانٍ قليلة.");
             }
         };
 

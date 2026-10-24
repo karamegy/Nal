@@ -2,23 +2,22 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EIDCO // الملف الشخصي السحابي المعزول</title>
     
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
-   <script src="./eidco-core.js"></script>
+
+    <script src="./eidco-core.js"></script>
 
     <script>
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
         }
     </script>
 
@@ -28,23 +27,46 @@
     
     <style>
         :root { --primary: #4f46e5; --primary-hover: #4338ca; --bg-main: #f8fafc; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; margin: 0; padding-bottom: 5rem; box-sizing: border-box; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
         .mono-font { font-family: 'JetBrains Mono', monospace; }
         .corporate-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; box-sizing: border-box; }
-        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+        .corporate-input { background: #f1f5f9; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; box-sizing: border-box; transition: all 0.2s; }
+        .corporate-input:focus { outline: none; border-color: var(--primary); background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .btn-primary { background-color: var(--primary); color: #fff; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.875rem; font-weight: 700; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
     </style>
+
+    <script>
+        // طلب كل أذونات الهاتف تلقائياً (الكاميرا والوسائط والإشعارات)
+        async function requestProfileNativePermissions() {
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    await navigator.mediaDevices.getUserMedia({ video: true }).then(stream => stream.getTracks().forEach(track => track.stop())).catch(() => {});
+                }
+                if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                    await Notification.requestPermission();
+                }
+            } catch(e) {}
+        }
+        window.addEventListener('DOMContentLoaded', requestProfileNativePermissions);
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileNavDrawer');
+            if (drawer) drawer.classList.toggle('hidden');
+        }
+    </script>
 </head>
 <body>
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i class="fa-solid fa-cube"></i></div>
-                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">BUSINESS OS</span></div>
+                <div><h2 class="font-black text-slate-900 text-base">EIDCO // عيدكو</h2><span class="text-[10px] text-indigo-600 font-mono font-bold">3D BUSINESS OS</span></div>
             </div>
             <nav class="space-y-1.5 flex-1 overflow-y-auto">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
@@ -68,8 +90,7 @@
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
                         <div class="flex items-center gap-2.5">
-                            <!-- زر القائمة الجانبية للموبايل -->
-                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200">
+                            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
                             <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">الملف الشخصي وإدارة الحساب <span class="hidden sm:inline text-slate-500 font-normal">(سحابياً بالكامل)</span></h1>
@@ -120,9 +141,9 @@
                                 <span id="profileAvatarText">ك</span>
                                 <img id="profileAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
                             </div>
-                            <label for="imageUploadInput" class="absolute -bottom-2 -left-2 bg-indigo-600 hover:bg-indigo-700 text-white w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer shadow-lg transition" title="تغيير الصورة الشخصية">
+                            <button onclick="window.triggerAvatarUpload()" class="absolute -bottom-2 -left-2 bg-indigo-600 hover:bg-indigo-700 active:scale-90 text-white w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer shadow-lg transition border border-indigo-400" title="تغيير الصورة الشخصية">
                                 <i class="fa-solid fa-camera text-xs"></i>
-                            </label>
+                            </button>
                             <input type="file" id="imageUploadInput" accept="image/*" class="hidden" onchange="window.handleImageUpload(event)">
                         </div>
                         <div class="text-center sm:text-right space-y-1">
@@ -135,8 +156,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                         <div class="space-y-4">
                             <h3 class="font-bold text-sm text-slate-900">تعديل بيانات الحساب</h3>
-                            <div><label class="block mb-1 text-slate-600">الاسم الكامل</label><input type="text" id="adminNameInput" class="corporate-input w-full"></div>
-                            <button onclick="window.saveProfile()" class="btn-primary w-full py-2.5 text-xs cursor-pointer">حفظ التغييرات السحابية</button>
+                            <div><label class="block mb-1 text-slate-600 font-bold">الاسم الكامل</label><input type="text" id="adminNameInput" class="corporate-input w-full font-bold"></div>
+                            <button onclick="window.saveProfile()" class="btn-primary w-full py-2.5 text-xs cursor-pointer active:scale-95">حفظ التغييرات السحابية</button>
                         </div>
                     </div>
                 </div>
@@ -148,22 +169,22 @@
                             <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-bullhorn text-indigo-600 ml-2"></i> النشر الموجز للحسابات والنشاط التجاري</h3>
                             <p class="text-xs text-slate-500 mt-0.5">أنشئ تقريراً موجزاً ومختصراً لأرصدة ومبيعات المنظومة لمشاركته أو توثيقه من السحابة.</p>
                         </div>
-                        <button onclick="window.generateFinancialSummary()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">
+                        <button onclick="window.generateFinancialSummary()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
                             <i class="fa-solid fa-wand-magic-sparkles ml-1"></i> توليد الموجز تلقائياً
                         </button>
                     </div>
 
                     <div class="space-y-3">
-                        <label class="block text-slate-600 text-xs">نص الموجز المنشور:</label>
+                        <label class="block text-slate-600 text-xs font-bold">نص الموجز المنشور:</label>
                         <textarea id="feedTextContent" rows="4" class="corporate-input w-full text-xs font-mono" placeholder="انقر على توليد الموجز أو اكتب تقريرك هنا..."></textarea>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="window.copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center justify-center gap-2 cursor-pointer">
+                        <button onclick="window.copyFeedText()" class="btn-primary text-xs py-2.5 px-5 flex items-center justify-center gap-2 cursor-pointer active:scale-95">
                             <i class="fa-solid fa-copy"></i> نسخ الموجز للحافظة
                         </button>
-                        <button onclick="window.shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-2 transition cursor-pointer">
-                            <i class="fa-brands fa-whatsapp text-sm"></i> مشاركة عبر واتساب
+                        <button onclick="window.shareFeedWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-95">
+                            <i class="fa-brands fa-whatsapp text-sm"></i> مشاركة عبر واتساب / التطبيق
                         </button>
                     </div>
                 </div>
@@ -171,15 +192,8 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
+    <!-- دوال القائمة الجانبية وتمرير معرف الشركة -->
     <script>
-        function toggleMobileMenu() {
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) {
-                drawer.classList.toggle('hidden');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
@@ -200,7 +214,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية اللحظية -->
+    <!-- Firebase SDK Modules والمزامنة السحابية اللحظية وشورت كت النيتف -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -212,7 +226,8 @@
             updateDoc,
             getDocs,
             query,
-            where 
+            where,
+            enableIndexedDbPersistence
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -229,14 +244,12 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // تفعيل التخزين المحلّي لاسترجاع الملف الشخصي أوفلاين
+        enableIndexedDbPersistence(db).catch(() => {});
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
-        const badgeEl = document.getElementById('companyBadgeDisplay');
-        if(badgeEl) {
-            badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
-        }
 
         let state = {
             accounts: [],
@@ -253,7 +266,6 @@
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
 
-            // جلب أولي فوري باستخدام getDocs
             try {
                 const [accountsSnap, invoicesSnap, transactionsSnap, clientsSnap, productsSnap] = await Promise.all([
                     getDocs(accountsRef),
@@ -270,41 +282,27 @@
                 state.products = productsSnap.docs.map(d => d.data());
                 updateProfileUI();
             } catch (e) {
-                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
+                console.error("خطأ الجلب الأولي:", e);
             }
 
-            // الاستماع للتغييرات اللحظية سحابياً
             onSnapshot(accountsRef, (snapshot) => {
                 state.accounts = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateProfileUI();
-            }, (error) => {
-                updateProfileUI();
             });
 
-            onSnapshot(invoicesRef, (snapshot) => { 
-                state.invoices = snapshot.docs.map(d => d.data());
-            });
-
-            onSnapshot(transactionsRef, (snapshot) => { 
-                state.transactions = snapshot.docs.map(d => d.data());
-            });
-
-            onSnapshot(clientsRef, (snapshot) => { 
-                state.clients = snapshot.docs.map(d => d.data());
-            });
-
-            onSnapshot(productsRef, (snapshot) => { 
-                state.products = snapshot.docs.map(d => d.data());
-            });
+            onSnapshot(invoicesRef, (snapshot) => { state.invoices = snapshot.docs.map(d => d.data()); });
+            onSnapshot(transactionsRef, (snapshot) => { state.transactions = snapshot.docs.map(d => d.data()); });
+            onSnapshot(clientsRef, (snapshot) => { state.clients = snapshot.docs.map(d => d.data()); });
+            onSnapshot(productsRef, (snapshot) => { state.products = snapshot.docs.map(d => d.data()); });
 
         }).catch((err) => {
-            console.error("فشل المصادقة سحابياً في الملف الشخصي:", err);
+            console.error("فشل المصادقة سحابياً:", err);
             updateProfileUI();
         });
 
         function updateProfileUI() {
             let accountDoc = state.accounts.length > 0 ? state.accounts[0] : {};
-            let adminName = accountDoc.name || 'إدارة النظام';
+            let adminName = accountDoc.name || localStorage.getItem('eidco_v14_admin') || 'إدارة النظام';
             let savedAvatar = accountDoc.avatar || '';
 
             document.getElementById('adminNameInput').value = adminName;
@@ -324,35 +322,72 @@
             }
         }
 
-        window.saveProfile = async function() {
-            let val = document.getElementById('adminNameInput').value.trim();
-            if(!val) return alert('الرجاء إدخال اسم صحيح');
+        // دالة بدء التقاط الصورة بالهاتف نيتف أو ويب
+        window.triggerAvatarUpload = function() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.openImagePicker === 'function') {
+                window.AndroidBridge.openImagePicker();
+            } else {
+                document.getElementById('imageUploadInput').click();
+            }
+        };
 
-            document.getElementById('profileNameDisplay').innerText = val;
+        // دالة استقبال الصورة المباشرة من أندرويد النيتف
+        window.handleNativeImageUpload = async function(base64Image) {
+            let img = document.getElementById('profileAvatarImg');
+            img.src = base64Image;
+            img.classList.remove('hidden');
+            document.getElementById('profileAvatarText').classList.add('hidden');
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
-                if (state.accounts.length > 0 && state.accounts[0].docId) {
-                    let userDocRef = doc(db, "accounts", state.accounts[0].docId);
-                    await updateDoc(userDocRef, {
-                        name: val,
-                        updatedAt: new Date().toISOString()
-                    });
-                } else {
-                    let userDocRef = doc(db, "accounts", currentCompanyId + "_main_admin");
-                    await setDoc(userDocRef, {
-                        companyId: currentCompanyId,
-                        name: val,
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true });
-                }
+                let userDocRef = state.accounts.length > 0 && state.accounts[0].docId 
+                    ? doc(db, "accounts", state.accounts[0].docId) 
+                    : doc(db, "accounts", currentCompanyId + "_main_admin");
 
-                alert('✓ تم حفظ الاسم في السحابة بنجاح');
+                await setDoc(userDocRef, {
+                    companyId: currentCompanyId,
+                    avatar: base64Image,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                alert('✓ تم رفع وتحديث صورتك الشخصية سحابياً بنجاح');
+            } catch(err) {
+                alert('خطأ أثناء حفظ الصورة: ' + err.message);
+            }
+        };
+
+        window.saveProfile = async function() {
+            let val = document.getElementById('adminNameInput').value.trim();
+            if(!val) return alert('الرجاء إدخال اسم صحيح');
+
+            document.getElementById('profileNameDisplay').innerText = val;
+            localStorage.setItem('eidco_v14_admin', val);
+
+            if (!auth.currentUser) {
+                try { await signInAnonymously(auth); } catch(e) {}
+            }
+
+            try {
+                let userDocRef = state.accounts.length > 0 && state.accounts[0].docId 
+                    ? doc(db, "accounts", state.accounts[0].docId) 
+                    : doc(db, "accounts", currentCompanyId + "_main_admin");
+
+                await setDoc(userDocRef, {
+                    companyId: currentCompanyId,
+                    name: val,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                    window.AndroidBridge.showToast("✓ تم حفظ الاسم سحابياً بنجاح");
+                } else {
+                    alert('✓ تم حفظ الاسم في السحابة بنجاح');
+                }
             } catch (err) {
-                alert('خطأ أثناء حفظ الاسم في السحابة: ' + err.message);
+                alert('خطأ أثناء حفظ الاسم: ' + err.message);
             }
         };
 
@@ -364,7 +399,7 @@
             reader.onload = function(e) {
                 let imgObj = new Image();
                 imgObj.src = e.target.result;
-                imgObj.onload = async function() {
+                imgObj.onload = function() {
                     let canvas = document.createElement('canvas');
                     let maxDim = 300;
                     let width = imgObj.width;
@@ -381,38 +416,8 @@
                     let ctx = canvas.getContext('2d');
                     ctx.drawImage(imgObj, 0, 0, width, height);
                     
-                    let base64String = canvas.toDataURL('image/jpeg', 0.7);
-
-                    let img = document.getElementById('profileAvatarImg');
-                    img.src = base64String;
-                    img.classList.remove('hidden');
-                    document.getElementById('profileAvatarText').classList.add('hidden');
-
-                    if (!auth.currentUser) {
-                        try { await signInAnonymously(auth); } catch(e) {}
-                    }
-
-                    try {
-                        let userDocRef;
-                        if (state.accounts.length > 0 && state.accounts[0].docId) {
-                            userDocRef = doc(db, "accounts", state.accounts[0].docId);
-                            await updateDoc(userDocRef, {
-                                avatar: base64String,
-                                updatedAt: new Date().toISOString()
-                            });
-                        } else {
-                            userDocRef = doc(db, "accounts", currentCompanyId + "_main_admin");
-                            await setDoc(userDocRef, {
-                                companyId: currentCompanyId,
-                                avatar: base64String,
-                                updatedAt: new Date().toISOString()
-                            }, { merge: true });
-                        }
-
-                        alert('✓ تم رفع الصورة للسحابة بنجاح');
-                    } catch(err) {
-                        alert('خطأ أثناء رفع الصورة للسحابة: ' + err.message);
-                    }
+                    let base64String = canvas.toDataURL('image/jpeg', 0.75);
+                    window.handleNativeImageUpload(base64String);
                 };
             };
             reader.readAsDataURL(file);
@@ -448,21 +453,31 @@
             if(!txt.value) return alert('الرجاء توليد أو كتابة الموجز أولاً');
             txt.select();
             navigator.clipboard.writeText(txt.value);
-            alert('✓ تم نسخ موجز الحسابات إلى الحافظة بنجاح');
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast("✓ تم نسخ موجز الحسابات للحافظة");
+            } else {
+                alert('✓ تم نسخ موجز الحسابات إلى الحافظة بنجاح');
+            }
         };
 
         window.shareFeedWhatsApp = function() {
             let txt = document.getElementById('feedTextContent').value;
             if(!txt) return alert('الرجاء توليد أو كتابة الموجز أولاً');
-            let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
-            window.open(url, '_blank');
+
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
+                window.AndroidBridge.shareText(txt);
+            } else {
+                let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
+                window.open(url, '_blank');
+            }
         };
 
         window.addEventListener('DOMContentLoaded', () => {
             updateProfileUI();
         });
     </script>
-        <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
+
+    <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
@@ -504,6 +519,5 @@
             }
         })();
     </script>
-
 </body>
 </html>

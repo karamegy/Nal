@@ -365,6 +365,7 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
+            signInWithPopup,
             signInWithCredential,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
@@ -389,7 +390,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        let tokenClient = null;
+        let tokenClient;
 
         function initGoogleAuthClient() {
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
@@ -399,7 +400,6 @@
                     callback: async (tokenResponse) => {
                         if (tokenResponse.error) {
                             console.error('Google Auth Error:', tokenResponse);
-                            alert('حدث خطأ أثناء فتح حسابات جوجل');
                             return;
                         }
                         try {
@@ -419,22 +419,32 @@
             initGoogleAuthClient();
         });
 
-        // دالة تسجيل الدخول بالضغط المباشر لإظهار قائمة اختيار الحسابات مباشرة
-        window.signInWithGoogle = function() {
+        // دالة تسجيل الدخول المحسنة لتستوعب الويب والـ WebView تلقائيًا
+        window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // 1. استخدام AndroidBridge إذا كان متوفراً في التطبيق الأصلي
+            // 1. إذا كان التطبيق يستخدم AndroidBridge الأصلي
             if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
                 window.AndroidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. الفتح المباشر لقائمة اختيار الحسابات عبر GIS Token Client
-            if (!tokenClient) {
-                initGoogleAuthClient();
+            // 2. المحاولة عبر Firebase Popup أولاً (تشتغل في بيئات الـ Web والـ WebView)
+            try {
+                showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+                return;
+            } catch (popupError) {
+                console.warn("Popup Auth failed/blocked, falling back to OAuth Client...", popupError);
             }
 
+            // 3. Fallback لمكتبة Google Identity Services للويب العادي
             if (tokenClient) {
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
+            } else if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                initGoogleAuthClient();
                 tokenClient.requestAccessToken({ prompt: 'select_account' });
             } else {
                 alert("جاري تحميل خدمات Google، يرجى المحاولة بعد ثوانٍ قليلة.");

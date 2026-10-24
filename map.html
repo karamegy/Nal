@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات السحابية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>EIDCO // خريطة الأسطول والملاحة المتطورة GPS والشحنات السحابية Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -21,11 +21,9 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS -->
+    <!-- Leaflet CSS & Plugins -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Routing Machine CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <!-- Leaflet Geocoder CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/control.geocoder.css" />
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -47,16 +45,24 @@
             box-sizing: border-box;
         }
 
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100dvh; 
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            flex-shrink: 0;
+        }
+
+        input, textarea, select {
+            scroll-margin-bottom: 120px;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
@@ -82,6 +88,7 @@
             display: inline-flex; 
             align-items: center; 
             justify-content: center; 
+            user-select: none;
         }
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
@@ -102,7 +109,7 @@
         
         #leafletMap { 
             height: 68vh; 
-            min-height: 520px; 
+            min-height: 480px; 
             width: 100%; 
             border-radius: 20px; 
             border: 1px solid var(--border-color); 
@@ -162,8 +169,10 @@
             width: 100%; 
             text-align: right; 
             box-sizing: border-box; 
+            user-select: none;
         }
         .touch-btn:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+        .touch-btn:active { transform: scale(0.96); }
         
         #geofenceAlertBanner { 
             display: none; 
@@ -204,19 +213,57 @@
     </style>
 
     <script>
-        // طلب كل أذونات النظام الحيوية (GPS & Notifications) تلقائياً
-        async function requestAllAppPermissions() {
+        function showNativeToast(message) {
+            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+                window.AndroidBridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+                window.AndroidBridge.vibrate(duration);
+            }
+        }
+
+        // دالة موحدة ومضمونة للحصول على الموقع الجغرافي مع الدعم الأهلي للأندرويد
+        function getUserGpsPosition(successCb, errorCb) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
-                        console.log("✓ تم منح إذن الموقع الجغرافي بنجاح:", pos.coords.latitude, pos.coords.longitude);
+                        if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
-                        console.warn("⚠️ لم يتم منح إذن الموقع:", err.message);
+                        // محاولة ثانية بدقة متوازنة في حالة فشل الدقة العالية
+                        navigator.geolocation.getCurrentPosition(
+                            pos => {
+                                if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
+                            },
+                            err2 => {
+                                if (errorCb) errorCb(err2);
+                            },
+                            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                        );
                     },
-                    { enableHighAccuracy: true, timeout: 10000 }
+                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
                 );
+            } else if (errorCb) {
+                errorCb(new Error("خدمة GPS غير مدعومة بالمتصفح"));
             }
+        }
+
+        async function requestAllAppPermissions() {
+            getUserGpsPosition(
+                (lat, lng) => {
+                    console.log("✓ تم تحديد موقع GPS بنجاح:", lat, lng);
+                },
+                err => {
+                    console.warn("⚠️ لم يتم تحديد الموقع الجغرافي:", err.message);
+                }
+            );
+
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 try {
                     await Notification.requestPermission();
@@ -227,6 +274,7 @@
         window.addEventListener('DOMContentLoaded', requestAllAppPermissions);
 
         function toggleMobileMenu() {
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
@@ -234,6 +282,7 @@
         }
 
         window.openAddVehicleModal = function(defaultLat = '', defaultLng = '') {
+            triggerHaptic(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-truck text-indigo-600 ml-1"></i> إضافة مركبة للأسطول سحابياً';
             document.getElementById('vehicleId').value = '';
             document.getElementById('vehicleName').value = '';
@@ -248,10 +297,12 @@
         };
 
         window.closeVehicleModal = function() {
+            triggerHaptic(15);
             document.getElementById('vehicleModal').classList.add('hidden');
         };
 
         window.openAddShipmentModal = function(defaultLat = '', defaultLng = '') {
+            triggerHaptic(20);
             document.getElementById('shipmentModalTitle').innerHTML = '<i class="fa-solid fa-box text-emerald-600 ml-1"></i> إضافة شحنة جديدة سحابياً';
             document.getElementById('shipmentId').value = '';
             document.getElementById('shipmentCode').value = 'SHP-' + Math.floor(1000 + Math.random() * 9000);
@@ -267,10 +318,12 @@
         };
 
         window.closeShipmentModal = function() {
+            triggerHaptic(15);
             document.getElementById('shipmentModal').classList.add('hidden');
         };
 
         window.toggleTouchPanel = function() {
+            triggerHaptic(15);
             const panel = document.getElementById('touchControlPanel');
             const icon = document.getElementById('panelToggleIcon');
             if(panel && icon) {
@@ -316,7 +369,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">نظام الملاحة وتتبع الأسطول والشحنات الحية <span class="hidden sm:inline text-slate-500 font-normal">(GPS - سحابياً بالكامل)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">نظام الملاحة وتتبع الأسطول والشحنات الحية <span class="hidden sm:inline text-slate-500 font-normal">(Native GPS Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -400,8 +453,8 @@
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-2 flex-1 min-w-[260px]">
                             <span class="font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-magnifying-glass ml-1 text-indigo-600"></i> البحث الجغرافي:</span>
-                            <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو مدينة..." class="corporate-input flex-1" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
-                            <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer active:scale-95">بحث</button>
+                            <input type="text" id="customSearchInput" placeholder="ابحث عن مكان، عنوان، شحنة، أو مدينة..." class="corporate-input flex-1 font-bold text-slate-800" onkeypress="if(event.key === 'Enter') window.searchCustomLocation()">
+                            <button onclick="window.searchCustomLocation()" class="btn-primary py-2 px-4 text-xs cursor-pointer active:scale-95 shadow-md">بحث</button>
                         </div>
                         <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
                             <span class="font-bold text-slate-700 whitespace-nowrap">طبقات الخريطة:</span>
@@ -415,7 +468,7 @@
                         <span class="font-bold text-indigo-600 whitespace-nowrap"><i class="fa-solid fa-route ml-1"></i> ملاحة المسارات:</span>
                         <input type="text" id="routeStartInput" placeholder="نقطة البداية (أو اتركها فارغة لموقعك GPS)" class="corporate-input flex-1 min-w-[180px]">
                         <input type="text" id="routeEndInput" placeholder="نقطة الوصول (مثال: مدينة نصر، القاهرة)" class="corporate-input flex-1 min-w-[180px]">
-                        <button onclick="window.searchAndCalculateRoute()" class="btn-primary py-2 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 cursor-pointer active:scale-95">
+                        <button onclick="window.searchAndCalculateRoute()" class="btn-primary py-2 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 cursor-pointer active:scale-95 shadow-md">
                             <i class="fa-solid fa-location-arrow ml-1"></i> رسم المسار
                         </button>
                         <button id="clearRouteBtn" onclick="window.clearActiveRoute()" class="hidden px-3 py-2 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 border border-red-200 cursor-pointer transition">
@@ -424,7 +477,7 @@
                     </div>
                 </div>
 
-                <div class="corporate-card p-4 relative overflow-hidden bg-white">
+                <div class="corporate-card p-4 relative overflow-hidden bg-white shadow-sm">
                     <div id="touchControlPanel" class="touch-control-panel">
                         <div class="flex items-center justify-between pb-1 border-b border-slate-200 cursor-pointer" onclick="window.toggleTouchPanel()">
                             <span class="text-[11px] font-bold text-indigo-600 font-mono">التدوير الحر وإعدادات العرض</span>
@@ -447,13 +500,13 @@
                     <div id="leafletMap"></div>
                 </div>
 
-                <div class="corporate-card p-5 space-y-4 bg-white">
+                <div class="corporate-card p-5 space-y-4 bg-white shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
                             <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-boxes-packing ml-2 text-emerald-600"></i> إدارة ومتابعة الشحنات سحابياً</h3>
                             <p class="text-xs text-slate-500">سجل الشحنات الحالية ومواقع تسليمها لتظهر مباشرة على خريطة الملاحة.</p>
                         </div>
-                        <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
+                        <button type="button" onclick="window.openAddShipmentModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md"><i class="fa-solid fa-plus ml-1.5"></i> إضافة شحنة جديدة</button>
                     </div>
 
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -476,13 +529,13 @@
                     </div>
                 </div>
 
-                <div class="corporate-card p-5 space-y-4 bg-white">
+                <div class="corporate-card p-5 space-y-4 bg-white shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div>
                             <h3 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-truck-field ml-2 text-indigo-600"></i> إدارة مركبات الأسطول سحابياً</h3>
                             <p class="text-xs text-slate-500">أضف مركبات جديدة، حدث مواقعها أو احذفها لتتزامن لحظياً مع الخريطة.</p>
                         </div>
-                        <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer active:scale-95"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
+                        <button type="button" onclick="window.openAddVehicleModal()" class="btn-primary text-xs py-2 px-4 cursor-pointer active:scale-95 shadow-md"><i class="fa-solid fa-plus ml-1.5"></i> إضافة مركبة جديدة</button>
                     </div>
 
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -520,11 +573,11 @@
                 <input type="hidden" id="vehicleId">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">اسم المركبة / السائق</label>
-                    <input type="text" id="vehicleName" required placeholder="مثال: شاحنة نقل رقم 02" class="corporate-input">
+                    <input type="text" id="vehicleName" required placeholder="مثال: شاحنة نقل رقم 02" class="corporate-input font-bold text-slate-800">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">رقم اللوحة المعدنية</label>
-                    <input type="text" id="vehiclePlate" required placeholder="مثال: أ ب ج 1234" class="corporate-input">
+                    <input type="text" id="vehiclePlate" required placeholder="مثال: أ ب ج 1234" class="corporate-input font-bold text-indigo-600">
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
@@ -541,17 +594,17 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
-                            <input type="number" step="any" id="vehicleLat" required placeholder="خط العرض" class="corporate-input mono-font">
+                            <input type="number" step="any" id="vehicleLat" required placeholder="خط العرض" class="corporate-input mono-font font-bold text-slate-800">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
-                            <input type="number" step="any" id="vehicleLng" required placeholder="خط الطول" class="corporate-input mono-font">
+                            <input type="number" step="any" id="vehicleLng" required placeholder="خط الطول" class="corporate-input mono-font font-bold text-slate-800">
                         </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
                     <button type="button" onclick="window.closeVehicleModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
-                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer active:scale-95">حفظ المركبة سحابياً</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer active:scale-95 shadow-md">حفظ المركبة سحابياً</button>
                 </div>
             </form>
         </div>
@@ -568,15 +621,15 @@
                 <input type="hidden" id="shipmentId">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">كود/تتبع الشحنة</label>
-                    <input type="text" id="shipmentCode" required placeholder="مثال: SHP-1001" class="corporate-input mono-font">
+                    <input type="text" id="shipmentCode" required placeholder="مثال: SHP-1001" class="corporate-input mono-font font-bold text-emerald-600">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">اسم المستلم / جهة التسليم</label>
-                    <input type="text" id="shipmentReceiver" required placeholder="مثال: شركة النور - القاهرة" class="corporate-input">
+                    <input type="text" id="shipmentReceiver" required placeholder="مثال: شركة النور - القاهرة" class="corporate-input font-bold text-slate-800">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">حالة الشحنة</label>
-                    <select id="shipmentStatus" class="corporate-input font-bold">
+                    <select id="shipmentStatus" class="corporate-input font-bold text-slate-800 cursor-pointer">
                         <option value="قيد التوصيل">قيد التوصيل</option>
                         <option value="تم التسليم">تم التسليم</option>
                         <option value="معلقة">معلقة</option>
@@ -597,17 +650,17 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط العرض (Lat)</label>
-                            <input type="number" step="any" id="shipmentLat" required placeholder="خط العرض" class="corporate-input mono-font">
+                            <input type="number" step="any" id="shipmentLat" required placeholder="خط العرض" class="corporate-input mono-font font-bold text-slate-800">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-0.5">خط الطول (Lng)</label>
-                            <input type="number" step="any" id="shipmentLng" required placeholder="خط الطول" class="corporate-input mono-font">
+                            <input type="number" step="any" id="shipmentLng" required placeholder="خط الطول" class="corporate-input mono-font font-bold text-slate-800">
                         </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
                     <button type="button" onclick="window.closeShipmentModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">إلغاء</button>
-                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95">حفظ الشحنة سحابياً</button>
+                    <button type="submit" class="btn-primary py-2 px-5 text-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md">حفظ الشحنة سحابياً</button>
                 </div>
             </form>
         </div>
@@ -709,13 +762,21 @@
 
             streetLayer.addTo(map);
 
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    map.setView([pos.coords.latitude, pos.coords.longitude], 13);
-                }, () => {}, { enableHighAccuracy: true });
-            }
+            // جلب الموقع عند فتح الخريطة مع استجابة مرئية
+            getUserGpsPosition(
+                (lat, lng) => {
+                    if (map) {
+                        map.setView([lat, lng], 13);
+                        showNativeToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
+                    }
+                },
+                err => {
+                    console.warn("تنبيه GPS الخريطة:", err.message);
+                }
+            );
 
             window.switchLayer = function(type) {
+                triggerHaptic(15);
                 map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
                 if(type === 'street') streetLayer.addTo(map);
                 if(type === 'topo') topoLayer.addTo(map);
@@ -727,19 +788,21 @@
                 const lng = e.latlng.lng.toFixed(6);
 
                 if (pickingMode === 'vehicle') {
+                    triggerHaptic(25);
                     document.getElementById('vehicleLat').value = lat;
                     document.getElementById('vehicleLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    alert(`✓ تم التقاط الإحداثيات للمركبة: (${lat}, ${lng})`);
+                    showNativeToast(`✓ تم التقاط موقع المركبة: (${lat}, ${lng})`);
                     return;
                 }
                 if (pickingMode === 'shipment') {
+                    triggerHaptic(25);
                     document.getElementById('shipmentLat').value = lat;
                     document.getElementById('shipmentLng').value = lng;
                     pickingMode = null;
                     map.getContainer().style.cursor = '';
-                    alert(`✓ تم التقاط الإحداثيات للشحنة: (${lat}, ${lng})`);
+                    showNativeToast(`✓ تم التقاط موقع الشحنة: (${lat}, ${lng})`);
                     return;
                 }
 
@@ -774,11 +837,16 @@
                 }
             });
 
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 300);
+
         } catch (e) {
             console.warn("Leaflet Map setup warning:", e);
         }
 
         window.rotateMap = function(degDelta) {
+            triggerHaptic(15);
             if (!map) return;
             let currentBearing = map.getBearing ? map.getBearing() : 0;
             let newBearing = (currentBearing + degDelta) % 360;
@@ -788,6 +856,7 @@
         };
 
         window.resetMapRotation = function() {
+            triggerHaptic(15);
             if (!map) return;
             if (map.setBearing) {
                 map.setBearing(0);
@@ -798,6 +867,7 @@
         let currentShipmentDocs = [];
 
         window.resetMapView = function() {
+            triggerHaptic(20);
             if (!map) return;
             let bounds = [];
             currentFleetDocs.forEach(v => {
@@ -813,14 +883,20 @@
 
             if (bounds.length > 0) {
                 map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
-            } else if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    map.setView([pos.coords.latitude, pos.coords.longitude], 14);
-                });
+            } else {
+                getUserGpsPosition(
+                    (lat, lng) => {
+                        map.setView([lat, lng], 14);
+                    },
+                    err => {
+                        showNativeToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
+                    }
+                );
             }
         };
 
         window.calculateRoute = function(startLat, startLng, destLat, destLng, destName = 'الوجهة') {
+            triggerHaptic(25);
             if (!map) return;
             if (activeRoutingControl) {
                 map.removeControl(activeRoutingControl);
@@ -862,23 +938,25 @@
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.remove('hidden');
 
+                showNativeToast(`🧭 المسافة: ${distanceKm} كم | الوقت: ${timeMin} دقيقة`);
                 alert(`🧭 تم رسم مسار الملاحة إلى [ ${destName} ]\n• المسافة: ${distanceKm} كم\n• الوقت المتوقع: ${timeMin} دقيقة`);
             });
         };
 
         window.navigateRouteTo = function(destLat, destLng, destName) {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    window.calculateRoute(pos.coords.latitude, pos.coords.longitude, destLat, destLng, destName);
-                }, () => {
+            triggerHaptic(20);
+            getUserGpsPosition(
+                (lat, lng) => {
+                    window.calculateRoute(lat, lng, destLat, destLng, destName);
+                },
+                err => {
                     window.calculateRoute(map.getCenter().lat, map.getCenter().lng, destLat, destLng, destName);
-                }, { enableHighAccuracy: true });
-            } else {
-                window.calculateRoute(map.getCenter().lat, map.getCenter().lng, destLat, destLng, destName);
-            }
+                }
+            );
         };
 
         window.searchAndCalculateRoute = async function() {
+            triggerHaptic(25);
             const startQuery = document.getElementById('routeStartInput').value.trim();
             const endQuery = document.getElementById('routeEndInput').value.trim();
 
@@ -900,14 +978,22 @@
                         return;
                     }
                 } else {
-                    if ("geolocation" in navigator) {
-                        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-                        startLat = pos.coords.latitude;
-                        startLng = pos.coords.longitude;
-                    } else {
-                        startLat = map.getCenter().lat;
-                        startLng = map.getCenter().lng;
-                    }
+                    let gpsSuccess = false;
+                    await new Promise(resolve => {
+                        getUserGpsPosition(
+                            (lat, lng) => {
+                                startLat = lat;
+                                startLng = lng;
+                                gpsSuccess = true;
+                                resolve();
+                            },
+                            err => {
+                                startLat = map.getCenter().lat;
+                                startLng = map.getCenter().lng;
+                                resolve();
+                            }
+                        );
+                    });
                 }
 
                 const endRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endQuery)}`);
@@ -926,6 +1012,7 @@
         };
 
         window.clearActiveRoute = function() {
+            triggerHaptic(15);
             if (activeRoutingControl && map) {
                 map.removeControl(activeRoutingControl);
                 activeRoutingControl = null;
@@ -933,41 +1020,44 @@
                 if(etaEl) etaEl.innerText = '-- دقيقة';
                 const clearBtn = document.getElementById('clearRouteBtn');
                 if(clearBtn) clearBtn.classList.add('hidden');
-                alert("✓ تم إلغاء المسار الحالي.");
+                showNativeToast("✓ تم إلغاء المسار الحالي");
             }
         };
 
         window.fetchGpsForModal = function(target) {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const lat = pos.coords.latitude.toFixed(6);
-                    const lng = pos.coords.longitude.toFixed(6);
+            triggerHaptic(30);
+            showNativeToast("⏳ جاري الاتصال بحساسات الـ GPS...");
+            getUserGpsPosition(
+                (lat, lng) => {
+                    let latFixed = lat.toFixed(6);
+                    let lngFixed = lng.toFixed(6);
                     if (target === 'vehicle') {
-                        document.getElementById('vehicleLat').value = lat;
-                        document.getElementById('vehicleLng').value = lng;
+                        document.getElementById('vehicleLat').value = latFixed;
+                        document.getElementById('vehicleLng').value = lngFixed;
                     } else if (target === 'shipment') {
-                        document.getElementById('shipmentLat').value = lat;
-                        document.getElementById('shipmentLng').value = lng;
+                        document.getElementById('shipmentLat').value = latFixed;
+                        document.getElementById('shipmentLng').value = lngFixed;
                     }
                     if (map) map.setView([lat, lng], 15);
-                    alert(`✓ تم جلب إحداثيات موقعك الحالي بنجاح: (${lat}, ${lng})`);
-                }, err => {
-                    alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى تفعيل خدمة GPS بالموبايل/الكمبيوتر.");
-                }, { enableHighAccuracy: true, timeout: 10000 });
-            } else {
-                alert("خدمة تحديد الموقع (GPS) غير مدعومة في متصفحك.");
-            }
+                    showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
+                },
+                err => {
+                    alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى التين من تفعيل الـ GPS والسمح بالأذونات.");
+                }
+            );
         };
 
         window.pickFromMap = function(target) {
+            triggerHaptic(20);
             pickingMode = target;
             if (map) {
                 map.getContainer().style.cursor = 'crosshair';
-                alert("💡 انقر الآن على المكان المطلوب داخل الخريطة لالتقاط الإحداثيات تلقائياً!");
+                showNativeToast("💡 انقر الآن على أي مكان داخل الخريطة");
             }
         };
 
         window.focusOnMap = function(lat, lng, label) {
+            triggerHaptic(20);
             if (map && !isNaN(lat) && !isNaN(lng)) {
                 map.setView([lat, lng], 16, { animate: true });
                 L.popup()
@@ -978,10 +1068,12 @@
         };
 
         window.searchCustomLocation = async function() {
+            triggerHaptic(25);
             const queryText = document.getElementById('customSearchInput').value.trim();
             if(!queryText) return;
 
             try {
+                showNativeToast("🔍 جاري البحث الميداني...");
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}`);
                 const data = await res.json();
 
@@ -1011,6 +1103,7 @@
         };
 
         window.saveVehicle = async function(e) {
+            triggerHaptic(30);
             if (e && e.preventDefault) e.preventDefault();
             let id = document.getElementById('vehicleId').value;
             let name = document.getElementById('vehicleName').value;
@@ -1045,6 +1138,7 @@
                     await addDoc(fleetCollection, vehicleData);
                 }
                 window.closeVehicleModal();
+                showNativeToast("✓ تم حفظ بيانات المركبة بنجاح");
                 alert("✓ تم حفظ بيانات المركبة سحابياً بنجاح.");
             } catch (err) {
                 alert("حدث خطأ أثناء حفظ المركبة بالسحابة: " + err.message);
@@ -1052,6 +1146,7 @@
         };
 
         window.editVehicle = function(id, name, plate, lat, lng) {
+            triggerHaptic(20);
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-indigo-600 ml-1"></i> تعديل بيانات المركبة سحابياً';
             document.getElementById('vehicleId').value = id;
             document.getElementById('vehicleName').value = name;
@@ -1062,12 +1157,14 @@
         };
 
         window.deleteVehicle = async function(id) {
+            triggerHaptic(40);
             if(confirm("هل أنت متأكد من حذف هذه المركبة من الأسطول السحابي؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "fleet_locations", id));
+                    showNativeToast("✓ تم حذف المركبة بنجاح");
                     alert("✓ تم حذف المركبة سحابياً بنجاح.");
                 } catch (err) {
                     alert("خطأ أثناء حذف المركبة بالسحابة: " + err.message);
@@ -1076,6 +1173,7 @@
         };
 
         window.saveShipment = async function(e) {
+            triggerHaptic(30);
             if (e && e.preventDefault) e.preventDefault();
             let code = document.getElementById('shipmentCode').value;
             let receiver = document.getElementById('shipmentReceiver').value;
@@ -1104,6 +1202,7 @@
                     createdAt: new Date().toISOString()
                 });
                 window.closeShipmentModal();
+                showNativeToast("✓ تم إضافة الشحنة بنجاح");
                 alert("✓ تم إضافة الشحنة سحابياً بنجاح.");
             } catch (err) {
                 alert("حدث خطأ أثناء حفظ الشحنة بالسحابة: " + err.message);
@@ -1111,12 +1210,14 @@
         };
 
         window.deleteShipment = async function(id) {
+            triggerHaptic(40);
             if(confirm("هل أنت متأكد من حذف هذه الشحنة سحابياً؟")) {
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) {}
                 }
                 try {
                     await deleteDoc(doc(db, "shipments", id));
+                    showNativeToast("✓ تم حذف الشحنة بنجاح");
                     alert("✓ تم حذف الشحنة سحابياً بنجاح.");
                 } catch (err) {
                     alert("خطأ أثناء حذف الشحنة بالسحابة: " + err.message);
@@ -1125,12 +1226,14 @@
         };
 
         window.toggleShipmentStatusOnMap = async function(id, currentStatus) {
+            triggerHaptic(20);
             const nextStatus = currentStatus === 'تم التسليم' ? 'قيد التوصيل' : 'تم التسليم';
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
             try {
                 await updateDoc(doc(db, "shipments", id), { status: nextStatus });
+                showNativeToast(`✓ تم تغيير حالة الشحنة إلى (${nextStatus})`);
                 alert(`✓ تم تحديث حالة الشحنة إلى: (${nextStatus}) بنجاح.`);
             } catch(e) {
                 alert("فشل تحديث حالة الشحنة: " + e.message);
@@ -1366,13 +1469,19 @@
 
         window.panToFleet = function() { window.resetMapView(); };
         window.panToUser = function() { 
-            if("geolocation" in navigator && map) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-                }, () => {
-                    alert("تعذر الحصول على موقع جهازك. تأكد من إعطاء إذن التحديد الجغرافي للمتصفح.");
-                });
-            }
+            triggerHaptic(20);
+            showNativeToast("⏳ جاري تحديد موقعك الجغرافي الحقيقي...");
+            getUserGpsPosition(
+                (lat, lng) => {
+                    if (map) {
+                        map.setView([lat, lng], 16, { animate: true });
+                        showNativeToast("✓ تم التمركز عند موقعك الحالي");
+                    }
+                },
+                err => {
+                    alert("تعذر الحصول على موقع جهازك. تأكد من تفعيل خدمة GPS ومنح الإذن للبرنامج.");
+                }
+            );
         };
     </script>
 

@@ -2,23 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // لوحة التحكم الرئيسية والمؤشرات</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
-
-    <script>
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -41,16 +36,25 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
         body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
-            min-height: 100vh; 
+            min-height: 100vh;
+            min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden; 
             overscroll-behavior-y: contain;
@@ -109,15 +113,24 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.75); 
+            background: rgba(15, 23, 42, 0.85); 
             backdrop-filter: blur(8px); 
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
             box-sizing: border-box; 
+            overflow-y: auto;
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         table th, table td { white-space: nowrap; }
 
@@ -150,6 +163,7 @@
             top: 0 !important;
             right: 0 !important;
             height: 100vh !important;
+            height: 100dvh !important;
             z-index: 100 !important;
             box-shadow: -10px 0 25px rgba(0,0,0,0.3);
         }
@@ -190,15 +204,18 @@
 
     <script>
         function toggleMobileSidebar() {
+            window.NativeBridge.vibrate(20);
             const sidebar = document.getElementById('appSidebar');
             if (sidebar) {
                 sidebar.classList.toggle('mobile-open');
             }
         }
         function lockSession() {
+            window.NativeBridge.vibrate(35);
             sessionStorage.removeItem('eidco_session_auth');
             sessionStorage.removeItem('eidco_biometric_verified');
-            window.location.href = 'auth.html';
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
         }
         function escapeHTML(str) {
             if (!str) return '';
@@ -211,7 +228,7 @@
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
 
     <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800 no-print">
         <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
@@ -230,7 +247,7 @@
             <button onclick="window.toggleRssPause()" id="rssPauseBtn" class="text-slate-400 hover:text-indigo-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="إيقاف / تشغيل الحركة">
                 <i class="fa-solid fa-pause"></i>
             </button>
-            <button onclick="window.openAddNewsModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-bold rounded-md transition flex items-center gap-1">
+            <button onclick="window.openAddNewsModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-bold rounded-md transition flex items-center gap-1 cursor-pointer">
                 <i class="fa-solid fa-plus text-[10px]"></i> خبر جديد
             </button>
         </div>
@@ -238,7 +255,7 @@
 
     <!-- زر TV الطافي المحدث -->
     <div id="floatingTvTrigger" class="no-print cursor-grab active:cursor-grabbing select-none">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
@@ -288,7 +305,7 @@
 
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
+                <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
                 <a href="javascript:void(0)" onclick="lockSession()" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -346,7 +363,7 @@
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1 truncate max-w-[220px] sm:max-w-none" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
-                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95">
+                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95">
                         <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> فتح شاشة التلفزيون بصفحة جديدة
                     </button>
                 </div>
@@ -514,7 +531,7 @@
 
     <!-- نافذة إضافة خبر جديد في شريط RSS -->
     <div id="addNewsModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative">
+        <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-black text-base text-indigo-600"><i class="fa-solid fa-rss text-amber-500 ml-1"></i> إضافة خبر عاجل لشريط RSS</h3>
                 <button onclick="window.closeAddNewsModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
@@ -535,30 +552,30 @@
                 </div>
             </div>
             <div class="pt-3 border-t flex justify-end gap-2">
-                <button onclick="window.closeAddNewsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition">إلغاء</button>
-                <button onclick="window.submitCustomNews()" class="btn-primary text-xs py-2 px-5">نشر الخبر الآن</button>
+                <button onclick="window.closeAddNewsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
+                <button onclick="window.submitCustomNews()" class="btn-primary text-xs py-2 px-5 cursor-pointer">نشر الخبر الآن</button>
             </div>
         </div>
     </div>
 
     <!-- نافذة عرض الملخص والتفاصيل -->
     <div id="summaryModal" class="custom-modal">
-        <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative max-h-[85vh] flex flex-col">
+        <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modalTitle" class="font-black text-base text-indigo-600">تفاصيل الملخص</h3>
                 <button onclick="window.closeSummaryModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="modalBody" class="space-y-3 text-xs overflow-y-auto flex-1 p-1"></div>
             <div class="pt-2 border-t text-center">
-                <button onclick="window.closeSummaryModal()" class="btn-primary w-full py-2 text-xs">إغلاق النافذة</button>
+                <button onclick="window.closeSummaryModal()" class="btn-primary w-full py-2 text-xs cursor-pointer">إغلاق النافذة</button>
             </div>
         </div>
     </div>
 
-    <!-- تعريف الدوال العامة مباشرة خارج نطاق الـ Module لضمان عمل الأزرار 100% -->
+    <!-- تعريف الدوال العامة مباشرة المربوطة بالجسر الأهلي -->
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         let rssNewsList = [
@@ -571,6 +588,7 @@
         const rssSpeedLabels = ['1x', '2x', '0.5x'];
 
         window.toggleRssPause = function() {
+            window.NativeBridge.vibrate(20);
             let ticker = document.getElementById('rssTickerContent');
             let btn = document.getElementById('rssPauseBtn');
             if(ticker && btn) {
@@ -587,6 +605,7 @@
         };
 
         window.toggleRssSpeed = function() {
+            window.NativeBridge.vibrate(20);
             currentRssSpeedIndex = (currentRssSpeedIndex + 1) % rssSpeeds.length;
             let ticker = document.getElementById('rssTickerContent');
             if(ticker) {
@@ -596,35 +615,42 @@
         };
 
         window.openAddNewsModal = function() { 
+            window.NativeBridge.vibrate(30);
             let m = document.getElementById('addNewsModal');
             if(m) m.classList.add('active'); 
         };
         
         window.closeAddNewsModal = function() { 
+            window.NativeBridge.vibrate(20);
             let m = document.getElementById('addNewsModal');
             if(m) m.classList.remove('active'); 
         };
 
         window.submitCustomNews = function() {
+            window.NativeBridge.vibrate(40);
             let textInput = document.getElementById('newRssTextInput');
             let catInput = document.getElementById('newRssCategoryInput');
             if(!textInput) return;
             let text = textInput.value.trim();
             let cat = catInput ? catInput.value : 'تحديث';
-            if(!text) return alert('الرجاء كتابة نص الخبر أولاً');
+            if(!text) {
+                window.NativeBridge.showToast('الرجاء كتابة نص الخبر أولاً');
+                return;
+            }
             rssNewsList.unshift(`📌 [${cat}] ${text}`);
             textInput.value = '';
             window.closeAddNewsModal();
-            alert('✓ تم إضافة الخبر بنجاح لشريط الأخبار الخاص بهذا الحساب.');
+            window.NativeBridge.showToast('تم نشر الخبر بنجاح لشريط الأخبار');
         };
 
         window.closeSummaryModal = function() { 
+            window.NativeBridge.vibrate(20);
             let m = document.getElementById('summaryModal');
             if(m) m.classList.remove('active'); 
         };
 
-        // دالة الطباعة وحفظ PDF
         window.downloadReportPDF = function() {
+            window.NativeBridge.vibrate(30);
             let tag = document.getElementById('printIndexCompanyTag');
             let dateEl = document.getElementById('printIndexDate');
             if(tag) tag.innerText = `معرف الشركة: ${currentCompanyId}`;
@@ -632,10 +658,10 @@
             window.print();
         };
 
-        // تصدير التقارير كصورة PNG عبر html2canvas
         window.downloadReportImage = function() {
+            window.NativeBridge.vibrate(30);
             let element = document.getElementById('indexReportPrintArea');
-            if (!element) return alert('منطقة التقرير غير متوفرة');
+            if (!element) return window.NativeBridge.showToast('منطقة التقرير غير متوفرة');
             
             if (typeof html2canvas === 'undefined') {
                 let script = document.createElement('script');
@@ -649,17 +675,17 @@
 
         function executeImageCapture(element) {
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                let fileName = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast('تم تصدير وحفظ التقرير كصورة بنجاح');
             }).catch(err => {
-                alert('فشل تصدير الصورة: ' + err.message);
+                window.NativeBridge.showToast('فشل تصدير الصورة: ' + err.message);
             });
         }
 
-        // مشاركة التقرير
         window.shareReport = async function() {
+            window.NativeBridge.vibrate(30);
             let vaultVal = document.getElementById('statVault')?.innerText || '0 ج.م';
             let salesVal = document.getElementById('statSales')?.innerText || '0 ج.م';
             let profitsVal = document.getElementById('statProfits')?.innerText || '0 ج.م';
@@ -673,18 +699,7 @@
             text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'EIDCO // ملخص مؤشرات الأداء',
-                        text: text
-                    });
-                } catch (err) {
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-                }
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-            }
+            window.NativeBridge.shareText(text, 'EIDCO // ملخص مؤشرات الأداء');
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -697,17 +712,10 @@
                     if (el) el.style.display = 'none';
                 });
             }
-
-            document.querySelectorAll('a[href]').forEach(link => {
-                let href = link.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('javascript') && !href.startsWith('http') && !href.includes('companyId=')) {
-                    let separator = href.includes('?') ? '&' : '?';
-                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
-                }
-            });
         });
     </script>
 
+    <!-- Firebase SDK Modules والمزامنة اللحظية مع السحابة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -737,7 +745,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        enableIndexedDbPersistence(db).catch((err) => {});
+        enableIndexedDbPersistence(db).catch(() => {});
 
         let state = {
             accounts: [],
@@ -752,6 +760,7 @@
         let unsubscribers = [];
 
         window.purgeAllInvalidData = async function() {
+            window.NativeBridge.vibrate(40);
             if(!confirm('هل تريد تطهير وفحص الحركات المعلقة أو الوهمية المرتبطة بهذا الحساب في السحابة؟')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -768,15 +777,16 @@
                         txDeleted++;
                     }
                 }
-                alert(`✓ تم بنجاح تطهير الخزنة سحابياً وإزالة ${txDeleted} حركة غير صالحة لهذا الحساب.`);
+                window.NativeBridge.vibrate(80);
+                window.NativeBridge.showToast(`تم إزالة ${txDeleted} حركة غير صالحة سحابياً`);
             } catch (err) {
-                alert('خطأ أثناء التطهير السحابي الشامل: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء التطهير السحابي: ' + err.message);
             }
         };
 
         signInAnonymously(auth).then(() => {
             initApp(currentCompanyId);
-        }).catch((err) => {
+        }).catch(() => {
             initApp(currentCompanyId);
         });
 
@@ -902,7 +912,7 @@
 
         function updateAdminHeader() {
             let accountDoc = state.accounts.find(acc => acc.companyId === currentCompanyId) || {};
-            let adminName = localStorage.getItem('eidco_admin_' + currentCompanyId) || accountDoc.name || 'مسؤول الحساب';
+            let adminName = localStorage.getItem('eidco_v14_admin') || accountDoc.name || 'مسؤول الحساب';
             let nameEl = document.getElementById('welcomeAdminName');
             if(nameEl) nameEl.innerText = adminName;
 
@@ -970,6 +980,7 @@
         }
 
         window.showSummaryModal = function(type) {
+            window.NativeBridge.vibrate(30);
             let modalTitle = document.getElementById('modalTitle');
             let modalBody = document.getElementById('modalBody');
             if(!modalTitle || !modalBody) return;
@@ -1062,6 +1073,7 @@
         };
 
         window.deleteDashboardBatchInvoice = async function(id, docId) {
+            window.NativeBridge.vibrate(40);
             if(!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إرجاع الأصناف للمخزن وتحديث الخزنة في سحابة Firebase.')) return;
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -1083,9 +1095,10 @@
                 let tx = txSnap.docs.find(t => t.data().desc && t.data().desc.includes(id));
                 if(tx) await deleteDoc(doc(db, "transactions", tx.id));
 
-                alert('✓ تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
+                window.NativeBridge.vibrate(60);
+                window.NativeBridge.showToast('تم حذف الفاتورة وتحديث النظام السحابي بنجاح');
             } catch (err) {
-                alert('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 

@@ -17,6 +17,13 @@
     <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
+    <script>
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -38,14 +45,10 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -63,7 +66,13 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
+        .mono-font { 
+            font-family: 'JetBrains Mono', monospace; 
+            direction: ltr; 
+            unicode-bidi: embed; 
+            text-align: left; 
+            display: inline-block; 
+        }
         
         .corporate-card { 
             background: var(--card-bg); 
@@ -176,8 +185,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
@@ -198,6 +228,7 @@
                 <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-boxes-packing"></i> طلبات كابيتر والجملة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات المحلات والعملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة التحصيلية</a>
@@ -254,6 +285,7 @@
                         <a href="batch-invoices.html" class="nav-link active"><i class="fa-solid fa-boxes-packing"></i> طلبات كابيتر والجملة</a>
                         <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                         <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات المحلات والعملاء</a>
+                        <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة التحصيلية</a>
@@ -650,7 +682,7 @@
         }
 
         window.addBatchItemRow = function(productCode = '', qtyVal = 1, priceVal = 0) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let tbody = document.getElementById('batchItemsTableBody');
             let rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 4);
             let productOptions = state.products.map(p => `<option value="${p.code}" data-barcode="${p.barcode || ''}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === productCode ? 'selected' : ''}>${p.name} (المتاح بالمخزن: ${p.qty})</option>`).join('');
@@ -717,15 +749,15 @@
             if(!query) return;
             let matchedProd = state.products.find(p => (p.name && p.name.toLowerCase().includes(query)) || (p.code && p.code.toLowerCase().includes(query)) || (p.barcode && p.barcode.includes(query)));
             if(matchedProd) {
-                window.NativeBridge.vibrate(30);
+                triggerHaptic(30);
                 window.addBatchItemRow(matchedProd.code, 1, matchedProd.sellPrice);
                 document.getElementById('quickItemSearch').value = '';
-                window.NativeBridge.showToast(`✓ تم إضافة (${matchedProd.name}) لشحنة كابيتر`);
+                showNativeToast(`✓ تم إضافة (${matchedProd.name}) لشحنة كابيتر`);
             }
         };
 
         window.saveBatchInvoice = async function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let clientName = document.getElementById('batchClient').value;
             if(!clientName) return alert('الرجاء اختيار المحل / العميل أولاً');
 
@@ -850,25 +882,25 @@
                     });
                 }
 
-                window.NativeBridge.showToast("✓ تم حفظ طلب كابيتر وتحديث المخزن سحابياً");
+                showNativeToast("✓ تم حفظ طلب كابيتر وتحديث المخزن سحابياً");
                 window.resetBatchForm();
             } catch (err) {
-                window.NativeBridge.showToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
+                showNativeToast('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
         };
 
         window.updateCapiterStatusFast = async function(docId, newStatus) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             try {
                 await updateDoc(doc(db, "invoices", docId), { orderStatus: newStatus });
-                window.NativeBridge.showToast(`✓ تم تحديث حالة الشحنة إلى (${newStatus})`);
+                showNativeToast(`✓ تم تحديث حالة الشحنة إلى (${newStatus})`);
             } catch (err) {
-                window.NativeBridge.showToast('فشل تحديث حالة الشحنة: ' + err.message);
+                showNativeToast('فشل تحديث حالة الشحنة: ' + err.message);
             }
         };
 
         window.editBatchInvoice = function(id) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -894,7 +926,7 @@
         };
 
         window.resetBatchForm = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             editingBatchId = null;
             document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-truck-loading ml-2 text-indigo-600"></i> إنشـاء طلب جملة كابيتر جديد`;
             document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> حفظ طلب كابيتر وتحديث المخزن سحابياً`;
@@ -958,7 +990,7 @@
         }
 
         window.printDriverWaybill = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let activeOrders = state.invoices.filter(i => i.isBatch && i.orderStatus !== 'ملغي');
             if(!activeOrders.length) return alert('لا توجد شحنات نشطة لطباعة بيان السائق');
 
@@ -1007,14 +1039,14 @@
         };
 
         window.sendBatchToETA = async function(batchId) {
-            window.NativeBridge.vibrate(50);
+            triggerHaptic(50);
             let inv = state.invoices.find(i => i.id === batchId);
-            if (!inv) return window.NativeBridge.showToast('⚠️ الفاتورة غير موجودة محلياً');
+            if (!inv) return showNativeToast('⚠️ الفاتورة غير موجودة محلياً');
 
             if (!confirm(`هل أنت متأكد من إرسال الشحنة (${batchId}) إلى مصلحة الضرائب المصرية؟`)) return;
 
             try {
-                window.NativeBridge.showToast("⏳ جاري الإرسال للضرائب...");
+                showNativeToast("⏳ جاري الإرسال للضرائب...");
 
                 const cleanInvoiceData = JSON.parse(JSON.stringify(inv));
 
@@ -1042,19 +1074,19 @@
                             etaResponse: result.response 
                         });
                     }
-                    window.NativeBridge.showToast("✅ تم اعتماد الفاتورة لدى مصلحة الضرائب");
+                    showNativeToast("✅ تم اعتماد الفاتورة لدى مصلحة الضرائب");
                 } else {
                     console.error('ETA Rejection:', result.error);
-                    window.NativeBridge.showToast('❌ رفضت مصلحة الضرائب الفاتورة');
+                    showNativeToast('❌ رفضت مصلحة الضرائب الفاتورة');
                 }
             } catch (err) {
                 console.error('Network Error Details:', err);
-                window.NativeBridge.showToast('❌ خطأ في شبكة الضرائب: ' + err.message);
+                showNativeToast('❌ خطأ في شبكة الضرائب: ' + err.message);
             }
         };
 
         window.deleteBatchInvoice = async function(id) {
-            window.NativeBridge.vibrate(80);
+            triggerHaptic(80);
             if(!confirm('هل أنت متأكد من إلغاء وحذف هذه الشحنة؟ سيتم إعادة الكميات للمخزن السحابي.')) return;
             
             try {
@@ -1082,14 +1114,14 @@
                     await deleteDoc(doc(db, "transactions", tx.id));
                 }
 
-                window.NativeBridge.showToast("✓ تم حذف الطلب وتصفية البيانات سحابياً");
+                showNativeToast("✓ تم حذف الطلب وتصفية البيانات سحابياً");
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
+                showNativeToast('حدث خطأ أثناء الحذف بالسحابة: ' + err.message);
             }
         };
 
         window.openInvoicePreview = function(id) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let inv = state.invoices.find(i => i.id === id);
             if(!inv) return;
 
@@ -1122,29 +1154,38 @@
         };
 
         window.closePreviewModal = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             document.getElementById('previewModal').classList.remove('active');
             activePreviewInv = null;
         };
 
         window.printInvoicePDF = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             window.print();
         };
 
         window.downloadInvoiceImage = function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-CapiterOrder-${activePreviewInv ? activePreviewInv.id : Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast("تم تصدير وحفظ الصورة بنجاح");
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("تم تصدير وحفظ الصورة بنجاح");
             });
         };
 
         window.shareBatchInvoiceNative = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if(!activePreviewInv) return;
             let inv = activePreviewInv;
 
@@ -1168,7 +1209,18 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا في منظومة كابيتر للجملة! 🙏`;
 
-            window.NativeBridge.shareText(text, `طلب كابيتر ${inv.id}`);
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(text, `طلب كابيتر ${inv.id}`);
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: `طلب كابيتر ${inv.id}`, text: text });
+                } catch (err) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
         };
 
         window.sendInvoiceWhatsApp = function(id) {
@@ -1179,12 +1231,12 @@
         };
 
         window.triggerCloudSync = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let badge = document.getElementById('syncStatusBadge');
             badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري المزامنة...`;
             setTimeout(() => {
                 badge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">متزامن سحابياً</span>`;
-                window.NativeBridge.showToast("✓ تم المزامنة اللحظية مع سحابة كابيتر");
+                showNativeToast("✓ تم المزامنة اللحظية مع سحابة كابيتر");
             }, 600);
         };
 
@@ -1231,7 +1283,7 @@
         }
 
         window.openBarcodeScannerModal = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             document.getElementById('barcodeScannerModal').classList.add('active');
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
@@ -1243,12 +1295,12 @@
                 },
                 errorMessage => {}
             ).catch(err => {
-                window.NativeBridge.showToast('تعذر تشغيل الكاميرا: تأكد من إعطاء الصلاحيات.');
+                showNativeToast('تعذر تشغيل الكاميرا: تأكد من إعطاء الصلاحيات.');
             });
         };
 
         window.closeBarcodeScannerModal = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             if(html5QrCode) {
                 html5QrCode.stop().then(() => {
                     document.getElementById('barcodeScannerModal').classList.remove('active');

@@ -44,8 +44,6 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -63,15 +61,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* منع انكماش الهيدر أثناء ظهور لوحة المفاتيح */
         header {
             flex-shrink: 0;
         }
 
-        /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -185,8 +179,29 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("Toast:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if ("vibrate" in navigator) navigator.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
         function toggleMobileMenu() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
@@ -213,7 +228,6 @@
                 <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                 <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -270,7 +284,6 @@
                         <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                         <a href="documents.html" class="nav-link active"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
@@ -458,7 +471,7 @@
         }
 
         window.togglePaymentFields = function(category) {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             const extraFields = document.getElementById('paymentExtraFields');
             if (category === 'المدفوعات والتحويلات البنكية') {
                 extraFields.classList.remove('hidden');
@@ -567,7 +580,7 @@
         });
 
         window.saveDocument = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
             let clientSelect = document.getElementById('docClientSelect');
@@ -637,9 +650,9 @@
                         document.getElementById('paymentRef').value = '';
                         fileInput.value = '';
 
-                        window.NativeBridge.showToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
+                        showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
                     } catch (err) {
-                        window.NativeBridge.showToast('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
+                        showNativeToast('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
                     }
                 } else {
                     let docPayload = {
@@ -661,9 +674,9 @@
                         document.getElementById('docExpiryDate').value = '';
                         fileInput.value = '';
 
-                        window.NativeBridge.showToast("✓ تم حفظ المستند بالأرشيف");
+                        showNativeToast("✓ تم حفظ المستند بالأرشيف");
                     }).catch(err => {
-                        window.NativeBridge.showToast('خطأ أثناء حفظ المستند بالسحابة: ' + err.message);
+                        showNativeToast('خطأ أثناء حفظ المستند بالسحابة: ' + err.message);
                     });
                 }
             };
@@ -684,20 +697,20 @@
         };
 
         window.deleteDocument = async function(docId, isPayment, event) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if (event) event.stopPropagation();
             if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً؟')) return;
             try {
                 let colName = isPayment ? "client_payments" : "documents_tree";
                 await deleteDoc(doc(db, colName, docId));
-                window.NativeBridge.showToast("✓ تم الحذف بنجاح");
+                showNativeToast("✓ تم الحذف بنجاح");
             } catch(err) {
-                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
+                showNativeToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.previewDocument = function(docId, isPayment) {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             let i = null;
             if (isPayment) {
                 let pay = clientPaymentsList.find(p => p.docId === docId);
@@ -769,31 +782,39 @@
         };
 
         window.closePreviewModal = function() {
-            window.NativeBridge.vibrate(15);
+            triggerHaptic(15);
             document.getElementById('previewModal').classList.remove('active');
         };
 
         window.downloadDocAsImage = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
             
             html2canvas(element, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `${activePreviewItem.title || 'document'}_full.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                window.NativeBridge.downloadFile(fileName, base64Data);
-                window.NativeBridge.showToast("تم تصدير المستند كصورة بنجاح");
+                
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("تم تصدير المستند كصورة بنجاح");
             });
         };
 
         window.downloadDocAsPDF = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             window.print();
         };
 
-        // مشاركة مباشرة عبر أندرويد وواتساب
         window.sendDocWhatsApp = async function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let i = activePreviewItem;
             let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢\n\n` +
@@ -813,7 +834,18 @@
 
             msg += `\n_تم الإرسال عبر نظام EIDCO Business OS_`;
 
-            window.NativeBridge.shareText(msg, i.title || 'مستند EIDCO');
+            const bridge = getActiveBridge();
+            if (typeof bridge.shareText === 'function') {
+                bridge.shareText(msg, i.title || 'مستند EIDCO');
+            } else if (navigator.share) {
+                try {
+                    await navigator.share({ title: i.title || 'مستند EIDCO', text: msg });
+                } catch (e) {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+                }
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+            }
         };
 
         window.renderTree = function() {

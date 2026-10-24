@@ -9,9 +9,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -41,6 +44,8 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
         }
 
@@ -48,10 +53,12 @@
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
+            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -63,6 +70,8 @@
 
         /* المحافظة على رؤية حقول الإدخال أثناء الكتابة */
         input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
             scroll-margin-bottom: 120px;
         }
 
@@ -129,16 +138,23 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.75); 
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(8px);
             z-index: 1000; 
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
-            overflow-y: auto; 
             box-sizing: border-box; 
         }
         .custom-modal.active { display: flex !important; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            width: 100%;
+            margin: auto;
+        }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -169,29 +185,14 @@
     </style>
 
     <script>
-        function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
-            } else {
-                console.log("Toast:", message);
-            }
-        }
-
-        function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
-            }
-        }
-
         function toggleMobileMenu() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) drawer.classList.toggle('hidden');
         }
     </script>
 </head>
-<body>
+<body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
         <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
@@ -255,7 +256,7 @@
                                 <span class="text-[9px] text-indigo-600 font-mono font-bold">BUSINESS OS</span>
                             </div>
                         </div>
-                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                        <button onclick="toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold cursor-pointer">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -397,7 +398,7 @@
 
     <!-- نافذة معاينة الملفات والتفاصيل الكاملة المنبثقة -->
     <div id="previewModal" class="custom-modal">
-        <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative box-border">
+        <div id="previewCardContent" class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl relative box-border custom-modal-content">
             
             <!-- هيدر معتمد للطباعة والتصدير المعياري A4 -->
             <div class="hidden print-header flex justify-between items-center border-b pb-3">
@@ -457,7 +458,7 @@
         }
 
         window.togglePaymentFields = function(category) {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             const extraFields = document.getElementById('paymentExtraFields');
             if (category === 'المدفوعات والتحويلات البنكية') {
                 extraFields.classList.remove('hidden');
@@ -468,7 +469,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
             
             const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -514,17 +515,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل IndexedDB للعمل السريع والتخزين أوفلاين في التطبيق الأهلي Native WebView
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
 
         let documentsList = [];
         let clientPaymentsList = [];
@@ -573,7 +567,7 @@
         });
 
         window.saveDocument = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             let category = document.getElementById('docCategory').value;
             let title = document.getElementById('docTitle').value.trim();
             let clientSelect = document.getElementById('docClientSelect');
@@ -643,10 +637,9 @@
                         document.getElementById('paymentRef').value = '';
                         fileInput.value = '';
 
-                        showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
-                        alert('✓ تم تسجيل دفعة السداد وإضافتها للخزنة وكشف الحساب بنجاح دون أي تكرار.');
+                        window.NativeBridge.showToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
                     } catch (err) {
-                        alert('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
+                        window.NativeBridge.showToast('حدث خطأ أثناء حفظ الدفعة: ' + err.message);
                     }
                 } else {
                     let docPayload = {
@@ -668,10 +661,9 @@
                         document.getElementById('docExpiryDate').value = '';
                         fileInput.value = '';
 
-                        showNativeToast("✓ تم حفظ المستند بالأرشيف");
-                        alert('✓ تم حفظ المستند في الأرشيف الشجري بنجاح.');
+                        window.NativeBridge.showToast("✓ تم حفظ المستند بالأرشيف");
                     }).catch(err => {
-                        alert('خطأ أثناء حفظ المستند بالسحابة: ' + err.message);
+                        window.NativeBridge.showToast('خطأ أثناء حفظ المستند بالسحابة: ' + err.message);
                     });
                 }
             };
@@ -692,21 +684,20 @@
         };
 
         window.deleteDocument = async function(docId, isPayment, event) {
-            triggerHaptic(40);
+            window.NativeBridge.vibrate(40);
             if (event) event.stopPropagation();
             if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً؟')) return;
             try {
                 let colName = isPayment ? "client_payments" : "documents_tree";
                 await deleteDoc(doc(db, colName, docId));
-                showNativeToast("✓ تم الحذف بنجاح");
-                alert('✓ تم الحذف بنجاح.');
+                window.NativeBridge.showToast("✓ تم الحذف بنجاح");
             } catch(err) {
-                alert('خطأ أثناء الحذف: ' + err.message);
+                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.previewDocument = function(docId, isPayment) {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             let i = null;
             if (isPayment) {
                 let pay = clientPaymentsList.find(p => p.docId === docId);
@@ -778,33 +769,31 @@
         };
 
         window.closePreviewModal = function() {
-            triggerHaptic(15);
+            window.NativeBridge.vibrate(15);
             document.getElementById('previewModal').classList.remove('active');
         };
 
         window.downloadDocAsImage = function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let element = document.getElementById('previewCardContent');
             
             html2canvas(element, { scale: 3, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let link = document.createElement('a');
-                link.download = `${activePreviewItem.title || 'document'}_full.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(err => {
-                alert('خطأ أثناء حفظ الصورة: ' + err.message);
+                let fileName = `${activePreviewItem.title || 'document'}_full.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                window.NativeBridge.downloadFile(fileName, base64Data);
+                window.NativeBridge.showToast("تم تصدير المستند كصورة بنجاح");
             });
         };
 
         window.downloadDocAsPDF = function() {
-            triggerHaptic(20);
+            window.NativeBridge.vibrate(20);
             window.print();
         };
 
         // مشاركة مباشرة عبر أندرويد وواتساب
         window.sendDocWhatsApp = async function() {
-            triggerHaptic(30);
+            window.NativeBridge.vibrate(30);
             if (!activePreviewItem) return alert('⚠️ لا يوجد مستند محدد للمعاينة.');
             let i = activePreviewItem;
             let msg = `📄 *مستند / بيان مالي - EIDCO* 🏢\n\n` +
@@ -824,22 +813,7 @@
 
             msg += `\n_تم الإرسال عبر نظام EIDCO Business OS_`;
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(msg);
-            } else if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: i.title,
-                        text: msg
-                    });
-                } catch (err) {
-                    let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                let whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            window.NativeBridge.shareText(msg, i.title || 'مستند EIDCO');
         };
 
         window.renderTree = function() {
@@ -982,7 +956,7 @@
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

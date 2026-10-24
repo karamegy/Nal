@@ -48,7 +48,7 @@
             color: #f8fafc;
             min-height: 100dvh;
             margin: 0;
-            padding-bottom: env(safe-area-inset-bottom, 1.5rem);
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
             padding-top: env(safe-area-inset-top, 0px);
             display: flex;
             flex-direction: column;
@@ -231,10 +231,10 @@
         <div id="tvAmbilight" class="absolute -inset-6 bg-indigo-600/30 blur-3xl rounded-3xl transition-all duration-500 opacity-90 pointer-events-none"></div>
 
         <!-- إطار التلفزيون المعدني -->
-        <div class="real-tv-bezel p-2.5 sm:p-6 rounded-[28px] sm:rounded-[36px] relative overflow-hidden">
+        <div class="real-tv-bezel p-2 sm:p-5 rounded-[24px] sm:rounded-[36px] relative overflow-hidden">
             
             <!-- شاشة التلفزيون OLED -->
-            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[480px] sm:min-h-[560px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
+            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[440px] sm:min-h-[540px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
                 
                 <div class="tv-glass-glare"></div>
                 <div class="tv-scanlines"></div>
@@ -258,7 +258,7 @@
                 </div>
 
                 <!-- هيدر البث العلوي والمتجاوب -->
-                <div class="p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
+                <div class="p-3 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
                     <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto justify-between sm:justify-start">
                         <div class="flex items-center gap-2">
                             <button onclick="toggleMobileMenu()" class="w-9 h-9 bg-slate-800 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95 transition-transform">
@@ -292,8 +292,8 @@
                     </div>
                 </div>
 
-                <!-- منطقة البث الرئيسية -->
-                <div id="realTvContent" class="p-4 sm:p-8 relative z-20 flex-1 flex flex-col justify-center my-auto transition-all duration-300 select-none">
+                <!-- منطقة البث الرئيسية السلسة والمتجاوبة -->
+                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto max-h-[60vh] sm:max-h-none transition-all duration-300 select-none">
                     <!-- يتم دفق المحتوى عبر JS -->
                 </div>
 
@@ -438,7 +438,6 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل استمرار تخزين الشاشة أوفلاين
         enableIndexedDbPersistence(db).catch(() => {});
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -454,7 +453,6 @@
         let isWallMode = false;
         let initialLoadDone = false;
 
-        // دعم السحب باللمس على الشاشة للتنقل بين القنوات نيتف
         let touchStartX = 0;
         let touchEndX = 0;
         const screenContainerEl = document.getElementById('realTvScreen');
@@ -562,7 +560,6 @@
             speakArabicText(textToSpeak);
         };
 
-        // محرك استقبال أوامر الريموت الذكي للأزرار ولوحة المفاتيح
         window.addEventListener('keydown', (e) => {
             const key = e.key;
             const code = e.keyCode;
@@ -612,7 +609,6 @@
             const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
             const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
 
-            // الاستماع السحابي لأوامر ريموت الهاتف اللحظية من Firebase
             onSnapshot(doc(db, "tv_remote", currentCompanyId), (snapshot) => {
                 if (snapshot.exists()) {
                     const cmd = snapshot.data();
@@ -876,30 +872,42 @@
                 let totalProfit = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
 
                 screen.innerHTML = `
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-chart-pie text-indigo-400"></i> المؤشرات الرئيسية المباشرة (معزولة ومزامنة لحظياً)</span>
-                            <span class="text-[11px] text-slate-400 font-mono">EIDCO OS v14</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-chart-pie text-indigo-400"></i> المؤشرات الرئيسية المباشرة</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">EIDCO OS v14</span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div class="bg-indigo-950/85 border border-indigo-800/80 p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-indigo-300 text-xs font-bold"><i class="fa-solid fa-vault"></i> رصيد الخزنة</div>
-                                <div class="text-base sm:text-xl font-black text-white mono-font">${vault.toLocaleString()} ج.م</div>
+                                <div class="flex items-center justify-between text-indigo-300 text-xs font-bold">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-vault text-indigo-400"></i> رصيد الخزنة</span>
+                                    <span class="text-[9px] bg-indigo-900/80 px-1.5 py-0.5 rounded text-indigo-300 font-mono">LIVE</span>
+                                </div>
+                                <div class="text-lg sm:text-xl font-black text-white mono-font pt-1">${vault.toLocaleString()} ج.م</div>
                                 <div class="text-[10px] text-slate-400">رصيد الخزنة النقدي سحابياً</div>
                             </div>
                             <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-cyan-300 text-xs font-bold"><i class="fa-solid fa-cart-shopping"></i> إجمالي المبيعات</div>
-                                <div class="text-base sm:text-xl font-black text-cyan-400 mono-font">${totalSales.toLocaleString()} ج.م</div>
+                                <div class="flex items-center justify-between text-cyan-300 text-xs font-bold">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-cart-shopping text-cyan-400"></i> إجمالي المبيعات</span>
+                                    <span class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">TOTAL</span>
+                                </div>
+                                <div class="text-lg sm:text-xl font-black text-cyan-400 mono-font pt-1">${totalSales.toLocaleString()} ج.م</div>
                                 <div class="text-[10px] text-slate-400">إجمالي المبيعات السحابية</div>
                             </div>
                             <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-emerald-300 text-xs font-bold"><i class="fa-solid fa-chart-line"></i> صافي الأرباح</div>
-                                <div class="text-base sm:text-xl font-black text-emerald-400 mono-font">${totalProfit.toLocaleString()} ج.م</div>
+                                <div class="flex items-center justify-between text-emerald-300 text-xs font-bold">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-emerald-400"></i> صافي الأرباح</span>
+                                    <span class="text-[9px] bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-400 font-mono">NET</span>
+                                </div>
+                                <div class="text-lg sm:text-xl font-black text-emerald-400 mono-font pt-1">${totalProfit.toLocaleString()} ج.م</div>
                                 <div class="text-[10px] text-slate-400">صافي الأرباح المحققة</div>
                             </div>
                             <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-purple-300 text-xs font-bold"><i class="fa-solid fa-building-user"></i> العملاء والشركات</div>
-                                <div class="text-base sm:text-xl font-black text-purple-400 mono-font">${state.clients.length} جهة</div>
+                                <div class="flex items-center justify-between text-purple-300 text-xs font-bold">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-building-user text-purple-400"></i> العملاء والشركات</span>
+                                    <span class="text-[9px] bg-purple-950 px-1.5 py-0.5 rounded text-purple-300 font-mono">CLIENTS</span>
+                                </div>
+                                <div class="text-lg sm:text-xl font-black text-purple-400 mono-font pt-1">${state.clients.length} جهة</div>
                                 <div class="text-[10px] text-slate-400">العملاء والجهات السحابية</div>
                             </div>
                         </div>
@@ -908,17 +916,23 @@
             } else if(currentTvChannel === 'invoices') {
                 let recentInv = state.invoices.slice(-3).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> الفواتير الفردية والمجمعة (سحابياً)</span>
-                            <span class="text-[11px] text-slate-400 font-mono">فردية: ${state.invoices.length} | مجمعة: ${state.batch_invoices.length}</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> الفواتير الفردية والمجمعة</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">فردية: ${state.invoices.length} | مجمعة: ${state.batch_invoices.length}</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             ${recentInv.map(i => `
-                                <div class="bg-slate-900/90 border border-slate-700/70 p-3.5 rounded-2xl space-y-1.5 shadow-xl">
-                                    <div class="flex justify-between items-center"><span class="mono-font text-amber-400 font-bold text-xs">#${i.invoiceNumber || i.id || 'INV'}</span><span class="text-[10px] text-slate-400">${i.date || 'اليوم'}</span></div>
+                                <div class="bg-slate-900/90 border border-slate-700/70 p-3.5 rounded-2xl space-y-2 shadow-xl">
+                                    <div class="flex justify-between items-center">
+                                        <span class="mono-font text-amber-400 font-bold text-xs">#${i.invoiceNumber || i.id || 'INV'}</span>
+                                        <span class="text-[10px] text-slate-400">${i.date || 'اليوم'}</span>
+                                    </div>
                                     <div class="text-xs font-black text-slate-100 truncate">${i.clientName || i.client || 'عميل نقدي'}</div>
-                                    <div class="flex justify-between items-end pt-1 border-t border-slate-800 text-xs"><span class="text-indigo-400 font-black mono-font">${Number(i.totalAmount || i.total || 0).toLocaleString()} ج.م</span><span class="text-emerald-400 font-bold">فردية</span></div>
+                                    <div class="flex justify-between items-end pt-1 border-t border-slate-800 text-xs">
+                                        <span class="text-indigo-400 font-black mono-font">${Number(i.totalAmount || i.total || 0).toLocaleString()} ج.م</span>
+                                        <span class="text-emerald-400 font-bold text-[10px]">فردية</span>
+                                    </div>
                                 </div>
                             `).join('') || '<div class="col-span-3 text-center text-slate-500 py-4 text-xs font-bold">لا توجد فواتير فردية بعد</div>'}
                         </div>
@@ -927,12 +941,12 @@
             } else if (currentTvChannel === 'inventory') {
                 let recentProds = state.products.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-cyan-400 border-b border-slate-800 pb-2">
                             <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف المسجلة سحابياً</span>
-                            <span class="text-[11px] text-slate-400 font-mono">إجمالي الأصناف: ${state.products.length}</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">إجمالي الأصناف: ${state.products.length}</span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             ${recentProds.map(p => `
                                 <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-1 shadow">
                                     <div class="text-xs font-black text-white truncate">${p.name || p.productName || 'صنف'}</div>
@@ -946,12 +960,12 @@
             } else if (currentTvChannel === 'fleet') {
                 let recentFleet = state.fleet.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-purple-400 border-b border-slate-800 pb-2">
                             <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-map-location-dot"></i> أسطول النقل والشحنات اللوجستية (GPS)</span>
-                            <span class="text-[11px] text-slate-400 font-mono">المواقع النشطة: ${state.fleet.length}</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">المواقع النشطة: ${state.fleet.length}</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             ${recentFleet.map(f => `
                                 <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow">
                                     <div>
@@ -967,12 +981,12 @@
             } else if (currentTvChannel === 'clients') {
                 let recentClients = state.clients.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-4">
+                    <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
                             <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-building-user"></i> حسابات العملاء وجهات العمل</span>
-                            <span class="text-[11px] text-slate-400 font-mono">إجمالي العملاء: ${state.clients.length}</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">إجمالي العملاء: ${state.clients.length}</span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             ${recentClients.map(c => `
                                 <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-1">
                                     <div class="text-xs font-black text-white truncate">${c.name || c.clientName || 'عميل'}</div>
@@ -991,21 +1005,21 @@
                 let phone = acc.phone || 'غير مسجل';
 
                 screen.innerHTML = `
-                    <div class="space-y-4 text-center max-w-lg mx-auto w-full">
+                    <div class="space-y-3 sm:space-y-4 text-center max-w-lg mx-auto w-full">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-400 border-b border-slate-800 pb-2 text-right w-full">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-id-badge"></i> الملف الشخصي والحساب (profile.html)</span>
-                            <span class="text-[11px] text-slate-400 font-mono">معزول ومزامن</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-id-badge"></i> الملف الشخصي والحساب</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">معزول ومزامن</span>
                         </div>
-                        <div class="bg-slate-900/90 border border-slate-800 p-5 sm:p-6 rounded-3xl space-y-4 shadow-2xl flex flex-col items-center">
-                            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-xl ring-4 ring-indigo-500/30 overflow-hidden">
+                        <div class="bg-slate-900/90 border border-slate-800 p-4 sm:p-6 rounded-3xl space-y-3 shadow-2xl flex flex-col items-center">
+                            <div class="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xl sm:text-3xl shadow-xl ring-4 ring-indigo-500/30 overflow-hidden">
                                 ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
                             </div>
                             <div class="space-y-1">
                                 <h3 class="font-black text-base sm:text-lg text-white">${name}</h3>
                                 <p class="text-xs text-indigo-400 font-bold">${role}</p>
-                                <p class="text-xs text-slate-400 font-mono mt-1">معرف الشركة: ${currentCompanyId}</p>
+                                <p class="text-[11px] text-slate-400 font-mono mt-1">معرف الشركة: ${currentCompanyId}</p>
                             </div>
-                            <div class="w-full pt-3 border-t border-slate-800/80 flex justify-around text-xs text-slate-300 font-mono">
+                            <div class="w-full pt-3 border-t border-slate-800/80 flex justify-around text-xs text-slate-300 font-mono flex-wrap gap-2">
                                 <span>📞 الهاتف: ${phone}</span>
                                 <span class="text-emerald-400 font-bold">● متصل سحابياً</span>
                             </div>

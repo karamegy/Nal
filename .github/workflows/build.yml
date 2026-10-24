@@ -57,11 +57,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 4. إنشاء مجلد الأصول وملف capacitor.plugins.json مسبقاً لمنع خطأ ENOENT
-          mkdir -p android/app/src/main/assets
-          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
-
-          # 5. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
+          # 4. ضبط ملف capacitor.config.json المباشر للرابط الخارجي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -95,7 +91,7 @@ jobs:
           }
           EOF
 
-          # 6. توليد أحجام الأيقونات لأندرويد
+          # 5. توليد أحجام الأيقونات لأندرويد
           if [ -f "icon-new-512.png" ]; then
             cp icon-new-512.png assets/icon.png 2>/dev/null || true
           elif [ -f "logo.png" ]; then
@@ -106,12 +102,12 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
+          # 6. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
 
-          # 8. تجهيز مسارات موفر الملفات والـ AndroidManifest
+          # 7. تجهيز مسارات موفر الملفات والـ AndroidManifest
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -188,14 +184,14 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                  </meta-data>
+                  </provider>
 
               </application>
 
           </manifest>
           EOF
 
-          # 9. حقن ملف strings.xml
+          # 8. حقن ملف strings.xml
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -208,16 +204,20 @@ jobs:
           </resources>
           EOF
 
-          # 10. نسخ ملف التوقيع وضمان وجود ملف plugins.json مرة أخرى قبل الـ Sync احتياطياً
+          # 9. نسخ ملف التوقيع
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
-          mkdir -p android/app/src/main/assets
-          if [ ! -f "android/app/src/main/assets/capacitor.plugins.json" ]; then
-            echo "{}" > android/app/src/main/assets/capacitor.plugins.json
-          fi
 
-          # 11. إعداد Gradle للتوقيع وضبط الإصدارات
+          # 10. تحديث ونسخ ملفات كاباسيتور يدوياً بدون مسح الأصول
+          npx cap update android
+          npx cap copy android
+
+          # 11. 🛑 إنشاء ملف capacitor.plugins.json وضمان استقراره تماماً
+          mkdir -p android/app/src/main/assets
+          echo "{}" > android/app/src/main/assets/capacitor.plugins.json
+
+          # 12. إعداد Gradle للتوقيع وضبط الإصدارات
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -249,11 +249,10 @@ jobs:
           }
           EOF
 
-          # 12. تنظيف مخلفات الكاش وتحديث كاباسيتور والبناء بنجاح تام
+          # 13. تنظيف مخلفات الكاش والبناء بنجاح تام
           rm -rf ~/.gradle/caches/jars-9/ || true
           rm -rf ~/.gradle/caches/transforms/ || true
 
-          npx cap sync android
           cd android
           chmod +x gradlew
           ./gradlew clean --no-daemon

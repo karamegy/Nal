@@ -16,6 +16,10 @@
     <script src="./eidco-core.js"></script>
 
     <script>
+        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
+        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
+        window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
+
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -131,9 +135,14 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
+
         function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
             }
@@ -141,8 +150,9 @@
 
         function triggerHaptic(duration = 40) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
             }
         }
 
@@ -309,9 +319,11 @@
 
     <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
+        const DEFAULT_COMPANY_ID = 'company_founder_karm';
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
             const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -350,6 +362,8 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        const DEFAULT_COMPANY_ID = 'company_founder_karm';
+
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -366,7 +380,8 @@
         // تفعيل استمرار تخزين البيانات أوفلاين
         enableIndexedDbPersistence(db).catch(() => {});
 
-        const currentCompanyId = localStorage.getItem('eidco_current_company_id') || 'default_company';
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
 
         const collectionsList = [
             "accounts", 
@@ -383,6 +398,10 @@
             "settings",
             "shipments"
         ];
+
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
 
         function showStatus(text, isError = false) {
             const el = document.getElementById('statusMessage');
@@ -483,9 +502,10 @@
                 }
 
                 const jsonStr = JSON.stringify(backupData, null, 2);
+                const bridge = getActiveBridge();
 
-                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
-                    window.AndroidBridge.downloadFile(`EIDCO_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`, jsonStr);
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(`EIDCO_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`, jsonStr);
                 } else {
                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
                     const dl = document.createElement('a'); 
@@ -531,9 +551,10 @@
                 }
 
                 summaryText += `\nإجمالي السجلات السحابية: ${totalRecords}\nيرجى الاحتفاظ بهذا البريد للتوثيق والمراجعة.`;
+                const bridge = getActiveBridge();
 
-                if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                    window.AndroidBridge.shareText(summaryText);
+                if (typeof bridge.shareText === 'function') {
+                    bridge.shareText(summaryText);
                 } else if (navigator.share) {
                     try {
                         await navigator.share({
@@ -557,8 +578,9 @@
 
         window.triggerJsonPicker = function() {
             triggerHaptic(20);
-            if (window.AndroidBridge && typeof window.AndroidBridge.openFilePicker === 'function') {
-                window.AndroidBridge.openFilePicker();
+            const bridge = getActiveBridge();
+            if (typeof bridge.openFilePicker === 'function') {
+                bridge.openFilePicker();
             } else {
                 document.getElementById('importJsonFile').click();
             }
@@ -644,7 +666,7 @@
 
     <!-- الزر العائم المتحرك لبث EIDCO TV المحدث والكامل -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

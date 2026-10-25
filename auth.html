@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services للنافذة المدمجة -->
+    <!-- مكتبة Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -234,13 +234,10 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google (المدمج) -->
+                <!-- زر دخول بـ Google -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
-
-                <!-- حاوية زر Google المباشر (تُستخدم كبديل تلقائي مدمج داخل الصفحة) -->
-                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center"></div>
 
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
@@ -298,7 +295,7 @@
             </button>
         </div>
 
-        <!-- خيارات إضافية (الشكاوى والخصوصية) -->
+        <!-- خيارات إضافية -->
         <div class="space-y-2 relative z-10 pt-1">
             <button onclick="openComplaintsModal()" class="w-full bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> إرسال بلاغ أو شكوى للإدارة العليا
@@ -494,6 +491,7 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -526,48 +524,6 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // فحص بيئة التشغيل للتمييز بين التطبيق المدمج الـ Native ومتصفح الويب
-        function isNativeAppEnvironment() {
-            const isCapacitor = typeof window !== 'undefined' && window.Capacitor && 
-                (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
-            const hasBridge = !!(window.AndroidBridge || window.NativeBridge);
-            const isWebView = /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || navigator.userAgent.includes('W2A');
-            
-            return !!(isCapacitor || hasBridge || isWebView);
-        }
-
-        const isCapacitorNative = isNativeAppEnvironment();
-
-        function initCapacitorBridge() {
-            if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
-                if (window.Capacitor.Plugins.GoogleAuth) {
-                    window.Capacitor.Plugins.GoogleAuth.initialize({
-                        clientId: CLIENT_ID,
-                        grantOfflineAccess: true,
-                        scopes: ['profile', 'email']
-                    }).catch(err => console.warn("GoogleAuth init warning:", err));
-                }
-
-                if (window.Capacitor.Plugins.App) {
-                    window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
-                        const activeModal = document.querySelector('.custom-modal.active');
-                        if (activeModal) {
-                            activeModal.classList.remove('active');
-                        } else if (canGoBack) {
-                            window.history.back();
-                        } else {
-                            window.Capacitor.Plugins.App.exitApp();
-                        }
-                    });
-                }
-
-                if (window.Capacitor.Plugins.SplashScreen) {
-                    setTimeout(() => window.Capacitor.Plugins.SplashScreen.hide(), 500);
-                }
-            }
-        }
-        initCapacitorBridge();
-
         function showAuthMsg(type, text) {
             const msgBox = document.getElementById('authMsgBox');
             if (!msgBox) return;
@@ -598,122 +554,79 @@
             }
         });
 
-        // إعداد نافذة Google Identity Services (One Tap) للمتصفح فقط
-        function initGoogleOneTap() {
-            if (!isNativeAppEnvironment() && window.google && window.google.accounts && window.google.accounts.id) {
-                window.google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: handleCredentialResponse,
-                    auto_select: false,
-                    cancel_on_tap_outside: true,
-                    context: "signin"
-                });
-            }
-        }
-
-        async function handleCredentialResponse(response) {
-            try {
-                showNativeToast("جاري تسجيل الدخول...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (e) {
-                showAuthMsg('error', 'خطأ أثناء المصادقة بـ Google: ' + e.message);
-            }
-        }
-
-        window.addEventListener('load', () => {
-            setTimeout(initGoogleOneTap, 800);
-        });
-
-        // دالة تسجيل الدخول بـ Google المعدلة لحل مشكلة المتصفح الخارجي نهائياً
+        // =========================================================
+        // دالة الدخول بـ Google الشاملة (Native + Web Hybrid)
+        // =========================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const isNative = isNativeAppEnvironment();
+            const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // ==========================================
-            // المسار الأول: إذا كان يعمل داخل التطبيق المدمج (Native APK / Action Build)
-            // ==========================================
-            if (isNative) {
-                // 1. استخدام إضافة Capacitor GoogleAuth
-                if (window.Capacitor?.Plugins?.GoogleAuth) {
-                    try {
-                        showNativeToast("جاري فتح حسابات Google...");
-                        
-                        await window.Capacitor.Plugins.GoogleAuth.initialize({
-                            clientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
+            // 1. استخدام Capacitor Native Plugin إذا وُجدت
+            if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
+                try {
+                    showNativeToast("جاري فتح حسابات Google (Native)...");
 
-                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                        const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-                        
-                        if (idToken) {
-                            const credential = GoogleAuthProvider.credential(idToken);
-                            const result = await signInWithCredential(auth, credential);
-                            await processGoogleAccountData(result.user);
-                            return;
-                        } else {
-                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق من Google.');
-                            return;
-                        }
-                    } catch (nativeErr) {
-                        console.warn("Capacitor GoogleAuth Error:", nativeErr);
-                        showAuthMsg('error', 'تم إلغاء عملية الدخول أو حدث خطأ في استدعاء الخدمة.');
-                        return; // يمنع التحويل للمتصفح الخارجي القاطع
+                    await capacitorGoogleAuth.initialize({
+                        clientId: CLIENT_ID,
+                        serverClientId: CLIENT_ID,
+                        grantOfflineAccess: true,
+                        scopes: ['profile', 'email']
+                    }).catch(e => console.warn("GoogleAuth Init Warning:", e));
+
+                    const googleUser = await capacitorGoogleAuth.signIn();
+                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+
+                    if (idToken) {
+                        const credential = GoogleAuthProvider.credential(idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        await processGoogleAccountData(result.user);
+                        return;
+                    }
+                } catch (nativeErr) {
+                    console.warn("Capacitor Native Auth failed/canceled, switching to web fallback...", nativeErr);
+                    let errMessage = nativeErr?.message || JSON.stringify(nativeErr);
+                    if (errMessage.includes("canceled") || errMessage.includes("12501")) {
+                        showAuthMsg('error', 'تم إلغاء عملية الدخول من قِبل المستخدم.');
+                        return;
                     }
                 }
-
-                // 2. استخدام الجسر المباشر لـ Android Native Bridge
-                const bridge = window.AndroidBridge || window.NativeBridge;
-                if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
-                    showNativeToast("جاري فتح حسابات Google...");
-                    bridge.launchNativeGoogleSignIn();
-                    return;
-                }
-
-                // 3. النافذة المدمجة المباشرة داخل الـ WebView
-                if (window.google && window.google.accounts && window.google.accounts.id) {
-                    window.google.accounts.id.prompt((notification) => {
-                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                            renderEmbeddedGoogleBtn();
-                        }
-                    });
-                    return;
-                }
-
-                showAuthMsg('error', 'خدمة Google المدمجة غير متوفرة في هذا التطبيق.');
-                return;
             }
 
-            // ==========================================
-            // المسار الثاني: عند فتح المشروع من متصفح عادي (Chrome/Edge/Safari)
-            // ==========================================
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        renderEmbeddedGoogleBtn();
-                    }
-                });
-            } else {
-                showAuthMsg('error', 'تعذر تحميل خدمة Google Identity. يرجى التأكد من الاتصال بالإنترنت.');
+            // 2. استخدام Android Native Bridge إذا كان معرّفاً
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                try {
+                    showNativeToast("جاري فتح حسابات Google...");
+                    androidBridge.launchNativeGoogleSignIn();
+                    return;
+                } catch (e) {
+                    console.warn("Android Bridge Error:", e);
+                }
+            }
+
+            // 3. الحل البديل التلقائي (Fallback): Firebase Web Popup مخصص للـ Web / TWA / PWA
+            try {
+                showNativeToast("جاري فتح اختيار الحسابات...");
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                
+                const result = await signInWithPopup(auth, provider);
+                if (result && result.user) {
+                    await processGoogleAccountData(result.user);
+                }
+            } catch (webErr) {
+                console.error("Google Web Popup Auth Error:", webErr);
+                if (webErr.code === 'auth/popup-closed-by-user') {
+                    showAuthMsg('error', 'تم إغلاق نافذة تسجيل الدخول قبل إكمال العملية.');
+                } else if (webErr.code === 'auth/popup-blocked') {
+                    showAuthMsg('error', 'تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة من إعدادات المتصفح.');
+                } else {
+                    showAuthMsg('error', 'خطأ في تسجيل الدخول بـ Google: ' + (webErr.message || webErr.code));
+                }
             }
         };
-
-        function renderEmbeddedGoogleBtn() {
-            const wrapper = document.getElementById('googleNativeBtnWrapper');
-            if (wrapper && window.google?.accounts?.id) {
-                wrapper.classList.remove('hidden');
-                document.getElementById('googleBtnCustom').classList.add('hidden');
-                window.google.accounts.id.renderButton(
-                    wrapper,
-                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
-                );
-            }
-        }
 
         // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
@@ -857,7 +770,7 @@
 
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
-            let userDisplayName = user.displayName || userEmail.split('@')[0];
+            let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
             let userPhotoUrl = user.photoURL || '';
 
             const querySnapshot = await getDocs(accountsRef);
@@ -884,7 +797,7 @@
                 let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
                 assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
 
-                if (userEmail === 'haretg@gmail.com') {
+                if (userEmail.toLowerCase() === 'haretg@gmail.com') {
                     assignedCompanyId = 'company_founder_karm';
                     finalUserName = FOUNDER_NAME;
                     userRole = 'مدير نظام رئيسي';

@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services (One Tap & Credential Manager) -->
+    <!-- مكتبة Google Identity Services الرسمية للنافذة المباشرة -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -243,6 +243,9 @@
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
             </div>
+            
+            <!-- الحاوية المباشرة لزر جوجل التلقائي (غير مرئية للتأكيد الفوري) -->
+            <div id="g_id_onload" class="hidden"></div>
         </div>
 
         <!-- قسم الدخول التقليدي (Username + PIN) -->
@@ -491,7 +494,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -556,25 +558,25 @@
             }
         });
 
-        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل
+        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل مع التعرف والمزامنة المباشرة
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: window.handleGoogleIdentityCredential,
-                    auto_select: false,
+                    auto_select: true,
                     cancel_on_tap_outside: false
                 });
 
-                // فتح النافذة تلقائياً عند فتح الصفحة إن أمكن
+                // عرض نافذة الاختيار السفلية المباشرة
                 window.google.accounts.id.prompt();
             }
         };
 
         window.handleGoogleIdentityCredential = async function(response) {
-            if (!response.credential) return;
+            if (!response || !response.credential) return;
             try {
-                showNativeToast("جاري توثيق الحساب سحابياً...");
+                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
                 const credential = GoogleAuthProvider.credential(response.credential);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -583,17 +585,16 @@
             }
         };
 
-        // تشغيل التهيئة فور تجهيز السكربت
         if (document.readyState === 'complete') {
             window.initGoogleIdentity();
         } else {
             window.addEventListener('load', window.initGoogleIdentity);
         }
 
-        // استقبال ה- Token من كود الأندرويد الناتيف إن وجد
+        // استقبال ה- Token من كود الأندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
-                showNativeToast("جاري توثيق الحساب سحابياً...");
+                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
                 const credential = GoogleAuthProvider.credential(idToken);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -603,7 +604,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول الموحدة بـ Google مع إظهار Bottom Sheet الرسمية
+        // دالة الدخول الموحدة بـ Google (تستدعي النافذة المباشرة فقط بدون متصفح)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -613,10 +614,10 @@
             const capacitorPlugins = window.Capacitor?.Plugins;
             const googleAuthPlugin = capacitorPlugins?.GoogleAuth;
 
-            // 1. مسار Capacitor GoogleAuth الناتيف
+            // 1. مسار Capacitor GoogleAuth المباشر
             if (googleAuthPlugin) {
                 try {
-                    showNativeToast("جاري فتح حسابات Google...");
+                    showNativeToast("جاري فتح حسابات الجهاز...");
                     if (typeof googleAuthPlugin.initialize === 'function') {
                         await googleAuthPlugin.initialize({
                             clientId: CLIENT_ID,
@@ -639,43 +640,24 @@
                 }
             }
 
-            // 2. مسار Android Native Bridge المباشر
+            // 2. مسار Android Native Bridge المباشر داخل الجسر
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح نافذة جوجل الرسمية...");
+                showNativeToast("جاري اختيار الحساب...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 3. مسار Google Identity Services (One Tap Bottom Sheet)
+            // 3. مسار GIS One Tap (عرض نافذة اختيار الحسابات المباشرة بدون متصفح)
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري فتح حسابات الجهاز...");
+                showNativeToast("جاري فتح حسابات جوجل...");
                 window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // التراجع المباشر إلى Firebase Popup إذا تم حظر One Tap
-                        fallbackToFirebasePopup();
+                    if (notification.isNotDisplayed()) {
+                        window.google.accounts.id.prompt();
                     }
                 });
                 return;
             }
-
-            // 4. المسار الاحتياطي الستندارد (Firebase Popup)
-            fallbackToFirebasePopup();
         };
-
-        async function fallbackToFirebasePopup() {
-            try {
-                showNativeToast("جاري فتح نافذة تسجيل Google...");
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-                
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (popupErr) {
-                if (popupErr.code !== 'auth/popup-closed-by-user') {
-                    showAuthMsg('error', 'تعذر إتمام الدخول: ' + popupErr.message);
-                }
-            }
-        }
 
         // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
@@ -863,7 +845,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
-                showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
+                showNativeToast("✓ تم تسجيل الدخول والمزامنة بنجاح");
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (err) {
                 isProcessingAuth = false;

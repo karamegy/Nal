@@ -47,7 +47,21 @@
             box-sizing: border-box;
         }
 
-        html, body { 
+        /* السماح بالتفاعل الكامل والتحديد لحقول المدخلات */
+        input, textarea, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            scroll-margin-bottom: 120px;
+        }
+
+        html {
+            background-color: var(--bg-main);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            height: 100%;
+        }
+
+        body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main) !important; 
             color: var(--text-main); 
@@ -57,7 +71,9 @@
             padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden;
-            overscroll-behavior-y: contain;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: manipulation;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -65,11 +81,13 @@
             flex-shrink: 0;
         }
 
-        input, textarea, select {
-            scroll-margin-bottom: 120px;
+        .mono-font { 
+            font-family: 'JetBrains Mono', monospace; 
+            direction: ltr; 
+            unicode-bidi: embed; 
+            text-align: left; 
+            display: inline-block; 
         }
-
-        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         
         .corporate-card { 
             background: var(--card-bg); 
@@ -128,6 +146,14 @@
 
         .tree-node { border-right: 2px dashed #cbd5e1; margin-right: 1rem; padding-right: 1.25rem; position: relative; }
         
+        /* حاوية التمرير للجداول والقوائم العريضة */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
+            overscroll-behavior-x: contain;
+        }
+
         .custom-modal { 
             display: none; 
             position: fixed; 
@@ -138,14 +164,18 @@
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
             box-sizing: border-box; 
         }
         .custom-modal.active { display: flex !important; }
 
         .custom-modal-content {
-            max-height: 90vh;
-            max-height: 90dvh;
+            max-height: 85vh;
+            max-height: 85dvh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             width: 100%;
             margin: auto;
         }
@@ -209,8 +239,8 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية للشاشات الكبيرة -->
-        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
+        <!-- القائمة الجانبية للشاشات الكبيرة واللوحيات -->
+        <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-cube"></i></div>
                 <div>
@@ -259,7 +289,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل -->
+            <!-- القائمة المنسدلة الجانبية للموبايل واللوحيات -->
             <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -274,7 +304,7 @@
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
-                    <nav class="space-y-1.5 flex-1">
+                    <nav class="space-y-1.5 flex-1 overflow-y-auto">
                         <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                         <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                         <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
@@ -303,7 +333,7 @@
                         إضافة مستند أو تسجيل تحويل/دفعة جديدة للأرشيف المالي والشجري
                     </h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">قسم المجلد / نوع الإدخال الشجري</label>
                             <select id="docCategory" class="corporate-input font-bold text-indigo-900" onchange="window.togglePaymentFields(this.value)">
@@ -330,7 +360,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">تاريخ الاستحقاق أو تاريخ المعاملة</label>
                             <input type="date" id="docExpiryDate" class="corporate-input mono-font" dir="ltr">
@@ -347,7 +377,7 @@
                     </div>
 
                     <!-- حقول المدفوعات والتحويلات المتقدمة -->
-                    <div id="paymentExtraFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 hidden">
+                    <div id="paymentExtraFields" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs bg-indigo-50/60 p-4 rounded-xl border border-indigo-200 hidden">
                         <div>
                             <label class="block mb-1 text-indigo-950 font-bold">قيمة المبلغ المدفوع (ج.م)</label>
                             <input type="number" id="paymentAmount" class="corporate-input mono-font bg-white font-bold text-indigo-700" placeholder="0.00" dir="ltr">
@@ -369,7 +399,7 @@
                     </div>
 
                     <!-- رفع الملف المرفق -->
-                    <div class="grid grid-cols-1 md:grid-cols-1 gap-4 text-xs">
+                    <div class="grid grid-cols-1 gap-4 text-xs">
                         <div>
                             <label class="block mb-1 text-slate-700 font-bold">رفـع المستند أو إيصال الدفع (صورة أو ملف PDF سحابي - أقصى حد 700KB)</label>
                             <input type="file" id="docFileInput" accept="image/*,application/pdf" class="corporate-input text-slate-500 py-2 bg-slate-50 cursor-pointer">
@@ -393,7 +423,7 @@
 
                 <!-- هيكل شجرة المستندات والمدفوعات -->
                 <div class="corporate-card p-6 space-y-4 bg-white shadow-sm">
-                    <div class="flex justify-between items-center border-b pb-3">
+                    <div class="flex justify-between items-center flex-wrap gap-2 border-b pb-3">
                         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-sitemap text-indigo-600"></i> 
                             الهيكل الشجري للأرشيف والتحويلات المالية (مزامنة فورية مع معرف الحساب)
@@ -457,6 +487,26 @@
             </div>
         </div>
     </div>
+
+    <!-- معالج محاذاة الكيبورد والتمرير التلقائي للوحيات والموبايل -->
+    <script>
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const activeModal = document.querySelector('.custom-modal.active');
+                if (activeModal) {
+                    activeModal.style.height = `${window.visualViewport.height}px`;
+                }
+            });
+        }
+    </script>
 
     <!-- دوال القائمة الجانبية وتجهيز الصفحة -->
     <script>

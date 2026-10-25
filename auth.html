@@ -15,6 +15,9 @@
 
     <script src="capacitor.js"></script>
 
+    <!-- مكتبة Google Identity Services للنافذة المدمجة (GIS / One Tap) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -116,7 +119,7 @@
             background: #020617;
             border: 1px solid #1e293b;
             color: #94a3b8;
-            padding: 10px 14px;
+            padding: 10px 8px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: 700;
@@ -214,13 +217,16 @@
         <!-- شريط الرسائل والتنبيهات -->
         <div id="authMsgBox" class="hidden relative z-10 p-3 rounded-xl text-xs font-bold text-center border"></div>
 
-        <!-- أزرار تبويب طرق الدخول (Auth Tabs) -->
-        <div class="flex items-center gap-2 relative z-10 pt-1">
+        <!-- أزرار تبويب طرق الدخول وإنشاء حساب -->
+        <div class="flex items-center gap-1.5 relative z-10 pt-1">
             <button id="tabQuickBtn" onclick="switchAuthTab('quick')" class="auth-tab-btn active">
-                <i class="fa-solid fa-bolt text-amber-400 ml-1"></i> الدخول السريع (Google/هاتف)
+                <i class="fa-solid fa-bolt text-amber-400 ml-1"></i> دخول سريع
             </button>
             <button id="tabPinBtn" onclick="switchAuthTab('pin')" class="auth-tab-btn">
-                <i class="fa-solid fa-fingerprint text-indigo-400 ml-1"></i> اسم المستخدم و PIN
+                <i class="fa-solid fa-fingerprint text-indigo-400 ml-1"></i> اسم و PIN
+            </button>
+            <button id="tabRegisterBtn" onclick="switchAuthTab('register')" class="auth-tab-btn border-emerald-500/40 text-emerald-400">
+                <i class="fa-solid fa-user-plus text-emerald-400 ml-1"></i> حساب جديد
             </button>
         </div>
 
@@ -258,6 +264,32 @@
                     <span class="text-[10px] text-slate-500 block mt-0.5" id="selectedAccountDisplay">يرجى إدخال البيانات والنقر للتحقق</span>
                 </div>
             </div>
+        </div>
+
+        <!-- قسم تسجيل حساب جديد -->
+        <div id="registerAuthSection" class="space-y-3 relative z-10 pt-1 hidden">
+            <div class="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-xl mb-2">
+                <p class="text-xs text-emerald-300 font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-check"></i> إنشاء حساب جديد للمؤسسة / الشريك
+                </p>
+            </div>
+            <div class="space-y-2.5">
+                <div>
+                    <label class="block text-xs text-slate-300 font-bold mb-1">اسم الحساب / الشركة الجديدة:</label>
+                    <input type="text" id="regUsernameInput" class="corporate-input text-xs font-bold" placeholder="مثال: شركة البركة للتجارة">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 font-bold mb-1">البريد الإلكتروني أو الهاتف (اختياري):</label>
+                    <input type="text" id="regContactInput" class="corporate-input text-xs mono-font" placeholder="user@company.com / 010xxxxxxx">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 font-bold mb-1">تحديد الرقم السري (PIN):</label>
+                    <input type="password" id="regPinInput" class="corporate-input text-xs mono-font tracking-widest text-center text-base" placeholder="••••" maxlength="6">
+                </div>
+            </div>
+            <button onclick="createNewAccountProcess()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold w-full py-3 rounded-xl text-xs transition cursor-pointer shadow flex items-center justify-center gap-2 mt-2">
+                <i class="fa-solid fa-floppy-disk"></i> تسجيل وتفعيل الحساب فوراً
+            </button>
         </div>
 
         <!-- خيارات إضافية (الشكاوى والخصوصية) -->
@@ -369,19 +401,29 @@
             triggerHaptic(15);
             const quickSec = document.getElementById('quickAuthSection');
             const pinSec = document.getElementById('pinAuthSection');
+            const regSec = document.getElementById('registerAuthSection');
+
             const tabQuickBtn = document.getElementById('tabQuickBtn');
             const tabPinBtn = document.getElementById('tabPinBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+
+            quickSec.classList.add('hidden');
+            pinSec.classList.add('hidden');
+            regSec.classList.add('hidden');
+
+            tabQuickBtn.classList.remove('active');
+            tabPinBtn.classList.remove('active');
+            tabRegisterBtn.classList.remove('active');
 
             if (tab === 'quick') {
                 quickSec.classList.remove('hidden');
-                pinSec.classList.add('hidden');
                 tabQuickBtn.classList.add('active');
-                tabPinBtn.classList.remove('active');
-            } else {
-                quickSec.classList.add('hidden');
+            } else if (tab === 'pin') {
                 pinSec.classList.remove('hidden');
-                tabQuickBtn.classList.remove('active');
                 tabPinBtn.classList.add('active');
+            } else if (tab === 'register') {
+                regSec.classList.remove('hidden');
+                tabRegisterBtn.classList.add('active');
             }
         }
 
@@ -429,7 +471,7 @@
         }
     </script>
 
-    <!-- Firebase Engine & Capacitor Native Modules -->
+    <!-- Firebase Engine & Native Auth Handlers -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -464,12 +506,13 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
+        const CLIENT_ID = "515898424721-web.apps.googleusercontent.com";
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         auth.languageCode = 'ar';
 
-        // تفعيل وحفظ الجلسة محلياً أوفلاين (IndexedDB / LocalStorage)
         setPersistence(auth, indexedDBLocalPersistence).catch(() => {
             setPersistence(auth, browserLocalPersistence).catch(console.error);
         });
@@ -480,12 +523,11 @@
 
         const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
-        // إعداد وتجهيز إضافة Capacitor للهواتف الذكية
         function initCapacitorBridge() {
             if (isCapacitorNative && window.Capacitor.Plugins) {
                 if (window.Capacitor.Plugins.GoogleAuth) {
                     window.Capacitor.Plugins.GoogleAuth.initialize({
-                        clientId: '515898424721-web.apps.googleusercontent.com',
+                        clientId: CLIENT_ID,
                         grantOfflineAccess: true,
                         scopes: ['profile', 'email']
                     }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -529,7 +571,6 @@
             if (msgBox) msgBox.classList.add('hidden');
         }
 
-        // مراقب حالة المصادقة (Auth Observer)
         onAuthStateChanged(auth, async (user) => {
             if (user && !user.isAnonymous) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -542,7 +583,31 @@
             }
         });
 
-        // تسجيل الدخول بـ Google المزدوج (Native Plugin / AndroidBridge / Firebase Popup)
+        // إعداد نافذة Google One Tap المدمجة لتظهر كمودال نيتف أسفل الشاشة دون فتح متصفح خارجي
+        function setupGoogleOneTap() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: async (response) => {
+                        try {
+                            const credential = GoogleAuthProvider.credential(response.credential);
+                            const result = await signInWithCredential(auth, credential);
+                            await processGoogleAccountData(result.user);
+                        } catch (e) {
+                            showAuthMsg('error', 'خطأ أثناء تأكيد الدخول بـ Google: ' + e.message);
+                        }
+                    },
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+            }
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(setupGoogleOneTap, 1000);
+        });
+
+        // تسجيل الدخول بـ Google دون فتح متصفحات خارجية برمجياً
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
@@ -560,11 +625,11 @@
                         return;
                     }
                 } catch (nativeErr) {
-                    console.warn("Capacitor GoogleAuth Error, trying fallbacks...", nativeErr);
+                    console.warn("Capacitor GoogleAuth Error, falling back...", nativeErr);
                 }
             }
 
-            // 2. استخدام الجسر الأهلي للتطبيق
+            // 2. استخدام الجسر الأهلي Android Bridge إن وجد
             const bridge = window.AndroidBridge || window.NativeBridge;
             if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات Google...");
@@ -572,7 +637,20 @@
                 return;
             }
 
-            // 3. النافذة المنبثقة القياسية لـ Firebase
+            // 3. إظهار نافذة Google One Tap Bottom Sheet المدمجة داخل الصفحة (Modal)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // في حال عدم ظهور المودال المدمج، يتم استخدام Popup معزول
+                        fallbackGooglePopup();
+                    }
+                });
+            } else {
+                fallbackGooglePopup();
+            }
+        };
+
+        async function fallbackGooglePopup() {
             try {
                 showNativeToast("جاري فتح نافذة تسجيل الدخول...");
                 const provider = new GoogleAuthProvider();
@@ -583,9 +661,67 @@
                 console.error("Google Auth Popup Error:", err);
                 showAuthMsg('error', 'تعذر فتح نافذة تسجيل الدخول بـ Google: ' + err.message);
             }
+        }
+
+        // إنشاء وتنسيق حساب جديد
+        window.createNewAccountProcess = async function() {
+            triggerHaptic(30);
+            clearAuthMsgs();
+
+            const username = document.getElementById('regUsernameInput').value.trim();
+            const contact = document.getElementById('regContactInput').value.trim();
+            const pin = document.getElementById('regPinInput').value.trim();
+
+            if (!username) {
+                alert('يرجى كتابة اسم الحساب أو الشركة الجديد.');
+                return;
+            }
+            if (!pin || pin.length < 4) {
+                alert('يرجى تحديد رقم سري (PIN) لا يقل عن 4 أرقام.');
+                return;
+            }
+
+            try {
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let existing = cloudAccounts.find(a => a.name === username);
+                if (existing) {
+                    showAuthMsg('error', '⚠️ هذا الاسم مسجل بالفعل، يرجى اختيار اسم آخر أو تسجيل الدخول.');
+                    return;
+                }
+
+                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+
+                await setDoc(doc(db, "accounts", newCompanyId), {
+                    name: username,
+                    pin: pin,
+                    contact: contact || '',
+                    role: 'مدير مؤسسة جديد',
+                    companyId: newCompanyId,
+                    biometricVerified: true,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_v14_admin', username);
+                localStorage.setItem('eidco_current_company_id', newCompanyId);
+
+                showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
+                alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه إلى المنظومة...`);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
+
+            } catch (err) {
+                showAuthMsg('error', 'خطأ أثناء إنشاء الحساب: ' + err.message);
+            }
         };
 
-        // المصادقة التلقائية السحابية والتحقق الأول
         signInAnonymously(auth).then(() => {
             onSnapshot(accountsRef, (snapshot) => {
                 let accountsData = snapshot.docs.map(docSnap => ({
@@ -609,7 +745,6 @@
             console.error("خطأ في المصادقة الأولية:", err);
         });
 
-        // الشكاوى والبلاغات
         window.openComplaintsModal = function() {
             triggerHaptic(20);
             let currentInputName = document.getElementById('usernameInput').value.trim();
@@ -668,7 +803,6 @@
             }
         }
 
-        // معالجة حساب Google والمطابقة مع التراخيص والحظر
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];

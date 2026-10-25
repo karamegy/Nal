@@ -54,10 +54,11 @@
             min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
+            padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden;
-            overscroll-behavior-y: contain;
+            overflow-y: auto !important;
+            overscroll-behavior-y: auto;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -216,7 +217,7 @@
         </aside>
 
         <!-- المحتوى الرئيسي -->
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
             <!-- الهيدر المحدث والمتجاوب مع الشاشات الصغيرة -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -267,7 +268,7 @@
                 </div>
             </div>
 
-            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-24">
                 <!-- شريط تنبيهات انخفاض المخزون -->
                 <div id="lowStockAlertBanner" class="hidden p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -745,7 +746,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -762,22 +763,23 @@
             if (!dragEl) return;
             let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-            dragEl.addEventListener('touchstart', dragStart, {passive: false});
-            dragEl.addEventListener('touchend', dragEnd, {passive: false});
-            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('touchstart', dragStart, {passive: true});
+            dragEl.addEventListener('touchend', dragEnd, {passive: true});
+            dragEl.addEventListener('touchmove', drag, {passive: true});
             dragEl.addEventListener('mousedown', dragStart);
             document.addEventListener('mouseup', dragEnd);
             document.addEventListener('mousemove', drag);
 
             function dragStart(e) {
-                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+                if (e.target.closest('#floatingTvTrigger')) {
+                    initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                    initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                    isDragging = true;
+                }
             }
             function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
             function drag(e) {
                 if (isDragging) {
-                    e.preventDefault();
                     currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
                     currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
                     xOffset = currentX; yOffset = currentY;

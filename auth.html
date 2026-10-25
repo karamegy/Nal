@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services للنافذة المدمجة (GIS / One Tap) -->
+    <!-- مكتبة Google Identity Services للنافذة المدمجة -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -233,9 +233,15 @@
         <!-- قسم الدخول السريع (Google + الهاتف) -->
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                
+                <!-- زر دخول بـ Google (المدمج) -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
+
+                <!-- حاوية زر Google المباشر (تُستخدم كبديل تلقائي مدمج داخل الصفحة) -->
+                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center"></div>
+
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
@@ -487,7 +493,6 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithPopup,
             signInWithCredential,
             setPersistence,
             indexedDBLocalPersistence,
@@ -583,36 +588,40 @@
             }
         });
 
-        // إعداد نافذة Google One Tap المدمجة لتظهر كمودال نيتف أسفل الشاشة دون فتح متصفح خارجي
-        function setupGoogleOneTap() {
+        // إعداد نافذة Google Identity Services المدمجة (One Tap Bottom-Sheet)
+        function initGoogleOneTap() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
-                    callback: async (response) => {
-                        try {
-                            const credential = GoogleAuthProvider.credential(response.credential);
-                            const result = await signInWithCredential(auth, credential);
-                            await processGoogleAccountData(result.user);
-                        } catch (e) {
-                            showAuthMsg('error', 'خطأ أثناء تأكيد الدخول بـ Google: ' + e.message);
-                        }
-                    },
+                    callback: handleCredentialResponse,
                     auto_select: false,
-                    cancel_on_tap_outside: true
+                    cancel_on_tap_outside: true,
+                    context: "signin"
                 });
             }
         }
 
+        async function handleCredentialResponse(response) {
+            try {
+                showNativeToast("جاري تسجيل الدخول...");
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (e) {
+                showAuthMsg('error', 'خطأ أثناء المصادقة بـ Google: ' + e.message);
+            }
+        }
+
         window.addEventListener('load', () => {
-            setTimeout(setupGoogleOneTap, 1000);
+            setTimeout(initGoogleOneTap, 800);
         });
 
-        // تسجيل الدخول بـ Google دون فتح متصفحات خارجية برمجياً
+        // تسجيل الدخول بـ Google المدمج داخل الصفحة فقط بدون فتح متصفحات خارجية
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            // 1. استخدام إضافة Capacitor النيتف للموبايل
+            // 1. إذا كان تطبيق native عبر Capacitor
             if (isCapacitorNative && window.Capacitor?.Plugins?.GoogleAuth) {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -625,11 +634,11 @@
                         return;
                     }
                 } catch (nativeErr) {
-                    console.warn("Capacitor GoogleAuth Error, falling back...", nativeErr);
+                    console.warn("Capacitor GoogleAuth Error:", nativeErr);
                 }
             }
 
-            // 2. استخدام الجسر الأهلي Android Bridge إن وجد
+            // 2. إذا كان هنالك جسر Android Bridge مدمج
             const bridge = window.AndroidBridge || window.NativeBridge;
             if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات Google...");
@@ -637,29 +646,28 @@
                 return;
             }
 
-            // 3. إظهار نافذة Google One Tap Bottom Sheet المدمجة داخل الصفحة (Modal)
+            // 3. إظهار نافذة Google المدمجة أسفل الشاشة (One Tap Prompt / Bottom Sheet)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // في حال عدم ظهور المودال المدمج، يتم استخدام Popup معزول
-                        fallbackGooglePopup();
+                        // في حال تم تجاهل النافذة أو إغلاقها يتم رندر زر مدمج داخل الصفحة بدلاً من فتح متصفح خارجي
+                        renderEmbeddedGoogleBtn();
                     }
                 });
             } else {
-                fallbackGooglePopup();
+                showAuthMsg('error', 'تعذر تحميل خدمة Google Identity. يرجى التأكد من الاتصال بالإنترنت.');
             }
         };
 
-        async function fallbackGooglePopup() {
-            try {
-                showNativeToast("جاري فتح نافذة تسجيل الدخول...");
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                console.error("Google Auth Popup Error:", err);
-                showAuthMsg('error', 'تعذر فتح نافذة تسجيل الدخول بـ Google: ' + err.message);
+        function renderEmbeddedGoogleBtn() {
+            const wrapper = document.getElementById('googleNativeBtnWrapper');
+            if (wrapper && window.google?.accounts?.id) {
+                wrapper.classList.remove('hidden');
+                document.getElementById('googleBtnCustom').classList.add('hidden');
+                window.google.accounts.id.renderButton(
+                    wrapper,
+                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
+                );
             }
         }
 

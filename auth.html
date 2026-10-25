@@ -15,6 +15,9 @@
 
     <script src="capacitor.js"></script>
 
+    <!-- مكتبة Google Identity Services للنافذة المدمجة -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -186,81 +189,6 @@
                 bridge.vibrate(duration);
             }
         }
-
-        function switchAuthTab(tab) {
-            triggerHaptic(15);
-            const quickSec = document.getElementById('quickAuthSection');
-            const pinSec = document.getElementById('pinAuthSection');
-            const regSec = document.getElementById('registerAuthSection');
-
-            const tabQuickBtn = document.getElementById('tabQuickBtn');
-            const tabPinBtn = document.getElementById('tabPinBtn');
-            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
-
-            quickSec.classList.add('hidden');
-            pinSec.classList.add('hidden');
-            regSec.classList.add('hidden');
-
-            tabQuickBtn.classList.remove('active');
-            tabPinBtn.classList.remove('active');
-            tabRegisterBtn.classList.remove('active');
-
-            if (tab === 'quick') {
-                quickSec.classList.remove('hidden');
-                tabQuickBtn.classList.add('active');
-            } else if (tab === 'pin') {
-                pinSec.classList.remove('hidden');
-                tabPinBtn.classList.add('active');
-            } else if (tab === 'register') {
-                regSec.classList.remove('hidden');
-                tabRegisterBtn.classList.add('active');
-            }
-        }
-
-        function closeModalOnOutsideClick(event, modalId) {
-            if (event.target.id === modalId) {
-                triggerHaptic(15);
-                document.getElementById(modalId).classList.remove('active');
-            }
-        }
-
-        document.addEventListener('focusin', (e) => {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
-                setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-            }
-        });
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const container = document.getElementById('installContainer');
-            if (container) container.classList.remove('hidden');
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('installAppBtn')?.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        document.getElementById('installContainer').classList.add('hidden');
-                    }
-                    deferredPrompt = null;
-                }
-            });
-        });
-
-        function openPrivacyModal() {
-            triggerHaptic(20);
-            document.getElementById('privacyModal').classList.add('active');
-        }
-        function closePrivacyModal() {
-            triggerHaptic(15);
-            document.getElementById('privacyModal').classList.remove('active');
-        }
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
@@ -306,10 +234,13 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google -->
+                <!-- زر دخول بـ Google (المدمج) -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
+
+                <!-- حاوية زر Google المباشر (تُستخدم كبديل تلقائي مدمج داخل الصفحة) -->
+                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center"></div>
 
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
@@ -367,7 +298,7 @@
             </button>
         </div>
 
-        <!-- خيارات إضافية -->
+        <!-- خيارات إضافية (الشكاوى والخصوصية) -->
         <div class="space-y-2 relative z-10 pt-1">
             <button onclick="openComplaintsModal()" class="w-full bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> إرسال بلاغ أو شكوى للإدارة العليا
@@ -471,6 +402,81 @@
         </div>
     </div>
 
+    <script>
+        function switchAuthTab(tab) {
+            triggerHaptic(15);
+            const quickSec = document.getElementById('quickAuthSection');
+            const pinSec = document.getElementById('pinAuthSection');
+            const regSec = document.getElementById('registerAuthSection');
+
+            const tabQuickBtn = document.getElementById('tabQuickBtn');
+            const tabPinBtn = document.getElementById('tabPinBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+
+            quickSec.classList.add('hidden');
+            pinSec.classList.add('hidden');
+            regSec.classList.add('hidden');
+
+            tabQuickBtn.classList.remove('active');
+            tabPinBtn.classList.remove('active');
+            tabRegisterBtn.classList.remove('active');
+
+            if (tab === 'quick') {
+                quickSec.classList.remove('hidden');
+                tabQuickBtn.classList.add('active');
+            } else if (tab === 'pin') {
+                pinSec.classList.remove('hidden');
+                tabPinBtn.classList.add('active');
+            } else if (tab === 'register') {
+                regSec.classList.remove('hidden');
+                tabRegisterBtn.classList.add('active');
+            }
+        }
+
+        function closeModalOnOutsideClick(event, modalId) {
+            if (event.target.id === modalId) {
+                triggerHaptic(15);
+                document.getElementById(modalId).classList.remove('active');
+            }
+        }
+
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const container = document.getElementById('installContainer');
+            if (container) container.classList.remove('hidden');
+        });
+
+        document.getElementById('installAppBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('installContainer').classList.add('hidden');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        function openPrivacyModal() {
+            triggerHaptic(20);
+            document.getElementById('privacyModal').classList.add('active');
+        }
+        function closePrivacyModal() {
+            triggerHaptic(15);
+            document.getElementById('privacyModal').classList.remove('active');
+        }
+    </script>
+
     <!-- Firebase Engine & Native Auth Handlers -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -488,7 +494,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -521,14 +526,23 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : !!(window.Capacitor && window.Capacitor.isNative);
+        // فحص بيئة التشغيل للتمييز بين التطبيق المدمج الـ Native ومتصفح الويب
+        function isNativeAppEnvironment() {
+            const isCapacitor = typeof window !== 'undefined' && window.Capacitor && 
+                (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
+            const hasBridge = !!(window.AndroidBridge || window.NativeBridge);
+            const isWebView = /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || navigator.userAgent.includes('W2A');
+            
+            return !!(isCapacitor || hasBridge || isWebView);
+        }
+
+        const isCapacitorNative = isNativeAppEnvironment();
 
         function initCapacitorBridge() {
             if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
                 if (window.Capacitor.Plugins.GoogleAuth) {
                     window.Capacitor.Plugins.GoogleAuth.initialize({
                         clientId: CLIENT_ID,
-                        serverClientId: CLIENT_ID,
                         grantOfflineAccess: true,
                         scopes: ['profile', 'email']
                     }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -552,12 +566,7 @@
                 }
             }
         }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initCapacitorBridge);
-        } else {
-            initCapacitorBridge();
-        }
+        initCapacitorBridge();
 
         function showAuthMsg(type, text) {
             const msgBox = document.getElementById('authMsgBox');
@@ -589,114 +598,124 @@
             }
         });
 
-        // دالة تسجيل الدخول عبر Google المحصنة
+        // إعداد نافذة Google Identity Services (One Tap) للمتصفح فقط
+        function initGoogleOneTap() {
+            if (!isNativeAppEnvironment() && window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: handleCredentialResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: true,
+                    context: "signin"
+                });
+            }
+        }
+
+        async function handleCredentialResponse(response) {
+            try {
+                showNativeToast("جاري تسجيل الدخول...");
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (e) {
+                showAuthMsg('error', 'خطأ أثناء المصادقة بـ Google: ' + e.message);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(initGoogleOneTap, 800);
+        });
+
+        // دالة تسجيل الدخول بـ Google المعدلة لحل مشكلة المتصفح الخارجي نهائياً
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            let authenticatedUser = null;
+            const isNative = isNativeAppEnvironment();
 
-            // 1. محاولة أندرويد الناتيف
-            if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-                try {
-                    showNativeToast("جاري اختيار حساب Google...");
-                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-                    
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        authenticatedUser = result.user;
+            // ==========================================
+            // المسار الأول: إذا كان يعمل داخل التطبيق المدمج (Native APK / Action Build)
+            // ==========================================
+            if (isNative) {
+                // 1. استخدام إضافة Capacitor GoogleAuth
+                if (window.Capacitor?.Plugins?.GoogleAuth) {
+                    try {
+                        showNativeToast("جاري فتح حسابات Google...");
+                        
+                        await window.Capacitor.Plugins.GoogleAuth.initialize({
+                            clientId: CLIENT_ID,
+                            grantOfflineAccess: true,
+                            scopes: ['profile', 'email']
+                        }).catch(() => {});
+
+                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                        const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+                        
+                        if (idToken) {
+                            const credential = GoogleAuthProvider.credential(idToken);
+                            const result = await signInWithCredential(auth, credential);
+                            await processGoogleAccountData(result.user);
+                            return;
+                        } else {
+                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق من Google.');
+                            return;
+                        }
+                    } catch (nativeErr) {
+                        console.warn("Capacitor GoogleAuth Error:", nativeErr);
+                        showAuthMsg('error', 'تم إلغاء عملية الدخول أو حدث خطأ في استدعاء الخدمة.');
+                        return; // يمنع التحويل للمتصفح الخارجي القاطع
                     }
-                } catch (nativeErr) {
-                    console.warn("Native GoogleAuth fail, switching seamlessly to Web Popup:", nativeErr);
                 }
-            } 
 
-            // 2. البديل التلقائي المباشر (Firebase Web Popup)
-            if (!authenticatedUser) {
-                try {
-                    showNativeToast("جاري فتح نافذة Google...");
-                    const googleProvider = new GoogleAuthProvider();
-                    googleProvider.setCustomParameters({ prompt: 'select_account' });
-                    
-                    const result = await signInWithPopup(auth, googleProvider);
-                    if (result && result.user) {
-                        authenticatedUser = result.user;
-                    }
-                } catch (webErr) {
-                    console.error("Google Auth Web Error:", webErr);
+                // 2. استخدام الجسر المباشر لـ Android Native Bridge
+                const bridge = window.AndroidBridge || window.NativeBridge;
+                if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
+                    showNativeToast("جاري فتح حسابات Google...");
+                    bridge.launchNativeGoogleSignIn();
+                    return;
                 }
-            }
 
-            // 3. معالجة الدخول
-            if (authenticatedUser) {
-                await processGoogleAccountData(authenticatedUser);
-            } else {
-                showAuthMsg('error', 'تعذر استكمال تسجيل الدخول. يرجى التأكد من الاتصال بالإنترنت أو إعادة المحاولة.');
-            }
-        };
+                // 3. النافذة المدمجة المباشرة داخل الـ WebView
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    window.google.accounts.id.prompt((notification) => {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                            renderEmbeddedGoogleBtn();
+                        }
+                    });
+                    return;
+                }
 
-        // معالجة حساب Google والتوجيه المباشر
-        async function processGoogleAccountData(user) {
-            let userEmail = user.email || '';
-            let userDisplayName = user.displayName || userEmail.split('@')[0];
-            let userPhotoUrl = user.photoURL || '';
-
-            const querySnapshot = await getDocs(accountsRef);
-            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-
-            if (existingAccount && existingAccount.isBanned) {
-                showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                showNativeToast("⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
+                showAuthMsg('error', 'خدمة Google المدمجة غير متوفرة في هذا التطبيق.');
                 return;
             }
 
-            let assignedCompanyId;
-            let finalUserName;
-            let userRole = 'محاسب أول';
-
-            if (existingAccount) {
-                finalUserName = existingAccount.name;
-                assignedCompanyId = existingAccount.companyId;
-                userRole = existingAccount.role || 'محاسب أول';
+            // ==========================================
+            // المسار الثاني: عند فتح المشروع من متصفح عادي (Chrome/Edge/Safari)
+            // ==========================================
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        renderEmbeddedGoogleBtn();
+                    }
+                });
             } else {
-                finalUserName = userDisplayName;
-                let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
-
-                if (userEmail === 'haretg@gmail.com') {
-                    assignedCompanyId = 'company_founder_karm';
-                    finalUserName = FOUNDER_NAME;
-                    userRole = 'مدير نظام رئيسي';
-                }
-
-                await setDoc(doc(db, "accounts", assignedCompanyId), {
-                    name: finalUserName,
-                    pin: "1234",
-                    role: userRole,
-                    companyId: assignedCompanyId,
-                    email: userEmail,
-                    avatar: userPhotoUrl,
-                    isBanned: false,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
+                showAuthMsg('error', 'تعذر تحميل خدمة Google Identity. يرجى التأكد من الاتصال بالإنترنت.');
             }
+        };
 
-            sessionStorage.setItem('eidco_biometric_verified', 'true');
-            sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_v14_admin', finalUserName);
-            localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectPage = urlParams.get('redirect') || 'index.html';
-
-            showNativeToast(`✓ مرحباً بك يا ${finalUserName}`);
-            window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+        function renderEmbeddedGoogleBtn() {
+            const wrapper = document.getElementById('googleNativeBtnWrapper');
+            if (wrapper && window.google?.accounts?.id) {
+                wrapper.classList.remove('hidden');
+                document.getElementById('googleBtnCustom').classList.add('hidden');
+                window.google.accounts.id.renderButton(
+                    wrapper,
+                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
+                );
+            }
         }
 
+        // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
             triggerHaptic(30);
             clearAuthMsgs();
@@ -821,6 +840,85 @@
                 alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
+
+        async function promptDeviceVerification(userName) {
+            try {
+                if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+                    const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                    if (isAvailable) {
+                        return true;
+                    }
+                }
+                return confirm(`🔒 تأكيد البصمة الحيوية للحساب (${userName}): اضغط موافق لتفعيل مصادقة الجهاز.`);
+            } catch (e) {
+                return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
+            }
+        }
+
+        async function processGoogleAccountData(user) {
+            let userEmail = user.email || '';
+            let userDisplayName = user.displayName || userEmail.split('@')[0];
+            let userPhotoUrl = user.photoURL || '';
+
+            const querySnapshot = await getDocs(accountsRef);
+            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+
+            if (existingAccount && existingAccount.isBanned) {
+                showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                return;
+            }
+
+            let assignedCompanyId;
+            let finalUserName;
+            let userRole = 'محاسب أول';
+
+            if (existingAccount) {
+                finalUserName = existingAccount.name;
+                assignedCompanyId = existingAccount.companyId;
+                userRole = existingAccount.role || 'محاسب أول';
+            } else {
+                finalUserName = userDisplayName;
+                let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
+
+                if (userEmail === 'haretg@gmail.com') {
+                    assignedCompanyId = 'company_founder_karm';
+                    finalUserName = FOUNDER_NAME;
+                    userRole = 'مدير نظام رئيسي';
+                }
+
+                let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
+                if (!pinCodeInput) pinCodeInput = "1234";
+
+                await setDoc(doc(db, "accounts", assignedCompanyId), {
+                    name: finalUserName,
+                    pin: pinCodeInput,
+                    role: userRole,
+                    companyId: assignedCompanyId,
+                    email: userEmail,
+                    avatar: userPhotoUrl,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+            }
+
+            let verified = await promptDeviceVerification(finalUserName);
+            if (!verified) return;
+
+            sessionStorage.setItem('eidco_biometric_verified', 'true');
+            sessionStorage.setItem('eidco_session_auth', 'true');
+            localStorage.setItem('eidco_v14_admin', finalUserName);
+            localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectPage = urlParams.get('redirect') || 'index.html';
+
+            showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
+            window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+        }
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);
@@ -977,6 +1075,13 @@
                         return;
                     }
                     assignedCompanyId = matchedAccount.companyId;
+                }
+
+                let verified = await promptDeviceVerification(username);
+                if (!verified) {
+                    statusEl.innerText = "❌ تم إلغاء تأكيد البصمة أو فشل التعرف.";
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    return;
                 }
 
                 statusEl.innerText = "✓ تمت المطابقة وتأكيد البصمة بنجاح! جاري التوجيه...";

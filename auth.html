@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services الرسمية للنافذة المباشرة -->
+    <!-- مكتبة Google Identity Services الرسمية للويب -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -244,7 +244,6 @@
                 </button>
             </div>
             
-            <!-- الحاوية المباشرة لزر جوجل التلقائي (غير مرئية للتأكيد الفوري) -->
             <div id="g_id_onload" class="hidden"></div>
         </div>
 
@@ -558,18 +557,15 @@
             }
         });
 
-        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل مع التعرف والمزامنة المباشرة
+        // تهيئة مكتبة Google Identity Services للويب بدون فتح تلقائي للنوافذ
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: window.handleGoogleIdentityCredential,
-                    auto_select: true,
-                    cancel_on_tap_outside: false
+                    auto_select: false,
+                    cancel_on_tap_outside: true
                 });
-
-                // عرض نافذة الاختيار السفلية المباشرة
-                window.google.accounts.id.prompt();
             }
         };
 
@@ -581,6 +577,7 @@
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
             } catch (err) {
+                isProcessingAuth = false;
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
@@ -591,7 +588,7 @@
             window.addEventListener('load', window.initGoogleIdentity);
         }
 
-        // استقبال ה- Token من كود الأندرويد الناتيف
+        // استقبال ה- Token المباشر من كود الأندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
@@ -599,22 +596,31 @@
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
             } catch (err) {
+                isProcessingAuth = false;
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
 
         // =========================================================================
-        // دالة الدخول الموحدة بـ Google (تستدعي النافذة المباشرة فقط بدون متصفح)
+        // دالة الدخول الموحدة بـ Google (تستدعي نافذة الأندرويد الأصلية داخل الـ APK)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
-            const capacitorPlugins = window.Capacitor?.Plugins;
-            const googleAuthPlugin = capacitorPlugins?.GoogleAuth;
+            if (isProcessingAuth) return;
 
-            // 1. مسار Capacitor GoogleAuth المباشر
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
+            const googleAuthPlugin = window.Capacitor?.Plugins?.GoogleAuth;
+
+            // 1. الأولوية الأولى: الـ Native Android Bridge الخاص بالتطبيق (فتح قائمة الحسابات الناتيف)
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري اختيار الحساب...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 2. الأولوية الثانية: Capacitor Plugin للتطبيق (Fallback)
             if (googleAuthPlugin) {
                 try {
                     showNativeToast("جاري فتح حسابات الجهاز...");
@@ -640,19 +646,13 @@
                 }
             }
 
-            // 2. مسار Android Native Bridge المباشر داخل الجسر
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري اختيار الحساب...");
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 3. مسار GIS One Tap (عرض نافذة اختيار الحسابات المباشرة بدون متصفح)
+            // 3. الأولوية الثالثة: متصفح الويب (GIS Web)
             if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.initGoogleIdentity();
                 showNativeToast("جاري فتح حسابات جوجل...");
                 window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-                        window.google.accounts.id.prompt();
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+                        isProcessingAuth = false;
                     }
                 });
                 return;

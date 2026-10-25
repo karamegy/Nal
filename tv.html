@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO السحابية المعزولة Native</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EIDCO // شاشة العرض المباشرة 4K TV PRO السحابية Native</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
@@ -13,21 +13,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
 
-    <script src="./eidco-core.js"></script>
-
     <script>
-        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge
         window.AndroidBridge = window.AndroidBridge || window.NativeBridge || {};
         window.NativeBridge = window.NativeBridge || window.AndroidBridge || {};
-
-        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
-            window.location.href = 'auth.html';
-        }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
-            });
-        }
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -50,7 +38,7 @@
             min-height: 100dvh;
             margin: 0;
             padding: 0.5rem;
-            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
             padding-top: env(safe-area-inset-top, 0px);
             display: flex;
             flex-direction: column;
@@ -66,7 +54,7 @@
         .real-tv-bezel {
             background: linear-gradient(145deg, #1e293b 0%, #090d16 100%);
             box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(79, 70, 229, 0.2);
-            border: 3px solid #1e293b;
+            border: 2px solid #1e293b;
             width: 100%;
             box-sizing: border-box;
         }
@@ -76,12 +64,13 @@
             box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
             position: relative;
             touch-action: pan-y;
+            min-height: 420px;
         }
 
         .tv-glass-glare {
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
             pointer-events: none;
             z-index: 30;
         }
@@ -104,14 +93,6 @@
         .animate-tv-marquee {
             display: inline-flex;
             animation: tvMarquee 26s linear infinite;
-        }
-        .animate-tv-marquee:hover {
-            animation-play-state: paused;
-        }
-
-        .tv-power-off {
-            filter: brightness(0) grayscale(100%);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .nav-link { 
@@ -159,23 +140,11 @@
                 bridge.vibrate(duration);
             }
         }
-
-        async function enableTvWakeLock() {
-            try {
-                const bridge = getActiveBridge();
-                if (typeof bridge.keepScreenOn === 'function') {
-                    bridge.keepScreenOn(true);
-                } else if ('wakeLock' in navigator) {
-                    await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {}
-        }
-        enableTvWakeLock();
     </script>
 </head>
 <body class="p-2 sm:p-6">
 
-    <!-- القائمة المنسدلة الجانبية للموبايل -->
+    <!-- القائمة الجانبية للموبايل -->
     <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm hidden transition-opacity">
         <div class="absolute right-0 top-0 bottom-0 w-80 bg-slate-900 text-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto border-l border-slate-800">
             <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
@@ -194,21 +163,13 @@
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
-                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-sitemap text-indigo-400"></i> شجرة الحسابات</a>
-                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
-                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
-                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
-                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
-                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
-                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
                 <a href="tv.html" class="nav-link active"><i class="fa-solid fa-tv"></i> شاشة البث 4K TV</a>
             </nav>
         </div>
     </div>
 
-    <!-- النافذة المنبثقة لرمز QR الخاص بالريموت -->
+    <!-- النافذة المنبثقة لرمز QR -->
     <div id="tvQrModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative">
             <button onclick="window.toggleQrModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white text-lg cursor-pointer">
@@ -229,14 +190,11 @@
     </div>
 
     <div class="w-full max-w-6xl mx-auto relative">
-        <!-- هالة الضوء Ambient Glow -->
         <div id="tvAmbilight" class="absolute -inset-6 bg-indigo-600/30 blur-3xl rounded-3xl transition-all duration-500 opacity-90 pointer-events-none"></div>
 
-        <!-- إطار التلفزيون المعدني -->
         <div class="real-tv-bezel p-2 sm:p-5 rounded-[20px] sm:rounded-[32px] relative overflow-hidden">
             
-            <!-- شاشة التلفزيون OLED -->
-            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[300px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
+            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
                 
                 <div class="tv-glass-glare"></div>
                 <div class="tv-scanlines"></div>
@@ -249,17 +207,17 @@
                 </div>
 
                 <!-- OSD شريط معلومات القناة -->
-                <div id="tvOsdBanner" class="absolute top-4 right-4 sm:top-5 sm:right-5 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl text-xs flex items-center gap-3 sm:gap-4 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+                <div id="tvOsdBanner" class="absolute top-4 right-4 sm:top-5 sm:right-5 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl text-xs flex items-center gap-3 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
                     <span class="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-xl mono-font text-xs" id="osdChNum">CH 01</span>
                     <div>
                         <div class="font-black text-slate-100 text-xs sm:text-sm" id="osdChTitle">قناة المؤشرات الشاملة</div>
-                        <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                        <div class="text-[10px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
                             <span>3840x2160 @ 60fps</span> • <span class="text-emerald-400">HDR10+ LIVE</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- هيدر البث العلوي والمتجاوب -->
+                <!-- الهيدر العلوي -->
                 <div class="p-3 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent">
                     <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto justify-between sm:justify-start">
                         <div class="flex items-center gap-2">
@@ -271,35 +229,34 @@
                                 <span>EIDCO 4K</span>
                             </div>
                         </div>
-                        <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-3 py-1 rounded-full text-xs font-mono font-bold truncate max-w-[160px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-3 py-1 rounded-full text-xs font-mono font-bold truncate max-w-[160px] sm:max-w-none">معرف الشركة: جارِ التحميل...</span>
                     </div>
 
-                    <!-- أزرار التحكم بالشاشة -->
                     <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-end">
-                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-indigo-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="نطق معلومات الشاشة الحالية بصوت واضح">
+                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-indigo-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm">
                             <i class="fa-solid fa-microphone-lines text-cyan-400"></i> <span class="hidden md:inline">انطق الشاشة</span>
                         </button>
-                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="تفعيل/إيقاف الإعلان الصوتي الفوري">
+                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm">
                             <i class="fa-solid fa-bullhorn text-amber-400" id="tvSpeechIcon"></i> <span class="hidden md:inline">الناطق الفوري</span>
                         </button>
-                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="كتم / تشغيل أصوات التنبيه">
+                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm">
                             <i class="fa-solid fa-volume-high text-emerald-400" id="tvMuteIcon"></i>
                         </button>
-                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="ملء الشاشة">
+                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm">
                             <i class="fa-solid fa-expand"></i>
                         </button>
-                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95 shadow-sm" title="تشغيل / إطفاء">
+                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-9 h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95 shadow-sm">
                             <i class="fa-solid fa-power-off"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- منطقة البث الرئيسية السلسة والمتجاوبة -->
-                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto transition-all duration-300 select-none min-h-[180px]">
-                    <!-- يتم دفق المحتوى عبر JS -->
+                <!-- منطقة البث الرئيسية -->
+                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto transition-all duration-300 select-none min-h-[260px]">
+                    <!-- المحتوى يُرسم فورا -->
                 </div>
 
-                <!-- شريط الأخبار السفلي العاجل -->
+                <!-- شريط الأخبار السفلي -->
                 <div class="relative z-20 bg-slate-950/95 border-t border-slate-800/80">
                     <div class="flex items-stretch text-xs">
                         <div class="bg-indigo-600 text-white font-black px-3 py-2 sm:px-5 sm:py-3 flex items-center gap-2 shrink-0 shadow-lg">
@@ -337,7 +294,7 @@
             </div>
         </div>
 
-        <!-- الريموت الكنترول وشريط التحكم -->
+        <!-- الريموت الكنترول -->
         <div id="tvRemoteControlBar" class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-slate-800 shadow-2xl transition-all duration-300">
             <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span class="text-xs font-bold text-slate-300 flex items-center gap-2 ml-1">
@@ -364,32 +321,25 @@
             </div>
 
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="window.toggleQrModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95" title="إظهار QR للتحكم بالهاتف">
+                <button onclick="window.toggleQrModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95">
                     <i class="fa-solid fa-qrcode ml-1"></i> QR الريموت
                 </button>
                 <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95">
                     <i class="fa-solid fa-rotate ml-1"></i> دائرى (5s)
                 </button>
-                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition border border-slate-700 cursor-pointer hidden sm:block active:scale-95" title="إخفاء لوحة التحكم للتعليق الجداري">
-                    <i class="fa-solid fa-tv ml-1"></i> جداري
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة -->
     <script>
         const DEFAULT_COMPANY_ID = 'company_founder_karm';
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
+        localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
-            localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
             const badgeEl = document.getElementById('companyBadgeDisplay');
-            if(badgeEl) {
-                badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
-            }
+            if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
@@ -401,7 +351,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم الجلب والريموت الذكي وأوفلاين -->
+    <!-- Firebase SDK Modules المحسنة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -411,12 +361,9 @@
             getDocs, 
             query, 
             where, 
-            doc, 
-            enableIndexedDbPersistence 
+            doc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-        const DEFAULT_COMPANY_ID = 'company_founder_karm';
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -431,43 +378,41 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        enableIndexedDbPersistence(db).catch(() => {});
-
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || DEFAULT_COMPANY_ID;
-        localStorage.setItem('eidco_current_company_id', currentCompanyId);
-
         let state = { invoices: [], batch_invoices: [], transactions: [], clients: [], products: [], fleet: [], account: {} };
         let currentTvChannel = 'metrics';
         let tvAutoSlideInterval = null;
         let isTvPoweredOn = true;
         let isTvMuted = false;
         let isSpeechEnabled = true;
-        let isWallMode = false;
-        let initialLoadDone = false;
 
-        let touchStartX = 0;
-        let touchEndX = 0;
-        const screenContainerEl = document.getElementById('realTvScreen');
-        if (screenContainerEl) {
-            screenContainerEl.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-            screenContainerEl.addEventListener('touchend', e => {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipeGesture();
-            }, {passive: true});
+        // تهيئة الصوت بأمان لمنع الـ Block في هواتف iOS/Android
+        let audioCtx = null;
+        function getSafeAudioContext() {
+            if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
         }
 
-        function handleSwipeGesture() {
-            const diff = touchEndX - touchStartX;
-            if (Math.abs(diff) > 50) {
-                const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
-                let currentIdx = channels.indexOf(currentTvChannel);
-                if (diff < 0) {
-                    window.switchTvChannel(channels[(currentIdx + 1) % channels.length]);
-                } else {
-                    window.switchTvChannel(channels[(currentIdx - 1 + channels.length) % channels.length]);
-                }
-            }
+        function playBeepSound(freq = 440, type = 'sine', duration = 0.1) {
+            if (isTvMuted || !isTvPoweredOn) return;
+            try {
+                const ctx = getSafeAudioContext();
+                if (!ctx) return;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
         }
 
         window.toggleQrModal = function() {
@@ -483,52 +428,11 @@
                 
                 qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(remoteUrl)}`;
                 urlText.innerText = remoteUrl;
-                
                 modal.classList.remove('hidden');
             } else {
                 modal.classList.add('hidden');
             }
         };
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playBeepSound(freq = 440, type = 'sine', duration = 0.1) {
-            if (isTvMuted || !isTvPoweredOn) return;
-            try {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {}
-        }
-
-        function playInvoiceBellSound() {
-            if (isTvMuted || !isTvPoweredOn) return;
-            playBeepSound(587.33, 'triangle', 0.15);
-            setTimeout(() => playBeepSound(880, 'sine', 0.3), 100);
-        }
-
-        function announceNewInvoice(inv) {
-            if (!isSpeechEnabled || !('speechSynthesis' in window)) return;
-            let msgText = `تنبيه مبيعات جديد. تم إصدار فاتورة برقم ${inv.invoiceNumber || inv.id || ''} بقيمة ${inv.totalAmount || inv.total || 0} جنيه مصري.`;
-            speakArabicText(msgText);
-        }
-
-        function speakArabicText(text) {
-            if (!('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel();
-            let utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ar-SA';
-            utterance.rate = 0.95;
-            utterance.pitch = 1.0;
-            window.speechSynthesis.speak(utterance);
-        }
 
         window.speakCurrentScreenInfo = function() {
             if (!isTvPoweredOn) return;
@@ -536,65 +440,23 @@
             playBeepSound(700, 'sine', 0.1);
 
             let textToSpeak = "";
-            if (currentTvChannel === 'metrics') {
-                textToSpeak = `قناة المؤشرات الشاملة. رصيد الخزنة، إجمالي المبيعات، والأرباح معروضة مباشرة.`;
-            } else if (currentTvChannel === 'invoices') {
-                textToSpeak = `قناة الفواتير والمبيعات. إجمالي الفواتير الفردية والمجمعة مسجلة سحابياً.`;
-            } else if (currentTvChannel === 'inventory') {
-                textToSpeak = `قناة المخزن والأصناف. عدد الأصناف المسجلة ${state.products.length} صنف.`;
-            } else if (currentTvChannel === 'fleet') {
-                textToSpeak = `قناة الأسطول والشحنات. عدد مواقع التتبع ${state.fleet.length} موقع.`;
-            } else if (currentTvChannel === 'clients') {
-                textToSpeak = `قناة حسابات العملاء. إجمالي العملاء ${state.clients.length} جهة.`;
-            } else if (currentTvChannel === 'profile') {
-                textToSpeak = `قناة الملف الشخصي وحساب الشركة. عرض صورة البروفايل وبيانات المسؤول.`;
-            }
+            if (currentTvChannel === 'metrics') textToSpeak = `قناة المؤشرات الشاملة. رصيد الخزنة، إجمالي المبيعات، والأرباح.`;
+            else if (currentTvChannel === 'invoices') textToSpeak = `قناة الفواتير والمبيعات.`;
+            else if (currentTvChannel === 'inventory') textToSpeak = `قناة المخزن والأصناف. الأصناف المسجلة ${state.products.length} صنف.`;
+            else if (currentTvChannel === 'fleet') textToSpeak = `قناة الأسطول والشحنات.`;
+            else if (currentTvChannel === 'clients') textToSpeak = `قناة حسابات العملاء. الإجمالي ${state.clients.length} عميل.`;
+            else if (currentTvChannel === 'profile') textToSpeak = `قناة الملف الشخصي وبيانات المؤسسة.`;
 
-            speakArabicText(textToSpeak);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'ar-SA';
+                window.speechSynthesis.speak(utterance);
+            }
         };
 
-        window.addEventListener('keydown', (e) => {
-            const key = e.key;
-            const code = e.keyCode;
-            const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
-            let currentIdx = channels.indexOf(currentTvChannel);
-
-            const keysToPrevent = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ChannelUp', 'ChannelDown'];
-            if (keysToPrevent.includes(key) || [37, 38, 39, 40].includes(code)) {
-                e.preventDefault();
-            }
-
-            if (key === 'ArrowRight' || key === 'ArrowUp' || key === 'ChannelUp' || code === 39 || code === 38) {
-                window.switchTvChannel(channels[(currentIdx + 1) % channels.length]);
-            } 
-            else if (key === 'ArrowLeft' || key === 'ArrowDown' || key === 'ChannelDown' || code === 37 || code === 40) {
-                window.switchTvChannel(channels[(currentIdx - 1 + channels.length) % channels.length]);
-            }
-            else if ((code >= 49 && code <= 54) || (key >= '1' && key <= '6')) {
-                const targetNum = parseInt(key) || (code - 48);
-                if (targetNum >= 1 && targetNum <= 6) {
-                    window.switchTvChannel(channels[targetNum - 1]);
-                }
-            }
-            else if (key === 'Enter' || code === 13) {
-                window.toggleTvAutoSlide();
-            }
-            else if (key === 'Red' || key.toLowerCase() === 'p') {
-                window.toggleTvPower();
-            }
-            else if (key === 'Green' || key.toLowerCase() === 'm') {
-                window.toggleTvAudio();
-            }
-            else if (key === 'Yellow' || key.toLowerCase() === 's') {
-                window.toggleSpeechAnnouncer();
-            }
-            else if (key === 'Blue' || key.toLowerCase() === 'f') {
-                window.toggleTvFullscreen();
-            }
-        });
-
-        // تعريف دالة الرسم أولاً لضمان إمكانية استدعائها فوراً وفي أي وقت
-        function renderTvScreen() {
+        // دالة الرسم الرئيسية
+        window.renderTvScreen = function() {
             if(!isTvPoweredOn) return;
             let screen = document.getElementById('realTvContent');
             if(!screen) return;
@@ -619,7 +481,7 @@
                                     <span class="text-[9px] bg-indigo-900/80 px-1.5 py-0.5 rounded text-indigo-300 font-mono">LIVE</span>
                                 </div>
                                 <div class="text-lg sm:text-xl font-black text-white mono-font pt-1">${vault.toLocaleString()} ج.م</div>
-                                <div class="text-[10px] text-slate-400">رصيد الخزنة النقدي سحابياً</div>
+                                <div class="text-[10px] text-slate-400">رصيد الخزنة النقدي</div>
                             </div>
                             <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl shadow-lg space-y-1">
                                 <div class="flex items-center justify-between text-cyan-300 text-xs font-bold">
@@ -643,7 +505,7 @@
                                     <span class="text-[9px] bg-purple-950 px-1.5 py-0.5 rounded text-purple-300 font-mono">CLIENTS</span>
                                 </div>
                                 <div class="text-lg sm:text-xl font-black text-purple-400 mono-font pt-1">${state.clients.length} جهة</div>
-                                <div class="text-[10px] text-slate-400">العملاء والجهات السحابية</div>
+                                <div class="text-[10px] text-slate-400">العملاء والجهات المسجلة</div>
                             </div>
                         </div>
                     </div>
@@ -654,9 +516,9 @@
                     <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2">
                             <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> الفواتير الفردية والمجمعة</span>
-                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">فردية: ${state.invoices.length} | مجمعة: ${state.batch_invoices.length}</span>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">فردية: ${state.invoices.length}</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             ${recentInv.map(i => `
                                 <div class="bg-slate-900/90 border border-slate-700/70 p-3.5 rounded-2xl space-y-2 shadow-xl">
                                     <div class="flex justify-between items-center">
@@ -666,7 +528,6 @@
                                     <div class="text-xs font-black text-slate-100 truncate">${i.clientName || i.client || 'عميل نقدي'}</div>
                                     <div class="flex justify-between items-end pt-1 border-t border-slate-800 text-xs">
                                         <span class="text-indigo-400 font-black mono-font">${Number(i.totalAmount || i.total || 0).toLocaleString()} ج.م</span>
-                                        <span class="text-emerald-400 font-bold text-[10px]">فردية</span>
                                     </div>
                                 </div>
                             `).join('') || '<div class="col-span-3 text-center text-slate-500 py-4 text-xs font-bold">لا توجد فواتير فردية بعد</div>'}
@@ -678,7 +539,7 @@
                 screen.innerHTML = `
                     <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-cyan-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف المسجلة سحابياً</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</span>
                             <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">إجمالي الأصناف: ${state.products.length}</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -697,7 +558,7 @@
                 screen.innerHTML = `
                     <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-purple-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-map-location-dot"></i> أسطول النقل والشحنات اللوجستية (GPS)</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-map-location-dot"></i> أسطول النقل اللوجستي (GPS)</span>
                             <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">المواقع النشطة: ${state.fleet.length}</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -718,7 +579,7 @@
                 screen.innerHTML = `
                     <div class="space-y-3 sm:space-y-4">
                         <div class="flex justify-between items-center text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-building-user"></i> حسابات العملاء وجهات العمل</span>
+                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-building-user"></i> حسابات العملاء</span>
                             <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">إجمالي العملاء: ${state.clients.length}</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -726,7 +587,6 @@
                                 <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl space-y-1">
                                     <div class="text-xs font-black text-white truncate">${c.name || c.clientName || 'عميل'}</div>
                                     <div class="text-[10px] text-indigo-300 font-mono">${c.phone || c.mobile || 'بدون هاتف'}</div>
-                                    <div class="text-[10px] text-emerald-400">حساب معزول وسحابي</div>
                                 </div>
                             `).join('') || '<div class="col-span-4 text-center text-slate-500 py-4 text-xs font-bold">لا توجد جهات عملاء مسجلة</div>'}
                         </div>
@@ -735,142 +595,69 @@
             } else if (currentTvChannel === 'profile') {
                 let acc = state.account || {};
                 let name = acc.name || localStorage.getItem('eidco_v14_admin') || 'إدارة النظام';
-                let avatar = acc.avatar || '';
                 let role = acc.role || 'مدير النظام التنفيذي';
-                let phone = acc.phone || 'غير مسجل';
 
                 screen.innerHTML = `
                     <div class="space-y-3 sm:space-y-4 text-center max-w-lg mx-auto w-full">
-                        <div class="flex justify-between items-center text-xs font-black text-indigo-400 border-b border-slate-800 pb-2 text-right w-full">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-id-badge"></i> الملف الشخصي والحساب</span>
-                            <span class="text-[10px] sm:text-[11px] text-slate-400 font-mono">معزول ومزامن</span>
-                        </div>
                         <div class="bg-slate-900/90 border border-slate-800 p-4 sm:p-6 rounded-3xl space-y-3 shadow-2xl flex flex-col items-center">
-                            <div class="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xl sm:text-3xl shadow-xl ring-4 ring-indigo-500/30 overflow-hidden">
-                                ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xl sm:text-2xl shadow-xl">
+                                ${name.charAt(0)}
                             </div>
-                            <div class="space-y-1">
-                                <h3 class="font-black text-base sm:text-lg text-white">${name}</h3>
+                            <div>
+                                <h3 class="font-black text-base text-white">${name}</h3>
                                 <p class="text-xs text-indigo-400 font-bold">${role}</p>
                                 <p class="text-[11px] text-slate-400 font-mono mt-1">معرف الشركة: ${currentCompanyId}</p>
-                            </div>
-                            <div class="w-full pt-3 border-t border-slate-800/80 flex justify-around text-xs text-slate-300 font-mono flex-wrap gap-2">
-                                <span>📞 الهاتف: ${phone}</span>
-                                <span class="text-emerald-400 font-bold">● متصل سحابياً</span>
                             </div>
                         </div>
                     </div>
                 `;
             }
-        }
-        window.renderTvScreen = renderTvScreen;
+        };
 
-        // تنفيذ دالة الرسم بشكل فوري ومباشر دون انتظار حوادث DOM السابقة
-        renderTvScreen();
+        // تشغيل البث الأولي الفوري فوراً
+        window.renderTvScreen();
 
-        signInAnonymously(auth).then(async () => {
+        // التوصيل بالـ Firebase مع المعالجات السحابية
+        signInAnonymously(auth).then(() => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
             const batchInvoicesRef = query(collection(db, "batch_invoices"), where("companyId", "==", currentCompanyId));
             const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
             const fleetRef = query(collection(db, "fleet_locations"), where("companyId", "==", currentCompanyId));
-            const accountsRef = query(collection(db, "accounts"), where("companyId", "==", currentCompanyId));
 
-            onSnapshot(doc(db, "tv_remote", currentCompanyId), (snapshot) => {
-                if (snapshot.exists()) {
-                    const cmd = snapshot.data();
-                    if (cmd.action === 'change_channel' && cmd.channel) {
-                        window.switchTvChannel(cmd.channel);
-                    } else if (cmd.action === 'power') {
-                        window.toggleTvPower();
-                    } else if (cmd.action === 'mute') {
-                        window.toggleTvAudio();
-                    } else if (cmd.action === 'speech') {
-                        window.speakCurrentScreenInfo();
-                    } else if (cmd.action === 'broadcast_ticker' && cmd.message) {
-                        let ticker = document.getElementById('tvLowerTicker');
-                        if (ticker) {
-                            ticker.innerHTML = `<span>🚨 خبر عاجل: ${cmd.message}</span> ✦ ` + ticker.innerHTML;
-                        }
-                    }
-                }
-            });
+            onSnapshot(invoicesRef, (snap) => {
+                state.invoices = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-            try {
-                const [invSnap, batchSnap, transSnap, clientsSnap, prodSnap, fleetSnap, accSnap] = await Promise.all([
-                    getDocs(invoicesRef),
-                    getDocs(batchInvoicesRef),
-                    getDocs(transactionsRef),
-                    getDocs(clientsRef),
-                    getDocs(productsRef),
-                    getDocs(fleetRef),
-                    getDocs(accountsRef)
-                ]);
+            onSnapshot(batchInvoicesRef, (snap) => {
+                state.batch_invoices = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-                state.invoices = invSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.batch_invoices = batchSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.transactions = transSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.products = prodSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.fleet = fleetSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                if (!accSnap.empty) {
-                    state.account = accSnap.docs[0].data();
-                }
+            onSnapshot(transactionsRef, (snap) => {
+                state.transactions = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-                initialLoadDone = true;
-                renderTvScreen();
-            } catch (e) {
-                console.error("خطأ في الجلب الأول:", e);
-                renderTvScreen();
-            }
+            onSnapshot(clientsRef, (snap) => {
+                state.clients = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-            onSnapshot(invoicesRef, (snapshot) => {
-                let prevCount = state.invoices.length;
-                state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                if (initialLoadDone && state.invoices.length > prevCount) {
-                    playInvoiceBellSound();
-                    announceNewInvoice(state.invoices[state.invoices.length - 1]);
-                    showNativeToast("🔔 تم إصدار فاتورة جديدة مبيعات");
-                }
-                renderTvScreen();
-            });
+            onSnapshot(productsRef, (snap) => {
+                state.products = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-            onSnapshot(batchInvoicesRef, (snapshot) => {
-                state.batch_invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTvScreen();
-            });
+            onSnapshot(fleetRef, (snap) => {
+                state.fleet = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                window.renderTvScreen();
+            }, console.error);
 
-            onSnapshot(transactionsRef, (snapshot) => {
-                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTvScreen();
-            });
-
-            onSnapshot(clientsRef, (snapshot) => {
-                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTvScreen();
-            });
-
-            onSnapshot(productsRef, (snapshot) => {
-                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTvScreen();
-            });
-
-            onSnapshot(fleetRef, (snapshot) => {
-                state.fleet = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                renderTvScreen();
-            });
-
-            onSnapshot(accountsRef, (snapshot) => {
-                if (!snapshot.empty) {
-                    state.account = snapshot.docs[0].data();
-                    renderTvScreen();
-                }
-            });
-
-        }).catch((error) => {
-            console.error("فشل المصادقة سحابياً:", error);
-            renderTvScreen();
+        }).catch(err => {
+            console.warn("المصادقة تعمل أوفلاين:", err);
         });
 
         window.switchTvChannel = function(channel) {
@@ -885,127 +672,53 @@
                 if(btn) {
                     if(ch === channel) {
                         btn.className = "px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95";
-                        btn.querySelector('span').className = "font-mono text-[9px] bg-indigo-800 px-1 py-0.5 rounded";
                     } else {
                         btn.className = "px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95";
-                        btn.querySelector('span').className = "font-mono text-[9px] bg-slate-700 px-1 py-0.5 rounded";
                     }
                 }
             });
 
-            showTvOsdBanner(channel);
-            renderTvScreen();
-
-            if (isSpeechEnabled) {
-                setTimeout(() => window.speakCurrentScreenInfo(), 600);
-            }
+            window.renderTvScreen();
         };
-
-        function showTvOsdBanner(channel) {
-            let banner = document.getElementById('tvOsdBanner');
-            let osdNum = document.getElementById('osdChNum');
-            let osdTitle = document.getElementById('osdChTitle');
-            if(!banner) return;
-
-            const titles = {
-                'metrics': ['CH 01', 'قناة المؤشرات الشاملة (الخزنة، المبيعات والأرباح)'],
-                'invoices': ['CH 02', 'قناة الفواتير الفردية والمجمعة'],
-                'inventory': ['CH 03', 'قناة المخزن والأصناف السحابية'],
-                'fleet': ['CH 04', 'قناة الأسطول والرحلات اللوجستية GPS'],
-                'clients': ['CH 05', 'قناة حسابات العملاء وجهات العمل'],
-                'profile': ['CH 06', 'قناة الملف الشخصي وصورة البروفايل (profile.html)']
-            };
-
-            osdNum.innerText = titles[channel][0];
-            osdTitle.innerText = titles[channel][1];
-
-            banner.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
-            banner.classList.add('opacity-100', 'translate-y-0');
-
-            setTimeout(() => {
-                banner.classList.remove('opacity-100', 'translate-y-0');
-                banner.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
-            }, 2500);
-        }
 
         window.toggleTvPower = function() {
             triggerHaptic(50);
-            playBeepSound(isTvPoweredOn ? 250 : 800, 'square', 0.15);
             isTvPoweredOn = !isTvPoweredOn;
-            let screenContainer = document.getElementById('realTvScreen');
             let overlay = document.getElementById('tvOffOverlay');
             let led = document.getElementById('tvPowerLed');
             let ledText = document.getElementById('tvLedText');
-            let ambilight = document.getElementById('tvAmbilight');
 
             if(isTvPoweredOn) {
                 overlay.classList.add('hidden');
-                screenContainer.classList.remove('tv-power-off');
                 led.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all";
                 ledText.innerText = "POWER ON";
-                if (ambilight) {
-                    ambilight.classList.remove('opacity-0');
-                    ambilight.classList.add('opacity-90');
-                }
-                renderTvScreen();
-                showNativeToast("📺 تم تشغيل الشاشة");
+                window.renderTvScreen();
             } else {
                 overlay.classList.remove('hidden');
-                screenContainer.classList.add('tv-power-off');
                 led.className = "w-2.5 h-2.5 rounded-full bg-rose-600 shadow-[0_0_10px_#ef4444] transition-all";
                 ledText.innerText = "STANDBY";
-                if (ambilight) {
-                    ambilight.classList.remove('opacity-90');
-                    ambilight.classList.add('opacity-0');
-                }
-                if('speechSynthesis' in window) window.speechSynthesis.cancel();
-                showNativeToast("🛑 الشاشة في وضع الاستعداد");
             }
         };
 
         window.toggleTvAudio = function() {
             triggerHaptic(20);
             isTvMuted = !isTvMuted;
-            playBeepSound(400, 'sine', 0.1);
             let icon = document.getElementById('tvMuteIcon');
             icon.className = isTvMuted ? "fa-solid fa-volume-xmark text-rose-400" : "fa-solid fa-volume-high text-emerald-400";
-            showNativeToast(isTvMuted ? "🔇 تم كتم الصوت" : "🔊 تم تفعيل الصوت");
         };
 
         window.toggleSpeechAnnouncer = function() {
             triggerHaptic(20);
             isSpeechEnabled = !isSpeechEnabled;
-            playBeepSound(520, 'sine', 0.1);
             let icon = document.getElementById('tvSpeechIcon');
             icon.className = isSpeechEnabled ? "fa-solid fa-bullhorn text-amber-400" : "fa-solid fa-volume-xmark text-slate-500";
-            if (!isSpeechEnabled && 'speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
-            showNativeToast(isSpeechEnabled ? "📢 الناطق الفوري مفعل" : "🔕 الناطق الفوري معطل");
-        };
-
-        window.toggleWallMode = function() {
-            triggerHaptic(30);
-            isWallMode = !isWallMode;
-            playBeepSound(700, 'sine', 0.1);
-            let bar = document.getElementById('tvRemoteControlBar');
-            let btn = document.getElementById('wallModeBtn');
-            if(isWallMode) {
-                bar.classList.add('opacity-10', 'hover:opacity-100');
-                btn.innerHTML = `<i class="fa-solid fa-eye ml-1"></i> إظهار التحكم`;
-            } else {
-                bar.classList.remove('opacity-10', 'hover:opacity-100');
-                btn.innerHTML = `<i class="fa-solid fa-tv ml-1"></i> جداري`;
-            }
         };
 
         window.toggleTvFullscreen = function() {
             triggerHaptic(30);
-            playBeepSound(500, 'sine', 0.1);
             let elem = document.getElementById('realTvScreen');
             if (!document.fullscreenElement) {
                 if (elem.requestFullscreen) elem.requestFullscreen();
-                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
             }
@@ -1013,23 +726,20 @@
 
         window.toggleTvAutoSlide = function() {
             triggerHaptic(30);
-            playBeepSound(480, 'sine', 0.1);
             let btn = document.getElementById('tvAutoSlideBtn');
             if(tvAutoSlideInterval) {
                 clearInterval(tvAutoSlideInterval);
                 tvAutoSlideInterval = null;
-                btn.classList.remove('bg-emerald-600'); btn.classList.add('bg-amber-500');
+                btn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95";
                 btn.innerHTML = `<i class="fa-solid fa-rotate ml-1"></i> دائرى (5s)`;
-                showNativeToast("⏹️ تم إيقاف التدوير الآلي");
             } else {
                 tvAutoSlideInterval = setInterval(() => {
                     const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
                     let nextIdx = (channels.indexOf(currentTvChannel) + 1) % channels.length;
-                    switchTvChannel(channels[nextIdx]);
+                    window.switchTvChannel(channels[nextIdx]);
                 }, 5000);
-                btn.classList.remove('bg-amber-500'); btn.classList.add('bg-emerald-600');
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95";
                 btn.innerHTML = `<i class="fa-solid fa-pause ml-1"></i> إيقاف`;
-                showNativeToast("▶️ تم تفعيل التدوير الآلي (5s)");
             }
         };
 

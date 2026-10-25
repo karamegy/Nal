@@ -13,6 +13,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
 
+    <script src="capacitor.js"></script>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -110,6 +112,26 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
+        .auth-tab-btn {
+            background: #020617;
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.2s;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .auth-tab-btn.active {
+            background: #312e81;
+            border-color: #6366f1;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
         .custom-modal { 
             display: none; 
             position: fixed; 
@@ -142,9 +164,16 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.AndroidBridge || window.NativeBridge || {};
+        }
+
         function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
+            const bridge = getActiveBridge();
+            if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
@@ -152,84 +181,97 @@
 
         function triggerHaptic(duration = 35) {
             if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
             }
         }
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="corporate-card p-5 sm:p-8 max-w-lg w-full space-y-5 text-right relative overflow-hidden my-auto">
+    <div class="corporate-card p-5 sm:p-8 max-w-lg w-full space-y-4 text-right relative overflow-hidden my-auto">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
-        <!-- زر تثبيت الـ PWA عند تحفيزه -->
+        <!-- زر تثبيت الـ PWA -->
         <div id="installContainer" class="hidden text-center relative z-10">
-            <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 px-5 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
+            <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
                 <i class="fa-solid fa-download text-amber-300 text-sm"></i> تثبيت تطبيق EIDCO الرسمي على الهاتف
             </button>
         </div>
 
+        <!-- الهيدر واللوجو -->
         <div class="flex items-center gap-3 relative z-10">
             <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
                 <i class="fa-solid fa-cube text-xl text-white"></i>
             </div>
             <div>
-                <h1 class="text-base sm:text-lg font-black text-white">EIDCO v14 // الأمان المعزول</h1>
-                <p class="text-[10px] text-slate-400 font-mono">تسجيل الدخول ومزامنة البصمة والحسابات السحابية</p>
+                <h1 class="text-base sm:text-lg font-black text-white">EIDCO v14 // Enterprise OS</h1>
+                <p class="text-[10px] text-slate-400 font-mono">بوابة الدخول المعزولة والمصادقة الذكية 2027</p>
             </div>
         </div>
 
-        <!-- أزرار الدخول -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 pt-1">
-            <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
-                <i class="fa-brands fa-google text-rose-500 text-base"></i> تسجيل بـ Google
-            </button>
-            <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
-                <i class="fa-solid fa-phone text-emerald-400 text-base"></i> تسجيل برقم الهاتف
-            </button>
-        </div>
+        <!-- شريط الرسائل والتنبيهات -->
+        <div id="authMsgBox" class="hidden relative z-10 p-3 rounded-xl text-xs font-bold text-center border"></div>
 
-        <div class="relative z-10">
-            <button onclick="openComplaintsModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
-                <i class="fa-solid fa-triangle-exclamation"></i> هل تواجه مشكلة؟ إرسال شكوى أو بلاغ للإدارة
+        <!-- أزرار تبويب طرق الدخول (Auth Tabs) -->
+        <div class="flex items-center gap-2 relative z-10 pt-1">
+            <button id="tabQuickBtn" onclick="switchAuthTab('quick')" class="auth-tab-btn active">
+                <i class="fa-solid fa-bolt text-amber-400 ml-1"></i> الدخول السريع (Google/هاتف)
+            </button>
+            <button id="tabPinBtn" onclick="switchAuthTab('pin')" class="auth-tab-btn">
+                <i class="fa-solid fa-fingerprint text-indigo-400 ml-1"></i> اسم المستخدم و PIN
             </button>
         </div>
 
-        <div class="relative flex py-1 items-center z-10">
-            <div class="flex-grow border-t border-slate-800"></div>
-            <span class="flex-shrink mx-4 text-slate-500 text-[10px] font-mono">أو بالاسم والرقم السري والبصمة</span>
-            <div class="flex-grow border-t border-slate-800"></div>
-        </div>
-
-        <div class="space-y-3 relative z-10">
-            <div>
-                <label class="block text-xs text-slate-300 font-bold mb-1">اسم المستخدم / الحساب / الشركة:</label>
-                <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء...">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code):</label>
-                <input type="password" id="userPinInput" class="corporate-input text-xs mono-font tracking-widest text-center text-base" placeholder="••••" maxlength="6">
+        <!-- قسم الدخول السريع (Google + الهاتف) -->
+        <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
+                    <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
+                </button>
+                <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
+                    <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
+                </button>
             </div>
         </div>
 
-        <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-3 relative z-10">
-            <div onclick="performBiometricAuth()" class="w-16 h-16 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
-                <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
+        <!-- قسم الدخول التقليدي (Username + PIN + Biometrics) -->
+        <div id="pinAuthSection" class="space-y-3 relative z-10 pt-1 hidden">
+            <div class="space-y-2.5">
+                <div>
+                    <label class="block text-xs text-slate-300 font-bold mb-1">اسم المستخدم / الشركة:</label>
+                    <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء...">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code):</label>
+                    <input type="password" id="userPinInput" class="corporate-input text-xs mono-font tracking-widest text-center text-base" placeholder="••••" maxlength="6">
+                </div>
             </div>
-            <div>
-                <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر لتأكيد الدخول والمزامنة</span>
-                <span class="text-[10px] text-slate-500 block mt-1" id="selectedAccountDisplay">يرجى كتابة اسم الحساب والرقم السري ثم النقر للتحقق</span>
+
+            <div class="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-2">
+                <div onclick="performBiometricAuth()" class="w-14 h-14 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
+                    <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر للمصادقة وبدء المزامنة</span>
+                    <span class="text-[10px] text-slate-500 block mt-0.5" id="selectedAccountDisplay">يرجى إدخال البيانات والنقر للتحقق</span>
+                </div>
             </div>
         </div>
 
-        <div class="relative z-10 pt-1">
-            <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-2.5 text-center flex items-center justify-between gap-2">
+        <!-- خيارات إضافية (الشكاوى والخصوصية) -->
+        <div class="space-y-2 relative z-10 pt-1">
+            <button onclick="openComplaintsModal()" class="w-full bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
+                <i class="fa-solid fa-triangle-exclamation"></i> إرسال بلاغ أو شكوى للإدارة العليا
+            </button>
+
+            <div class="bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-2 text-center flex items-center justify-between gap-2">
                 <span class="text-[11px] text-slate-300 font-bold flex items-center gap-1.5">
                     <i class="fa-solid fa-shield-halved text-indigo-400 text-xs"></i> حماية وتأمين البيانات
                 </span>
-                <button onclick="openPrivacyModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer flex items-center gap-1 active:scale-95 shadow">
-                    <i class="fa-solid fa-file-contract text-[10px]"></i> سياسة الخصوصية
+                <button onclick="openPrivacyModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1 rounded-lg text-[10px] transition cursor-pointer flex items-center gap-1 active:scale-95 shadow">
+                    <i class="fa-solid fa-file-contract"></i> سياسة الخصوصية
                 </button>
             </div>
         </div>
@@ -240,6 +282,7 @@
     </div>
 
     <!-- Modals -->
+    <!-- 1. نافذة الخصوصية -->
     <div id="privacyModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'privacyModal')">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -253,8 +296,8 @@
                 <p class="font-bold text-indigo-300">نظام EIDCO يلتزم بالكامل بحماية خصوصيتك وأمان بياناتك:</p>
                 <ul class="list-disc list-inside space-y-2 text-slate-400">
                     <li><strong class="text-white">حماية الحسابات:</strong> تُستخدم بيانات التسجيل حصراً للتحقق من هوية المستخدم وتخصيص صلاحيات المنظومة.</li>
-                    <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة ومحميّة المعزولة لكل شركة.</li>
-                    <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك.</li>
+                    <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة ومحميّة ومعزولة لكل شركة.</li>
+                    <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك بواسطة مستشعر الهاتف.</li>
                     <li><strong class="text-white">عدم المشاركة:</strong> لا نقوم ببيع أو مشاركة بياناتك الشخصية مع أي أطراف خارجية.</li>
                 </ul>
             </div>
@@ -268,6 +311,7 @@
         </div>
     </div>
 
+    <!-- 2. نافذة الشكاوى -->
     <div id="complaintsModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'complaintsModal')">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -297,6 +341,7 @@
         </div>
     </div>
 
+    <!-- 3. نافذة دخول الهاتف (OTP) -->
     <div id="phoneAuthModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'phoneAuthModal')">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -320,6 +365,26 @@
     </div>
 
     <script>
+        function switchAuthTab(tab) {
+            triggerHaptic(15);
+            const quickSec = document.getElementById('quickAuthSection');
+            const pinSec = document.getElementById('pinAuthSection');
+            const tabQuickBtn = document.getElementById('tabQuickBtn');
+            const tabPinBtn = document.getElementById('tabPinBtn');
+
+            if (tab === 'quick') {
+                quickSec.classList.remove('hidden');
+                pinSec.classList.add('hidden');
+                tabQuickBtn.classList.add('active');
+                tabPinBtn.classList.remove('active');
+            } else {
+                quickSec.classList.add('hidden');
+                pinSec.classList.remove('hidden');
+                tabQuickBtn.classList.remove('active');
+                tabPinBtn.classList.add('active');
+            }
+        }
+
         function closeModalOnOutsideClick(event, modalId) {
             if (event.target.id === modalId) {
                 triggerHaptic(15);
@@ -364,7 +429,7 @@
         }
     </script>
 
-    <!-- Firebase SDK Modules & Google Identity -->
+    <!-- Firebase Engine & Capacitor Native Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -381,6 +446,11 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithPopup,
+            signInWithCredential,
+            setPersistence,
+            indexedDBLocalPersistence,
+            browserLocalPersistence,
+            onAuthStateChanged,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -397,36 +467,125 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        auth.languageCode = 'ar';
+
+        // تفعيل وحفظ الجلسة محلياً أوفلاين (IndexedDB / LocalStorage)
+        setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+            setPersistence(auth, browserLocalPersistence).catch(console.error);
+        });
+
         const accountsRef = collection(db, "accounts");
         const messagesRef = collection(db, "messages");
-
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // تسجيل الدخول بـ Google المباشر عبر Firebase Popup بدون الحاجة لمعرف Client خارجي ناقص
+        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+
+        // إعداد وتجهيز إضافة Capacitor للهواتف الذكية
+        function initCapacitorBridge() {
+            if (isCapacitorNative && window.Capacitor.Plugins) {
+                if (window.Capacitor.Plugins.GoogleAuth) {
+                    window.Capacitor.Plugins.GoogleAuth.initialize({
+                        clientId: '515898424721-web.apps.googleusercontent.com',
+                        grantOfflineAccess: true,
+                        scopes: ['profile', 'email']
+                    }).catch(err => console.warn("GoogleAuth init warning:", err));
+                }
+
+                if (window.Capacitor.Plugins.App) {
+                    window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
+                        const activeModal = document.querySelector('.custom-modal.active');
+                        if (activeModal) {
+                            activeModal.classList.remove('active');
+                        } else if (canGoBack) {
+                            window.history.back();
+                        } else {
+                            window.Capacitor.Plugins.App.exitApp();
+                        }
+                    });
+                }
+
+                if (window.Capacitor.Plugins.SplashScreen) {
+                    setTimeout(() => window.Capacitor.Plugins.SplashScreen.hide(), 500);
+                }
+            }
+        }
+        initCapacitorBridge();
+
+        function showAuthMsg(type, text) {
+            const msgBox = document.getElementById('authMsgBox');
+            if (!msgBox) return;
+            msgBox.classList.remove('hidden', 'bg-rose-950/80', 'border-rose-700', 'text-rose-200', 'bg-emerald-950/80', 'border-emerald-700', 'text-emerald-200');
+            
+            if (type === 'error') {
+                msgBox.classList.add('bg-rose-950/80', 'border-rose-700', 'text-rose-200');
+            } else {
+                msgBox.classList.add('bg-emerald-950/80', 'border-emerald-700', 'text-emerald-200');
+            }
+            msgBox.innerText = text;
+        }
+
+        function clearAuthMsgs() {
+            const msgBox = document.getElementById('authMsgBox');
+            if (msgBox) msgBox.classList.add('hidden');
+        }
+
+        // مراقب حالة المصادقة (Auth Observer)
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const savedCompanyId = localStorage.getItem('eidco_current_company_id');
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
+                if (savedCompanyId && sessionStorage.getItem('eidco_session_auth')) {
+                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
+                }
+            }
+        });
+
+        // تسجيل الدخول بـ Google المزدوج (Native Plugin / AndroidBridge / Firebase Popup)
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
+            clearAuthMsgs();
 
-            // أ) أندرويد نيتف (Native Bridge)
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+            // 1. استخدام إضافة Capacitor النيتف للموبايل
+            if (isCapacitorNative && window.Capacitor?.Plugins?.GoogleAuth) {
+                try {
+                    showNativeToast("جاري فتح حسابات Google...");
+                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+                    if (idToken) {
+                        const credential = GoogleAuthProvider.credential(idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        await processGoogleAccountData(result.user);
+                        return;
+                    }
+                } catch (nativeErr) {
+                    console.warn("Capacitor GoogleAuth Error, trying fallbacks...", nativeErr);
+                }
+            }
+
+            // 2. استخدام الجسر الأهلي للتطبيق
+            const bridge = window.AndroidBridge || window.NativeBridge;
+            if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات Google...");
-                window.AndroidBridge.launchNativeGoogleSignIn();
+                bridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // ب) تسجيل الدخول المباشر بالمبثوق الخاص بـ Firebase Google Auth
+            // 3. النافذة المنبثقة القياسية لـ Firebase
             try {
+                showNativeToast("جاري فتح نافذة تسجيل الدخول...");
                 const provider = new GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
-                showNativeToast("جاري فتح نافذة تسجيل الدخول...");
                 const result = await signInWithPopup(auth, provider);
                 await processGoogleAccountData(result.user);
             } catch (err) {
-                console.error("Popup Error:", err);
-                alert('تعذر فتح نافذة تسجيل الدخول: ' + err.message);
+                console.error("Google Auth Popup Error:", err);
+                showAuthMsg('error', 'تعذر فتح نافذة تسجيل الدخول بـ Google: ' + err.message);
             }
         };
 
-        // المصادقة التلقائية الأولية
+        // المصادقة التلقائية السحابية والتحقق الأول
         signInAnonymously(auth).then(() => {
             onSnapshot(accountsRef, (snapshot) => {
                 let accountsData = snapshot.docs.map(docSnap => ({
@@ -441,6 +600,7 @@
                         role: 'مدير نظام رئيسي',
                         companyId: 'company_founder_karm',
                         biometricVerified: true,
+                        isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
                 }
@@ -449,7 +609,7 @@
             console.error("خطأ في المصادقة الأولية:", err);
         });
 
-        // دوال الشكاوى
+        // الشكاوى والبلاغات
         window.openComplaintsModal = function() {
             triggerHaptic(20);
             let currentInputName = document.getElementById('usernameInput').value.trim();
@@ -508,7 +668,7 @@
             }
         }
 
-        // معالجة وتخزين بيانات حساب Google وإنشاء معرف الشركة (companyId)
+        // معالجة حساب Google والمطابقة مع التراخيص والحظر
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
@@ -520,6 +680,7 @@
             let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
 
             if (existingAccount && existingAccount.isBanned) {
+                showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
                 alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
                 return;
             }
@@ -621,6 +782,7 @@
 
                 let existingAccount = cloudAccounts.find(a => a.phone === phoneNum);
                 if (existingAccount && existingAccount.isBanned) {
+                    showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
                     alert("⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
                     return;
                 }
@@ -665,6 +827,7 @@
 
         window.performBiometricAuth = async function() {
             triggerHaptic(40);
+            clearAuthMsgs();
             const username = document.getElementById('usernameInput').value.trim();
             const pinInput = document.getElementById('userPinInput').value.trim();
 
@@ -690,6 +853,7 @@
                 if (matchedAccount && matchedAccount.isBanned) {
                     statusEl.innerText = "❌ عذراً، هذا الحساب محظور من قِبل الإدارة!";
                     statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    showAuthMsg('error', "⚠️ هذا الحساب محظور نهائياً بسبب شكاوى ومخالفات مسجلة.");
                     alert("⚠️ تنبيه: هذا الحساب تم حظره نهائياً بسبب شكاوى ومخالفات مسجلة ضده.");
                     return;
                 }
@@ -720,6 +884,7 @@
                     if (pinInput !== expectedPin) {
                         statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
                         statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                        showAuthMsg('error', "⚠️ الرقم السري غير مطابق للحساب.");
                         alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
                         return;
                     }
@@ -747,7 +912,7 @@
                 showNativeToast(`مرحباً بك يا ${username}`);
                 setTimeout(() => {
                     window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-                }, 600);
+                }, 500);
 
             } catch (error) {
                 statusEl.innerText = "⚠️ خطأ في المصادقة السحابية: " + error.message;

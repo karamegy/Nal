@@ -21,9 +21,6 @@
       }
     </script>
 
-    <!-- Google Identity Services SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -338,15 +335,6 @@
             }
         });
 
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                const activeModal = document.querySelector('.custom-modal.active');
-                if (activeModal) {
-                    activeModal.style.height = `${window.visualViewport.height}px`;
-                }
-            });
-        }
-
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -392,7 +380,6 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithCredential,
             signInWithPopup,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
@@ -407,8 +394,6 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        const GOOGLE_CLIENT_ID = "515898424721-web.apps.googleusercontent.com"; 
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
@@ -417,47 +402,7 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // 1. تهيئة Google Identity Services لاستدعاء نافذة الاختيار المدمجة داخل التطبيق
-        function initGoogleAuthServices() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleIdToken,
-                    auto_select: false,
-                    cancel_on_tap_outside: true,
-                    context: 'signin'
-                });
-            }
-
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-                try {
-                    window.Capacitor.Plugins.GoogleAuth.initialize({
-                        clientId: GOOGLE_CLIENT_ID,
-                        scopes: ['profile', 'email'],
-                        grantOfflineAccess: true
-                    });
-                } catch(e) {
-                    console.log("GoogleAuth Init Note:", e);
-                }
-            }
-        }
-
-        window.addEventListener('load', () => {
-            initGoogleAuthServices();
-        });
-
-        async function handleGoogleIdToken(response) {
-            try {
-                showNativeToast("جاري التحقق من حساب Google...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (error) {
-                alert('خطأ في مصادقة جوجل: ' + error.message);
-            }
-        }
-
-        // 2. دالة تسجيل الدخول عبر نافذة جوجل المدمجة دون تحويل الصفحات أو فتح متصفح خارجي
+        // تسجيل الدخول بـ Google المباشر عبر Firebase Popup بدون الحاجة لمعرف Client خارجي ناقص
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
@@ -468,47 +413,18 @@
                 return;
             }
 
-            // ب) Capacitor Native
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-                try {
-                    showNativeToast("جاري فتح حسابات Google...");
-                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                    const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
-                    const result = await signInWithCredential(auth, credential);
-                    await processGoogleAccountData(result.user);
-                    return;
-                } catch (error) {
-                    console.error("Capacitor Native Google Sign-In Error:", error);
-                }
-            }
-
-            // جـ) استدعاء نافذة جوجل المدمجة (Google Identity Bottom Sheet Prompt)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري فتح نافذة Google المدمجة...");
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        fallbackPopupSignIn();
-                    }
-                });
-                return;
-            }
-
-            fallbackPopupSignIn();
-        };
-
-        // دالة fallback تفتح Popup مستقلة بدلاً من redirect المتصفح
-        async function fallbackPopupSignIn() {
+            // ب) تسجيل الدخول المباشر بالمبثوق الخاص بـ Firebase Google Auth
             try {
                 const provider = new GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
-                showNativeToast("جاري فتح نافذة المصادقة...");
+                showNativeToast("جاري فتح نافذة تسجيل الدخول...");
                 const result = await signInWithPopup(auth, provider);
                 await processGoogleAccountData(result.user);
             } catch (err) {
-                console.warn("Popup blocked or network error:", err);
+                console.error("Popup Error:", err);
                 alert('تعذر فتح نافذة تسجيل الدخول: ' + err.message);
             }
-        }
+        };
 
         // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {

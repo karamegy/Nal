@@ -77,10 +77,13 @@
             box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
             position: relative;
             touch-action: pan-y;
-            min-height: auto;
-            max-height: calc(100vh - 160px);
-            max-height: calc(100dvh - 160px);
-            overflow: hidden;
+            /* تم ضبط الأبعاد هنا لتتزامن وتتطابق مع شاشة الموبايل تماماً */
+            min-height: 50vh;
+            min-height: 50dvh;
+            max-height: none;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
 
         .tv-glass-glare {
@@ -307,7 +310,7 @@
                 </div>
 
                 <!-- منطقة البث الرئيسية السلسة والمتجاوبة -->
-                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto transition-all duration-300 select-none min-h-0">
+                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-start overflow-y-auto transition-all duration-300 select-none min-h-0 space-y-3">
                     <!-- يتم دفق المحتوى عبر JS -->
                 </div>
 
@@ -480,7 +483,6 @@
         function handleSwipeGesture() {
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
-            // التحقق من أن السحب أفقي وليس رأسي للأعلى/الأسفل
             if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY)) {
                 const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
                 let currentIdx = channels.indexOf(currentTvChannel);
@@ -512,7 +514,6 @@
             }
         };
 
-        // معالج الصوت التكيّفي المعتمد للهواتف والمتصفحات
         let audioCtx = null;
         function getSafeAudioContext() {
             if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {

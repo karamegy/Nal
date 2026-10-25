@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services المدمجة (تظهر الشيت الداخلي) -->
+    <!-- مكتبة Google Identity Services المدمجة -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -491,6 +491,8 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
+            signInWithRedirect,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -554,7 +556,7 @@
         });
 
         // =========================================================
-        // دالة الدخول بـ Google المدمجة حصرياً (Native / GIS Bottom Sheet)
+        // دالة الدخول بـ Google المدمجة حصرياً مع Fallback تلقائي
         // =========================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -596,9 +598,11 @@
                 return;
             }
 
-            // 3. المسار الثالث: إظهار الشيت المدمج الداخلي (Google Identity One Tap Prompt) دون فتح متصفح
+            const googleProvider = new GoogleAuthProvider();
+
+            // 3. المسار الثالث: Google Identity One Tap مع Fallback تلقائي لـ Firebase Popup/Redirect
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري إظهار نافذة Google المدمجة...");
+                showNativeToast("جاري إظهار نافذة Google...");
                 
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
@@ -617,16 +621,36 @@
                     cancel_on_tap_outside: true
                 });
 
-                window.google.accounts.id.prompt((notification) => {
+                window.google.accounts.id.prompt(async (notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        console.warn("Google Prompt not displayed:", notification.getNotDisplayedReason());
-                        showAuthMsg('error', '⚠️ لم تعذر إظهار الشيت الداخلي. يرجى التأكد من تسجيل حساب Google على الهاتف.');
+                        console.warn("Google One Tap not displayed:", notification.getNotDisplayedReason());
+                        
+                        // في حال تعذر إظهار الشيت الداخلي (البيئة WebView أو متصفح هاتف)، نفتح نافذة تسجيل دخول Google مباشرة
+                        try {
+                            showNativeToast("جاري فتح نافذة Google...");
+                            const result = await signInWithPopup(auth, googleProvider);
+                            await processGoogleAccountData(result.user);
+                        } catch (popupErr) {
+                            console.warn("Popup blocked or failed, trying redirect:", popupErr);
+                            try {
+                                await signInWithRedirect(auth, googleProvider);
+                            } catch (redirectErr) {
+                                showAuthMsg('error', '⚠️ تعذر إظهار نافذة Google. يرجى التأكد من الاتصال بالإنترنت أو إعدادات المتصفح.');
+                            }
+                        }
                     }
                 });
                 return;
             }
 
-            showAuthMsg('error', '❌ تعذر إظهار الشيت المدمج لـ Google.');
+            // Fallback مباشر إذا لم تكن مكتبة gsi محمّلة
+            try {
+                showNativeToast("جاري فتح نافذة Google...");
+                const result = await signInWithPopup(auth, googleProvider);
+                await processGoogleAccountData(result.user);
+            } catch (err) {
+                showAuthMsg('error', '❌ تعذر إظهار نافذة Google: ' + err.message);
+            }
         };
 
         // إنشاء وتنسيق حساب جديد

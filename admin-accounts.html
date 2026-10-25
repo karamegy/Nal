@@ -118,7 +118,14 @@
             user-select: text !important;
         }
 
-        html, body { 
+        html {
+            background-color: var(--bg-main);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            height: 100%;
+        }
+
+        body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
@@ -127,7 +134,9 @@
             margin: 0; 
             padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0.75rem;
             overflow-x: hidden;
-            overscroll-behavior-y: contain;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: manipulation;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -172,7 +181,15 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
-        /* إصلاح النافذة المنبثقة للتوافق مع لوحة المفاتيح */
+        /* ضبط التمرير السلس للجدول على الموبايل واللمس */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
+            overscroll-behavior-x: contain;
+        }
+
+        /* إصلاح النافذة المنبثقة للتوافق الكامل مع التمرير والكيبورد */
         .custom-modal { 
             display: none; 
             position: fixed; 
@@ -186,14 +203,15 @@
             box-sizing: border-box;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
         }
         .custom-modal.active { display: flex !important; }
 
-        /* تقييد ارتفاع الكارت داخل المودال لمنع اختفائه خلف الكيبورد */
         .custom-modal-content {
-            max-height: 90vh;
-            max-height: 90dvh;
+            max-height: 85vh;
+            max-height: 85dvh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             width: 100%;
             margin: auto;
         }
@@ -287,7 +305,7 @@
                 <span class="text-[11px] text-slate-400 mono-font" id="syncStatusText">جاري جلب السجلات...</span>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <div class="table-container rounded-xl border border-slate-800">
                 <table class="w-full text-right text-xs">
                     <thead>
                         <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
@@ -316,7 +334,7 @@
                 <span class="text-[11px] text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <div class="table-container rounded-xl border border-slate-800">
                 <table class="w-full text-right text-xs">
                     <thead>
                         <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
@@ -377,7 +395,7 @@
         </div>
     </div>
 
-    <!-- معالج محاذاة الكيبورد التلقائي (Keyboard Viewport Handler) -->
+    <!-- معالج محاذاة الكيبورد والتمرير التلقائي -->
     <script>
         document.addEventListener('focusin', (e) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {

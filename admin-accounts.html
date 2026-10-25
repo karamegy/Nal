@@ -12,33 +12,42 @@
     <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
+    <!-- النواة المركزية والجسر الأهلي -->
     <script src="./eidco-core.js"></script>
 
     <script>
-        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي (Native Bridge Helper)
+        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي والهجين
+        function getActiveBridge() {
+            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
         window.NativeBridge = {
             vibrate: function(ms = 40) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                    window.AndroidBridge.vibrate(ms);
-                } else if (navigator.vibrate) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.vibrate === 'function') {
+                    bridge.vibrate(ms);
+                } else if ("vibrate" in navigator) {
                     navigator.vibrate(ms);
                 }
             },
             showToast: function(msg) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                    window.AndroidBridge.showToast(msg);
+                const bridge = getActiveBridge();
+                if (typeof bridge.showToast === 'function') {
+                    bridge.showToast(msg);
                 } else {
                     console.log("[Toast]: " + msg);
                 }
             },
             keepScreenOn: function(enable = true) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.keepScreenOn === 'function') {
-                    window.AndroidBridge.keepScreenOn(enable);
+                const bridge = getActiveBridge();
+                if (typeof bridge.keepScreenOn === 'function') {
+                    bridge.keepScreenOn(enable);
                 }
             },
             shareText: function(text) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                    window.AndroidBridge.shareText(text);
+                const bridge = getActiveBridge();
+                if (typeof bridge.shareText === 'function') {
+                    bridge.shareText(text);
                 } else if (navigator.share) {
                     navigator.share({ text: text }).catch(() => {});
                 } else {
@@ -46,8 +55,9 @@
                 }
             },
             downloadFile: function(filename, base64Data) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
-                    window.AndroidBridge.downloadFile(filename, base64Data);
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(filename, base64Data);
                 } else {
                     const link = document.createElement('a');
                     link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
@@ -68,6 +78,10 @@
         }
         if (!localStorage.getItem('eidco_v14_admin')) {
             localStorage.setItem('eidco_v14_admin', FOUNDER_NAME);
+        }
+
+        if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
+            window.location.href = 'auth.html';
         }
 
         // إبقاء الشاشة مضاءة أثناء مراقبة اللوحة
@@ -112,11 +126,12 @@
             min-height: 100dvh; 
             margin: 0; 
             padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0.75rem;
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
 
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; direction: ltr; unicode-bidi: embed; text-align: left; display: inline-block; }
         
         .corporate-card { 
             background: var(--card-bg); 
@@ -132,7 +147,7 @@
             border-radius: 12px; 
             padding: 10px 14px; 
             transition: all 0.2s; 
-            font-size: 14px; /* يمنع التكبير التلقائي في آيفون وأندرويد عند الكتابة */
+            font-size: 14px;
         }
         .corporate-input:focus { 
             outline: none; 
@@ -169,7 +184,7 @@
             padding: 1rem; 
             backdrop-filter: blur(8px); 
             box-sizing: border-box;
-            overflow-y: auto; /* يسمح بالتمرير عند فتح الكيبورد */
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         .custom-modal.active { display: flex !important; }
@@ -188,6 +203,18 @@
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
+
+    <script>
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
@@ -352,7 +379,6 @@
 
     <!-- معالج محاذاة الكيبورد التلقائي (Keyboard Viewport Handler) -->
     <script>
-        // إظهار حقل الإدخال فوق لوحة المفاتيح فور التركيز عليه
         document.addEventListener('focusin', (e) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
                 setTimeout(() => {
@@ -361,7 +387,6 @@
             }
         });
 
-        // التعامل الديناميكي مع تغير حجم الشاشة عند ظهور الكيبورد في أندرويد WebView
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
                 const activeModal = document.querySelector('.custom-modal.active');
@@ -401,13 +426,13 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // التحقق من وجود الجسر البرمجي للأندرويد
-        if (window.AndroidBridge) {
+        // التحقق من وجود الجسر البرمجي للأندرويد والهجين
+        const activeBridge = (window.CapacitorBridge || window.AndroidBridge || window.NativeBridge);
+        if (activeBridge) {
             const badge = document.getElementById('nativeStatusBadge');
             if (badge) badge.classList.remove('hidden');
         }
 
-        // تفعيل التخزين المحلي IndexedDB للعمل السريع في WebView
         enableIndexedDbPersistence(db).catch((err) => {
             console.warn('Persistence check:', err.code);
         });
@@ -428,7 +453,8 @@
                 }
             } else {
                 signInAnonymously(auth).catch(err => {
-                    document.getElementById('syncStatusText').innerText = "⚠️ خطأ مصادقة سحابية";
+                    const statusEl = document.getElementById('syncStatusText');
+                    if (statusEl) statusEl.innerText = "⚠️ خطأ مصادقة سحابية";
                 });
             }
         });
@@ -437,26 +463,32 @@
             onSnapshot(accountsRef, (snapshot) => {
                 globalAccountsList = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 renderAccountsTable(globalAccountsList);
-                document.getElementById('syncStatusText').innerText = "✓ متزامن سحابياً";
+                const statusEl = document.getElementById('syncStatusText');
+                if (statusEl) statusEl.innerText = "✓ متزامن سحابياً";
             }, (err) => {
-                document.getElementById('syncStatusText').innerText = "⚠️ خطأ في المزامنة";
+                const statusEl = document.getElementById('syncStatusText');
+                if (statusEl) statusEl.innerText = "⚠️ خطأ في المزامنة";
             });
 
             onSnapshot(messagesRef, (snapshot) => {
                 let allMessages = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 let complaintsList = allMessages.filter(m => m.type === 'شكوى نظام' || m.message);
                 renderComplaintsTable(complaintsList);
-                document.getElementById('complaintsSyncStatus').innerText = `✓ المزامنة (${complaintsList.length})`;
+                const complaintsStatusEl = document.getElementById('complaintsSyncStatus');
+                if (complaintsStatusEl) complaintsStatusEl.innerText = `✓ المزامنة (${complaintsList.length})`;
             }, (err) => {
-                document.getElementById('complaintsSyncStatus').innerText = "⚠️ خطأ الشكاوى";
+                const complaintsStatusEl = document.getElementById('complaintsSyncStatus');
+                if (complaintsStatusEl) complaintsStatusEl.innerText = "⚠️ خطأ الشكاوى";
             });
         }
 
         function renderAccountsTable(data) {
-            document.getElementById('totalAccountsCount').innerText = data.length;
-            document.getElementById('activeAccountsCount').innerText = data.filter(a => !a.isBanned).length;
+            if (document.getElementById('totalAccountsCount')) document.getElementById('totalAccountsCount').innerText = data.length;
+            if (document.getElementById('activeAccountsCount')) document.getElementById('activeAccountsCount').innerText = data.filter(a => !a.isBanned).length;
 
             let tbody = document.getElementById('adminAccountsTableBody');
+            if (!tbody) return;
+
             if(!data.length) {
                 tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">لا توجد حسابات مسجلة حالياً.</td></tr>`;
                 return;
@@ -465,28 +497,36 @@
             tbody.innerHTML = data.map(acc => {
                 let isBanned = acc.isBanned === true;
                 let compId = acc.companyId || FOUNDER_COMPANY;
+                let safeDocId = escapeHTML(acc.docId);
+                let safeName = escapeHTML(acc.name || 'بدون اسم');
+                let safeRole = escapeHTML(acc.role || 'محاسب أول');
+                let safeCompId = escapeHTML(compId);
+                let safeContact = escapeHTML(acc.email || acc.phone || 'تسجيل يدوي');
+                let safeDate = escapeHTML(acc.date || '---');
+                let initialChar = safeName ? safeName.charAt(0) : 'م';
+
                 return `
                     <tr class="hover:bg-slate-900/60 transition ${isBanned ? 'bg-rose-950/20' : ''}">
                         <td class="p-3.5 font-bold text-white flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30 overflow-hidden shrink-0">
-                                ${acc.avatar ? `<img src="${acc.avatar}" class="w-full h-full object-cover">` : (acc.name ? acc.name.charAt(0) : 'م')}
+                                ${acc.avatar ? `<img src="${escapeHTML(acc.avatar)}" class="w-full h-full object-cover">` : initialChar}
                             </div>
-                            <span class="truncate max-w-[140px]">${acc.name || 'بدون اسم'}</span>
+                            <span class="truncate max-w-[140px]">${safeName}</span>
                         </td>
-                        <td class="p-3.5 text-slate-300 font-bold">${acc.role || 'محاسب أول'}</td>
-                        <td class="p-3.5 mono-font text-indigo-400 font-bold">${compId}</td>
-                        <td class="p-3.5 mono-font text-slate-400 text-[11px]">${acc.email || acc.phone || 'تسجيل يدوي'}</td>
+                        <td class="p-3.5 text-slate-300 font-bold">${safeRole}</td>
+                        <td class="p-3.5 mono-font text-indigo-400 font-bold" dir="ltr">${safeCompId}</td>
+                        <td class="p-3.5 mono-font text-slate-400 text-[11px]">${safeContact}</td>
                         <td class="p-3.5 text-center">
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isBanned ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
                                 ${isBanned ? 'محظور ⛔' : 'نشط ✓'}
                             </span>
                         </td>
-                        <td class="p-3.5 mono-font text-slate-500 text-[11px]">${acc.date || '---'}</td>
+                        <td class="p-3.5 mono-font text-slate-500 text-[11px]">${safeDate}</td>
                         <td class="p-3.5 text-center space-x-1 space-x-reverse">
-                            <button onclick="window.toggleAccountBan('${acc.docId}', ${isBanned})" class="px-2 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
+                            <button onclick="window.toggleAccountBan('${safeDocId}', ${isBanned})" class="px-2 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${isBanned ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-600/20 text-amber-300 border border-amber-500/30'}">
                                 <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} ml-1"></i> ${isBanned ? 'فك الحظر' : 'حظر'}
                             </button>
-                            <button onclick="window.deleteCloudAccount('${acc.docId}', '${acc.name || 'الحساب'}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف نهائي">
+                            <button onclick="window.deleteCloudAccount('${safeDocId}', '${safeName}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف نهائي">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
@@ -497,60 +537,74 @@
 
         function renderComplaintsTable(data) {
             let tbody = document.getElementById('adminComplaintsTableBody');
+            if (!tbody) return;
+
             if(!data.length) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">لا توجد شكاوى أو بلاغات مسجلة.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = data.map(comp => `
-                <tr class="hover:bg-slate-900/60 transition">
-                    <td class="p-3.5 font-bold text-white flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30 shrink-0">
-                            ${comp.senderName ? comp.senderName.charAt(0) : 'ش'}
-                        </div>
-                        <span class="truncate max-w-[140px]">${comp.senderName || 'جهة غير معروفة'}</span>
-                    </td>
-                    <td class="p-3.5 mono-font text-indigo-300 text-[11px]">${comp.contactInfo || '---'}</td>
-                    <td class="p-3.5 text-slate-200 max-w-xs truncate" title="${comp.message}">${comp.message}</td>
-                    <td class="p-3.5 mono-font text-slate-500 text-[11px]">${comp.date || '---'}</td>
-                    <td class="p-3.5 text-center space-x-1 space-x-reverse">
-                        <button onclick="window.resolveComplaint('${comp.docId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
-                            <i class="fa-solid fa-check ml-1"></i> تم الحل
-                        </button>
-                        <button onclick="window.deleteComplaint('${comp.docId}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف الشكوى">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = data.map(comp => {
+                let safeDocId = escapeHTML(comp.docId);
+                let safeSender = escapeHTML(comp.senderName || 'جهة غير معروفة');
+                let safeContact = escapeHTML(comp.contactInfo || '---');
+                let safeMessage = escapeHTML(comp.message || '');
+                let safeDate = escapeHTML(comp.date || '---');
+                let initialChar = safeSender ? safeSender.charAt(0) : 'ش';
+
+                return `
+                    <tr class="hover:bg-slate-900/60 transition">
+                        <td class="p-3.5 font-bold text-white flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30 shrink-0">
+                                ${initialChar}
+                            </div>
+                            <span class="truncate max-w-[140px]">${safeSender}</span>
+                        </td>
+                        <td class="p-3.5 mono-font text-indigo-300 text-[11px]">${safeContact}</td>
+                        <td class="p-3.5 text-slate-200 max-w-xs truncate" title="${safeMessage}">${safeMessage}</td>
+                        <td class="p-3.5 mono-font text-slate-500 text-[11px]">${safeDate}</td>
+                        <td class="p-3.5 text-center space-x-1 space-x-reverse">
+                            <button onclick="window.resolveComplaint('${safeDocId}')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
+                                <i class="fa-solid fa-check ml-1"></i> تم الحل
+                            </button>
+                            <button onclick="window.deleteComplaint('${safeDocId}')" class="text-rose-400 hover:text-rose-300 px-2 py-1 text-xs cursor-pointer active:scale-95" title="حذف الشكوى">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         window.openAddAccountModal = function() {
             window.NativeBridge.vibrate(30);
-            document.getElementById('modalAccountName').value = '';
-            document.getElementById('modalAccountCompanyId').value = FOUNDER_COMPANY;
-            document.getElementById('modalAccountPin').value = '1234';
+            if (document.getElementById('modalAccountName')) document.getElementById('modalAccountName').value = '';
+            if (document.getElementById('modalAccountCompanyId')) document.getElementById('modalAccountCompanyId').value = FOUNDER_COMPANY;
+            if (document.getElementById('modalAccountPin')) document.getElementById('modalAccountPin').value = '1234';
             
             const modal = document.getElementById('adminAddModal');
-            modal.classList.add('active');
-            
-            // ضبط ارتفاع المودال وفقاً للرؤية الفعلية للشاشة
-            if (window.visualViewport) {
-                modal.style.height = `${window.visualViewport.height}px`;
+            if (modal) {
+                modal.classList.add('active');
+                if (window.visualViewport) {
+                    modal.style.height = `${window.visualViewport.height}px`;
+                }
             }
         };
 
         window.closeAddAccountModal = function() {
             window.NativeBridge.vibrate(20);
-            document.getElementById('adminAddModal').classList.remove('active');
+            const modal = document.getElementById('adminAddModal');
+            if (modal) modal.classList.remove('active');
         };
 
         window.saveAdminAccount = async function() {
             window.NativeBridge.vibrate(40);
-            let name = document.getElementById('modalAccountName').value.trim();
-            let companyIdInput = document.getElementById('modalAccountCompanyId').value.trim() || FOUNDER_COMPANY;
-            let pin = document.getElementById('modalAccountPin').value.trim() || "1234";
-            let role = document.getElementById('modalAccountRole').value;
+            let nameInput = document.getElementById('modalAccountName');
+            let name = nameInput ? nameInput.value.trim() : '';
+            let companyIdInput = document.getElementById('modalAccountCompanyId') ? document.getElementById('modalAccountCompanyId').value.trim() : FOUNDER_COMPANY;
+            let pinInput = document.getElementById('modalAccountPin') ? document.getElementById('modalAccountPin').value.trim() : "1234";
+            let roleSelect = document.getElementById('modalAccountRole');
+            let role = roleSelect ? roleSelect.value : "مدير نظام رئيسي";
 
             if(!name) {
                 window.NativeBridge.showToast('الرجاء إدخال اسم المسؤول');
@@ -563,13 +617,13 @@
 
             try {
                 let cleanNameKey = name.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let docIdToUse = companyIdInput + "_" + cleanNameKey;
+                let docIdToUse = (companyIdInput || FOUNDER_COMPANY) + "_" + cleanNameKey;
                 
                 await setDoc(doc(db, "accounts", docIdToUse), {
                     name: name,
                     role: role,
-                    companyId: companyIdInput,
-                    pin: pin,
+                    companyId: companyIdInput || FOUNDER_COMPANY,
+                    pin: pinInput || "1234",
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 });

@@ -492,7 +492,6 @@
             GoogleAuthProvider, 
             signInWithCredential,
             signInWithPopup,
-            signInWithRedirect,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -556,7 +555,7 @@
         });
 
         // =========================================================
-        // دالة الدخول بـ Google المدمجة حصرياً مع Fallback تلقائي
+        // دالة الدخول بـ Google المعدلة (بدون signInWithRedirect)
         // =========================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -565,7 +564,7 @@
             const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
             const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. المسار الأول: Capacitor GoogleAuth Plugin
+            // 1. المسار الأول: Capacitor GoogleAuth Plugin (في حال تطبيق أندرويد مجهّز)
             if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -599,8 +598,11 @@
             }
 
             const googleProvider = new GoogleAuthProvider();
+            googleProvider.setCustomParameters({
+                prompt: 'select_account'
+            });
 
-            // 3. المسار الثالث: Google Identity One Tap مع Fallback تلقائي لـ Firebase Popup/Redirect
+            // 3. المسار الثالث: Google Identity Services (One Tap) أو Popup فقط
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 showNativeToast("جاري إظهار نافذة Google...");
                 
@@ -623,33 +625,25 @@
 
                 window.google.accounts.id.prompt(async (notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        console.warn("Google One Tap not displayed:", notification.getNotDisplayedReason());
-                        
-                        // في حال تعذر إظهار الشيت الداخلي (البيئة WebView أو متصفح هاتف)، نفتح نافذة تسجيل دخول Google مباشرة
+                        // استدعاء Popup بدلاً من Redirect لتجنب فقدان الجلسة
                         try {
-                            showNativeToast("جاري فتح نافذة Google...");
                             const result = await signInWithPopup(auth, googleProvider);
                             await processGoogleAccountData(result.user);
                         } catch (popupErr) {
-                            console.warn("Popup blocked or failed, trying redirect:", popupErr);
-                            try {
-                                await signInWithRedirect(auth, googleProvider);
-                            } catch (redirectErr) {
-                                showAuthMsg('error', '⚠️ تعذر إظهار نافذة Google. يرجى التأكد من الاتصال بالإنترنت أو إعدادات المتصفح.');
-                            }
+                            showAuthMsg('error', '⚠️ تعذر فتح نافذة Google. يرجى تفعيل التبويبات المنبثقة (Pop-ups) أو استخدام خيار اسم المستخدم وPIN.');
                         }
                     }
                 });
                 return;
             }
 
-            // Fallback مباشر إذا لم تكن مكتبة gsi محمّلة
+            // Fallback مباشر عبر Popup بدون الاستعانة بـ Redirect
             try {
                 showNativeToast("جاري فتح نافذة Google...");
                 const result = await signInWithPopup(auth, googleProvider);
                 await processGoogleAccountData(result.user);
             } catch (err) {
-                showAuthMsg('error', '❌ تعذر إظهار نافذة Google: ' + err.message);
+                showAuthMsg('error', '❌ تعذر فتح نافذة Google: ' + err.message);
             }
         };
 

@@ -555,7 +555,7 @@
         });
 
         // =========================================================
-        // دالة الدخول بـ Google المعدلة (بدون signInWithRedirect)
+        // دالة الدخول بـ Google المعالجة لإظهار نافذة اختيار الحسابات الرسمية
         // =========================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -564,48 +564,20 @@
             const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
             const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. المسار الأول: Capacitor GoogleAuth Plugin (في حال تطبيق أندرويد مجهّز)
-            if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
-                try {
-                    showNativeToast("جاري فتح حسابات Google...");
-
-                    await capacitorGoogleAuth.initialize({
-                        clientId: CLIENT_ID,
-                        serverClientId: CLIENT_ID,
-                        grantOfflineAccess: true,
-                        scopes: ['profile', 'email']
-                    }).catch(e => console.warn(e));
-
-                    const googleUser = await capacitorGoogleAuth.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    console.warn("Capacitor Auth failed:", nativeErr);
-                }
-            }
-
-            // 2. المسار الثاني: Android Native Bridge Direct
+            // 1. في حال كان التطبيق يعمل داخل أندرويد Native
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات Google...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            const googleProvider = new GoogleAuthProvider();
-            googleProvider.setCustomParameters({
-                prompt: 'select_account'
-            });
-
-            // 3. المسار الثالث: Google Identity Services (One Tap) أو Popup فقط
-            if (window.google && window.google.accounts && window.google.accounts.id) {
+            // 2. استخدام مكتبة Google Identity Services لإظهار النافذة الصفراء الرسمية (Google Sign-In Sheet)
+            if (window.google && window.google.accounts) {
                 showNativeToast("جاري إظهار نافذة Google...");
                 
+                // إعادة إرسال الطلب لفتح النافذة
+                window.google.accounts.id.cancel();
+
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: async (response) => {
@@ -623,28 +595,32 @@
                     cancel_on_tap_outside: true
                 });
 
-                window.google.accounts.id.prompt(async (notification) => {
+                // استدعاء الشيت الأصفر الخاص بـ Google
+                window.google.accounts.id.prompt((notification) => {
+                    // إذا كان المتصفح يرفض إظهار One-Tap، يتم فتح نافذة التوثيق الرسمية المباشرة بدون Redirect
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // استدعاء Popup بدلاً من Redirect لتجنب فقدان الجلسة
-                        try {
-                            const result = await signInWithPopup(auth, googleProvider);
-                            await processGoogleAccountData(result.user);
-                        } catch (popupErr) {
-                            showAuthMsg('error', '⚠️ تعذر فتح نافذة Google. يرجى تفعيل التبويبات المنبثقة (Pop-ups) أو استخدام خيار اسم المستخدم وPIN.');
+                        if (window.google.accounts.oauth2) {
+                            const client = window.google.accounts.oauth2.initTokenClient({
+                                client_id: CLIENT_ID,
+                                scope: 'email profile openid',
+                                callback: async (tokenResponse) => {
+                                    if (tokenResponse.access_token) {
+                                        const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                                        const result = await signInWithCredential(auth, credential);
+                                        await processGoogleAccountData(result.user);
+                                    }
+                                },
+                            });
+                            client.requestAccessToken();
+                        } else {
+                            showAuthMsg('error', '⚠️ يرجى السماح بالنوافذ المنبثقة من إعدادات المتصفح لفتح نافذة Google.');
                         }
                     }
                 });
                 return;
             }
 
-            // Fallback مباشر عبر Popup بدون الاستعانة بـ Redirect
-            try {
-                showNativeToast("جاري فتح نافذة Google...");
-                const result = await signInWithPopup(auth, googleProvider);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                showAuthMsg('error', '❌ تعذر فتح نافذة Google: ' + err.message);
-            }
+            showAuthMsg('error', '❌ تعذر الاتصال بمكتبة Google، يرجى التأكد من الاتصال بالإنترنت.');
         };
 
         // إنشاء وتنسيق حساب جديد

@@ -15,9 +15,6 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services الرسمية للنافذة المباشرة -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -234,8 +231,8 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google -->
-                <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
+                <!-- زر دخول بـ Google (متصل بدالة Firebase Popup المباشرة) -->
+                <button id="googleBtnCustom" onclick="window.triggerGoogleSignIn()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
 
@@ -243,9 +240,6 @@
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
             </div>
-            
-            <!-- الحاوية المباشرة لزر جوجل التلقائي (غير مرئية للتأكيد الفوري) -->
-            <div id="g_id_onload" class="hidden"></div>
         </div>
 
         <!-- قسم الدخول التقليدي (Username + PIN) -->
@@ -493,7 +487,7 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithCredential,
+            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -510,8 +504,6 @@
             messagingSenderId: "515898424721",
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
-
-        const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -558,40 +550,36 @@
             }
         });
 
-        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل مع التعرف والمزامنة المباشرة
-        window.initGoogleIdentity = function() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: window.handleGoogleIdentityCredential,
-                    auto_select: true,
-                    cancel_on_tap_outside: false
-                });
+        // =========================================================================
+        // دالة الدخول بـ Google المباشرة (تفتح نافذة اختيار الحسابات الرسمية بالكامل)
+        // =========================================================================
+        window.triggerGoogleSignIn = async function() {
+            triggerHaptic(25);
+            clearAuthMsgs();
 
-                // عرض نافذة الاختيار السفلية المباشرة
-                window.google.accounts.id.prompt();
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري اختيار الحساب...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
             }
-        };
 
-        window.handleGoogleIdentityCredential = async function(response) {
-            if (!response || !response.credential) return;
             try {
-                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
+                showNativeToast("جاري فتح نافذة حسابات جوجل...");
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                
+                const result = await signInWithPopup(auth, provider);
+                if (result && result.user) {
+                    await processGoogleAccountData(result.user);
+                }
             } catch (err) {
-                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
+                console.error("Google Sign-In Error:", err);
+                showAuthMsg('error', 'فشل تسجيل الدخول بـ Google: ' + (err.message || err));
             }
         };
 
-        if (document.readyState === 'complete') {
-            window.initGoogleIdentity();
-        } else {
-            window.addEventListener('load', window.initGoogleIdentity);
-        }
-
-        // استقبال ה- Token من كود الأندرويد الناتيف
+        // استقبال الـ Token في حال تم استدعاؤه من جسر أندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
@@ -600,62 +588,6 @@
                 await processGoogleAccountData(result.user);
             } catch (err) {
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
-            }
-        };
-
-        // =========================================================================
-        // دالة الدخول الموحدة بـ Google (تستدعي النافذة المباشرة فقط بدون متصفح)
-        // =========================================================================
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-            clearAuthMsgs();
-
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
-            const capacitorPlugins = window.Capacitor?.Plugins;
-            const googleAuthPlugin = capacitorPlugins?.GoogleAuth;
-
-            // 1. مسار Capacitor GoogleAuth المباشر
-            if (googleAuthPlugin) {
-                try {
-                    showNativeToast("جاري فتح حسابات الجهاز...");
-                    if (typeof googleAuthPlugin.initialize === 'function') {
-                        await googleAuthPlugin.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-                    }
-                    const googleUser = await googleAuthPlugin.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    console.warn("Capacitor Auth native retry:", nativeErr);
-                }
-            }
-
-            // 2. مسار Android Native Bridge المباشر داخل الجسر
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري اختيار الحساب...");
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 3. مسار GIS One Tap (عرض نافذة اختيار الحسابات المباشرة بدون متصفح)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري فتح حسابات جوجل...");
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-                        window.google.accounts.id.prompt();
-                    }
-                });
-                return;
             }
         };
 

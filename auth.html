@@ -234,12 +234,12 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google (المدمج) -->
+                <!-- زر دخول بـ Google -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
 
-                <!-- حاوية زر Google المباشر (تُستخدم كبديل تلقائي مدمج داخل الصفحة) -->
+                <!-- حاوية زر Google المباشر الكلاسيكي -->
                 <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center"></div>
 
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
@@ -298,7 +298,7 @@
             </button>
         </div>
 
-        <!-- خيارات إضافية (الشكاوى والخصوصية) -->
+        <!-- خيارات إضافية -->
         <div class="space-y-2 relative z-10 pt-1">
             <button onclick="openComplaintsModal()" class="w-full bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> إرسال بلاغ أو شكوى للإدارة العليا
@@ -526,7 +526,6 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // فحص بيئة التشغيل للتمييز بين التطبيق المدمج الـ Native ومتصفح الويب
         function isNativeAppEnvironment() {
             const isCapacitor = typeof window !== 'undefined' && window.Capacitor && 
                 (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
@@ -543,6 +542,7 @@
                 if (window.Capacitor.Plugins.GoogleAuth) {
                     window.Capacitor.Plugins.GoogleAuth.initialize({
                         clientId: CLIENT_ID,
+                        serverClientId: CLIENT_ID, // <-- مُمكّن ضروري لاستخراج idToken في أندرويد
                         grantOfflineAccess: true,
                         scopes: ['profile', 'email']
                     }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -598,7 +598,6 @@
             }
         });
 
-        // إعداد نافذة Google Identity Services (One Tap) للمتصفح فقط
         function initGoogleOneTap() {
             if (!isNativeAppEnvironment() && window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -626,16 +625,13 @@
             setTimeout(initGoogleOneTap, 800);
         });
 
-        // دالة تسجيل الدخول بـ Google المعدلة لحل مشكلة المتصفح الخارجي نهائياً
+        // دالة تسجيل الدخول بـ Google المعدلة ومحمية من أخطاء الـ Native
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
             const isNative = isNativeAppEnvironment();
 
-            // ==========================================
-            // المسار الأول: إذا كان يعمل داخل التطبيق المدمج (Native APK / Action Build)
-            // ==========================================
             if (isNative) {
                 // 1. استخدام إضافة Capacitor GoogleAuth
                 if (window.Capacitor?.Plugins?.GoogleAuth) {
@@ -644,6 +640,7 @@
                         
                         await window.Capacitor.Plugins.GoogleAuth.initialize({
                             clientId: CLIENT_ID,
+                            serverClientId: CLIENT_ID, // <-- الحقل الأساسي لإصلاح مشكلة Token على أندرويد
                             grantOfflineAccess: true,
                             scopes: ['profile', 'email']
                         }).catch(() => {});
@@ -657,17 +654,24 @@
                             await processGoogleAccountData(result.user);
                             return;
                         } else {
-                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق من Google.');
+                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق (idToken) من Google.');
                             return;
                         }
                     } catch (nativeErr) {
                         console.warn("Capacitor GoogleAuth Error:", nativeErr);
-                        showAuthMsg('error', 'تم إلغاء عملية الدخول أو حدث خطأ في استدعاء الخدمة.');
-                        return; // يمنع التحويل للمتصفح الخارجي القاطع
+                        
+                        // في حالة وجود خطأ في إضافة Capacitor Native، إظهار زر Google المدمج كبديل فوراً
+                        if (window.google && window.google.accounts && window.google.accounts.id) {
+                            renderEmbeddedGoogleBtn();
+                            showAuthMsg('error', 'تعذر استخدام النافذة المنبثقة المباشرة، يُرجى الضغط على زر Google المدمج الأدنى.');
+                        } else {
+                            showAuthMsg('error', 'خطأ أندرويد: يرجى التأكد من إضافة بصمة SHA-1 في Google Console.');
+                        }
+                        return;
                     }
                 }
 
-                // 2. استخدام الجسر المباشر لـ Android Native Bridge
+                // 2. الجسر المباشر
                 const bridge = window.AndroidBridge || window.NativeBridge;
                 if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -675,13 +679,9 @@
                     return;
                 }
 
-                // 3. النافذة المدمجة المباشرة داخل الـ WebView
+                // 3. النافذة المدمجة في WebView
                 if (window.google && window.google.accounts && window.google.accounts.id) {
-                    window.google.accounts.id.prompt((notification) => {
-                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                            renderEmbeddedGoogleBtn();
-                        }
-                    });
+                    renderEmbeddedGoogleBtn();
                     return;
                 }
 
@@ -689,9 +689,7 @@
                 return;
             }
 
-            // ==========================================
-            // المسار الثاني: عند فتح المشروع من متصفح عادي (Chrome/Edge/Safari)
-            // ==========================================
+            // عند التشغيل من المتصفح
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -715,7 +713,6 @@
             }
         }
 
-        // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
             triggerHaptic(30);
             clearAuthMsgs();

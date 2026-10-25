@@ -15,9 +15,6 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -234,13 +231,10 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google الموحد -->
+                <!-- زر دخول بـ Google -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
-
-                <!-- حاوية زر Google المباشر الكلاسيكي (تظهر فقط عند الحاجة) -->
-                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center my-1"></div>
 
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
@@ -495,7 +489,6 @@
             GoogleAuthProvider, 
             signInWithCredential,
             signInWithPopup,
-            signInWithRedirect,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -528,16 +521,8 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        function isNativeAppEnvironment() {
-            const isCapacitor = typeof window !== 'undefined' && window.Capacitor && 
-                (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
-            const hasBridge = !!(window.AndroidBridge || window.NativeBridge);
-            const isWebView = /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || navigator.userAgent.includes('W2A');
-            
-            return !!(isCapacitor || hasBridge || isWebView);
-        }
-
-        const isCapacitorNative = isNativeAppEnvironment();
+        // فحص أندرويد وCapacitor المطابق تماماً لتطبيق GITI ERP
+        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : (window.Capacitor && window.Capacitor.isNative);
 
         function initCapacitorBridge() {
             if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
@@ -568,7 +553,12 @@
                 }
             }
         }
-        initCapacitorBridge();
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCapacitorBridge);
+        } else {
+            initCapacitorBridge();
+        }
 
         function showAuthMsg(type, text) {
             const msgBox = document.getElementById('authMsgBox');
@@ -600,104 +590,51 @@
             }
         });
 
-        // تسجيل الدخول بـ Google المتعدد الطرق والأكثر استقراراً
+        // دالة تسجيل الدخول المستخرجة والمطابقة لطريقة GITI ERP
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            showNativeToast("جاري فتح حسابات Google...");
-
-            // 1. المحاولة عبر إضافة Capacitor GoogleAuth Native (إن وُجدت)
-            if (window.Capacitor?.Plugins?.GoogleAuth) {
-                try {
-                    await window.Capacitor.Plugins.GoogleAuth.initialize({
-                        clientId: CLIENT_ID,
-                        serverClientId: CLIENT_ID,
-                        grantOfflineAccess: true,
-                        scopes: ['profile', 'email']
-                    }).catch(() => {});
-
-                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+            try {
+                // 1. الدخول المباشر على أجهزة الأندرويد والتطبيق الذكي (Capacitor Native)
+                if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                    try {
+                        showNativeToast("جاري فتح حسابات Google...");
+                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                        const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
+                        
+                        if (idToken) {
+                            const credential = GoogleAuthProvider.credential(idToken);
+                            const result = await signInWithCredential(auth, credential);
+                            await processGoogleAccountData(result.user);
+                            return;
+                        } else {
+                            showAuthMsg('error', 'تعذر استخراج رمز التوثيق (idToken) من نظام أندرويد.');
+                            return;
+                        }
+                    } catch (nativeErr) {
+                        console.warn("Capacitor Native GoogleAuth Error:", nativeErr);
+                        showAuthMsg('error', 'فشل تسجيل الدخول عبر Google Auth. تأكد من ضبط SHA-1 في Firebase Console.');
+                        return;
+                    }
+                } 
+                // 2. الدخول عبر المتصفح (Web Popup)
+                else {
+                    showNativeToast("جاري فتح نافذة Google...");
+                    const googleProvider = new GoogleAuthProvider();
+                    googleProvider.setCustomParameters({ prompt: 'select_account' });
                     
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
+                    const result = await signInWithPopup(auth, googleProvider);
+                    if (result && result.user) {
                         await processGoogleAccountData(result.user);
                         return;
                     }
-                } catch (nativeErr) {
-                    console.warn("Capacitor Native GoogleAuth failed, falling back to Firebase Provider...", nativeErr);
                 }
-            }
-
-            // 2. المحاولة عبر الجسر المباشر (Bridge)
-            const bridge = window.AndroidBridge || window.NativeBridge;
-            if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
-                bridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 3. التبديل الفوري لـ Firebase Web Provider (Popup / Redirect)
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.addScope('email');
-                provider.addScope('profile');
-
-                let result;
-                try {
-                    result = await signInWithPopup(auth, provider);
-                } catch (popupErr) {
-                    // في حال حظر Popups داخل WebView، نستخدم Redirect
-                    console.warn("Popup blocked, trying Redirect...", popupErr);
-                    await signInWithRedirect(auth, provider);
-                    return;
-                }
-
-                if (result && result.user) {
-                    await processGoogleAccountData(result.user);
-                    return;
-                }
-            } catch (fbErr) {
-                console.warn("Firebase Auth Provider Error:", fbErr);
-                
-                // 4. البديل الأخير: إظهار زر Google المدمج
-                if (window.google?.accounts?.id) {
-                    renderEmbeddedGoogleBtn();
-                    showAuthMsg('error', 'يرجى الضغط على زر Google المدمج أدناه لاستكمال تسجيل الدخول.');
-                } else {
-                    showAuthMsg('error', 'تعذر المصادقة تلقائياً. تأكد من إضافة بصمة SHA-1 في Firebase Console وإتاحة الإنترنت.');
-                }
+            } catch (err) {
+                console.error("Google Auth Error:", err);
+                showAuthMsg('error', 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت.');
             }
         };
-
-        function renderEmbeddedGoogleBtn() {
-            const wrapper = document.getElementById('googleNativeBtnWrapper');
-            if (wrapper && window.google?.accounts?.id) {
-                wrapper.classList.remove('hidden');
-                window.google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: handleCredentialResponse,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
-                window.google.accounts.id.renderButton(
-                    wrapper,
-                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
-                );
-            }
-        }
-
-        async function handleCredentialResponse(response) {
-            try {
-                showNativeToast("جاري تسجيل الدخول...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (e) {
-                showAuthMsg('error', 'خطأ أثناء المصادقة بـ Google: ' + e.message);
-            }
-        }
 
         window.createNewAccountProcess = async function() {
             triggerHaptic(30);

@@ -394,8 +394,6 @@
             GoogleAuthProvider, 
             signInWithCredential,
             signInWithPopup,
-            signInWithRedirect,
-            getRedirectResult,
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -419,24 +417,15 @@
 
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // 1. التقاط المباشر لنتيجة التوجيه (Redirect) فور تحميل الصفحة في البداية
-        getRedirectResult(auth).then(async (result) => {
-            if (result && result.user) {
-                showNativeToast("جاري استكمال تسجيل الدخول بـ Google...");
-                await processGoogleAccountData(result.user);
-            }
-        }).catch((error) => {
-            console.error("خطأ التوجيه:", error);
-        });
-
-        // 2. تهيئة خيار Google One Tap و Native GoogleAuth
+        // 1. تهيئة Google Identity Services لاستدعاء نافذة الاختيار المدمجة داخل التطبيق
         function initGoogleAuthServices() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
                     callback: handleGoogleIdToken,
                     auto_select: false,
-                    cancel_on_tap_outside: true
+                    cancel_on_tap_outside: true,
+                    context: 'signin'
                 });
             }
 
@@ -468,11 +457,18 @@
             }
         }
 
-        // 3. زر تسجيل الدخول الذكي والمحسن لـ Google مع مراعاة بيئة الـ WebView والـ Native
+        // 2. دالة تسجيل الدخول عبر نافذة جوجل المدمجة دون تحويل الصفحات أو فتح متصفح خارجي
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
 
-            // أ) Capacitor Native (موبايل)
+            // أ) أندرويد نيتف (Native Bridge)
+            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري فتح حسابات Google...");
+                window.AndroidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // ب) Capacitor Native
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -486,37 +482,33 @@
                 }
             }
 
-            // ب) جسر AndroidBridge مباشر
-            if (window.AndroidBridge && typeof window.AndroidBridge.launchNativeGoogleSignIn === 'function') {
-                window.AndroidBridge.launchNativeGoogleSignIn();
+            // جـ) استدعاء نافذة جوجل المدمجة (Google Identity Bottom Sheet Prompt)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                showNativeToast("جاري فتح نافذة Google المدمجة...");
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        fallbackPopupSignIn();
+                    }
+                });
                 return;
             }
 
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-
-            // جـ) فحص بيئة الـ WebView / APK Native لمنع فشل الـ Popup وإتاحة التوجيه المباشر
-            const isWebView = /WV|WebView|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || 
-                              window.matchMedia('(display-mode: standalone)').matches ||
-                              navigator.standalone;
-
-            if (isWebView) {
-                // داخل التطبيق/WebView: التوجه المباشر للـ Redirect بدون تضييع وقت في محاولة الـ Popup المحظورة
-                showNativeToast("جاري تحويلك إلى تسجيل دخول Google...");
-                await signInWithRedirect(auth, provider);
-            } else {
-                // متصفح عادي: محاولة النافذة المنبثقة أولاً
-                try {
-                    showNativeToast("جاري فتح تسجيل الدخول بـ Google...");
-                    const result = await signInWithPopup(auth, provider);
-                    await processGoogleAccountData(result.user);
-                } catch (err) {
-                    console.warn("Popup blocked or network failed, falling back to redirect...", err);
-                    showNativeToast("جاري تحويلك إلى صفحة Google...");
-                    await signInWithRedirect(auth, provider);
-                }
-            }
+            fallbackPopupSignIn();
         };
+
+        // دالة fallback تفتح Popup مستقلة بدلاً من redirect المتصفح
+        async function fallbackPopupSignIn() {
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                showNativeToast("جاري فتح نافذة المصادقة...");
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (err) {
+                console.warn("Popup blocked or network error:", err);
+                alert('تعذر فتح نافذة تسجيل الدخول: ' + err.message);
+            }
+        }
 
         // المصادقة التلقائية الأولية
         signInAnonymously(auth).then(() => {

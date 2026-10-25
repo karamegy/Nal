@@ -97,7 +97,14 @@
             user-select: text !important;
         }
 
-        html, body { 
+        html {
+            background-color: var(--bg-main);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            height: 100%;
+        }
+
+        body { 
             font-family: 'Cairo', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main); 
@@ -106,9 +113,11 @@
             margin: 0; 
             padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
-            overscroll-behavior-y: contain;
-            -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: manipulation;
+            -webkit-font-smoothing: antialiased;
         }
 
         .mono-font { font-family: 'JetBrains Mono', monospace; }
@@ -129,7 +138,7 @@
             border-radius: 12px; 
             padding: 10px 14px; 
             transition: all 0.2s; 
-            font-size: 14px; /* يمنع التكبير التلقائي في الشاشات الذكية عند التركيز */
+            font-size: 14px;
         }
         .corporate-input:focus { 
             outline: none; 
@@ -168,12 +177,20 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #1e1b4b; color: #818cf8; }
         
+        /* حاوية الجدول المرنة بالتمرير الأفقي والعمودي السلس */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
+            overscroll-behavior-x: contain;
+        }
+
         table th, table td { white-space: nowrap; }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        /* القائمة الجانبية للجوال */
+        /* القائمة الجانبية للجوال والتمرير السلس داخلياً */
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
@@ -183,6 +200,10 @@
             height: 100dvh !important;
             z-index: 100 !important;
             box-shadow: -10px 0 25px rgba(0,0,0,0.5);
+        }
+
+        #appSidebar nav {
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 
@@ -275,7 +296,7 @@
                         <span id="reportsCountBadge" class="text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg">0 بلاغ نشط</span>
                     </div>
 
-                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <div class="table-container rounded-xl border border-slate-800">
                         <table class="w-full text-right text-xs">
                             <thead>
                                 <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
@@ -298,7 +319,7 @@
         </div>
     </div>
 
-    <!-- معالج محاذاة الكيبورد التلقائي (Keyboard Viewport Handler) -->
+    <!-- معالج محاذاة الكيبورد والتمرير التلقائي -->
     <script>
         document.addEventListener('focusin', (e) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {

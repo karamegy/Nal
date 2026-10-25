@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services -->
+    <!-- مكتبة Google Identity Services المدمجة (تظهر الشيت الداخلي) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -230,7 +230,7 @@
             </button>
         </div>
 
-        <!-- قسم الدخول السريع (Google + الهاتف) -->
+        <!-- قسم الدخول السريع (Google Native + الهاتف) -->
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
@@ -491,7 +491,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -555,7 +554,7 @@
         });
 
         // =========================================================
-        // دالة الدخول بـ Google الشاملة (Native + Web Hybrid)
+        // دالة الدخول بـ Google المدمجة حصرياً (Native / GIS Bottom Sheet)
         // =========================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -564,17 +563,17 @@
             const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
             const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. استخدام Capacitor Native Plugin إذا وُجدت
+            // 1. المسار الأول: Capacitor GoogleAuth Plugin
             if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
                 try {
-                    showNativeToast("جاري فتح حسابات Google (Native)...");
+                    showNativeToast("جاري فتح حسابات Google...");
 
                     await capacitorGoogleAuth.initialize({
                         clientId: CLIENT_ID,
                         serverClientId: CLIENT_ID,
                         grantOfflineAccess: true,
                         scopes: ['profile', 'email']
-                    }).catch(e => console.warn("GoogleAuth Init Warning:", e));
+                    }).catch(e => console.warn(e));
 
                     const googleUser = await capacitorGoogleAuth.signIn();
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
@@ -586,46 +585,48 @@
                         return;
                     }
                 } catch (nativeErr) {
-                    console.warn("Capacitor Native Auth failed/canceled, switching to web fallback...", nativeErr);
-                    let errMessage = nativeErr?.message || JSON.stringify(nativeErr);
-                    if (errMessage.includes("canceled") || errMessage.includes("12501")) {
-                        showAuthMsg('error', 'تم إلغاء عملية الدخول من قِبل المستخدم.');
-                        return;
-                    }
+                    console.warn("Capacitor Auth failed:", nativeErr);
                 }
             }
 
-            // 2. استخدام Android Native Bridge إذا كان معرّفاً
+            // 2. المسار الثاني: Android Native Bridge Direct
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                try {
-                    showNativeToast("جاري فتح حسابات Google...");
-                    androidBridge.launchNativeGoogleSignIn();
-                    return;
-                } catch (e) {
-                    console.warn("Android Bridge Error:", e);
-                }
+                showNativeToast("جاري فتح حسابات Google...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
             }
 
-            // 3. الحل البديل التلقائي (Fallback): Firebase Web Popup مخصص للـ Web / TWA / PWA
-            try {
-                showNativeToast("جاري فتح اختيار الحسابات...");
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
+            // 3. المسار الثالث: إظهار الشيت المدمج الداخلي (Google Identity One Tap Prompt) دون فتح متصفح
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                showNativeToast("جاري إظهار نافذة Google المدمجة...");
                 
-                const result = await signInWithPopup(auth, provider);
-                if (result && result.user) {
-                    await processGoogleAccountData(result.user);
-                }
-            } catch (webErr) {
-                console.error("Google Web Popup Auth Error:", webErr);
-                if (webErr.code === 'auth/popup-closed-by-user') {
-                    showAuthMsg('error', 'تم إغلاق نافذة تسجيل الدخول قبل إكمال العملية.');
-                } else if (webErr.code === 'auth/popup-blocked') {
-                    showAuthMsg('error', 'تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة من إعدادات المتصفح.');
-                } else {
-                    showAuthMsg('error', 'خطأ في تسجيل الدخول بـ Google: ' + (webErr.message || webErr.code));
-                }
+                window.google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: async (response) => {
+                        try {
+                            if (response.credential) {
+                                const credential = GoogleAuthProvider.credential(response.credential);
+                                const result = await signInWithCredential(auth, credential);
+                                await processGoogleAccountData(result.user);
+                            }
+                        } catch (err) {
+                            showAuthMsg('error', 'فشل تسجيل الدخول: ' + err.message);
+                        }
+                    },
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        console.warn("Google Prompt not displayed:", notification.getNotDisplayedReason());
+                        showAuthMsg('error', '⚠️ لم تعذر إظهار الشيت الداخلي. يرجى التأكد من تسجيل حساب Google على الهاتف.');
+                    }
+                });
+                return;
             }
+
+            showAuthMsg('error', '❌ تعذر إظهار الشيت المدمج لـ Google.');
         };
 
         // إنشاء وتنسيق حساب جديد

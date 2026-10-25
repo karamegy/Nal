@@ -49,8 +49,8 @@
             min-height: 100vh;
             min-height: 100dvh;
             margin: 0;
-            padding: 0.75rem;
-            padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+            padding: 0.5rem;
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
             padding-top: env(safe-area-inset-top, 0px);
             display: flex;
             flex-direction: column;
@@ -81,7 +81,7 @@
         .tv-glass-glare {
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
             pointer-events: none;
             z-index: 30;
         }
@@ -89,11 +89,11 @@
         .tv-scanlines {
             position: absolute;
             inset: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 25;
-            opacity: 0.3;
+            opacity: 0.15;
         }
 
         @keyframes tvMarquee {
@@ -228,7 +228,7 @@
         </div>
     </div>
 
-    <div class="w-full max-w-6xl mx-auto my-auto relative">
+    <div class="w-full max-w-6xl mx-auto relative">
         <!-- هالة الضوء Ambient Glow -->
         <div id="tvAmbilight" class="absolute -inset-6 bg-indigo-600/30 blur-3xl rounded-3xl transition-all duration-500 opacity-90 pointer-events-none"></div>
 
@@ -236,7 +236,7 @@
         <div class="real-tv-bezel p-2 sm:p-5 rounded-[20px] sm:rounded-[32px] relative overflow-hidden">
             
             <!-- شاشة التلفزيون OLED -->
-            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[360px] sm:min-h-[480px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
+            <div id="realTvScreen" class="tv-screen-container relative rounded-2xl min-h-[300px] flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl">
                 
                 <div class="tv-glass-glare"></div>
                 <div class="tv-scanlines"></div>
@@ -295,7 +295,7 @@
                 </div>
 
                 <!-- منطقة البث الرئيسية السلسة والمتجاوبة -->
-                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto transition-all duration-300 select-none min-h-[220px]">
+                <div id="realTvContent" class="p-3 sm:p-6 relative z-20 flex-1 flex flex-col justify-center overflow-y-auto transition-all duration-300 select-none min-h-[180px]">
                     <!-- يتم دفق المحتوى عبر JS -->
                 </div>
 
@@ -454,11 +454,6 @@
         let isSpeechEnabled = true;
         let isWallMode = false;
         let initialLoadDone = false;
-
-        // عرض مبدئي فوري للواجهة فور التحميل بدون انتظار الاستجابة السحابية
-        window.addEventListener('DOMContentLoaded', () => {
-            renderTvScreen();
-        });
 
         let touchStartX = 0;
         let touchEndX = 0;
@@ -1036,6 +1031,13 @@
                     </div>
                 `;
             }
+        }
+
+        // تنفيذ دالة الرسم بشكل فوري ومباشر دون انتظار حوادث DOM السابقة
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderTvScreen);
+        } else {
+            renderTvScreen();
         }
 
         setInterval(() => {

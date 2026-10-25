@@ -244,7 +244,6 @@
                 </button>
             </div>
             
-            <!-- حاوية مخفية لإنشاء One Tap Sheet ناتيف داخلي -->
             <div id="g_id_onload" class="hidden"></div>
         </div>
 
@@ -511,7 +510,7 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // استخدام Web Client ID لحصول على الـ ID Token المطلوب لتوثيق Firebase Auth في الأندرويد
+        // Web Application Client ID الصحيح للحصول على ID Token لـ Firebase Auth
         const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
         const app = initializeApp(firebaseConfig);
@@ -572,28 +571,31 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google المعدلة حصرياً لبيئة Native Direct (بدون متصفح إطلاقاً)
+        // دالة الدخول بـ Google المعدلة والمثالية لبيئة التطبيق الناتيف
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
             const androidBridge = window.AndroidBridge || window.NativeBridge;
+            const capacitorPlugins = window.Capacitor?.Plugins;
+            const googleAuthPlugin = capacitorPlugins?.GoogleAuth;
 
-            // 1. المسار الأول: Capacitor GoogleAuth Native Plugin
-            if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
+            // 1. المسار الأول: Capacitor GoogleAuth Plugin الناتيف المباشر
+            if (googleAuthPlugin) {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
 
-                    await capacitorGoogleAuth.initialize({
-                        clientId: CLIENT_ID,
-                        serverClientId: CLIENT_ID,
-                        grantOfflineAccess: true,
-                        scopes: ['profile', 'email']
-                    }).catch(e => console.warn(e));
+                    if (typeof googleAuthPlugin.initialize === 'function') {
+                        await googleAuthPlugin.initialize({
+                            clientId: CLIENT_ID,
+                            serverClientId: CLIENT_ID,
+                            grantOfflineAccess: true,
+                            scopes: ['profile', 'email']
+                        }).catch(() => {});
+                    }
 
-                    const googleUser = await capacitorGoogleAuth.signIn();
+                    const googleUser = await googleAuthPlugin.signIn();
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
 
                     if (idToken) {
@@ -603,18 +605,18 @@
                         return;
                     }
                 } catch (nativeErr) {
-                    console.warn("Capacitor Auth failed:", nativeErr);
+                    console.warn("Capacitor Auth native retry:", nativeErr);
                 }
             }
 
-            // 2. المسار الثاني: Android Native Bridge Direct (عبر WebView Interface)
+            // 2. المسار الثاني: Android Native Bridge Direct
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح نافذة جوجل الرسمية...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 3. المسار الثالث: Google Identity Services / One Tap (Sheet سفلي ناتيف داخل التطبيق)
+            // 3. المسار الثالث: Google Identity Services (GSI) بدون FedCM المنعزلة
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 showNativeToast("جاري إظهار حسابات الجهاز...");
                 
@@ -632,14 +634,12 @@
                         }
                     },
                     auto_select: false,
-                    cancel_on_tap_outside: true,
-                    use_fedcm_for_prompt: true
+                    cancel_on_tap_outside: true
                 });
 
-                // إظهار نافذة One Tap السفلي المدمجة
                 window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        showAuthMsg('error', '⚠️ لم نتمكن من الوصول لخدمات Google Native المباشرة. يرجى التأكد من اختيار الحساب من النافذة الظاهرة أو استخدام دخول اسم المستخدم والـ PIN.');
+                    if (notification.isNotDisplayed() && notification.getNotDisplayedReason() !== 'suppressed_by_user') {
+                        showAuthMsg('error', '⚠️ يتعذر فتح النافذة المباشرة حالياً، يرجى الاستمرار عبر تسجيل اسم المستخدم والـ PIN.');
                     }
                 });
                 return;

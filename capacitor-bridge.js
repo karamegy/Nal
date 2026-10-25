@@ -2,7 +2,7 @@
  * =================================================================
  * EIDCO Business OS - Native Capacitor & Web Bridge (capacitor-bridge.js)
  * جسر التواصل البرمجي الموحد بين محرك WebView، أندرويد الأهلي، والمتصفح
- * الإصدار: 2.2.0 Ultra Safe Sync
+ * الإصدار: 2.2.1 Ultra Safe Sync (مصحح بالكامل)
  * =================================================================
  */
 
@@ -13,7 +13,7 @@
     let wakeLockSentinel = null;
 
     const BridgeCore = {
-        // 1. التحقق من البيئة الأهلية (Android / Capacitor)
+        // 1. التحقق من البيئة الأهلية (Android / Capacitor / iOS)
         isNative: function () {
             return !!(window.Capacitor && window.Capacitor.isNativePlatform()) || 
                    !!window.AndroidBridge || 
@@ -64,7 +64,7 @@
                     bottom: 80px;
                     left: 50%;
                     transform: translateX(-50%);
-                    background: rgba(15, 23, 42, 0.9);
+                    background: rgba(15, 23, 42, 0.95);
                     color: #ffffff;
                     padding: 10px 20px;
                     border-radius: 999px;
@@ -72,8 +72,9 @@
                     font-family: 'Cairo', sans-serif;
                     font-weight: 700;
                     z-index: 99999;
-                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
                     backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                     transition: opacity 0.3s ease, transform 0.3s ease;
                     pointer-events: none;
                     text-align: center;
@@ -93,7 +94,7 @@
             }, 2500);
         },
 
-        // 4. منع إغلاق الشاشة أثناء العمل (Keep Awake / Wake Lock)
+        // 4. منع إغلاق الشاشة أثناء العمل (Keep Awake / Wake Lock مع معالجة حظر التبويبات)
         keepScreenOn: async function (enable) {
             if (typeof enable === 'undefined') enable = true;
 
@@ -117,8 +118,11 @@
             // تقنية HTML5 Web Screen Wake Lock API للمتصفحات
             if ('wakeLock' in navigator) {
                 try {
-                    if (enable && !wakeLockSentinel) {
+                    if (enable && (!wakeLockSentinel || wakeLockSentinel.released)) {
                         wakeLockSentinel = await navigator.wakeLock.request('screen');
+                        wakeLockSentinel.addEventListener('release', () => {
+                            wakeLockSentinel = null;
+                        });
                     } else if (!enable && wakeLockSentinel) {
                         await wakeLockSentinel.release();
                         wakeLockSentinel = null;
@@ -175,11 +179,12 @@
         }
     };
 
-    // توحيد المسميات عبر كافة الواجهات والملفات
+    // توحيد المسميات عبر كافة الواجهات والملفات لضمان التوافق المطلق
     window.CapacitorBridge = BridgeCore;
     window.NativeBridge = BridgeCore;
+    window.AndroidBridge = window.AndroidBridge || BridgeCore;
 
-    // إعادة تفعيل منع النوم عند العودة للصحفة في المتصفح
+    // إعادة تفعيل منع النوم عند العودة للصفحة في المتصفح
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             BridgeCore.keepScreenOn(true);

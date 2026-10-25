@@ -55,7 +55,7 @@
             padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden;
-            overscroll-behavior-y: contain;
+            overflow-y: auto;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -832,7 +832,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -848,29 +848,58 @@
             const dragEl = document.getElementById('floatingTvTrigger');
             if (!dragEl) return;
             let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
-
-            dragEl.addEventListener('touchstart', dragStart, {passive: false});
-            dragEl.addEventListener('touchend', dragEnd, {passive: false});
-            dragEl.addEventListener('touchmove', drag, {passive: false});
-            dragEl.addEventListener('mousedown', dragStart);
-            document.addEventListener('mouseup', dragEnd);
-            document.addEventListener('mousemove', drag);
+            let startX = 0, startY = 0;
 
             function dragStart(e) {
-                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+                if (e.type === 'touchstart') {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    initialX = startX - xOffset;
+                    initialY = startY - yOffset;
+                } else {
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = startX - xOffset;
+                    initialY = startY - yOffset;
+                }
+                if (e.target.closest('#floatingTvTrigger')) {
+                    isDragging = true;
+                }
             }
-            function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+
+            function dragEnd() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
             function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
-                    currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
-                    xOffset = currentX; yOffset = currentY;
+                if (!isDragging) return;
+                
+                let clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
+                let clientY = (e.type === 'touchmove') ? e.touches[0].clientY : e.clientY;
+
+                let deltaX = Math.abs(clientX - startX);
+                let deltaY = Math.abs(clientY - startY);
+
+                if (deltaX > 6 || deltaY > 6) {
+                    if (e.cancelable) e.preventDefault();
+                    currentX = clientX - initialX;
+                    currentY = clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
                     dragEl.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
                 }
             }
+
+            dragEl.addEventListener('touchstart', dragStart, {passive: true});
+            window.addEventListener('touchend', dragEnd, {passive: true});
+            window.addEventListener('touchcancel', dragEnd, {passive: true});
+            window.addEventListener('touchmove', drag, {passive: false});
+
+            dragEl.addEventListener('mousedown', dragStart);
+            window.addEventListener('mouseup', dragEnd);
+            window.addEventListener('mousemove', drag);
         })();
     </script>
 </body>

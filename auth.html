@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services -->
+    <!-- مكتبة Google Identity Services (One Tap & Credential Manager) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -511,7 +511,6 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        // معرف الـ Web Client الكامل والمعتمد من Google Cloud Console
         const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
         const app = initializeApp(firebaseConfig);
@@ -572,26 +571,20 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google المحدثة والمستقرة لبيئات Native & PWA
+        // دالة الدخول بـ Google المعدلة حصرياً لبيئة Native Direct (بدون متصفح إطلاقاً)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
             const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. الأولوية الأولى: Native Android Bridge
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح حسابات Google...");
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 2. الأولوية الثانية: Capacitor GoogleAuth Plugin
+            // 1. المسار الأول: Capacitor GoogleAuth Native Plugin
             if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
+
                     await capacitorGoogleAuth.initialize({
                         clientId: CLIENT_ID,
                         serverClientId: CLIENT_ID,
@@ -613,19 +606,22 @@
                 }
             }
 
-            // 3. الأولوية الثالثة: Google Identity Services (GIS) المحسّنة
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري فتح اختيار الحسابات...");
-                
-                // إلغاء تهيئة أي جلسة سابقة لضمان فتح القائمة مجدداً
-                window.google.accounts.id.cancel();
+            // 2. المسار الثاني: Android Native Bridge Direct (عبر WebView Interface)
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري فتح نافذة جوجل الرسمية...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
+            }
 
+            // 3. المسار الثالث: Google Identity Services / One Tap (Sheet سفلي ناتيف داخل التطبيق)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                showNativeToast("جاري إظهار حسابات الجهاز...");
+                
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: async (response) => {
                         try {
                             if (response.credential) {
-                                showNativeToast("جاري التوثيق مع السحابة...");
                                 const credential = GoogleAuthProvider.credential(response.credential);
                                 const result = await signInWithCredential(auth, credential);
                                 await processGoogleAccountData(result.user);
@@ -636,35 +632,19 @@
                     },
                     auto_select: false,
                     cancel_on_tap_outside: true,
-                    // إلغاء FedCM لمنع إغلاق الشيت التلقائي في بيئات الـ WebView / TWA
-                    use_fedcm_for_prompt: false 
+                    use_fedcm_for_prompt: true
                 });
 
-                // طلب إظهار شيت اختيار الحسابات مباشرة
+                // إظهار نافذة One Tap السفلي المدمجة
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        console.warn("One Tap Notification reason:", notification.getNotDisplayedReason());
-                        
-                        // fallback في حالة منع الـ One Tap: فتح نافذة الـ Pop-up المباشرة عبر RenderButton
-                        const hiddenGContainer = document.getElementById('g_id_onload');
-                        if (hiddenGContainer) {
-                            hiddenGContainer.innerHTML = '';
-                            window.google.accounts.id.renderButton(hiddenGContainer, {
-                                type: 'standard',
-                                theme: 'outline',
-                                size: 'large'
-                            });
-                            const btn = hiddenGContainer.querySelector('div[role=button]');
-                            if (btn) btn.click();
-                        } else {
-                            showAuthMsg('error', '⚠️ يرجى اختيار الحساب من نافذة Google أو تسجيل الدخول باسم المستخدم والـ PIN.');
-                        }
+                        showAuthMsg('error', '⚠️ لم نتمكن من الوصول لخدمات Google Native المباشرة. يرجى التأكد من اختيار الحساب من النافذة الظاهرة أو استخدام دخول اسم المستخدم والـ PIN.');
                     }
                 });
                 return;
             }
 
-            showAuthMsg('error', '❌ متعذر جلب مكتبة Google، يرجى الاستمرار عبر الدخول بالـ PIN.');
+            showAuthMsg('error', '❌ بيئة تشغيل التطبيق غير مجهزة بمكتبات Google Native، يرجى الاستمرار عبر الدخول بالـ PIN.');
         };
 
         // إنشاء وتنسيق حساب جديد

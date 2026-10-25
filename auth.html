@@ -521,7 +521,7 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // فحص أندرويد وCapacitor المطابق تماماً لتطبيق GITI ERP
+        // فحص أندرويد وCapacitor المطابق لتطبيق GITI ERP
         const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : (window.Capacitor && window.Capacitor.isNative);
 
         function initCapacitorBridge() {
@@ -590,16 +590,16 @@
             }
         });
 
-        // دالة تسجيل الدخول المستخرجة والمطابقة لطريقة GITI ERP
+        // دالة تسجيل الدخول عبر Google
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
             try {
-                // 1. الدخول المباشر على أجهزة الأندرويد والتطبيق الذكي (Capacitor Native)
+                // 1. أجهزة أندرويد الهجين (APK Native Bottom Sheet)
                 if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
                     try {
-                        showNativeToast("جاري فتح حسابات Google...");
+                        showNativeToast("جاري فتح قائمة حسابات Google...");
                         const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
                         const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
                         
@@ -618,7 +618,7 @@
                         return;
                     }
                 } 
-                // 2. الدخول عبر المتصفح (Web Popup)
+                // 2. المتصفح (Web Popup)
                 else {
                     showNativeToast("جاري فتح نافذة Google...");
                     const googleProvider = new GoogleAuthProvider();
@@ -635,6 +635,69 @@
                 showAuthMsg('error', 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت.');
             }
         };
+
+        // معالجة حساب Google والتوجيه المباشر بنجاح
+        async function processGoogleAccountData(user) {
+            let userEmail = user.email || '';
+            let userDisplayName = user.displayName || userEmail.split('@')[0];
+            let userPhotoUrl = user.photoURL || '';
+
+            const querySnapshot = await getDocs(accountsRef);
+            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+
+            if (existingAccount && existingAccount.isBanned) {
+                showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                showNativeToast("⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
+                return;
+            }
+
+            let assignedCompanyId;
+            let finalUserName;
+            let userRole = 'محاسب أول';
+
+            if (existingAccount) {
+                finalUserName = existingAccount.name;
+                assignedCompanyId = existingAccount.companyId;
+                userRole = existingAccount.role || 'محاسب أول';
+            } else {
+                finalUserName = userDisplayName;
+                let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
+
+                if (userEmail === 'haretg@gmail.com') {
+                    assignedCompanyId = 'company_founder_karm';
+                    finalUserName = FOUNDER_NAME;
+                    userRole = 'مدير نظام رئيسي';
+                }
+
+                await setDoc(doc(db, "accounts", assignedCompanyId), {
+                    name: finalUserName,
+                    pin: "1234",
+                    role: userRole,
+                    companyId: assignedCompanyId,
+                    email: userEmail,
+                    avatar: userPhotoUrl,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+            }
+
+            // حفظ بيانات الجلسة والمصادقة
+            sessionStorage.setItem('eidco_biometric_verified', 'true');
+            sessionStorage.setItem('eidco_session_auth', 'true');
+            localStorage.setItem('eidco_v14_admin', finalUserName);
+            localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectPage = urlParams.get('redirect') || 'index.html';
+
+            showNativeToast(`✓ مرحباً بك يا ${finalUserName}`);
+            
+            // توجيه سريح ومباشر للـ Dashboard
+            window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+        }
 
         window.createNewAccountProcess = async function() {
             triggerHaptic(30);
@@ -760,85 +823,6 @@
                 alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
-
-        async function promptDeviceVerification(userName) {
-            try {
-                if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
-                    const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                    if (isAvailable) {
-                        return true;
-                    }
-                }
-                return confirm(`🔒 تأكيد البصمة الحيوية للحساب (${userName}): اضغط موافق لتفعيل مصادقة الجهاز.`);
-            } catch (e) {
-                return confirm(`🔒 نظام الأمان EIDCO: هل ترغب في تأكيد الدخول للحساب (${userName}) عبر بصمة الجهاز؟`);
-            }
-        }
-
-        async function processGoogleAccountData(user) {
-            let userEmail = user.email || '';
-            let userDisplayName = user.displayName || userEmail.split('@')[0];
-            let userPhotoUrl = user.photoURL || '';
-
-            const querySnapshot = await getDocs(accountsRef);
-            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-
-            if (existingAccount && existingAccount.isBanned) {
-                showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                return;
-            }
-
-            let assignedCompanyId;
-            let finalUserName;
-            let userRole = 'محاسب أول';
-
-            if (existingAccount) {
-                finalUserName = existingAccount.name;
-                assignedCompanyId = existingAccount.companyId;
-                userRole = existingAccount.role || 'محاسب أول';
-            } else {
-                finalUserName = userDisplayName;
-                let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
-
-                if (userEmail === 'haretg@gmail.com') {
-                    assignedCompanyId = 'company_founder_karm';
-                    finalUserName = FOUNDER_NAME;
-                    userRole = 'مدير نظام رئيسي';
-                }
-
-                let pinCodeInput = prompt(`أهلاً بك يا ${finalUserName}! يرجى إدخال رقم سري (PIN) لحماية حسابك:`, "1234");
-                if (!pinCodeInput) pinCodeInput = "1234";
-
-                await setDoc(doc(db, "accounts", assignedCompanyId), {
-                    name: finalUserName,
-                    pin: pinCodeInput,
-                    role: userRole,
-                    companyId: assignedCompanyId,
-                    email: userEmail,
-                    avatar: userPhotoUrl,
-                    isBanned: false,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-            }
-
-            let verified = await promptDeviceVerification(finalUserName);
-            if (!verified) return;
-
-            sessionStorage.setItem('eidco_biometric_verified', 'true');
-            sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_v14_admin', finalUserName);
-            localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectPage = urlParams.get('redirect') || 'index.html';
-
-            showNativeToast("✓ تم تسجيل الدخول بواسطة Google");
-            window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-        }
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);
@@ -995,13 +979,6 @@
                         return;
                     }
                     assignedCompanyId = matchedAccount.companyId;
-                }
-
-                let verified = await promptDeviceVerification(username);
-                if (!verified) {
-                    statusEl.innerText = "❌ تم إلغاء تأكيد البصمة أو فشل التعرف.";
-                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                    return;
                 }
 
                 statusEl.innerText = "✓ تمت المطابقة وتأكيد البصمة بنجاح! جاري التوجيه...";

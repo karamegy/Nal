@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services المدمجة -->
+    <!-- مكتبة Google Identity Services (One Tap & Credential Manager) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -234,7 +234,7 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google -->
+                <!-- زر دخول بـ Google Native -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
@@ -243,6 +243,9 @@
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
             </div>
+            
+            <!-- حاوية مخفية لإنشاء One Tap Sheet ناتيف داخلي -->
+            <div id="g_id_onload" class="hidden"></div>
         </div>
 
         <!-- قسم الدخول التقليدي (Username + PIN + Biometrics) -->
@@ -491,7 +494,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -554,9 +556,23 @@
             }
         });
 
-        // =========================================================
-        // دالة الدخول بـ Google المعدلة (بدون signInWithRedirect)
-        // =========================================================
+        // =========================================================================
+        // استقبال الـ ID Token من كود الأندرويد الأصلي (Native Android Code Callback)
+        // =========================================================================
+        window.onNativeGoogleSignInSuccess = async function(idToken) {
+            try {
+                showNativeToast("جاري توثيق الحساب سحابياً...");
+                const credential = GoogleAuthProvider.credential(idToken);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (err) {
+                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
+            }
+        };
+
+        // =========================================================================
+        // دالة الدخول بـ Google المعدلة حصرياً لبيئة Native Direct (بدون متصفح إطلاقاً)
+        // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
@@ -564,7 +580,7 @@
             const capacitorGoogleAuth = window.Capacitor?.Plugins?.GoogleAuth;
             const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. المسار الأول: Capacitor GoogleAuth Plugin (في حال تطبيق أندرويد مجهّز)
+            // 1. المسار الأول: Capacitor GoogleAuth Native Plugin
             if (capacitorGoogleAuth && typeof capacitorGoogleAuth.signIn === 'function') {
                 try {
                     showNativeToast("جاري فتح حسابات Google...");
@@ -590,21 +606,16 @@
                 }
             }
 
-            // 2. المسار الثاني: Android Native Bridge Direct
+            // 2. المسار الثاني: Android Native Bridge Direct (عبر WebView Interface)
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح حسابات Google...");
+                showNativeToast("جاري فتح نافذة جوجل الرسمية...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            const googleProvider = new GoogleAuthProvider();
-            googleProvider.setCustomParameters({
-                prompt: 'select_account'
-            });
-
-            // 3. المسار الثالث: Google Identity Services (One Tap) أو Popup فقط
+            // 3. المسار الثالث: Google Identity Services / One Tap (Sheet سفلي ناتيف داخل التطبيق)
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري إظهار نافذة Google...");
+                showNativeToast("جاري إظهار حسابات الجهاز...");
                 
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
@@ -620,31 +631,20 @@
                         }
                     },
                     auto_select: false,
-                    cancel_on_tap_outside: true
+                    cancel_on_tap_outside: true,
+                    use_fedcm_for_prompt: true
                 });
 
-                window.google.accounts.id.prompt(async (notification) => {
+                // إظهار نافذة One Tap السفلي المدمجة
+                window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // استدعاء Popup بدلاً من Redirect لتجنب فقدان الجلسة
-                        try {
-                            const result = await signInWithPopup(auth, googleProvider);
-                            await processGoogleAccountData(result.user);
-                        } catch (popupErr) {
-                            showAuthMsg('error', '⚠️ تعذر فتح نافذة Google. يرجى تفعيل التبويبات المنبثقة (Pop-ups) أو استخدام خيار اسم المستخدم وPIN.');
-                        }
+                        showAuthMsg('error', '⚠️ لم نتمكن من الوصول لخدمات Google Native المباشرة. يرجى التأكد من اختيار الحساب من النافذة الظاهرة أو استخدام دخول اسم المستخدم والـ PIN.');
                     }
                 });
                 return;
             }
 
-            // Fallback مباشر عبر Popup بدون الاستعانة بـ Redirect
-            try {
-                showNativeToast("جاري فتح نافذة Google...");
-                const result = await signInWithPopup(auth, googleProvider);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                showAuthMsg('error', '❌ تعذر فتح نافذة Google: ' + err.message);
-            }
+            showAuthMsg('error', '❌ بيئة تشغيل التطبيق غير مجهزة بمكتبات Google Native، يرجى الاستمرار عبر الدخول بالـ PIN.');
         };
 
         // إنشاء وتنسيق حساب جديد

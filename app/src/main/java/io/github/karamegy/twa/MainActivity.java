@@ -52,6 +52,10 @@ public class MainActivity extends BridgeActivity {
     private GoogleSignInClient mGoogleSignInClient;
     private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-web.apps.googleusercontent.com";
 
+    // المتغيرات المؤقتة لإدارة استجابة الموقع الجغرافي
+    private String pendingGeolocationOrigin;
+    private GeolocationPermissions.Callback pendingGeolocationCallback;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,7 +67,7 @@ public class MainActivity extends BridgeActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // تهيئة إعدادات WebView
+        // تهيئة إعدادات WebView والجسور البرمجية
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
@@ -75,12 +79,24 @@ public class MainActivity extends BridgeActivity {
             settings.setGeolocationEnabled(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
 
+            // إضافة الجسر التفاعلي بين Javascript و Android
             webView.addJavascriptInterface(new WebAppInterface(this), "AndroidBridge");
 
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                    callback.invoke(origin, true, false);
+                    // التحقق أولاً من منح إذن الموقع على مستوى النظام
+                    if (hasLocationPermission()) {
+                        callback.invoke(origin, true, false);
+                    } else {
+                        pendingGeolocationOrigin = origin;
+                        pendingGeolocationCallback = callback;
+                        ActivityCompat.requestPermissions(
+                                MainActivity.this,
+                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                                PERMISSION_REQUEST_CODE
+                        );
+                    }
                 }
 
                 @Override
@@ -106,16 +122,23 @@ public class MainActivity extends BridgeActivity {
         requestAppPermissions();
     }
 
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void requestAppPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             List<String> permissions = new ArrayList<>();
             permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
             permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-            permissions.add(Manifest.permission.VIBRATE);
             permissions.add(Manifest.permission.CAMERA);
 
-            // أذونات التخزين المتوافقة مع الإصدارات المختلفة
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // أذونات الوسائط والتخزين متوافقة مع Android 13+ (TIRAMISU) والإصدارات الأقدم
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+                permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
+            } else {
                 permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
                     permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -136,10 +159,25 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            // معالجة استجابة طلب إذن الموقع لصفحة الويب
+            if (pendingGeolocationCallback != null && pendingGeolocationOrigin != null) {
+                boolean granted = hasLocationPermission();
+                pendingGeolocationCallback.invoke(pendingGeolocationOrigin, granted, false);
+                pendingGeolocationCallback = null;
+                pendingGeolocationOrigin = null;
+            }
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // معالجة اختيار الملفات (ملف واحد أو عدة ملفات)
+        // معالجة اختيار الملفات
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
             Uri[] results = null;
@@ -161,7 +199,7 @@ public class MainActivity extends BridgeActivity {
             filePathCallback = null;
         }
 
-        // معالجة تسجيل الدخول بـ Google
+        // معالجة تسجيل الدخول عبر Google
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -173,7 +211,6 @@ public class MainActivity extends BridgeActivity {
                     runOnUiThread(() -> {
                         WebView webView = bridge.getWebView();
                         if (webView != null) {
-                            // تم تصحيح كود الاستدعاء بإزالة كلمة javascript: وإضافة فحص لضمان وجود الدالة
                             String jsCode = "if (typeof window.handleGoogleIdToken === 'function') { " +
                                             "   window.handleGoogleIdToken('" + idToken + "'); " +
                                             "} else { " +
@@ -243,7 +280,6 @@ public class MainActivity extends BridgeActivity {
         public void launchNativeGoogleSignIn() {
             runOnUiThread(() -> {
                 if (mGoogleSignInClient != null) {
-                    // الخروج أولاً لإتاحة اختيار الحساب دائماً، ثم فتح شاشة الدخول حتى لو فشل الخروج
                     mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
                         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
                         startActivityForResult(signInIntent, RC_SIGN_IN);
@@ -257,14 +293,12 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void downloadFile(String filename, String base64Data) {
             try {
-                // إزالة بادئة Data URI بشكل آمن لجميع أنواع الملفات (PDF, Images, Zip, etc.)
                 String cleanBase64 = base64Data;
                 if (cleanBase64.contains(",")) {
                     cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
                 }
-                byte[] pdfAsBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+                byte[] fileBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
 
-                // حفظ الملف بالتوافق مع Scoped Storage في Android 10+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ContentValues values = new ContentValues();
                     values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
@@ -274,7 +308,7 @@ public class MainActivity extends BridgeActivity {
                     if (uri != null) {
                         try (OutputStream os = mContext.getContentResolver().openOutputStream(uri)) {
                             if (os != null) {
-                                os.write(pdfAsBytes);
+                                os.write(fileBytes);
                                 os.flush();
                             }
                         }
@@ -283,7 +317,7 @@ public class MainActivity extends BridgeActivity {
                     File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     File file = new File(path, filename);
                     try (FileOutputStream os = new FileOutputStream(file, false)) {
-                        os.write(pdfAsBytes);
+                        os.write(fileBytes);
                         os.flush();
                     }
                 }

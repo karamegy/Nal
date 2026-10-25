@@ -70,7 +70,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json الخاص بمشروع EIDCO ونطاق Nal
+          # 2. إعداد ملف capacitor.config.json مع تفعيل إعدادات Google Auth للمشروع
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -99,14 +99,18 @@ jobs:
                 "androidScaleType": "CENTER_CROP",
                 "splashFullScreen": true,
                 "splashImmersive": true
+              },
+              "GoogleAuth": {
+                "scopes": ["profile", "email"],
+                "serverClientId": "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com",
+                "forceCodeForRefreshToken": true
               }
             }
           }
           EOF
 
-                    # 3. تثبيت مكتبات الكاباسيتور مع إضافة مكتبة Google Auth
+          # 3. تثبيت مكتبات الكاباسيتور مع إضافة مكتبة Google Auth والأيقونات
           npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets @codetrix-studio/capacitor-google-auth --save-dev --legacy-peer-deps
-
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
@@ -320,7 +324,7 @@ jobs:
             cp google-services.json android/app/ 2>/dev/null || true
           fi
 
-          # 8. تجهيز AndroidManifest و file_paths و strings
+          # 8. تجهيز AndroidManifest و file_paths و strings مع تضمين Google Client IDs بدقة
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -411,6 +415,8 @@ jobs:
               <string name="title_activity_main">EIDCO OS</string>
               <string name="package_name">io.github.karamegy.twa</string>
               <string name="custom_url_scheme">io.github.karamegy.twa</string>
+              <string name="server_client_id">515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com</string>
+              <string name="default_web_client_id">515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com</string>
               <string name="file_provider_authority">io.github.karamegy.twa.fileprovider</string>
           </resources>
           EOF

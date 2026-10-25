@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services للنافذة المدمجة -->
+    <!-- مكتبة Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -234,13 +234,13 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google -->
+                <!-- زر دخول بـ Google الموحد -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
 
-                <!-- حاوية زر Google المباشر الكلاسيكي -->
-                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center"></div>
+                <!-- حاوية زر Google المباشر الكلاسيكي (تظهر فقط عند الحاجة) -->
+                <div id="googleNativeBtnWrapper" class="hidden w-full flex justify-center my-1"></div>
 
                 <button onclick="openPhoneAuthModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
@@ -494,6 +494,8 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
+            signInWithRedirect,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -542,7 +544,7 @@
                 if (window.Capacitor.Plugins.GoogleAuth) {
                     window.Capacitor.Plugins.GoogleAuth.initialize({
                         clientId: CLIENT_ID,
-                        serverClientId: CLIENT_ID, // <-- مُمكّن ضروري لاستخراج idToken في أندرويد
+                        serverClientId: CLIENT_ID,
                         grantOfflineAccess: true,
                         scopes: ['profile', 'email']
                     }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -598,15 +600,91 @@
             }
         });
 
-        function initGoogleOneTap() {
-            if (!isNativeAppEnvironment() && window.google && window.google.accounts && window.google.accounts.id) {
+        // تسجيل الدخول بـ Google المتعدد الطرق والأكثر استقراراً
+        window.signInWithGoogle = async function() {
+            triggerHaptic(25);
+            clearAuthMsgs();
+
+            showNativeToast("جاري فتح حسابات Google...");
+
+            // 1. المحاولة عبر إضافة Capacitor GoogleAuth Native (إن وُجدت)
+            if (window.Capacitor?.Plugins?.GoogleAuth) {
+                try {
+                    await window.Capacitor.Plugins.GoogleAuth.initialize({
+                        clientId: CLIENT_ID,
+                        serverClientId: CLIENT_ID,
+                        grantOfflineAccess: true,
+                        scopes: ['profile', 'email']
+                    }).catch(() => {});
+
+                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+                    
+                    if (idToken) {
+                        const credential = GoogleAuthProvider.credential(idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        await processGoogleAccountData(result.user);
+                        return;
+                    }
+                } catch (nativeErr) {
+                    console.warn("Capacitor Native GoogleAuth failed, falling back to Firebase Provider...", nativeErr);
+                }
+            }
+
+            // 2. المحاولة عبر الجسر المباشر (Bridge)
+            const bridge = window.AndroidBridge || window.NativeBridge;
+            if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
+                bridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 3. التبديل الفوري لـ Firebase Web Provider (Popup / Redirect)
+            try {
+                const provider = new GoogleAuthProvider();
+                provider.addScope('email');
+                provider.addScope('profile');
+
+                let result;
+                try {
+                    result = await signInWithPopup(auth, provider);
+                } catch (popupErr) {
+                    // في حال حظر Popups داخل WebView، نستخدم Redirect
+                    console.warn("Popup blocked, trying Redirect...", popupErr);
+                    await signInWithRedirect(auth, provider);
+                    return;
+                }
+
+                if (result && result.user) {
+                    await processGoogleAccountData(result.user);
+                    return;
+                }
+            } catch (fbErr) {
+                console.warn("Firebase Auth Provider Error:", fbErr);
+                
+                // 4. البديل الأخير: إظهار زر Google المدمج
+                if (window.google?.accounts?.id) {
+                    renderEmbeddedGoogleBtn();
+                    showAuthMsg('error', 'يرجى الضغط على زر Google المدمج أدناه لاستكمال تسجيل الدخول.');
+                } else {
+                    showAuthMsg('error', 'تعذر المصادقة تلقائياً. تأكد من إضافة بصمة SHA-1 في Firebase Console وإتاحة الإنترنت.');
+                }
+            }
+        };
+
+        function renderEmbeddedGoogleBtn() {
+            const wrapper = document.getElementById('googleNativeBtnWrapper');
+            if (wrapper && window.google?.accounts?.id) {
+                wrapper.classList.remove('hidden');
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: handleCredentialResponse,
                     auto_select: false,
-                    cancel_on_tap_outside: true,
-                    context: "signin"
+                    cancel_on_tap_outside: true
                 });
+                window.google.accounts.id.renderButton(
+                    wrapper,
+                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
+                );
             }
         }
 
@@ -618,98 +696,6 @@
                 await processGoogleAccountData(result.user);
             } catch (e) {
                 showAuthMsg('error', 'خطأ أثناء المصادقة بـ Google: ' + e.message);
-            }
-        }
-
-        window.addEventListener('load', () => {
-            setTimeout(initGoogleOneTap, 800);
-        });
-
-        // دالة تسجيل الدخول بـ Google المعدلة ومحمية من أخطاء الـ Native
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-            clearAuthMsgs();
-
-            const isNative = isNativeAppEnvironment();
-
-            if (isNative) {
-                // 1. استخدام إضافة Capacitor GoogleAuth
-                if (window.Capacitor?.Plugins?.GoogleAuth) {
-                    try {
-                        showNativeToast("جاري فتح حسابات Google...");
-                        
-                        await window.Capacitor.Plugins.GoogleAuth.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID, // <-- الحقل الأساسي لإصلاح مشكلة Token على أندرويد
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-
-                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                        const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-                        
-                        if (idToken) {
-                            const credential = GoogleAuthProvider.credential(idToken);
-                            const result = await signInWithCredential(auth, credential);
-                            await processGoogleAccountData(result.user);
-                            return;
-                        } else {
-                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق (idToken) من Google.');
-                            return;
-                        }
-                    } catch (nativeErr) {
-                        console.warn("Capacitor GoogleAuth Error:", nativeErr);
-                        
-                        // في حالة وجود خطأ في إضافة Capacitor Native، إظهار زر Google المدمج كبديل فوراً
-                        if (window.google && window.google.accounts && window.google.accounts.id) {
-                            renderEmbeddedGoogleBtn();
-                            showAuthMsg('error', 'تعذر استخدام النافذة المنبثقة المباشرة، يُرجى الضغط على زر Google المدمج الأدنى.');
-                        } else {
-                            showAuthMsg('error', 'خطأ أندرويد: يرجى التأكد من إضافة بصمة SHA-1 في Google Console.');
-                        }
-                        return;
-                    }
-                }
-
-                // 2. الجسر المباشر
-                const bridge = window.AndroidBridge || window.NativeBridge;
-                if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
-                    showNativeToast("جاري فتح حسابات Google...");
-                    bridge.launchNativeGoogleSignIn();
-                    return;
-                }
-
-                // 3. النافذة المدمجة في WebView
-                if (window.google && window.google.accounts && window.google.accounts.id) {
-                    renderEmbeddedGoogleBtn();
-                    return;
-                }
-
-                showAuthMsg('error', 'خدمة Google المدمجة غير متوفرة في هذا التطبيق.');
-                return;
-            }
-
-            // عند التشغيل من المتصفح
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        renderEmbeddedGoogleBtn();
-                    }
-                });
-            } else {
-                showAuthMsg('error', 'تعذر تحميل خدمة Google Identity. يرجى التأكد من الاتصال بالإنترنت.');
-            }
-        };
-
-        function renderEmbeddedGoogleBtn() {
-            const wrapper = document.getElementById('googleNativeBtnWrapper');
-            if (wrapper && window.google?.accounts?.id) {
-                wrapper.classList.remove('hidden');
-                document.getElementById('googleBtnCustom').classList.add('hidden');
-                window.google.accounts.id.renderButton(
-                    wrapper,
-                    { theme: "outline", size: "large", type: "standard", shape: "pill", text: "signin_with", locale: "ar" }
-                );
             }
         }
 

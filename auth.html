@@ -186,6 +186,81 @@
                 bridge.vibrate(duration);
             }
         }
+
+        function switchAuthTab(tab) {
+            triggerHaptic(15);
+            const quickSec = document.getElementById('quickAuthSection');
+            const pinSec = document.getElementById('pinAuthSection');
+            const regSec = document.getElementById('registerAuthSection');
+
+            const tabQuickBtn = document.getElementById('tabQuickBtn');
+            const tabPinBtn = document.getElementById('tabPinBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+
+            quickSec.classList.add('hidden');
+            pinSec.classList.add('hidden');
+            regSec.classList.add('hidden');
+
+            tabQuickBtn.classList.remove('active');
+            tabPinBtn.classList.remove('active');
+            tabRegisterBtn.classList.remove('active');
+
+            if (tab === 'quick') {
+                quickSec.classList.remove('hidden');
+                tabQuickBtn.classList.add('active');
+            } else if (tab === 'pin') {
+                pinSec.classList.remove('hidden');
+                tabPinBtn.classList.add('active');
+            } else if (tab === 'register') {
+                regSec.classList.remove('hidden');
+                tabRegisterBtn.classList.add('active');
+            }
+        }
+
+        function closeModalOnOutsideClick(event, modalId) {
+            if (event.target.id === modalId) {
+                triggerHaptic(15);
+                document.getElementById(modalId).classList.remove('active');
+            }
+        }
+
+        document.addEventListener('focusin', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const container = document.getElementById('installContainer');
+            if (container) container.classList.remove('hidden');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('installAppBtn')?.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        document.getElementById('installContainer').classList.add('hidden');
+                    }
+                    deferredPrompt = null;
+                }
+            });
+        });
+
+        function openPrivacyModal() {
+            triggerHaptic(20);
+            document.getElementById('privacyModal').classList.add('active');
+        }
+        function closePrivacyModal() {
+            triggerHaptic(15);
+            document.getElementById('privacyModal').classList.remove('active');
+        }
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
@@ -396,81 +471,6 @@
         </div>
     </div>
 
-    <script>
-        function switchAuthTab(tab) {
-            triggerHaptic(15);
-            const quickSec = document.getElementById('quickAuthSection');
-            const pinSec = document.getElementById('pinAuthSection');
-            const regSec = document.getElementById('registerAuthSection');
-
-            const tabQuickBtn = document.getElementById('tabQuickBtn');
-            const tabPinBtn = document.getElementById('tabPinBtn');
-            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
-
-            quickSec.classList.add('hidden');
-            pinSec.classList.add('hidden');
-            regSec.classList.add('hidden');
-
-            tabQuickBtn.classList.remove('active');
-            tabPinBtn.classList.remove('active');
-            tabRegisterBtn.classList.remove('active');
-
-            if (tab === 'quick') {
-                quickSec.classList.remove('hidden');
-                tabQuickBtn.classList.add('active');
-            } else if (tab === 'pin') {
-                pinSec.classList.remove('hidden');
-                tabPinBtn.classList.add('active');
-            } else if (tab === 'register') {
-                regSec.classList.remove('hidden');
-                tabRegisterBtn.classList.add('active');
-            }
-        }
-
-        function closeModalOnOutsideClick(event, modalId) {
-            if (event.target.id === modalId) {
-                triggerHaptic(15);
-                document.getElementById(modalId).classList.remove('active');
-            }
-        }
-
-        document.addEventListener('focusin', (e) => {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
-                setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-            }
-        });
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const container = document.getElementById('installContainer');
-            if (container) container.classList.remove('hidden');
-        });
-
-        document.getElementById('installAppBtn')?.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('installContainer').classList.add('hidden');
-                }
-                deferredPrompt = null;
-            }
-        });
-
-        function openPrivacyModal() {
-            triggerHaptic(20);
-            document.getElementById('privacyModal').classList.add('active');
-        }
-        function closePrivacyModal() {
-            triggerHaptic(15);
-            document.getElementById('privacyModal').classList.remove('active');
-        }
-    </script>
-
     <!-- Firebase Engine & Native Auth Handlers -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -521,8 +521,7 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        // فحص أندرويد وCapacitor المطابق لتطبيق GITI ERP
-        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : (window.Capacitor && window.Capacitor.isNative);
+        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : !!(window.Capacitor && window.Capacitor.isNative);
 
         function initCapacitorBridge() {
             if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
@@ -590,53 +589,55 @@
             }
         });
 
-        // دالة تسجيل الدخول عبر Google
+        // دالة تسجيل الدخول عبر Google المحصنة
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            try {
-                // 1. أجهزة أندرويد الهجين (APK Native Bottom Sheet)
-                if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-                    try {
-                        showNativeToast("جاري فتح قائمة حسابات Google...");
-                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                        const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
-                        
-                        if (idToken) {
-                            const credential = GoogleAuthProvider.credential(idToken);
-                            const result = await signInWithCredential(auth, credential);
-                            await processGoogleAccountData(result.user);
-                            return;
-                        } else {
-                            showAuthMsg('error', 'تعذر استخراج رمز التوثيق (idToken) من نظام أندرويد.');
-                            return;
-                        }
-                    } catch (nativeErr) {
-                        console.warn("Capacitor Native GoogleAuth Error:", nativeErr);
-                        showAuthMsg('error', 'فشل تسجيل الدخول عبر Google Auth. تأكد من ضبط SHA-1 في Firebase Console.');
-                        return;
+            let authenticatedUser = null;
+
+            // 1. محاولة أندرويد الناتيف
+            if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                try {
+                    showNativeToast("جاري اختيار حساب Google...");
+                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+                    
+                    if (idToken) {
+                        const credential = GoogleAuthProvider.credential(idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        authenticatedUser = result.user;
                     }
-                } 
-                // 2. المتصفح (Web Popup)
-                else {
+                } catch (nativeErr) {
+                    console.warn("Native GoogleAuth fail, switching seamlessly to Web Popup:", nativeErr);
+                }
+            } 
+
+            // 2. البديل التلقائي المباشر (Firebase Web Popup)
+            if (!authenticatedUser) {
+                try {
                     showNativeToast("جاري فتح نافذة Google...");
                     const googleProvider = new GoogleAuthProvider();
                     googleProvider.setCustomParameters({ prompt: 'select_account' });
                     
                     const result = await signInWithPopup(auth, googleProvider);
                     if (result && result.user) {
-                        await processGoogleAccountData(result.user);
-                        return;
+                        authenticatedUser = result.user;
                     }
+                } catch (webErr) {
+                    console.error("Google Auth Web Error:", webErr);
                 }
-            } catch (err) {
-                console.error("Google Auth Error:", err);
-                showAuthMsg('error', 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت.');
+            }
+
+            // 3. معالجة الدخول
+            if (authenticatedUser) {
+                await processGoogleAccountData(authenticatedUser);
+            } else {
+                showAuthMsg('error', 'تعذر استكمال تسجيل الدخول. يرجى التأكد من الاتصال بالإنترنت أو إعادة المحاولة.');
             }
         };
 
-        // معالجة حساب Google والتوجيه المباشر بنجاح
+        // معالجة حساب Google والتوجيه المباشر
         async function processGoogleAccountData(user) {
             let userEmail = user.email || '';
             let userDisplayName = user.displayName || userEmail.split('@')[0];
@@ -684,7 +685,6 @@
                 }, { merge: true });
             }
 
-            // حفظ بيانات الجلسة والمصادقة
             sessionStorage.setItem('eidco_biometric_verified', 'true');
             sessionStorage.setItem('eidco_session_auth', 'true');
             localStorage.setItem('eidco_v14_admin', finalUserName);
@@ -694,8 +694,6 @@
             const redirectPage = urlParams.get('redirect') || 'index.html';
 
             showNativeToast(`✓ مرحباً بك يا ${finalUserName}`);
-            
-            // توجيه سريح ومباشر للـ Dashboard
             window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
         }
 

@@ -15,7 +15,7 @@
 
     <script src="capacitor.js"></script>
 
-    <!-- مكتبة Google Identity Services -->
+    <!-- مكتبة Google Identity Services (One Tap & Credential Manager) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -556,6 +556,40 @@
             }
         });
 
+        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل
+        window.initGoogleIdentity = function() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: window.handleGoogleIdentityCredential,
+                    auto_select: false,
+                    cancel_on_tap_outside: false
+                });
+
+                // فتح النافذة تلقائياً عند فتح الصفحة إن أمكن
+                window.google.accounts.id.prompt();
+            }
+        };
+
+        window.handleGoogleIdentityCredential = async function(response) {
+            if (!response.credential) return;
+            try {
+                showNativeToast("جاري توثيق الحساب سحابياً...");
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (err) {
+                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
+            }
+        };
+
+        // تشغيل التهيئة فور تجهيز السكربت
+        if (document.readyState === 'complete') {
+            window.initGoogleIdentity();
+        } else {
+            window.addEventListener('load', window.initGoogleIdentity);
+        }
+
         // استقبال ה- Token من كود الأندرويد الناتيف إن وجد
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
@@ -569,7 +603,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول الموحدة والمضمونة بـ Google
+        // دالة الدخول الموحدة بـ Google مع إظهار Bottom Sheet الرسمية
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -612,7 +646,23 @@
                 return;
             }
 
-            // 3. المسار الستندارد المضمون (Firebase OAuth Popup) للويب والـ WebView
+            // 3. مسار Google Identity Services (One Tap Bottom Sheet)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                showNativeToast("جاري فتح حسابات الجهاز...");
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // التراجع المباشر إلى Firebase Popup إذا تم حظر One Tap
+                        fallbackToFirebasePopup();
+                    }
+                });
+                return;
+            }
+
+            // 4. المسار الاحتياطي الستندارد (Firebase Popup)
+            fallbackToFirebasePopup();
+        };
+
+        async function fallbackToFirebasePopup() {
             try {
                 showNativeToast("جاري فتح نافذة تسجيل Google...");
                 const provider = new GoogleAuthProvider();
@@ -625,7 +675,7 @@
                     showAuthMsg('error', 'تعذر إتمام الدخول: ' + popupErr.message);
                 }
             }
-        };
+        }
 
         // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {

@@ -526,10 +526,20 @@
         const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-        const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+        // فحص بيئة التشغيل للتمييز بين التطبيق المدمج الـ Native ومتصفح الويب
+        function isNativeAppEnvironment() {
+            const isCapacitor = typeof window !== 'undefined' && window.Capacitor && 
+                (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative);
+            const hasBridge = !!(window.AndroidBridge || window.NativeBridge);
+            const isWebView = /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) || navigator.userAgent.includes('W2A');
+            
+            return !!(isCapacitor || hasBridge || isWebView);
+        }
+
+        const isCapacitorNative = isNativeAppEnvironment();
 
         function initCapacitorBridge() {
-            if (isCapacitorNative && window.Capacitor.Plugins) {
+            if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
                 if (window.Capacitor.Plugins.GoogleAuth) {
                     window.Capacitor.Plugins.GoogleAuth.initialize({
                         clientId: CLIENT_ID,
@@ -588,9 +598,9 @@
             }
         });
 
-        // إعداد نافذة Google Identity Services المدمجة (One Tap Bottom-Sheet)
+        // إعداد نافذة Google Identity Services (One Tap) للمتصفح فقط
         function initGoogleOneTap() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
+            if (!isNativeAppEnvironment() && window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: handleCredentialResponse,
@@ -616,41 +626,75 @@
             setTimeout(initGoogleOneTap, 800);
         });
 
-        // تسجيل الدخول بـ Google المدمج داخل الصفحة فقط بدون فتح متصفحات خارجية
+        // دالة تسجيل الدخول بـ Google المعدلة لحل مشكلة المتصفح الخارجي نهائياً
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            // 1. إذا كان تطبيق native عبر Capacitor
-            if (isCapacitorNative && window.Capacitor?.Plugins?.GoogleAuth) {
-                try {
-                    showNativeToast("جاري فتح حسابات Google...");
-                    const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    console.warn("Capacitor GoogleAuth Error:", nativeErr);
-                }
-            }
+            const isNative = isNativeAppEnvironment();
 
-            // 2. إذا كان هنالك جسر Android Bridge مدمج
-            const bridge = window.AndroidBridge || window.NativeBridge;
-            if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح حسابات Google...");
-                bridge.launchNativeGoogleSignIn();
+            // ==========================================
+            // المسار الأول: إذا كان يعمل داخل التطبيق المدمج (Native APK / Action Build)
+            // ==========================================
+            if (isNative) {
+                // 1. استخدام إضافة Capacitor GoogleAuth
+                if (window.Capacitor?.Plugins?.GoogleAuth) {
+                    try {
+                        showNativeToast("جاري فتح حسابات Google...");
+                        
+                        await window.Capacitor.Plugins.GoogleAuth.initialize({
+                            clientId: CLIENT_ID,
+                            grantOfflineAccess: true,
+                            scopes: ['profile', 'email']
+                        }).catch(() => {});
+
+                        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+                        const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+                        
+                        if (idToken) {
+                            const credential = GoogleAuthProvider.credential(idToken);
+                            const result = await signInWithCredential(auth, credential);
+                            await processGoogleAccountData(result.user);
+                            return;
+                        } else {
+                            showAuthMsg('error', 'لم يتم الحصول على رمز التوثيق من Google.');
+                            return;
+                        }
+                    } catch (nativeErr) {
+                        console.warn("Capacitor GoogleAuth Error:", nativeErr);
+                        showAuthMsg('error', 'تم إلغاء عملية الدخول أو حدث خطأ في استدعاء الخدمة.');
+                        return; // يمنع التحويل للمتصفح الخارجي القاطع
+                    }
+                }
+
+                // 2. استخدام الجسر المباشر لـ Android Native Bridge
+                const bridge = window.AndroidBridge || window.NativeBridge;
+                if (bridge && typeof bridge.launchNativeGoogleSignIn === 'function') {
+                    showNativeToast("جاري فتح حسابات Google...");
+                    bridge.launchNativeGoogleSignIn();
+                    return;
+                }
+
+                // 3. النافذة المدمجة المباشرة داخل الـ WebView
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    window.google.accounts.id.prompt((notification) => {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                            renderEmbeddedGoogleBtn();
+                        }
+                    });
+                    return;
+                }
+
+                showAuthMsg('error', 'خدمة Google المدمجة غير متوفرة في هذا التطبيق.');
                 return;
             }
 
-            // 3. إظهار نافذة Google المدمجة أسفل الشاشة (One Tap Prompt / Bottom Sheet)
+            // ==========================================
+            // المسار الثاني: عند فتح المشروع من متصفح عادي (Chrome/Edge/Safari)
+            // ==========================================
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // في حال تم تجاهل النافذة أو إغلاقها يتم رندر زر مدمج داخل الصفحة بدلاً من فتح متصفح خارجي
                         renderEmbeddedGoogleBtn();
                     }
                 });

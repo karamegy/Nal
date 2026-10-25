@@ -13,6 +13,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
@@ -42,6 +43,7 @@ import java.util.List;
 
 public class MainActivity extends BridgeActivity {
 
+    private static final String TAG = "GoogleSignIn_MainActivity";
     private ValueCallback<Uri[]> filePathCallback;
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int PERMISSION_REQUEST_CODE = 2002;
@@ -166,15 +168,28 @@ public class MainActivity extends BridgeActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 if (account != null && account.getIdToken() != null) {
                     final String idToken = account.getIdToken();
+                    Log.d(TAG, "Google Sign-In Success. Token length: " + idToken.length());
+
                     runOnUiThread(() -> {
                         WebView webView = bridge.getWebView();
                         if (webView != null) {
-                            webView.evaluateJavascript("javascript:window.handleGoogleIdToken('" + idToken + "');", null);
+                            // تم تصحيح كود الاستدعاء بإزالة كلمة javascript: وإضافة فحص لضمان وجود الدالة
+                            String jsCode = "if (typeof window.handleGoogleIdToken === 'function') { " +
+                                            "   window.handleGoogleIdToken('" + idToken + "'); " +
+                                            "} else { " +
+                                            "   console.error('handleGoogleIdToken function is not defined on window object.'); " +
+                                            "}";
+                            webView.evaluateJavascript(jsCode, null);
+                        } else {
+                            Log.e(TAG, "WebView is null, cannot evaluate Javascript");
                         }
                     });
+                } else {
+                    Log.e(TAG, "Account or ID Token is null");
                 }
             } catch (ApiException e) {
-                Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Google Sign-In Failed. Status Code: " + e.getStatusCode() + " - Message: " + e.getMessage());
+                Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل (رمز: " + e.getStatusCode() + ")", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -228,10 +243,13 @@ public class MainActivity extends BridgeActivity {
         public void launchNativeGoogleSignIn() {
             runOnUiThread(() -> {
                 if (mGoogleSignInClient != null) {
+                    // الخروج أولاً لإتاحة اختيار الحساب دائماً، ثم فتح شاشة الدخول حتى لو فشل الخروج
                     mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
                         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
                         startActivityForResult(signInIntent, RC_SIGN_IN);
                     });
+                } else {
+                    Log.e(TAG, "mGoogleSignInClient is null during launchNativeGoogleSignIn");
                 }
             });
         }

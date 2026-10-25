@@ -558,18 +558,15 @@
             }
         });
 
-        // تهيئة مكتبة Google Identity Services (GIS One Tap) فور التحميل مع التعرف والمزامنة المباشرة
+        // تهيئة مكتبة Google Identity Services الرسمية (GIS One Tap) لعرض نافذة اختيار الحسابات المدمجة
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
                     client_id: CLIENT_ID,
                     callback: window.handleGoogleIdentityCredential,
-                    auto_select: true,
-                    cancel_on_tap_outside: false
+                    auto_select: false,
+                    cancel_on_tap_outside: true
                 });
-
-                // عرض نافذة الاختيار السفلية المباشرة
-                window.google.accounts.id.prompt();
             }
         };
 
@@ -591,7 +588,6 @@
             window.addEventListener('load', window.initGoogleIdentity);
         }
 
-        // استقبال ה- Token من كود الأندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
@@ -604,7 +600,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول الموحدة بـ Google (تستدعي النافذة المباشرة فقط بدون متصفح)
+        // دالة الدخول الموحدة بـ Google (تستدعي نافذة Google المدمجة حصراً بدون متصفح خارجي)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -614,7 +610,6 @@
             const capacitorPlugins = window.Capacitor?.Plugins;
             const googleAuthPlugin = capacitorPlugins?.GoogleAuth;
 
-            // 1. مسار Capacitor GoogleAuth المباشر
             if (googleAuthPlugin) {
                 try {
                     showNativeToast("جاري فتح حسابات الجهاز...");
@@ -640,22 +635,27 @@
                 }
             }
 
-            // 2. مسار Android Native Bridge المباشر داخل الجسر
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري اختيار الحساب...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 3. مسار GIS One Tap (عرض نافذة اختيار الحسابات المباشرة بدون متصفح)
+            // إظهار نافذة Google Identity Services المدمجة حصراً داخل التطبيق
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                showNativeToast("جاري فتح حسابات جوجل...");
+                showNativeToast("جاري إظهار نافذة الحسابات المدمجة...");
                 window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-                        window.google.accounts.id.prompt();
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // كبديل فوري في حال تم تجاهل الـ Prompt يدوياً
+                        window.google.accounts.id.renderButton(
+                            document.getElementById('quickAuthSection'),
+                            { theme: 'outline', size: 'large', width: '100%' }
+                        );
                     }
                 });
                 return;
+            } else {
+                showAuthMsg('error', 'خدمة مصادقة Google غير متوفرة حالياً، تأكد من الاتصال بالإنترنت.');
             }
         };
 
@@ -1023,10 +1023,10 @@
                     window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
                 }, 400);
 
-            } catch (error) {
+            } accountsRef.catch (error => {
                 statusEl.innerText = "⚠️ خطأ في المصادقة السحابية: " + error.message;
                 statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-            }
+            });
         };
     </script>
 </body>

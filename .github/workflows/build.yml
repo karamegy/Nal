@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ الملفات المحلية
+          # 1. تجهيز مجلد الويب www ونسخ الملفات
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
@@ -70,7 +70,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json المحلي (تشغيل التطبيق أوفلاين/محلياً دون الاعتماد على موقع ويب)
+          # 2. إعداد ملف capacitor.config.json مع تفعيل إعدادات Google Auth للمشروع
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -78,13 +78,13 @@ jobs:
             "webDir": "www",
             "bundledWebRuntime": false,
             "server": {
+              "url": "https://karamegy.github.io/Nal/auth.html",
               "androidScheme": "https",
               "cleartext": true,
               "allowNavigation": [
                 "karamegy.github.io",
                 "*.firebaseapp.com",
-                "*.googleapis.com",
-                "*.google.com"
+                "*.googleapis.com"
               ]
             },
             "android": {
@@ -116,7 +116,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المخصص مع إضافة جافا بريدج لتمرير مصادقة جوجل
+          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للحزمة
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -248,17 +248,6 @@ jobs:
 
                   WebAppInterface(Context c) {
                       mContext = c;
-                  }
-
-                  @JavascriptInterface
-                  public void launchNativeGoogleSignIn() {
-                      runOnUiThread(() -> {
-                          try {
-                              Toast.makeText(mContext, "جاري فتح حسابات Google...", Toast.LENGTH_SHORT).show();
-                          } catch (Exception e) {
-                              e.printStackTrace();
-                          }
-                      });
                   }
 
                   @JavascriptInterface

@@ -505,7 +505,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -604,7 +603,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google المحدثة (مباشرة وتعمل على كافة الهواتف والمتصفحات)
+        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -647,32 +646,24 @@
                 } catch (nativeErr) {
                     isProcessingAuth = false;
                     console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
+                    return;
                 }
             }
 
-            // 3. الحل المباشر للمتصفحات والموبايل
-            try {
-                isProcessingAuth = true;
-                showNativeToast("⚡ جاري فتح تسجيل دخول Google...");
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (popupErr) {
+            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
-                console.error("Popup Auth Error:", popupErr);
-                
-                if (window.google && window.google.accounts && window.google.accounts.id) {
-                    window.initGoogleIdentity();
-                    window.google.accounts.id.prompt((notification) => {
-                        if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
-                            isProcessingAuth = false;
-                        }
-                    });
-                } else {
-                    showAuthMsg('error', 'تعذر فتح نافذة Google، يرجى التأكد من سماح المتصفح بالنوافذ المنبثقة.');
-                }
+                showNativeToast("جاري فتح حسابات Google...");
+
+                window.initGoogleIdentity();
+
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
+                        isProcessingAuth = false;
+                    }
+                });
+            } else {
+                showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
             }
         };
 
@@ -716,6 +707,7 @@
 
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
+                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
@@ -733,6 +725,7 @@
                     console.warn("Direct doc read warning:", snapErr);
                 }
 
+                // حفظ وتحديث بيانات الحساب فوراً على السحابة
                 await setDoc(userDocRef, {
                     name: finalUserName,
                     pin: "1234",
@@ -745,6 +738,7 @@
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
 
+                // حفظ الجلسة محلياً ورأسياً للدخول الفوري
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_offline_session', 'true');

@@ -116,7 +116,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 5. نسخ MainActivity.java المكتمل والمزود بخدمة Google Sign-In من المستودع
+          # 5. نسخ MainActivity.java المكتمل
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           if [ -f "app/src/main/java/io/github/karamegy/twa/MainActivity.java" ]; then
             cp app/src/main/java/io/github/karamegy/twa/MainActivity.java android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
@@ -565,8 +565,12 @@ jobs:
           # 10. مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
 
-          # 11. إضافة إعدادات التوقيع والإصدارات
-          cat << EOF >> android/app/build.gradle
+          # 11. إضافة مكتبة play-services-auth وإعدادات البناء والتوقيع
+          cat << 'EOF' >> android/app/build.gradle
+
+          dependencies {
+              implementation 'com.google.android.gms:play-services-auth:21.0.0'
+          }
 
           android {
               defaultConfig {

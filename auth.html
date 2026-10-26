@@ -558,7 +558,7 @@
 
         let isProcessingAuth = false;
 
-        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام في المتصفح
+        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -589,13 +589,10 @@
             }
         });
 
-        // =========================================================================
-        // استقبال الـ ID Token المباشر الممرر من MainActivity.java
-        // =========================================================================
+        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
-                isProcessingAuth = true;
-                showNativeToast("⚡ جاري المصادقة والمزامنة الفورية...");
+                showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
                 const credential = GoogleAuthProvider.credential(idToken);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -606,22 +603,54 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google المعتمدة
+        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
             const androidBridge = window.AndroidBridge || window.NativeBridge;
+            const Capacitor = window.Capacitor;
 
-            // 1. الاستدعاء الناتيف لتطبيق الأندرويد عبر الجسر المعرف في MainActivity.java
+            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح حسابات Google...");
+                showNativeToast("جاري فتح حسابات الجهاز...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. Google Identity Services (GIS Overlay للمتصفح و PWA)
+            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
+            if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
+                try {
+                    isProcessingAuth = true;
+                    showNativeToast("جاري فتح حسابات الجهاز...");
+                    
+                    if (typeof Capacitor.Plugins.GoogleAuth.initialize === 'function') {
+                        await Capacitor.Plugins.GoogleAuth.initialize({
+                            clientId: CLIENT_ID,
+                            serverClientId: CLIENT_ID,
+                            grantOfflineAccess: true,
+                            scopes: ['profile', 'email']
+                        }).catch(() => {});
+                    }
+
+                    const googleUser = await Capacitor.Plugins.GoogleAuth.signIn();
+                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+
+                    if (idToken) {
+                        const credential = GoogleAuthProvider.credential(idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        await processGoogleAccountData(result.user);
+                        return;
+                    }
+                } catch (nativeErr) {
+                    isProcessingAuth = false;
+                    console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
+                    return;
+                }
+            }
+
+            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
                 showNativeToast("جاري فتح حسابات Google...");
@@ -638,7 +667,7 @@
             }
         };
 
-        // استقبال توكن Google من نافذة الـ Bottom-Sheet للمتصفح
+        // استقبال توكن Google من نافذة الـ Bottom-Sheet والمزامنة الفورية
         window.handleGoogleIdentityCredential = async function(response) {
             if (!response || !response.credential) {
                 isProcessingAuth = false;
@@ -678,6 +707,7 @@
 
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
+                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
@@ -1042,4 +1072,4 @@
         };
     </script>
 </body>
-</html>
+    </html>

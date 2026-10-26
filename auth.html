@@ -589,7 +589,9 @@
             }
         });
 
-        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
+        // =========================================================================
+        // استقبال الـ ID Token المباشر من تطبيق الأندرويد الأصلي (Native Bridge)
+        // =========================================================================
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
@@ -598,9 +600,13 @@
                 await processGoogleAccountData(result.user);
             } catch (err) {
                 isProcessingAuth = false;
+                console.error('فشل المصادقة السحابية:', err);
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
+
+        // ربط احتياطي لتوافقية الدوال مع Android Native Bridge
+        window.handleGoogleIdToken = window.onNativeGoogleSignInSuccess;
 
         // =========================================================================
         // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
@@ -1072,4 +1078,4 @@
         };
     </script>
 </body>
-    </html>
+</html>

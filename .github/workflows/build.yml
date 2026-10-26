@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 1. تجهيز مجلد الويب www ونسخ الملفات
+          # 1. تجهيز مجلد الويب www ونسخ الملفات المحلية
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
           if [ ! -f "www/index.html" ]; then
@@ -70,7 +70,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json مع تفعيل إعدادات Google Auth للمشروع
+          # 2. إعداد ملف capacitor.config.json المحلي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -78,13 +78,13 @@ jobs:
             "webDir": "www",
             "bundledWebRuntime": false,
             "server": {
-              "url": "https://karamegy.github.io/Nal/auth.html",
               "androidScheme": "https",
               "cleartext": true,
               "allowNavigation": [
                 "karamegy.github.io",
                 "*.firebaseapp.com",
-                "*.googleapis.com"
+                "*.googleapis.com",
+                "*.google.com"
               ]
             },
             "android": {
@@ -99,29 +99,25 @@ jobs:
                 "androidScaleType": "CENTER_CROP",
                 "splashFullScreen": true,
                 "splashImmersive": true
-              },
-              "GoogleAuth": {
-                "scopes": ["profile", "email"],
-                "serverClientId": "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com",
-                "forceCodeForRefreshToken": true
               }
             }
           }
           EOF
 
-          # 3. تثبيت مكتبات الكاباسيتور مع إضافة مكتبة Google Auth والأيقونات
-          npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets @codetrix-studio/capacitor-google-auth --save-dev --legacy-peer-deps
+          # 3. تثبيت مكتبات الكاباسيتور والأيقونات
+          npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets --save-dev --legacy-peer-deps
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المخصص بالمسار المطابق للحزمة
+          # 5. حقن ملف MainActivity.java الأصلي بالكامل (بدون أي تعديل على منطق البرمجة الخاص بك)
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
 
           import android.Manifest;
+          import android.content.ContentValues;
           import android.content.Context;
           import android.content.Intent;
           import android.content.pm.PackageManager;
@@ -131,6 +127,9 @@ jobs:
           import android.os.Environment;
           import android.os.VibrationEffect;
           import android.os.Vibrator;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.util.Log;
           import android.view.WindowManager;
           import android.webkit.GeolocationPermissions;
           import android.webkit.JavascriptInterface;
@@ -140,26 +139,49 @@ jobs:
           import android.webkit.WebView;
           import android.widget.Toast;
 
+          import androidx.annotation.NonNull;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
 
           import com.getcapacitor.BridgeActivity;
+          import com.google.android.gms.auth.api.signin.GoogleSignIn;
+          import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+          import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+          import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+          import com.google.android.gms.common.api.ApiException;
+          import com.google.android.gms.tasks.Task;
 
           import java.io.File;
           import java.io.FileOutputStream;
+          import java.io.OutputStream;
+          import java.util.ArrayList;
+          import java.util.List;
 
           public class MainActivity extends BridgeActivity {
 
+              private static final String TAG = "GoogleSignIn_MainActivity";
               private ValueCallback<Uri[]> filePathCallback;
               private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
               private static final int PERMISSION_REQUEST_CODE = 2002;
+              private static final int RC_SIGN_IN = 9001;
+
+              private GoogleSignInClient mGoogleSignInClient;
+              private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
+
+              private String pendingGeolocationOrigin;
+              private GeolocationPermissions.Callback pendingGeolocationCallback;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  WebView webView = this.bridge.getWebView();
+                  GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                          .requestIdToken(GOOGLE_WEB_CLIENT_ID)
+                          .requestEmail()
+                          .build();
+                  mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
+                  WebView webView = this.bridge.getWebView();
                   if (webView != null) {
                       WebSettings settings = webView.getSettings();
                       settings.setJavaScriptEnabled(true);
@@ -175,7 +197,17 @@ jobs:
                       webView.setWebChromeClient(new WebChromeClient() {
                           @Override
                           public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                              callback.invoke(origin, true, false);
+                              if (hasLocationPermission()) {
+                                  callback.invoke(origin, true, false);
+                              } else {
+                                  pendingGeolocationOrigin = origin;
+                                  pendingGeolocationCallback = callback;
+                                  ActivityCompat.requestPermissions(
+                                          MainActivity.this,
+                                          new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                                          PERMISSION_REQUEST_CODE
+                                  );
+                              }
                           }
 
                           @Override
@@ -201,27 +233,51 @@ jobs:
                   requestAppPermissions();
               }
 
+              private boolean hasLocationPermission() {
+                  return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                          || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+              }
+
               private void requestAppPermissions() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                      String[] permissions = {
-                              Manifest.permission.ACCESS_FINE_LOCATION,
-                              Manifest.permission.ACCESS_COARSE_LOCATION,
-                              Manifest.permission.VIBRATE,
-                              Manifest.permission.READ_EXTERNAL_STORAGE,
-                              Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                              Manifest.permission.CAMERA
-                      };
+                      List<String> permissions = new ArrayList<>();
+                      permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+                      permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+                      permissions.add(Manifest.permission.CAMERA);
 
-                      boolean needRequest = false;
-                      for (String perm : permissions) {
-                          if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-                              needRequest = true;
-                              break;
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                          permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+                          permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
+                      } else {
+                          permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+                          if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                              permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
                           }
                       }
 
-                      if (needRequest) {
-                          ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+                      List<String> listPermissionsNeeded = new ArrayList<>();
+                      for (String perm : permissions) {
+                          if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                              listPermissionsNeeded.add(perm);
+                          }
+                      }
+
+                      if (!listPermissionsNeeded.isEmpty()) {
+                          ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+                      }
+                  }
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+                  if (requestCode == PERMISSION_REQUEST_CODE) {
+                      if (pendingGeolocationCallback != null && pendingGeolocationOrigin != null) {
+                          boolean granted = hasLocationPermission();
+                          pendingGeolocationCallback.invoke(pendingGeolocationOrigin, granted, false);
+                          pendingGeolocationCallback = null;
+                          pendingGeolocationOrigin = null;
                       }
                   }
               }
@@ -229,17 +285,58 @@ jobs:
               @Override
               protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                   super.onActivityResult(requestCode, resultCode, data);
+
                   if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
                       if (filePathCallback == null) return;
                       Uri[] results = null;
+
                       if (resultCode == RESULT_OK && data != null) {
                           String dataString = data.getDataString();
                           if (dataString != null) {
                               results = new Uri[]{Uri.parse(dataString)};
+                          } else if (data.getClipData() != null) {
+                              int count = data.getClipData().getItemCount();
+                              results = new Uri[count];
+                              for (int i = 0; i < count; i++) {
+                                  results[i] = data.getClipData().getItemAt(i).getUri();
+                              }
                           }
                       }
+
                       filePathCallback.onReceiveValue(results);
                       filePathCallback = null;
+                  }
+
+                  if (requestCode == RC_SIGN_IN) {
+                      Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                      try {
+                          GoogleSignInAccount account = task.getResult(ApiException.class);
+                          if (account != null && account.getIdToken() != null) {
+                              final String idToken = account.getIdToken();
+                              Log.d(TAG, "Google Sign-In Success. Token length: " + idToken.length());
+
+                              runOnUiThread(() -> {
+                                  WebView webView = bridge.getWebView();
+                                  if (webView != null) {
+                                      String jsCode = "if (typeof window.onNativeGoogleSignInSuccess === 'function') { " +
+                                                      "   window.onNativeGoogleSignInSuccess('" + idToken + "'); " +
+                                                      "} else if (typeof window.handleGoogleIdToken === 'function') { " +
+                                                      "   window.handleGoogleIdToken('" + idToken + "'); " +
+                                                      "} else { " +
+                                                      "   console.error('No Google ID token handler function defined on window object.'); " +
+                                                      "}";
+                                      webView.evaluateJavascript(jsCode, null);
+                                  } else {
+                                      Log.e(TAG, "WebView is null, cannot evaluate Javascript");
+                                  }
+                              });
+                          } else {
+                              Log.e(TAG, "Account or ID Token is null");
+                          }
+                      } catch (ApiException e) {
+                          Log.e(TAG, "Google Sign-In Failed. Status Code: " + e.getStatusCode() + " - Message: " + e.getMessage());
+                          Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل (رمز: " + e.getStatusCode() + ")", Toast.LENGTH_SHORT).show();
+                      }
                   }
               }
 
@@ -289,15 +386,51 @@ jobs:
                   }
 
                   @JavascriptInterface
+                  public void launchNativeGoogleSignIn() {
+                      runOnUiThread(() -> {
+                          if (mGoogleSignInClient != null) {
+                              mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
+                                  Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                                  startActivityForResult(signInIntent, RC_SIGN_IN);
+                              });
+                          } else {
+                              Log.e(TAG, "mGoogleSignInClient is null during launchNativeGoogleSignIn");
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
                   public void downloadFile(String filename, String base64Data) {
                       try {
-                          byte[] pdfAsBytes = android.util.Base64.decode(base64Data.replaceFirst("^data:image/[^;]+;base64,", ""), android.util.Base64.DEFAULT);
-                          File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                          File file = new File(path, filename);
-                          FileOutputStream os = new FileOutputStream(file, false);
-                          os.write(pdfAsBytes);
-                          os.flush();
-                          os.close();
+                          String cleanBase64 = base64Data;
+                          if (cleanBase64.contains(",")) {
+                              cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
+                          }
+                          byte[] fileBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                              ContentValues values = new ContentValues();
+                              values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+                              values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+                              Uri uri = mContext.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                              if (uri != null) {
+                                  try (OutputStream os = mContext.getContentResolver().openOutputStream(uri)) {
+                                      if (os != null) {
+                                          os.write(fileBytes);
+                                          os.flush();
+                                      }
+                                  }
+                              }
+                          } else {
+                              File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                              File file = new File(path, filename);
+                              try (FileOutputStream os = new FileOutputStream(file, false)) {
+                                  os.write(fileBytes);
+                                  os.flush();
+                              }
+                          }
+
                           Toast.makeText(mContext, "تم حفظ الملف بنجاح في التنزيلات: " + filename, Toast.LENGTH_LONG).show();
                       } catch (Exception e) {
                           Toast.makeText(mContext, "خطأ أثناء حفظ الملف: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -324,7 +457,7 @@ jobs:
             cp google-services.json android/app/ 2>/dev/null || true
           fi
 
-          # 8. تجهيز AndroidManifest و file_paths و strings مع تضمين Google Client IDs بدقة
+          # 8. تجهيز AndroidManifest و file_paths و strings
           mkdir -p android/app/src/main/res/xml/
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -421,9 +554,9 @@ jobs:
           </resources>
           EOF
 
-          # 9. نسخ ملف التوقيع
+          # 9. التحقق من وجود مفتاح التوقيع وجميع كلمات السر الخاصة به
           HAS_KEYSTORE=false
-          if [ -f "signing.keystore" ]; then
+          if [ -f "signing.keystore" ] && [ -n "${KEYSTORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
             cp signing.keystore android/app/
             HAS_KEYSTORE=true
           fi
@@ -432,8 +565,12 @@ jobs:
           # 10. مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
 
-          # 11. إضافة إعدادات التوقيع والإصدارات بنمط الإلحاق (>> ) للحفاظ على روابط كاباسيتور الأصلية
+          # 11. إضافة إعدادات التوقيع ومكتبة Google Play Services Auth
           cat << EOF >> android/app/build.gradle
+
+          dependencies {
+              implementation 'com.google.android.gms:play-services-auth:20.7.0'
+          }
 
           android {
               defaultConfig {
@@ -464,26 +601,29 @@ jobs:
           }
           EOF
 
-          # 12. البناء بأمر موحد بدون Daemon وبدون Parallel لمنع قفل الملفات وحل خطأ JAR
+          # 12. تنفيذ أمر البناء الشامل لكل من APK و AAB
           cd android
           chmod +x gradlew
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
+            echo "Building Signed Release APK and AAB..."
             ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
-            ./gradlew assembleDebug --no-daemon --no-parallel
+            echo "Building Debug APK and AAB (Keystore missing or incomplete secrets)..."
+            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
           fi
 
-          # 13. تجميع وتوفير المخرجات النهائية
+          # 13. تجميع الملفات واستخراج النسخ الأصلية الصحيحة
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;
-          
-          find ./output_artifacts -type f -name "*.apk" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.apk || true
-          find ./output_artifacts -type f -name "*.aab" | head -n 1 | xargs -I {} cp {} ./EIDCO-OS-release.aab || true
-          
-          touch ./EIDCO-OS-release.apk
-          touch ./EIDCO-OS-release.aab
+
+          # إعادة تسمية أول نسخة APK و AAB تم العثور عليها للعرض في المخرجات المباشرة
+          FIRST_APK=$(find ./output_artifacts -type f -name "*.apk" | head -n 1)
+          FIRST_AAB=$(find ./output_artifacts -type f -name "*.aab" | head -n 1)
+
+          if [ -n "$FIRST_APK" ]; then cp "$FIRST_APK" ./EIDCO-OS-app.apk; fi
+          if [ -n "$FIRST_AAB" ]; then cp "$FIRST_AAB" ./EIDCO-OS-app.aab; fi
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -491,8 +631,8 @@ jobs:
           name: EIDCO-OS-Android-Release
           path: |
             output_artifacts/*
-            EIDCO-OS-release.apk
-            EIDCO-OS-release.aab
+            EIDCO-OS-app.apk
+            EIDCO-OS-app.aab
 
       - name: Clean Up Signing Key
         if: always()

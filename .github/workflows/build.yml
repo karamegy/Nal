@@ -569,28 +569,28 @@ jobs:
           # 10. مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
 
-          # 11. إضافة إعدادات التوقيع ومكتبة Google Play Services Auth
-          cat << EOF >> android/app/build.gradle
-
-          dependencies {
-              implementation 'com.google.android.gms:play-services-auth:20.7.0'
-          }
+          # 11. إعادة كتابة ملف build.gradle بالكامل بتركيب صحيح وسليم
+          cat << 'EOF' > android/app/build.gradle
+          apply plugin: 'com.android.application'
 
           android {
+              namespace "io.github.karamegy.twa"
+              compileSdkVersion rootProject.ext.compileSdkVersion
               defaultConfig {
                   applicationId "io.github.karamegy.twa"
-                  minSdk 24
-                  targetSdk 34
+                  minSdkVersion rootProject.ext.minSdkVersion
+                  targetSdkVersion rootProject.ext.targetSdkVersion
                   versionCode 24
                   versionName "8.0.0.0"
+                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
               }
               signingConfigs {
                   release {
                       if (file('signing.keystore').exists()) {
                           storeFile file('signing.keystore')
-                          storePassword '$KEYSTORE_PASSWORD'
-                          keyAlias '$KEY_ALIAS'
-                          keyPassword '$KEY_PASSWORD'
+                          storePassword System.getenv("KEYSTORE_PASSWORD")
+                          keyAlias System.getenv("KEY_ALIAS")
+                          keyPassword System.getenv("KEY_PASSWORD")
                       }
                   }
               }
@@ -600,8 +600,34 @@ jobs:
                           signingConfig signingConfigs.release
                       }
                       minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
                   }
               }
+          }
+
+          repositories {
+              flatDir {
+                  dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+              }
+          }
+
+          dependencies {
+              implementation fileTree(dir: 'libs', include: ['*.jar'])
+              implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+              implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+              implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+              implementation project(':capacitor-android')
+              implementation project(':capacitor-cordova-android-plugins')
+              implementation 'com.google.android.gms:play-services-auth:20.7.0'
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.text) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json missing, skipping plugin apply")
           }
           EOF
 

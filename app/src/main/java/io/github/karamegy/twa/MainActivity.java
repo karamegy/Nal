@@ -50,9 +50,10 @@ public class MainActivity extends BridgeActivity {
     private static final int RC_SIGN_IN = 9001;
 
     private GoogleSignInClient mGoogleSignInClient;
+    
+    // تم تصحيح المعرف هنا ليصبح Web Client ID الصحيح بدلاً من معرف الأندرويد
     private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
-    // المتغيرات المؤقتة لإدارة استجابة الموقع الجغرافي
     private String pendingGeolocationOrigin;
     private GeolocationPermissions.Callback pendingGeolocationCallback;
 
@@ -60,14 +61,13 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // تهيئة إعدادات Google Sign In
+        // تهيئة إعدادات Google Sign In باستخدام الـ Web Client ID الصحيح
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(GOOGLE_WEB_CLIENT_ID)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // تهيئة إعدادات WebView والجسور البرمجية
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
@@ -79,13 +79,11 @@ public class MainActivity extends BridgeActivity {
             settings.setGeolocationEnabled(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
 
-            // إضافة الجسر التفاعلي بين Javascript و Android
             webView.addJavascriptInterface(new WebAppInterface(this), "AndroidBridge");
 
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                    // التحقق أولاً من منح إذن الموقع على مستوى النظام
                     if (hasLocationPermission()) {
                         callback.invoke(origin, true, false);
                     } else {
@@ -134,7 +132,6 @@ public class MainActivity extends BridgeActivity {
             permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
             permissions.add(Manifest.permission.CAMERA);
 
-            // أذونات الوسائط والتخزين متوافقة مع Android 13+ (TIRAMISU) والإصدارات الأقدم
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
                 permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
@@ -163,7 +160,6 @@ public class MainActivity extends BridgeActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            // معالجة استجابة طلب إذن الموقع لصفحة الويب
             if (pendingGeolocationCallback != null && pendingGeolocationOrigin != null) {
                 boolean granted = hasLocationPermission();
                 pendingGeolocationCallback.invoke(pendingGeolocationOrigin, granted, false);
@@ -177,7 +173,6 @@ public class MainActivity extends BridgeActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // معالجة اختيار الملفات
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
             Uri[] results = null;
@@ -199,7 +194,6 @@ public class MainActivity extends BridgeActivity {
             filePathCallback = null;
         }
 
-        // معالجة تسجيل الدخول عبر Google
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
@@ -259,6 +253,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void keepScreenOn(final boolean keepOn) {
+div:
             runOnUiThread(() -> {
                 if (keepOn) {
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

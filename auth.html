@@ -505,6 +505,7 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -614,30 +615,35 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
+        // دالة الدخول بـ Google المعتمدة مع نظام المسارات المزدوجة والنوافذ المباشرة
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
             const androidBridge = window.AndroidBridge || window.NativeBridge;
-            const Capacitor = window.Capacitor;
+            const capacitorPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth;
 
-            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
+            // 1. Android Native Bridge للتطبيقات المحولة ناتيف
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 isProcessingAuth = true;
                 showNativeToast("جاري فتح حسابات الجهاز...");
-                androidBridge.launchNativeGoogleSignIn();
+                try {
+                    androidBridge.launchNativeGoogleSignIn();
+                } catch (e) {
+                    isProcessingAuth = false;
+                    console.error("Native Bridge Launch Error:", e);
+                }
                 return;
             }
 
-            // 2. تطبيق Capacitor Native Engine
-            if (Capacitor && Capacitor.isPluginAvailable && Capacitor.isPluginAvailable('GoogleAuth')) {
+            // 2. تطبيق Capacitor Native Plugin
+            if (capacitorPlugin) {
                 try {
                     isProcessingAuth = true;
                     showNativeToast("جاري فتح حسابات الجهاز...");
                     
-                    const googleUser = await Capacitor.Plugins.GoogleAuth.signIn();
+                    const googleUser = await capacitorPlugin.signIn();
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
 
                     if (idToken) {
@@ -648,24 +654,35 @@
                     }
                 } catch (nativeErr) {
                     isProcessingAuth = false;
-                    console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
+                    console.warn("Capacitor Native Auth Plugin error or cancelled:", nativeErr);
                 }
             }
 
-            // 3. Google Identity Services (GIS Overlay)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
+            // 3. الخيار المباشر الاحتياطي عبر Firebase Popup
+            try {
+                isProcessingAuth = true;
+                showNativeToast("جاري فتح نافذة تسجيل الدخول بـ Google...");
+                const provider = new GoogleAuthProvider();
+                provider.addScope('email');
+                provider.addScope('profile');
+                const result = await signInWithPopup(auth, provider);
+                await processGoogleAccountData(result.user);
+            } catch (popupErr) {
+                console.warn("Popup blocked or failed, trying GIS fallback...", popupErr);
                 isProcessingAuth = false;
-                showNativeToast("جاري فتح حسابات Google...");
 
-                window.initGoogleIdentity();
-
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
-                        isProcessingAuth = false;
-                    }
-                });
-            } else {
-                showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
+                // 4. Google Identity Services (GIS Bottom-Sheet Overlay)
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    showNativeToast("جاري فتح حسابات Google...");
+                    window.initGoogleIdentity();
+                    window.google.accounts.id.prompt((notification) => {
+                        if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
+                            isProcessingAuth = false;
+                        }
+                    });
+                } else {
+                    showAuthMsg('error', 'تعذر فتح نافذة تسجيل الدخول بـ Google.');
+                }
             }
         };
 
@@ -687,7 +704,7 @@
             }
         };
 
-        // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة الفورية
+        // دالة مزامنة بيانات حساب Google والتوجيه المحركي الفوري
         async function processGoogleAccountData(user) {
             try {
                 isProcessingAuth = true;
@@ -708,36 +725,15 @@
                     userRole = 'مدير نظام رئيسي';
                 }
 
-                // حفظ الجلسة محلياً فور اختيار الحساب لتفادي تعليق المزامنة أو الشبكة
+                // ⚡ حفظ الجلسة محلياً فوراً (توجيه مباشر صفر انتظار)
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_offline_session', 'true');
                 localStorage.setItem('eidco_v14_admin', finalUserName);
                 localStorage.setItem('eidco_current_company_id', assignedCompanyId);
 
+                // 🔄 التحديث الموازي للسحابة في الخلفية بدون حجب التوجيه
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
-
-                // قراءة الحساب إن وجد للتأكد من حالة الحظر وتعديل الاسم
-                try {
-                    const userDocSnap = await getDoc(userDocRef);
-                    if (userDocSnap.exists()) {
-                        const accountData = userDocSnap.data();
-                        if (accountData.isBanned) {
-                            showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                            alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                            isProcessingAuth = false;
-                            return;
-                        }
-                        if (accountData.name) finalUserName = accountData.name;
-                        if (accountData.role) userRole = accountData.role;
-                        
-                        localStorage.setItem('eidco_v14_admin', finalUserName);
-                    }
-                } catch (snapErr) {
-                    console.warn("Firestore doc fetch notice:", snapErr);
-                }
-
-                // حفظ وتحديث البيانات في السحابة
                 setDoc(userDocRef, {
                     name: finalUserName,
                     pin: "1234",
@@ -748,15 +744,15 @@
                     biometricVerified: true,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
-                }, { merge: true }).catch(err => console.warn("Background setDoc notice:", err));
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
+                }, { merge: true }).catch(err => console.warn("Firestore background sync notice:", err));
 
                 showNativeToast("✓ تم تسجيل الدخول ومزامنة الجلسة بنجاح");
-                
-                // التوجيه الفوري
+
+                // 🚀 التوجيه المباشر
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+
             } catch (err) {
                 isProcessingAuth = false;
                 showAuthMsg('error', 'خطأ في معالجة الحساب ومزامنة الجلسة: ' + err.message);

@@ -14,8 +14,6 @@
     <meta name="theme-color" content="#020617">
 
     <script src="capacitor.js"></script>
-
-    <!-- مكتبة Google Identity Services الرسمية للويب -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -190,7 +188,6 @@
             }
         }
 
-        // التحقق الفوري التلقائي من وجود جلسة سابقة (يدعم التصفح بدون أنترنت Offline)
         (function checkOfflineSession() {
             const savedCompanyId = localStorage.getItem('eidco_current_company_id');
             const savedAdmin = localStorage.getItem('eidco_v14_admin');
@@ -243,11 +240,11 @@
             </button>
         </div>
 
-        <!-- قسم الدخول السريع (Google Native + الهاتف) -->
+        <!-- قسم الدخول السريع -->
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google المطور -->
+                <!-- زر دخول بـ Google المعتمد (popup نافذة منبثقة) -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
@@ -506,8 +503,8 @@
             getAuth, 
             signInAnonymously, 
             GoogleAuthProvider, 
-            signInWithCredential,
             signInWithPopup,
+            signInWithCredential,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -525,14 +522,11 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         auth.languageCode = 'ar';
 
-        // تفعيل التخزين المحلّي لاستمرار الجلسات أوفلاين
         enableIndexedDbPersistence(db).catch(() => {});
         setPersistence(auth, indexedDBLocalPersistence).catch(() => {
             setPersistence(auth, browserLocalPersistence).catch(console.error);
@@ -561,9 +555,7 @@
         }
 
         let isProcessingAuth = false;
-        let tokenClient = null;
 
-        // التحقق التلقائي للربط السحابي والأوفلاين
         onAuthStateChanged(auth, async (user) => {
             if (user && !user.isAnonymous && !isProcessingAuth) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -578,58 +570,7 @@
             }
         });
 
-        // تهيئة Google Identity Client (GIS) المطور لإظهار قائمة الحسابات فوراً
-        window.initGoogleIdentity = function() {
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: window.handleGoogleIdentityCredential,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
-            }
-
-            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-                tokenClient = window.google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: 'email profile openid',
-                    callback: async (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            try {
-                                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
-                                const credential = GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                                const result = await signInWithCredential(auth, credential);
-                                await processGoogleAccountData(result.user);
-                            } catch (e) {
-                                isProcessingAuth = false;
-                                showAuthMsg('error', 'خطأ في المصادقة: ' + e.message);
-                            }
-                        }
-                    }
-                });
-            }
-        };
-
-        window.handleGoogleIdentityCredential = async function(response) {
-            if (!response || !response.credential) return;
-            try {
-                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
-                const credential = GoogleAuthProvider.credential(response.credential);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                isProcessingAuth = false;
-                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
-            }
-        };
-
-        if (document.readyState === 'complete') {
-            window.initGoogleIdentity();
-        } else {
-            window.addEventListener('load', window.initGoogleIdentity);
-        }
-
-        // استقبال ה- Token المباشر من كود الأندرويد الناتيف
+        // استقبال الـ Token المباشر من الأندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
@@ -643,7 +584,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول الموحدة بـ Google (تستدعي نافذة الحسابات المباشرة دون أخطاء)
+        // دالة الدخول المعتمدة لـ Google (فتح النافذة المنبثقة الرسمية Popup)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -652,71 +593,31 @@
             if (isProcessingAuth) return;
 
             const androidBridge = window.AndroidBridge || window.NativeBridge;
-            const googleAuthPlugin = window.Capacitor?.Plugins?.GoogleAuth;
 
-            // 1. الأولوية الأولى: الـ Native Android Bridge الخاص بالتطبيق
+            // 1. إذا كان التطبيق يعمل داخل APK أندرويد عبر Native Bridge
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري اختيار الحساب...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. الأولوية الثانية: Capacitor Plugin للتطبيق
-            if (googleAuthPlugin) {
-                try {
-                    showNativeToast("جاري فتح حسابات الجهاز...");
-                    if (typeof googleAuthPlugin.initialize === 'function') {
-                        await googleAuthPlugin.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-                    }
-                    const googleUser = await googleAuthPlugin.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    console.warn("Capacitor Auth native retry:", nativeErr);
-                }
-            }
-
-            // 3. الأولوية الثالثة: طلب نافذة اختيار الحسابات المباشرة لـ GIS Web (One Tap / Token Client)
-            showNativeToast("جاري فتح حسابات جوجل...");
-            if (tokenClient) {
-                tokenClient.requestAccessToken();
-                return;
-            }
-
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.initGoogleIdentity();
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-                        // في حالة الحظر، نستخدم طريقة Popup كبديل آمن
-                        const provider = new GoogleAuthProvider();
-                        signInWithPopup(auth, provider).then(async (result) => {
-                            await processGoogleAccountData(result.user);
-                        }).catch(e => {
-                            isProcessingAuth = false;
-                        });
-                    }
-                });
-                return;
-            }
-
-            // Fallback النهائي
+            // 2. استخدام طريقة Popup الرسمية والمباشرة لتفتح النافذة فوق التطبيق فوراً
             try {
+                isProcessingAuth = true;
+                showNativeToast("جاري فتح نافذة حسابات جوجل...");
+                
                 const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({
+                    prompt: 'select_account'
+                });
+
                 const result = await signInWithPopup(auth, provider);
                 await processGoogleAccountData(result.user);
             } catch (err) {
-                showAuthMsg('error', 'تعذر فتح نافذة الدخول: ' + err.message);
+                isProcessingAuth = false;
+                if (err.code !== 'auth/popup-closed-by-user') {
+                    showAuthMsg('error', 'خطأ في فتح النافذة المنبثقة: ' + err.message);
+                }
             }
         };
 
@@ -751,7 +652,6 @@
                 let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
                 let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
 
-                // حفظ الحساب بتنسيق الحقول المعتمد
                 await setDoc(doc(db, "accounts", newCompanyId), {
                     name: username,
                     pin: pin,
@@ -848,9 +748,6 @@
         };
 
         async function processGoogleAccountData(user) {
-            if (isProcessingAuth) return;
-            isProcessingAuth = true;
-
             try {
                 let userEmail = user.email || '';
                 let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
@@ -887,7 +784,6 @@
                         userRole = 'مدير نظام رئيسي';
                     }
 
-                    // حفظ بالحقول المعتمدة
                     await setDoc(doc(db, "accounts", assignedCompanyId), {
                         name: finalUserName,
                         pin: "1234",
@@ -1092,7 +988,6 @@
                 }, 400);
 
             } catch (error) {
-                // إذا كان الاتصال مقطوعاً (Offline)، يتم الاعتماد على البيانات المحلية فوراً
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_offline_session', 'true');

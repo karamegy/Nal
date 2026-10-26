@@ -565,8 +565,8 @@ jobs:
           # 10. مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
 
-          # 11. إضافة مكتبة play-services-auth وإعدادات البناء والتوقيع
-          cat << 'EOF' >> android/app/build.gradle
+          # 11. إضافة التبعيات وإعدادات التوقيع بشكل صحيح مع معالجة المتغيرات
+          cat << EOF >> android/app/build.gradle
 
           dependencies {
               implementation 'com.google.android.gms:play-services-auth:21.0.0'
@@ -584,9 +584,9 @@ jobs:
                   release {
                       if (file('signing.keystore').exists()) {
                           storeFile file('signing.keystore')
-                          storePassword '$KEYSTORE_PASSWORD'
-                          keyAlias '$KEY_ALIAS'
-                          keyPassword '$KEY_PASSWORD'
+                          storePassword '${KEYSTORE_PASSWORD}'
+                          keyAlias '${KEY_ALIAS}'
+                          keyPassword '${KEY_PASSWORD}'
                       }
                   }
               }

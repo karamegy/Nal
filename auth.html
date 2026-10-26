@@ -590,45 +590,35 @@
         });
 
         // =========================================================================
-        // دالة الدخول بـ Google المعتمدة والمطورة بالكامل للتطبيق والـ Web
+        // استقبال الـ ID Token المباشر الممرر من MainActivity.java
+        // =========================================================================
+        window.onNativeGoogleSignInSuccess = async function(idToken) {
+            try {
+                isProcessingAuth = true;
+                showNativeToast("⚡ جاري المصادقة والمزامنة الفورية...");
+                const credential = GoogleAuthProvider.credential(idToken);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
+            } catch (err) {
+                isProcessingAuth = false;
+                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
+            }
+        };
+
+        // =========================================================================
+        // دالة الدخول بـ Google المعتمدة
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const Capacitor = window.Capacitor;
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
 
-            // 1. التشغيل الناتيف تحت بيئة Android / Capacitor
-            if (Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
-                try {
-                    isProcessingAuth = true;
-                    showNativeToast("جاري فتح حسابات الجهاز...");
-                    
-                    if (typeof Capacitor.Plugins.GoogleAuth.initialize === 'function') {
-                        await Capacitor.Plugins.GoogleAuth.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-                    }
-
-                    const googleUser = await Capacitor.Plugins.GoogleAuth.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-
-                    if (idToken) {
-                        showNativeToast("⚡ جاري المصادقة والمزامنة...");
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    isProcessingAuth = false;
-                    console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
-                    showAuthMsg('error', 'تعذر اختيار الحساب: ' + (nativeErr.message || nativeErr));
-                    return;
-                }
+            // 1. الاستدعاء الناتيف لتطبيق الأندرويد عبر الجسر المعرف في MainActivity.java
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري فتح حسابات Google...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
             }
 
             // 2. Google Identity Services (GIS Overlay للمتصفح و PWA)
@@ -648,7 +638,7 @@
             }
         };
 
-        // استقبال توكن Google من نافذة الـ Bottom-Sheet والمزامنة الفورية
+        // استقبال توكن Google من نافذة الـ Bottom-Sheet للمتصفح
         window.handleGoogleIdentityCredential = async function(response) {
             if (!response || !response.credential) {
                 isProcessingAuth = false;

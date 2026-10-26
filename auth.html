@@ -558,7 +558,7 @@
 
         let isProcessingAuth = false;
 
-        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
+        // تهيئة GIS و Capacitor GoogleAuth المباشرة
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -571,11 +571,21 @@
             }
         };
 
-        if (document.readyState === 'complete') {
+        window.addEventListener('load', async () => {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+                try {
+                    await window.Capacitor.Plugins.GoogleAuth.initialize({
+                        clientId: CLIENT_ID,
+                        serverClientId: CLIENT_ID,
+                        grantOfflineAccess: true,
+                        scopes: ['profile', 'email']
+                    });
+                } catch (e) {
+                    console.warn("GoogleAuth Init Warning:", e);
+                }
+            }
             window.initGoogleIdentity();
-        } else {
-            window.addEventListener('load', window.initGoogleIdentity);
-        }
+        });
 
         onAuthStateChanged(auth, async (user) => {
             if (user && !user.isAnonymous && !isProcessingAuth) {
@@ -592,6 +602,7 @@
         // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
+                isProcessingAuth = true;
                 showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
                 const credential = GoogleAuthProvider.credential(idToken);
                 const result = await signInWithCredential(auth, credential);
@@ -614,26 +625,18 @@
 
             // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                isProcessingAuth = true;
                 showNativeToast("جاري فتح حسابات الجهاز...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
-            if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
+            // 2. تطبيق Capacitor Native Engine
+            if (Capacitor && Capacitor.isPluginAvailable && Capacitor.isPluginAvailable('GoogleAuth')) {
                 try {
                     isProcessingAuth = true;
                     showNativeToast("جاري فتح حسابات الجهاز...");
                     
-                    if (typeof Capacitor.Plugins.GoogleAuth.initialize === 'function') {
-                        await Capacitor.Plugins.GoogleAuth.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-                    }
-
                     const googleUser = await Capacitor.Plugins.GoogleAuth.signIn();
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
 
@@ -646,11 +649,10 @@
                 } catch (nativeErr) {
                     isProcessingAuth = false;
                     console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
-                    return;
                 }
             }
 
-            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
+            // 3. Google Identity Services (GIS Overlay)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
                 showNativeToast("جاري فتح حسابات Google...");
@@ -667,7 +669,7 @@
             }
         };
 
-        // استقبال توكن Google من نافذة الـ Bottom-Sheet والمزامنة الفورية
+        // استقبال توكن Google من GIS والمزامنة الفورية
         window.handleGoogleIdentityCredential = async function(response) {
             if (!response || !response.credential) {
                 isProcessingAuth = false;
@@ -688,6 +690,7 @@
         // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة الفورية
         async function processGoogleAccountData(user) {
             try {
+                isProcessingAuth = true;
                 let userEmail = (user.email || '').toLowerCase();
                 let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
                 let userPhotoUrl = user.photoURL || '';
@@ -705,9 +708,16 @@
                     userRole = 'مدير نظام رئيسي';
                 }
 
+                // حفظ الجلسة محلياً فور اختيار الحساب لتفادي تعليق المزامنة أو الشبكة
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', finalUserName);
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
-                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
+                // قراءة الحساب إن وجد للتأكد من حالة الحظر وتعديل الاسم
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
@@ -720,13 +730,15 @@
                         }
                         if (accountData.name) finalUserName = accountData.name;
                         if (accountData.role) userRole = accountData.role;
+                        
+                        localStorage.setItem('eidco_v14_admin', finalUserName);
                     }
                 } catch (snapErr) {
-                    console.warn("Direct doc read warning:", snapErr);
+                    console.warn("Firestore doc fetch notice:", snapErr);
                 }
 
-                // حفظ وتحديث بيانات الحساب فوراً على السحابة
-                await setDoc(userDocRef, {
+                // حفظ وتحديث البيانات في السحابة
+                setDoc(userDocRef, {
                     name: finalUserName,
                     pin: "1234",
                     role: userRole,
@@ -736,19 +748,14 @@
                     biometricVerified: true,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-
-                // حفظ الجلسة محلياً ورأسياً للدخول الفوري
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_offline_session', 'true');
-                localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+                }, { merge: true }).catch(err => console.warn("Background setDoc notice:", err));
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
                 showNativeToast("✓ تم تسجيل الدخول ومزامنة الجلسة بنجاح");
+                
+                // التوجيه الفوري
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (err) {
                 isProcessingAuth = false;

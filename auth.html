@@ -188,13 +188,30 @@
             }
         }
 
+        // دالة التحقق من الجلسة المعدلة لمنع الحلقة المفرغة عند القفل
         (function checkOfflineSession() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            const isLogout = action === 'logout' || action === 'lock' || urlParams.get('logout') === 'true';
+
+            if (isLogout) {
+                // مسح تفاصيل الجلسة المؤقتة فوراً لمنع التوجيه التلقائي
+                sessionStorage.clear();
+                localStorage.removeItem('eidco_offline_session');
+                localStorage.removeItem('eidco_current_company_id');
+                localStorage.removeItem('eidco_v14_admin');
+                
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+                return;
+            }
+
             const savedCompanyId = localStorage.getItem('eidco_current_company_id');
             const savedAdmin = localStorage.getItem('eidco_v14_admin');
             const hasAuth = sessionStorage.getItem('eidco_session_auth') || localStorage.getItem('eidco_offline_session');
 
             if (savedCompanyId && savedAdmin && hasAuth) {
-                const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get('redirect') || 'index.html';
                 window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
             }
@@ -243,8 +260,6 @@
         <!-- قسم الدخول السريع -->
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                
-                <!-- زر دخول بـ Google المعتمد ناتيف بالكامل -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
@@ -329,7 +344,6 @@
     </div>
 
     <!-- Modals -->
-    <!-- 1. نافذة الخصوصية -->
     <div id="privacyModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'privacyModal')">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -338,17 +352,15 @@
                 </h3>
                 <button onclick="closePrivacyModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
             </div>
-            
             <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pl-1">
                 <p class="font-bold text-indigo-300">نظام EIDCO يلتزم بالكامل بحماية خصوصيتك وأمان بياناتك:</p>
                 <ul class="list-disc list-inside space-y-2 text-slate-400">
-                    <li><strong class="text-white">حماية الحسابات:</strong> تُستخدم بيانات التسجيل حصراً للتحقق من هوية المستخدم وتخصيص صلاحيات المنظومة.</li>
-                    <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة ومحميّة ومعزولة لكل شركة.</li>
-                    <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك بواسطة مستشعر الهاتف.</li>
+                    <li><strong class="text-white">حماية الحسابات:</strong> تُستخدم بيانات التسجيل حصراً للتحقق من هوية المستخدم.</li>
+                    <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة.</li>
+                    <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك.</li>
                     <li><strong class="text-white">عدم المشاركة:</strong> لا نقوم ببيع أو مشاركة بياناتك الشخصية مع أي أطراف خارجية.</li>
                 </ul>
             </div>
-
             <div class="flex gap-2 pt-2 border-t border-slate-800">
                 <a href="privacy.html" target="_blank" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold flex-1 py-2.5 rounded-xl text-xs transition cursor-pointer text-center flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> فتح الصفحة الكاملة
@@ -358,7 +370,6 @@
         </div>
     </div>
 
-    <!-- 2. نافذة الشكاوى -->
     <div id="complaintsModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'complaintsModal')">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -388,7 +399,6 @@
         </div>
     </div>
 
-    <!-- 3. نافذة دخول الهاتف (OTP) -->
     <div id="phoneAuthModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'phoneAuthModal')">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -449,41 +459,14 @@
             }
         }
 
-        document.addEventListener('focusin', (e) => {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
-                setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-            }
-        });
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const container = document.getElementById('installContainer');
-            if (container) container.classList.remove('hidden');
-        });
-
-        document.getElementById('installAppBtn')?.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('installContainer').classList.add('hidden');
-                }
-                deferredPrompt = null;
-            }
-        });
-
-        function openPrivacyModal() {
+        window.openPrivacyModal = function() {
             triggerHaptic(20);
             document.getElementById('privacyModal').classList.add('active');
-        }
-        function closePrivacyModal() {
+        };
+        window.closePrivacyModal = function() {
             triggerHaptic(15);
             document.getElementById('privacyModal').classList.remove('active');
-        }
+        };
     </script>
 
     <!-- Firebase Engine & Native Auth Handlers -->
@@ -558,7 +541,6 @@
 
         let isProcessingAuth = false;
 
-        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -589,7 +571,6 @@
             }
         });
 
-        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
@@ -602,9 +583,6 @@
             }
         };
 
-        // =========================================================================
-        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
-        // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
@@ -612,14 +590,12 @@
             const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
-            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات الجهاز...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
             if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
                 try {
                     isProcessingAuth = true;
@@ -650,13 +626,10 @@
                 }
             }
 
-            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
                 showNativeToast("جاري فتح حسابات Google...");
-
                 window.initGoogleIdentity();
-
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
                         isProcessingAuth = false;
@@ -667,7 +640,6 @@
             }
         };
 
-        // استقبال توكن Google من نافذة الـ Bottom-Sheet والمزامنة الفورية
         window.handleGoogleIdentityCredential = async function(response) {
             if (!response || !response.credential) {
                 isProcessingAuth = false;
@@ -685,7 +657,6 @@
             }
         };
 
-        // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة الفورية
         async function processGoogleAccountData(user) {
             try {
                 let userEmail = (user.email || '').toLowerCase();
@@ -707,7 +678,6 @@
 
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
-                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
@@ -725,7 +695,6 @@
                     console.warn("Direct doc read warning:", snapErr);
                 }
 
-                // حفظ وتحديث بيانات الحساب فوراً على السحابة
                 await setDoc(userDocRef, {
                     name: finalUserName,
                     pin: "1234",
@@ -738,7 +707,6 @@
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
 
-                // حفظ الجلسة محلياً ورأسياً للدخول الفوري
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_offline_session', 'true');
@@ -756,7 +724,6 @@
             }
         }
 
-        // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
             triggerHaptic(30);
             clearAuthMsgs();
@@ -1072,4 +1039,4 @@
         };
     </script>
 </body>
-    </html>
+</html>

@@ -70,7 +70,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json المحلي (تشغيل التطبيق أوفلاين/محلياً دون الاعتماد على موقع ويب)
+          # 2. إعداد ملف capacitor.config.json المحلي
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -116,7 +116,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المخصص مع إضافة جافا بريدج لتمرير مصادقة جوجل
+          # 5. حقن ملف MainActivity.java المخصص وتسجيل إضافة GoogleAuth رسمياً
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -144,6 +144,7 @@ jobs:
           import androidx.core.content.ContextCompat;
 
           import com.getcapacitor.BridgeActivity;
+          import com.codetrixstudio.capacitor.GoogleAuth.GoogleAuth;
 
           import java.io.File;
           import java.io.FileOutputStream;
@@ -157,6 +158,9 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
+                  // تسجيل إضافة المصادقة الرسمية مع كاباسيتور
+                  registerPlugin(GoogleAuth.class);
 
                   WebView webView = this.bridge.getWebView();
 
@@ -248,17 +252,6 @@ jobs:
 
                   WebAppInterface(Context c) {
                       mContext = c;
-                  }
-
-                  @JavascriptInterface
-                  public void launchNativeGoogleSignIn() {
-                      runOnUiThread(() -> {
-                          try {
-                              Toast.makeText(mContext, "جاري فتح حسابات Google...", Toast.LENGTH_SHORT).show();
-                          } catch (Exception e) {
-                              e.printStackTrace();
-                          }
-                      });
                   }
 
                   @JavascriptInterface
@@ -434,7 +427,7 @@ jobs:
 
           # 9. نسخ ملف التوقيع
           HAS_KEYSTORE=false
-          if [ -f "signing.keystore" ]; then
+          if [ -f "signing.keystore" ]; me
             cp signing.keystore android/app/
             HAS_KEYSTORE=true
           fi
@@ -443,7 +436,7 @@ jobs:
           # 10. مزامنة Capacitor مع منصة أندرويد
           npx cap sync android
 
-          # 11. إضافة إعدادات التوقيع والإصدارات بنمط الإلحاق (>> ) للحفاظ على روابط كاباسيتور الأصلية
+          # 11. إضافة إعدادات التوقيع والإصدارات بنمط الإلحاق
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -475,7 +468,7 @@ jobs:
           }
           EOF
 
-          # 12. البناء بأمر موحد بدون Daemon وبدون Parallel لمنع قفل الملفات وحل خطأ JAR
+          # 12. البناء بأمر موحد بدون Daemon وبدون Parallel
           cd android
           chmod +x gradlew
 

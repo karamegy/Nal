@@ -50,7 +50,7 @@ public class MainActivity extends BridgeActivity {
     private static final int RC_SIGN_IN = 9001;
 
     private GoogleSignInClient mGoogleSignInClient;
-    private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-d50taduhav5jm03e992fhr9ndcra21ac.apps.googleusercontent.com";
+    private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
     // المتغيرات المؤقتة لإدارة استجابة الموقع الجغرافي
     private String pendingGeolocationOrigin;

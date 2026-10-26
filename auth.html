@@ -505,7 +505,6 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
-            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -604,19 +603,28 @@
         };
 
         // =========================================================================
-        // دالة الدخول بـ Google الشاملة والمطورة (Native + Web Fallback)
+        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
-            showNativeToast("جاري فتح حسابات Google...");
 
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
-            // 1. المحاولة الأولى: Capacitor GoogleAuth Native Plugin (خاص بالتطبيق على الموبايل)
-            if (Capacitor && Capacitor.isNativePlatform && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
+            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري فتح حسابات الجهاز...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
+            if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
                 try {
                     isProcessingAuth = true;
+                    showNativeToast("جاري فتح حسابات الجهاز...");
+                    
                     if (typeof Capacitor.Plugins.GoogleAuth.initialize === 'function') {
                         await Capacitor.Plugins.GoogleAuth.initialize({
                             clientId: CLIENT_ID,
@@ -633,36 +641,29 @@
                         const credential = GoogleAuthProvider.credential(idToken);
                         const result = await signInWithCredential(auth, credential);
                         await processGoogleAccountData(result.user);
-                        return; // نجاح التوثيق عبر الناتيف
+                        return;
                     }
                 } catch (nativeErr) {
-                    console.warn("⚠️ فشل التوثيق الأصلي عبر Capacitor، جاري الانتقال للتوثيق المباشر:", nativeErr);
                     isProcessingAuth = false;
+                    console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
+                    return;
                 }
             }
 
-            // 2. المحاولة الثانية: AndroidBridge المباشرة (إن وجد جسر ناتيف مخصص)
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 3. المحاولة الثالثة المضمونة 100%: Firebase Google Provider Popup (للويب والتطبيقات)
-            try {
-                isProcessingAuth = true;
-                const provider = new GoogleAuthProvider();
-                provider.addScope('profile');
-                provider.addScope('email');
-                
-                const result = await signInWithPopup(auth, provider);
-                await processGoogleAccountData(result.user);
-            } catch (webErr) {
+            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
+            if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
-                console.error("❌ خطأ في توثيق Google:", webErr);
-                if (webErr.code !== 'auth/popup_closed_by_user' && webErr.code !== 'auth/cancelled-popup-request') {
-                    showAuthMsg('error', 'فشل تسجيل الدخول بـ Google: ' + (webErr.message || webErr.code));
-                }
+                showNativeToast("جاري فتح حسابات Google...");
+
+                window.initGoogleIdentity();
+
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
+                        isProcessingAuth = false;
+                    }
+                });
+            } else {
+                showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
             }
         };
 
@@ -706,7 +707,7 @@
 
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
-                // التحقق السريع المباشر للحساب المحدد فقط
+                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
@@ -1071,4 +1072,4 @@
         };
     </script>
 </body>
-</html>
+    </html>

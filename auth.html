@@ -244,7 +244,7 @@
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- زر دخول بـ Google المعتمد ناتيف بالكامل بدون متصفح -->
+                <!-- زر دخول بـ Google المعتمد ناتيف بالكامل -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
@@ -557,24 +557,41 @@
 
         let isProcessingAuth = false;
 
+        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
+        window.initGoogleIdentity = function() {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: window.handleGoogleIdentityCredential,
+                    auto_select: false,
+                    cancel_on_tap_outside: true,
+                    context: 'signin'
+                });
+            }
+        };
+
+        if (document.readyState === 'complete') {
+            window.initGoogleIdentity();
+        } else {
+            window.addEventListener('load', window.initGoogleIdentity);
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (user && !user.isAnonymous && !isProcessingAuth) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const savedCompanyId = localStorage.getItem('eidco_current_company_id');
                 const redirectPage = urlParams.get('redirect') || 'index.html';
 
-                if (savedCompanyId) {
-                    sessionStorage.setItem('eidco_session_auth', 'true');
-                    localStorage.setItem('eidco_offline_session', 'true');
+                if (savedCompanyId && (sessionStorage.getItem('eidco_session_auth') || localStorage.getItem('eidco_offline_session'))) {
                     window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
                 }
             }
         });
 
-        // استقبال ה- Token المباشر من الأندرويد الناتيف
+        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
-                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
+                showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
                 const credential = GoogleAuthProvider.credential(idToken);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -585,7 +602,7 @@
         };
 
         // =========================================================================
-        // دالة الدخول المعتمدة لـ Google (تمنع فتح أي متصفح وتستدعي Native Shell فوراً)
+        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
@@ -596,14 +613,14 @@
             const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
-            // 1. الأولوية المطلقة: إذا كان التطبيق يعمل كـ APK أصلي عبر Android Bridge
+            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 showNativeToast("جاري فتح حسابات الجهاز...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
-            // 2. إذا كان التطبيق محزوماً عبر Capacitor على الأندرويد
+            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
             if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
                 try {
                     isProcessingAuth = true;
@@ -630,19 +647,16 @@
                 } catch (nativeErr) {
                     isProcessingAuth = false;
                     console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
-                    return; // إيقاف التنفيذ بدون فتح متصفح
+                    return;
                 }
             }
 
-            // 3. متصفحات الويب العادية (GIS One Tap / Floating Overlay داخل الشاشة بدون توجيه)
+            // 3. Google Identity Services (GIS Bottom-Sheet Overlay) الموضحة بالصورة
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = true;
-                window.google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: window.handleGoogleIdentityCredential,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
+                showNativeToast("جاري فتح حسابات Google...");
+
+                window.initGoogleIdentity();
 
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
@@ -650,14 +664,18 @@
                     }
                 });
             } else {
-                showNativeToast("⚠️ يرجى استخدام تطبيق الهاتف للحصول على الدخول المباشر");
+                showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
             }
         };
 
+        // استقبال توكن Google من نافذة الـ Bottom-Sheet
         window.handleGoogleIdentityCredential = async function(response) {
-            if (!response || !response.credential) return;
+            if (!response || !response.credential) {
+                isProcessingAuth = false;
+                return;
+            }
             try {
-                showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
+                showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
                 const credential = GoogleAuthProvider.credential(response.credential);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -666,6 +684,76 @@
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
+
+        // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة
+        async function processGoogleAccountData(user) {
+            try {
+                let userEmail = user.email || '';
+                let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
+                let userPhotoUrl = user.photoURL || '';
+
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
+
+                if (existingAccount && existingAccount.isBanned) {
+                    showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                    alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                    isProcessingAuth = false;
+                    return;
+                }
+
+                let assignedCompanyId;
+                let finalUserName;
+                let userRole = 'محاسب أول';
+
+                if (existingAccount) {
+                    finalUserName = existingAccount.name;
+                    assignedCompanyId = existingAccount.companyId;
+                    userRole = existingAccount.role || 'محاسب أول';
+                } else {
+                    finalUserName = userDisplayName;
+                    let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                    assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
+
+                    if (userEmail.toLowerCase() === 'haretg@gmail.com') {
+                        assignedCompanyId = 'company_founder_karm';
+                        finalUserName = FOUNDER_NAME;
+                        userRole = 'مدير نظام رئيسي';
+                    }
+
+                    // كتابة الحساب بجدول Firestore بالحقول المعتمدة
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
+                        name: finalUserName,
+                        pin: "1234",
+                        role: userRole,
+                        companyId: assignedCompanyId,
+                        email: userEmail,
+                        avatar: userPhotoUrl,
+                        biometricVerified: true,
+                        isBanned: false,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
+                }
+
+                // حفظ الجلسة محلياً وفي الـ Session للدخول المباشر
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', finalUserName);
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
+                showNativeToast("✓ تم تسجيل الدخول ومزامنة الجلسة بنجاح");
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+            } catch (err) {
+                isProcessingAuth = false;
+                showAuthMsg('error', 'خطأ في معالجة الحساب ومزامنة الجلسة: ' + err.message);
+            }
+        }
 
         // إنشاء وتنسيق حساب جديد
         window.createNewAccountProcess = async function() {
@@ -792,73 +880,6 @@
                 alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
-
-        async function processGoogleAccountData(user) {
-            try {
-                let userEmail = user.email || '';
-                let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
-                let userPhotoUrl = user.photoURL || '';
-
-                const querySnapshot = await getDocs(accountsRef);
-                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-
-                if (existingAccount && existingAccount.isBanned) {
-                    showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                    alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                    isProcessingAuth = false;
-                    return;
-                }
-
-                let assignedCompanyId;
-                let finalUserName;
-                let userRole = 'محاسب أول';
-
-                if (existingAccount) {
-                    finalUserName = existingAccount.name;
-                    assignedCompanyId = existingAccount.companyId;
-                    userRole = existingAccount.role || 'محاسب أول';
-                } else {
-                    finalUserName = userDisplayName;
-                    let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                    assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
-
-                    if (userEmail.toLowerCase() === 'haretg@gmail.com') {
-                        assignedCompanyId = 'company_founder_karm';
-                        finalUserName = FOUNDER_NAME;
-                        userRole = 'مدير نظام رئيسي';
-                    }
-
-                    await setDoc(doc(db, "accounts", assignedCompanyId), {
-                        name: finalUserName,
-                        pin: "1234",
-                        role: userRole,
-                        companyId: assignedCompanyId,
-                        email: userEmail,
-                        avatar: userPhotoUrl,
-                        biometricVerified: true,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
-                }
-
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_offline_session', 'true');
-                localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                showNativeToast("✓ تم تسجيل الدخول والمزامنة بنجاح");
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-            } catch (err) {
-                isProcessingAuth = false;
-                showAuthMsg('error', 'خطأ في معالجة الحساب: ' + err.message);
-            }
-        }
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);

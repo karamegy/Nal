@@ -47,11 +47,8 @@
             background-color: #020617 !important;
             color: #f8fafc;
             min-height: 100vh;
-            min-height: 100dvh;
             margin: 0;
-            padding: 0.25rem;
-            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
-            padding-top: env(safe-area-inset-top, 0px);
+            padding: 0.5rem;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -68,37 +65,54 @@
 
         .mono-font { font-family: 'JetBrains Mono', monospace; }
 
+        /* إطار التلفزيون المدمج */
         .real-tv-bezel {
             background: linear-gradient(145deg, #1e293b 0%, #090d16 100%);
-            box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8), 0 0 20px rgba(79, 70, 229, 0.15);
             border: 2px solid #1e293b;
             width: 100%;
+            max-width: 960px;
             box-sizing: border-box;
+            border-radius: 16px;
         }
 
         @media (min-width: 640px) {
-            .real-tv-bezel { border-width: 3px; }
+            .real-tv-bezel { 
+                border-width: 3px; 
+                border-radius: 28px; 
+            }
         }
 
+        /* تحديد ارتفاع الشاشة ليطابق التلفزيون الحقيقي بدون تمطيط طولي */
         .tv-screen-container {
             background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
             position: relative;
             touch-action: pan-y;
-            min-height: 45vh;
-            min-height: 45dvh;
-            max-height: none;
-            overflow-y: auto;
+            height: 320px; 
+            max-height: 52vh;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            border-radius: 12px;
         }
 
-        /* تحسين ملء الشاشات للهواتف والتلفزيونات عند النقر على التكبير */
+        @media (min-width: 640px) {
+            .tv-screen-container {
+                height: 480px;
+                max-height: none;
+                border-radius: 20px;
+            }
+        }
+
+        /* الوضع الملء الكامل */
         :fullscreen #realTvScreen,
         :-webkit-full-screen #realTvScreen {
             width: 100vw !important;
             height: 100vh !important;
             height: 100dvh !important;
+            max-height: none !important;
             border-radius: 0 !important;
             border: none !important;
             padding: 0 !important;
@@ -112,7 +126,7 @@
         .tv-glass-glare {
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 40%);
             pointer-events: none;
             z-index: 30;
         }
@@ -124,7 +138,7 @@
             background-size: 100% 4px;
             pointer-events: none;
             z-index: 25;
-            opacity: 0.15;
+            opacity: 0.12;
         }
 
         @keyframes tvMarquee {
@@ -149,9 +163,9 @@
             display: flex; 
             align-items: center; 
             gap: 12px; 
-            padding: 12px 16px; 
+            padding: 10px 14px; 
             border-radius: 12px; 
-            font-size: 0.875rem; 
+            font-size: 0.85rem; 
             font-weight: 700; 
             color: #94a3b8; 
             text-decoration: none; 
@@ -159,7 +173,7 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #312e81; color: #818cf8; }
 
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 
@@ -225,7 +239,7 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <nav class="space-y-1.5 flex-1">
+            <nav class="space-y-1 flex-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
@@ -248,105 +262,102 @@
 
     <!-- النافذة المنبثقة لرمز QR الخاص بالريموت -->
     <div id="tvQrModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl max-w-xs sm:max-w-sm w-full text-center space-y-3 shadow-2xl relative">
             <button onclick="window.toggleQrModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white text-lg cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
             <div class="space-y-1">
-                <div class="w-10 h-10 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto text-lg mb-2 border border-indigo-500/30">
+                <div class="w-9 h-9 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto text-base mb-1 border border-indigo-500/30">
                     <i class="fa-solid fa-qrcode"></i>
                 </div>
-                <h3 class="font-black text-white text-base">امسح الرمز للتحكم بالموبايل</h3>
-                <p class="text-xs text-slate-400">افتح كاميرا الهاتف للربط المباشر مع الشاشة</p>
+                <h3 class="font-black text-white text-sm">امسح الرمز للتحكم بالموبايل</h3>
+                <p class="text-[11px] text-slate-400">افتح كاميرا الهاتف للربط المباشر مع الشاشة</p>
             </div>
-            <div class="bg-white p-3 sm:p-4 rounded-2xl inline-block shadow-inner mx-auto">
-                <img id="tvQrImage" src="" alt="Remote QR Code" class="w-36 h-36 sm:w-44 sm:h-44 mx-auto">
+            <div class="bg-white p-2.5 rounded-2xl inline-block shadow-inner mx-auto">
+                <img id="tvQrImage" src="" alt="Remote QR Code" class="w-32 h-32 sm:w-40 sm:h-40 mx-auto">
             </div>
-            <div class="text-[10px] sm:text-[11px] text-indigo-400 font-mono font-bold truncate dir-ltr text-center px-2" id="tvQrUrlText"></div>
+            <div class="text-[10px] text-indigo-400 font-mono font-bold truncate dir-ltr text-center px-2" id="tvQrUrlText"></div>
         </div>
     </div>
 
-    <div class="w-full max-w-6xl mx-auto relative flex flex-col min-h-0 flex-1">
+    <div class="w-full max-w-4xl mx-auto relative flex flex-col">
         <!-- هالة الضوء Ambient Glow -->
-        <div id="tvAmbilight" class="absolute -inset-4 sm:-inset-6 bg-indigo-600/30 blur-2xl sm:blur-3xl rounded-3xl transition-all duration-500 opacity-90 pointer-events-none"></div>
+        <div id="tvAmbilight" class="absolute -inset-2 sm:-inset-4 bg-indigo-600/25 blur-xl sm:blur-2xl rounded-2xl transition-all duration-500 opacity-90 pointer-events-none"></div>
 
         <!-- إطار التلفزيون المعدني -->
-        <div class="real-tv-bezel p-1.5 sm:p-5 rounded-[16px] sm:rounded-[32px] relative overflow-hidden flex flex-col flex-1">
+        <div class="real-tv-bezel p-1.5 sm:p-3 relative overflow-hidden flex flex-col">
             
             <!-- شاشة التلفزيون OLED -->
-            <div id="realTvScreen" class="tv-screen-container relative rounded-xl sm:rounded-2xl flex flex-col justify-between overflow-hidden border border-slate-800/80 shadow-2xl flex-1">
+            <div id="realTvScreen" class="tv-screen-container relative border border-slate-800/80 shadow-2xl">
                 
                 <div class="tv-glass-glare"></div>
                 <div class="tv-scanlines"></div>
 
                 <!-- شاشة التوقف Standby -->
                 <div id="tvOffOverlay" class="hidden absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center text-slate-600 font-mono p-4 text-center">
-                    <i class="fa-solid fa-power-off text-5xl sm:text-7xl mb-3 sm:mb-4 text-rose-900/60 animate-pulse"></i>
-                    <span class="text-xs sm:text-sm tracking-widest uppercase text-slate-400 font-bold">EIDCO OLED 4K • STANDBY MODE</span>
-                    <span class="text-[10px] sm:text-[11px] text-slate-600 mt-2">اضغط على زر Power لتشغيل البث</span>
+                    <i class="fa-solid fa-power-off text-4xl sm:text-6xl mb-2 sm:mb-3 text-rose-900/60 animate-pulse"></i>
+                    <span class="text-[11px] sm:text-xs tracking-widest uppercase text-slate-400 font-bold">EIDCO OLED 4K • STANDBY MODE</span>
+                    <span class="text-[9px] sm:text-[10px] text-slate-600 mt-1">اضغط على زر Power لتشغيل البث</span>
                 </div>
 
                 <!-- OSD شريط معلومات القناة -->
-                <div id="tvOsdBanner" class="absolute top-2 right-2 sm:top-5 sm:right-5 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-3 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl text-xs flex items-center gap-2 sm:gap-4 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2 max-w-[90%]">
-                    <span class="bg-indigo-600 text-white font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl mono-font text-[10px] sm:text-xs shrink-0" id="osdChNum">CH 01</span>
+                <div id="tvOsdBanner" class="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 bg-slate-900/95 border border-slate-700/80 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-[11px] flex items-center gap-2 backdrop-blur-md shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2 max-w-[90%]">
+                    <span class="bg-indigo-600 text-white font-black px-1.5 py-0.5 rounded-md mono-font text-[9px] sm:text-xs shrink-0" id="osdChNum">CH 01</span>
                     <div class="truncate">
-                        <div class="font-black text-slate-100 text-xs sm:text-sm truncate" id="osdChTitle">قناة المؤشرات الشاملة</div>
-                        <div class="text-[9px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5 truncate">
+                        <div class="font-black text-slate-100 text-xs truncate" id="osdChTitle">قناة المؤشرات الشاملة</div>
+                        <div class="text-[9px] text-slate-400 font-mono flex items-center gap-1 mt-0.5 truncate">
                             <span>3840x2160 @ 60fps</span> • <span class="text-emerald-400">HDR10+ LIVE</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- هيدر البث العلوي والمتجاوب -->
-                <div class="p-2 sm:p-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent shrink-0">
-                    <div class="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <button onclick="toggleMobileMenu()" class="w-8 h-8 sm:w-9 sm:h-9 bg-slate-800 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95 transition-transform">
-                                <i class="fa-solid fa-bars text-xs sm:text-sm"></i>
-                            </button>
-                            <div class="flex items-center gap-1.5 sm:gap-2 bg-rose-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-black shadow-lg shadow-rose-900/40 border border-rose-400/30">
-                                <i class="fa-solid fa-circle text-[6px] sm:text-[8px] animate-ping"></i>
-                                <span>EIDCO 4K</span>
-                            </div>
+                <!-- هيدر البث العلوي -->
+                <div class="p-1.5 sm:p-2.5 flex items-center justify-between gap-1.5 relative z-20 border-b border-slate-800/60 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent shrink-0">
+                    <div class="flex items-center gap-1.5 truncate">
+                        <button onclick="toggleMobileMenu()" class="w-7 h-7 sm:w-8 sm:h-8 bg-slate-800 text-indigo-400 rounded-lg flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95 transition-transform shrink-0">
+                            <i class="fa-solid fa-bars text-xs"></i>
+                        </button>
+                        <div class="flex items-center gap-1 bg-rose-600 text-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-xs font-black shadow-md border border-rose-400/30 shrink-0">
+                            <i class="fa-solid fa-circle text-[5px] sm:text-[7px] animate-ping"></i>
+                            <span>4K LIVE</span>
                         </div>
-                        <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-mono font-bold truncate max-w-[130px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
+                        <span id="companyBadgeDisplay" class="bg-indigo-950/80 text-indigo-300 border border-indigo-800/80 px-1.5 py-0.5 rounded-md text-[8px] sm:text-[10px] font-mono font-bold truncate max-w-[110px] sm:max-w-none">معرف: جاري التحميل...</span>
                     </div>
 
                     <!-- أزرار التحكم بالشاشة -->
-                    <div class="flex items-center justify-end gap-1 sm:gap-1.5 flex-wrap">
-                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition border border-indigo-700 flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm" title="نطق معلومات الشاشة الحالية بصوت واضح">
-                            <i class="fa-solid fa-microphone-lines text-cyan-400"></i> <span class="hidden md:inline">انطق الشاشة</span>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="window.speakCurrentScreenInfo()" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] sm:text-xs font-bold transition border border-indigo-700 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm" title="نطق معلومات الشاشة الحالية">
+                            <i class="fa-solid fa-microphone-lines text-cyan-400"></i>
                         </button>
-                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition border border-slate-700 flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm" title="تفعيل/إيقاف الإعلان الصوتي الفوري">
-                            <i class="fa-solid fa-bullhorn text-amber-400" id="tvSpeechIcon"></i> <span class="hidden md:inline">الناطق الفوري</span>
+                        <button onclick="window.toggleSpeechAnnouncer()" id="tvSpeechBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] sm:text-xs font-bold transition border border-slate-700 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm" title="الناطق الفوري">
+                            <i class="fa-solid fa-bullhorn text-amber-400" id="tvSpeechIcon"></i>
                         </button>
-                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="كتم / تشغيل أصوات التنبيه">
+                        <button onclick="window.toggleTvAudio()" id="tvMuteBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="كتم / تشغيل أصوات التنبيه">
                             <i class="fa-solid fa-volume-high text-emerald-400" id="tvMuteIcon"></i>
                         </button>
-                        <!-- زر التكبير والتصغير المحسّن للموبايل -->
-                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="ملء / تصغير الشاشة">
+                        <button onclick="window.toggleTvFullscreen()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs flex items-center justify-center transition border border-slate-700 cursor-pointer active:scale-95 shadow-sm" title="ملء / تصغير الشاشة">
                             <i class="fa-solid fa-expand text-indigo-400" id="tvFullscreenIcon"></i>
                         </button>
-                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95 shadow-sm" title="تشغيل / إطفاء">
+                        <button onclick="window.toggleTvPower()" class="bg-rose-600/80 hover:bg-rose-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs flex items-center justify-center transition border border-rose-500 cursor-pointer active:scale-95 shadow-sm" title="تشغيل / إطفاء">
                             <i class="fa-solid fa-power-off"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- منطقة البث الرئيسية السلسة والمتجاوبة -->
-                <div id="realTvContent" class="p-2.5 sm:p-6 relative z-20 flex-1 flex flex-col justify-start overflow-y-auto transition-all duration-300 select-none min-h-0 space-y-3">
+                <!-- منطقة البث الرئيسية المتناسقة -->
+                <div id="realTvContent" class="p-2 sm:p-4 relative z-20 flex-1 flex flex-col justify-start overflow-y-auto transition-all duration-300 select-none space-y-2 min-h-0">
                     <!-- يتم دفق المحتوى عبر JS -->
                 </div>
 
                 <!-- شريط الأخبار السفلي العاجل -->
                 <div class="relative z-20 bg-slate-950/95 border-t border-slate-800/80 shrink-0">
-                    <div class="flex items-stretch text-xs">
-                        <div class="bg-indigo-600 text-white font-black px-2 py-1.5 sm:px-5 sm:py-3 flex items-center gap-1 sm:gap-2 shrink-0 shadow-lg text-[10px] sm:text-xs">
+                    <div class="flex items-stretch text-[11px]">
+                        <div class="bg-indigo-600 text-white font-black px-1.5 py-1 sm:px-3 sm:py-1.5 flex items-center gap-1 shrink-0 shadow-lg text-[9px] sm:text-xs">
                             <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
-                            <span class="hidden sm:inline">عاجل</span> EIDCO
+                            <span>EIDCO</span>
                         </div>
-                        <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-2 sm:px-3 font-bold">
-                            <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-5 sm:gap-8 text-[10px] sm:text-xs">
+                        <div class="overflow-hidden flex-1 bg-slate-900/90 text-slate-200 flex items-center px-2 font-bold">
+                            <div id="tvLowerTicker" class="whitespace-nowrap animate-tv-marquee flex items-center gap-4 sm:gap-6 text-[9px] sm:text-xs">
                                 <span>📊 دفق البيانات السحابية المعزولة متصل ومستقر 100%</span>
                                 <span>✦</span>
                                 <span>🧾 جدول المؤشرات المباشر يعكس رصيد الخزنة والمبيعات</span>
@@ -354,7 +365,7 @@
                                 <span>👤 الملف الشخصي للشركة والبروفايل مسجل سحابياً</span>
                             </div>
                         </div>
-                        <div class="bg-slate-950 px-2 sm:px-4 py-1.5 sm:py-2 text-slate-400 font-mono text-[9px] sm:text-xs flex items-center gap-1 sm:gap-2 border-r border-slate-800 shrink-0">
+                        <div class="bg-slate-950 px-1.5 sm:px-3 py-1 text-slate-400 font-mono text-[8px] sm:text-[10px] flex items-center gap-1 border-r border-slate-800 shrink-0">
                             <i class="fa-solid fa-clock text-indigo-400"></i>
                             <span id="tvLiveClockText">--:--:--</span>
                         </div>
@@ -364,53 +375,52 @@
             </div>
 
             <!-- حافة التلفزيون السفلى -->
-            <div class="flex justify-between items-center px-2 sm:px-3 pt-2 pb-0.5 text-slate-500 text-[10px] shrink-0">
-                <div class="flex items-center gap-1.5 sm:gap-2">
-                    <span id="tvPowerLed" class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all"></span>
-                    <span class="font-mono text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-widest" id="tvLedText">POWER ON</span>
+            <div class="flex justify-between items-center px-1.5 sm:px-3 pt-1 pb-0.5 text-slate-500 text-[9px] shrink-0">
+                <div class="flex items-center gap-1">
+                    <span id="tvPowerLed" class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] transition-all"></span>
+                    <span class="font-mono text-[7px] sm:text-[8px] text-slate-400 uppercase tracking-wider" id="tvLedText">POWER ON</span>
                 </div>
-                <div class="font-black tracking-[0.2em] sm:tracking-[0.25em] text-slate-300 text-[10px] sm:text-xs uppercase font-mono">
-                    EIDCO <span class="text-indigo-500">OLED</span> 4K PRO
+                <div class="font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-300 text-[8px] sm:text-[10px] uppercase font-mono">
+                    EIDCO <span class="text-indigo-500">OLED</span> 4K MINI
                 </div>
-                <div class="text-[8px] sm:text-[9px] font-mono text-slate-500">BROADCAST OS v14.0</div>
+                <div class="text-[7px] sm:text-[8px] font-mono text-slate-500">BROADCAST OS</div>
             </div>
         </div>
 
-        <!-- الريموت الكنترول وشريط التحكم المحسّن للتمرير الأفقي والموبايل -->
-        <div id="tvRemoteControlBar" class="mt-2 sm:mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-slate-900/90 backdrop-blur-md p-2 sm:p-3.5 rounded-2xl border border-slate-800 shadow-2xl transition-all duration-300 shrink-0">
-            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto">
-                <span class="text-xs font-bold text-slate-300 flex items-center gap-1 shrink-0 ml-1 hidden lg:flex">
-                    <i class="fa-solid fa-gamepad text-indigo-400 text-sm"></i> القنوات:
-                </span>
-                <button onclick="window.switchTvChannel('metrics')" id="remoteCh1" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-indigo-800 px-1 py-0.5 rounded">CH 1</span> المؤشرات
+        <!-- الريموت الكنترول وشريط التحكم المصغر للموبايل -->
+        <div id="tvRemoteControlBar" class="mt-2 w-full flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-2 rounded-xl border border-slate-800 shadow-xl shrink-0">
+            <!-- شريط القنوات الأفقي -->
+            <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 w-full">
+                <button onclick="window.switchTvChannel('metrics')" id="remoteCh1" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-indigo-600 text-white shadow transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-indigo-800 px-1 py-0.5 rounded">CH 1</span> المؤشرات
                 </button>
-                <button onclick="window.switchTvChannel('invoices')" id="remoteCh2" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded">CH 2</span> الفواتير
+                <button onclick="window.switchTvChannel('invoices')" id="remoteCh2" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded">CH 2</span> الفواتير
                 </button>
-                <button onclick="window.switchTvChannel('inventory')" id="remoteCh3" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded">CH 3</span> المخزن
+                <button onclick="window.switchTvChannel('inventory')" id="remoteCh3" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded">CH 3</span> المخزن
                 </button>
-                <button onclick="window.switchTvChannel('fleet')" id="remoteCh4" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded">CH 4</span> الأسطول
+                <button onclick="window.switchTvChannel('fleet')" id="remoteCh4" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded">CH 4</span> الأسطول
                 </button>
-                <button onclick="window.switchTvChannel('clients')" id="remoteCh5" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded">CH 5</span> العملاء
+                <button onclick="window.switchTvChannel('clients')" id="remoteCh5" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded">CH 5</span> العملاء
                 </button>
-                <button onclick="window.switchTvChannel('profile')" id="remoteCh6" class="px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
-                    <span class="font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded">CH 6</span> البروفايل
+                <button onclick="window.switchTvChannel('profile')" id="remoteCh6" class="px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0">
+                    <span class="font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded">CH 6</span> البروفايل
                 </button>
             </div>
 
-            <div class="flex items-center justify-between sm:justify-end gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                <button onclick="window.toggleQrModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center" title="إظهار QR للتحكم بالهاتف">
-                    <i class="fa-solid fa-qrcode ml-1"></i> QR الريموت
+            <!-- أزرار التحكم المصغرة -->
+            <div class="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-800/80">
+                <button onclick="window.toggleQrModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95" title="إظهار QR للتحكم بالهاتف">
+                    <i class="fa-solid fa-qrcode"></i> QR الريموت
                 </button>
-                <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center">
-                    <i class="fa-solid fa-rotate ml-1"></i> دائرى (5s)
+                <button onclick="window.toggleTvAutoSlide()" id="tvAutoSlideBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-rotate"></i> دائرى (5s)
                 </button>
-                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition border border-slate-700 cursor-pointer hidden sm:block active:scale-95" title="إخفاء لوحة التحكم للتعليق الجداري">
-                    <i class="fa-solid fa-tv ml-1"></i> جداري
+                <button onclick="window.toggleWallMode()" id="wallModeBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition border border-slate-700 cursor-pointer hidden sm:block active:scale-95" title="إخفاء لوحة التحكم للتعليق الجداري">
+                    <i class="fa-solid fa-tv"></i> جداري
                 </button>
             </div>
         </div>
@@ -427,7 +437,7 @@
 
             const badgeEl = document.getElementById('companyBadgeDisplay');
             if(badgeEl) {
-                badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
+                badgeEl.innerText = `معرف: ${currentCompanyId}`;
             }
 
             document.querySelectorAll('a[href]').forEach(link => {
@@ -507,7 +517,7 @@
         function handleSwipeGesture() {
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
-            if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY)) {
+            if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
                 const channels = ['metrics', 'invoices', 'inventory', 'fleet', 'clients', 'profile'];
                 let currentIdx = channels.indexOf(currentTvChannel);
                 if (diffX < 0) {
@@ -598,9 +608,9 @@
 
             let textToSpeak = "";
             if (currentTvChannel === 'metrics') {
-                textToSpeak = `قناة المؤشرات الشاملة. رصيد الخزنة، إجمالي المبيعات، والأرباح معروضة مباشرة.`;
+                textToSpeak = `قناة المؤشرات الشاملة. رصيد الخزنة والمبيعات والأرباح معروضة مباشرة.`;
             } else if (currentTvChannel === 'invoices') {
-                textToSpeak = `قناة الفواتير والمبيعات. إجمالي الفواتير الفردية والمجمعة مسجلة سحابياً.`;
+                textToSpeak = `قناة الفواتير والمبيعات. إجمالي الفواتير الفردية والمجمعة.`;
             } else if (currentTvChannel === 'inventory') {
                 textToSpeak = `قناة المخزن والأصناف. عدد الأصناف المسجلة ${state.products.length} صنف.`;
             } else if (currentTvChannel === 'fleet') {
@@ -668,43 +678,43 @@
                 let totalProfit = state.invoices.reduce((s,i) => s + Number(i.profit || 0), 0);
 
                 screen.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-chart-pie text-indigo-400"></i> المؤشرات الرئيسية المباشرة</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">EIDCO OS v14</span>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[11px] font-black text-indigo-300 border-b border-slate-800 pb-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-chart-pie text-indigo-400"></i> المؤشرات المباشرة</span>
+                            <span class="text-[8px] text-slate-400 font-mono">EIDCO v14</span>
                         </div>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                            <div class="bg-indigo-950/85 border border-indigo-800/80 p-2.5 sm:p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-indigo-300 text-[10px] sm:text-xs font-bold">
-                                    <span class="flex items-center gap-1"><i class="fa-solid fa-vault text-indigo-400"></i> رصيد الخزنة</span>
-                                    <span class="text-[8px] bg-indigo-900/80 px-1 py-0.5 rounded text-indigo-300 font-mono">LIVE</span>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div class="bg-indigo-950/85 border border-indigo-800/80 p-2 rounded-xl space-y-0.5">
+                                <div class="flex items-center justify-between text-indigo-300 text-[9px] font-bold">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-vault text-indigo-400"></i> الخزنة</span>
+                                    <span class="text-[7px] bg-indigo-900/80 px-1 rounded text-indigo-300 font-mono">LIVE</span>
                                 </div>
-                                <div class="text-sm sm:text-xl font-black text-white mono-font pt-0.5">${vault.toLocaleString()} ج.م</div>
-                                <div class="text-[9px] text-slate-400 truncate">رصيد الخزنة السحابي</div>
+                                <div class="text-xs sm:text-base font-black text-white mono-font">${vault.toLocaleString()} ج.م</div>
+                                <div class="text-[8px] text-slate-400 truncate">رصيد الخزنة السحابي</div>
                             </div>
-                            <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-cyan-300 text-[10px] sm:text-xs font-bold">
-                                    <span class="flex items-center gap-1"><i class="fa-solid fa-cart-shopping text-cyan-400"></i> إجمالي المبيعات</span>
-                                    <span class="text-[8px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 font-mono">TOTAL</span>
+                            <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl space-y-0.5">
+                                <div class="flex items-center justify-between text-cyan-300 text-[9px] font-bold">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-cart-shopping text-cyan-400"></i> المبيعات</span>
+                                    <span class="text-[7px] bg-slate-800 px-1 rounded text-slate-400 font-mono">TOTAL</span>
                                 </div>
-                                <div class="text-sm sm:text-xl font-black text-cyan-400 mono-font pt-0.5">${totalSales.toLocaleString()} ج.م</div>
-                                <div class="text-[9px] text-slate-400 truncate">إجمالي المبيعات</div>
+                                <div class="text-xs sm:text-base font-black text-cyan-400 mono-font">${totalSales.toLocaleString()} ج.م</div>
+                                <div class="text-[8px] text-slate-400 truncate">إجمالي المبيعات</div>
                             </div>
-                            <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-emerald-300 text-[10px] sm:text-xs font-bold">
-                                    <span class="flex items-center gap-1"><i class="fa-solid fa-chart-line text-emerald-400"></i> صافي الأرباح</span>
-                                    <span class="text-[8px] bg-emerald-950 px-1 py-0.5 rounded text-emerald-400 font-mono">NET</span>
+                            <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl space-y-0.5">
+                                <div class="flex items-center justify-between text-emerald-300 text-[9px] font-bold">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-chart-line text-emerald-400"></i> الأرباح</span>
+                                    <span class="text-[7px] bg-emerald-950 px-1 rounded text-emerald-400 font-mono">NET</span>
                                 </div>
-                                <div class="text-sm sm:text-xl font-black text-emerald-400 mono-font pt-0.5">${totalProfit.toLocaleString()} ج.م</div>
-                                <div class="text-[9px] text-slate-400 truncate">صافي الأرباح المحققة</div>
+                                <div class="text-xs sm:text-base font-black text-emerald-400 mono-font">${totalProfit.toLocaleString()} ج.م</div>
+                                <div class="text-[8px] text-slate-400 truncate">صافي الأرباح</div>
                             </div>
-                            <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl shadow-lg space-y-1">
-                                <div class="flex items-center justify-between text-purple-300 text-[10px] sm:text-xs font-bold">
-                                    <span class="flex items-center gap-1"><i class="fa-solid fa-building-user text-purple-400"></i> العملاء والشركات</span>
-                                    <span class="text-[8px] bg-purple-950 px-1 py-0.5 rounded text-purple-300 font-mono">CLIENTS</span>
+                            <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl space-y-0.5">
+                                <div class="flex items-center justify-between text-purple-300 text-[9px] font-bold">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-building-user text-purple-400"></i> العملاء</span>
+                                    <span class="text-[7px] bg-purple-950 px-1 rounded text-purple-300 font-mono">CLIENTS</span>
                                 </div>
-                                <div class="text-sm sm:text-xl font-black text-purple-400 mono-font pt-0.5">${state.clients.length} جهة</div>
-                                <div class="text-[9px] text-slate-400 truncate">العملاء والجهات</div>
+                                <div class="text-xs sm:text-base font-black text-purple-400 mono-font">${state.clients.length} جهة</div>
+                                <div class="text-[8px] text-slate-400 truncate">العملاء والجهات</div>
                             </div>
                         </div>
                     </div>
@@ -712,110 +722,106 @@
             } else if(currentTvChannel === 'invoices') {
                 let recentInv = state.invoices.slice(-3).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-xs font-black text-indigo-300 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-receipt text-amber-400"></i> الفواتير الفردية والمجمعة</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">فردية: ${state.invoices.length} | مجمعة: ${state.batch_invoices.length}</span>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[11px] font-black text-indigo-300 border-b border-slate-800 pb-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-receipt text-amber-400"></i> الفواتير</span>
+                            <span class="text-[8px] text-slate-400 font-mono">فردية: ${state.invoices.length}</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             ${recentInv.map(i => `
-                                <div class="bg-slate-900/90 border border-slate-700/70 p-2.5 sm:p-3.5 rounded-2xl space-y-1.5 shadow-xl">
+                                <div class="bg-slate-900/90 border border-slate-700/70 p-2 rounded-xl space-y-0.5 shadow">
                                     <div class="flex justify-between items-center">
-                                        <span class="mono-font text-amber-400 font-bold text-xs">#${i.invoiceNumber || i.id || 'INV'}</span>
-                                        <span class="text-[9px] text-slate-400">${i.date || 'اليوم'}</span>
+                                        <span class="mono-font text-amber-400 font-bold text-[9px]">#${i.invoiceNumber || i.id || 'INV'}</span>
+                                        <span class="text-[8px] text-slate-400">${i.date || 'اليوم'}</span>
                                     </div>
-                                    <div class="text-xs font-black text-slate-100 truncate">${i.clientName || i.client || 'عميل نقدي'}</div>
-                                    <div class="flex justify-between items-end pt-1 border-t border-slate-800 text-xs">
+                                    <div class="text-[10px] font-black text-slate-100 truncate">${i.clientName || i.client || 'عميل نقدي'}</div>
+                                    <div class="flex justify-between items-end pt-1 border-t border-slate-800 text-[9px]">
                                         <span class="text-indigo-400 font-black mono-font">${Number(i.totalAmount || i.total || 0).toLocaleString()} ج.م</span>
-                                        <span class="text-emerald-400 font-bold text-[9px]">فردية</span>
+                                        <span class="text-emerald-400 font-bold text-[7px]">فردية</span>
                                     </div>
                                 </div>
-                            `).join('') || '<div class="col-span-3 text-center text-slate-500 py-4 text-xs font-bold">لا توجد فواتير فردية بعد</div>'}
+                            `).join('') || '<div class="col-span-2 text-center text-slate-500 py-3 text-xs font-bold">لا توجد فواتير بعد</div>'}
                         </div>
                     </div>
                 `;
             } else if (currentTvChannel === 'inventory') {
                 let recentProds = state.products.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-xs font-black text-cyan-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف المسجلة سحابياً</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">إجمالي الأصناف: ${state.products.length}</span>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[11px] font-black text-cyan-400 border-b border-slate-800 pb-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-boxes-stacked"></i> الأصناف والمخزن</span>
+                            <span class="text-[8px] text-slate-400 font-mono">الأصناف: ${state.products.length}</span>
                         </div>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                        <div class="grid grid-cols-2 gap-1.5">
                             ${recentProds.map(p => `
-                                <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl space-y-1 shadow">
-                                    <div class="text-xs font-black text-white truncate">${p.name || p.productName || 'صنف'}</div>
-                                    <div class="text-[10px] text-indigo-400 font-mono">السعر: ${p.price || p.sellPrice || 0} ج.م</div>
-                                    <div class="text-[9px] text-emerald-400 font-bold">المخزون: ${p.stock || p.quantity || 0} وحدة</div>
+                                <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl space-y-0.5 shadow">
+                                    <div class="text-[10px] font-black text-white truncate">${p.name || p.productName || 'صنف'}</div>
+                                    <div class="text-[8px] text-indigo-400 font-mono">السعر: ${p.price || p.sellPrice || 0} ج.م</div>
+                                    <div class="text-[7px] text-emerald-400 font-bold">المخزون: ${p.stock || p.quantity || 0}</div>
                                 </div>
-                            `).join('') || '<div class="col-span-4 text-center text-slate-500 py-4 text-xs font-bold">لا توجد أصناف مخزنية مسجلة</div>'}
+                            `).join('') || '<div class="col-span-2 text-center text-slate-500 py-3 text-xs font-bold">لا توجد أصناف</div>'}
                         </div>
                     </div>
                 `;
             } else if (currentTvChannel === 'fleet') {
                 let recentFleet = state.fleet.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-xs font-black text-purple-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-map-location-dot"></i> أسطول النقل والشحنات اللوجستية (GPS)</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">المواقع النشطة: ${state.fleet.length}</span>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[11px] font-black text-purple-400 border-b border-slate-800 pb-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-map-location-dot"></i> أسطول GPS</span>
+                            <span class="text-[8px] text-slate-400 font-mono">نشط: ${state.fleet.length}</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             ${recentFleet.map(f => `
-                                <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl flex items-center justify-between shadow">
-                                    <div class="truncate pl-2">
-                                        <div class="text-xs font-black text-white truncate">${f.driverName || f.vehicleName || 'مركبة الأسطول'}</div>
-                                        <div class="text-[9px] text-slate-400 mt-0.5 truncate">${f.location || f.address || 'جارِ التتبع...'}</div>
+                                <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl flex items-center justify-between shadow">
+                                    <div class="truncate pl-1">
+                                        <div class="text-[10px] font-black text-white truncate">${f.driverName || f.vehicleName || 'مركبة الأسطول'}</div>
+                                        <div class="text-[8px] text-slate-400 truncate">${f.location || f.address || 'تتبع GPS...'}</div>
                                     </div>
-                                    <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-xl text-[9px] font-bold shrink-0">متصل GPS</span>
+                                    <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-1 py-0.5 rounded-md text-[7px] font-bold shrink-0">GPS</span>
                                 </div>
-                            `).join('') || '<div class="col-span-2 text-center text-slate-500 py-4 text-xs font-bold">لا توجد مواقع أسطول مسجلة حالياً</div>'}
+                            `).join('') || '<div class="col-span-2 text-center text-slate-500 py-3 text-xs font-bold">لا توجد مركبات</div>'}
                         </div>
                     </div>
                 `;
             } else if (currentTvChannel === 'clients') {
                 let recentClients = state.clients.slice(-4).reverse();
                 screen.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-xs font-black text-amber-400 border-b border-slate-800 pb-2">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-building-user"></i> حسابات العملاء وجهات العمل</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">إجمالي العملاء: ${state.clients.length}</span>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[11px] font-black text-amber-400 border-b border-slate-800 pb-1">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-building-user"></i> العملاء</span>
+                            <span class="text-[8px] text-slate-400 font-mono">العملاء: ${state.clients.length}</span>
                         </div>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                        <div class="grid grid-cols-2 gap-1.5">
                             ${recentClients.map(c => `
-                                <div class="bg-slate-900/90 border border-slate-800 p-2.5 sm:p-3.5 rounded-2xl space-y-1">
-                                    <div class="text-xs font-black text-white truncate">${c.name || c.clientName || 'عميل'}</div>
-                                    <div class="text-[9px] text-indigo-300 font-mono truncate">${c.phone || c.mobile || 'بدون هاتف'}</div>
-                                    <div class="text-[9px] text-emerald-400">حساب سحابي</div>
+                                <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl space-y-0.5">
+                                    <div class="text-[10px] font-black text-white truncate">${c.name || c.clientName || 'عميل'}</div>
+                                    <div class="text-[8px] text-indigo-300 font-mono truncate">${c.phone || c.mobile || 'بدون هاتف'}</div>
+                                    <div class="text-[7px] text-emerald-400">نشط سحابياً</div>
                                 </div>
-                            `).join('') || '<div class="col-span-4 text-center text-slate-500 py-4 text-xs font-bold">لا توجد جهات عملاء مسجلة</div>'}
+                            `).join('') || '<div class="col-span-2 text-center text-slate-500 py-3 text-xs font-bold">لا يوجد عملاء</div>'}
                         </div>
                     </div>
                 `;
             } else if (currentTvChannel === 'profile') {
                 let acc = state.account || {};
-                let name = acc.name || localStorage.getItem('eidco_v14_admin') || 'إدارة النظام';
+                let name = acc.name || localStorage.getItem('eidco_v14_admin') || 'مستخدم الهاتف (9799)';
                 let avatar = acc.avatar || '';
-                let role = acc.role || 'مدير النظام التنفيذي';
-                let phone = acc.phone || 'غير مسجل';
+                let role = acc.role || 'مدير نظام رئيسي';
+                let phone = acc.phone || '+201114099799';
 
                 screen.innerHTML = `
-                    <div class="space-y-3 text-center max-w-lg mx-auto w-full">
-                        <div class="flex justify-between items-center text-xs font-black text-indigo-400 border-b border-slate-800 pb-2 text-right w-full">
-                            <span class="flex items-center gap-2 text-xs sm:text-sm"><i class="fa-solid fa-id-badge"></i> الملف الشخصي والحساب</span>
-                            <span class="text-[9px] sm:text-[11px] text-slate-400 font-mono">معزول ومزامن</span>
-                        </div>
-                        <div class="bg-slate-900/90 border border-slate-800 p-3.5 sm:p-6 rounded-3xl space-y-2 sm:space-y-3 shadow-2xl flex flex-col items-center">
-                            <div class="w-12 h-12 sm:w-24 sm:h-24 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base sm:text-3xl shadow-xl ring-4 ring-indigo-500/30 overflow-hidden">
+                    <div class="h-full flex flex-col justify-center items-center p-1">
+                        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl w-full max-w-xs text-center space-y-2 shadow-xl">
+                            <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-base mx-auto shadow-md ring-2 ring-indigo-500/30 overflow-hidden">
                                 ${avatar ? `<img src="${avatar}" class="w-full h-full object-cover">` : name.charAt(0)}
                             </div>
-                            <div class="space-y-0.5 sm:space-y-1">
-                                <h3 class="font-black text-xs sm:text-lg text-white">${name}</h3>
-                                <p class="text-[10px] sm:text-xs text-indigo-400 font-bold">${role}</p>
-                                <p class="text-[9px] sm:text-[11px] text-slate-400 font-mono mt-0.5">معرف الشركة: ${currentCompanyId}</p>
+                            <div>
+                                <h3 class="font-black text-xs text-white">${name}</h3>
+                                <p class="text-[10px] text-indigo-400 font-bold">${role}</p>
+                                <p class="text-[8px] text-slate-400 font-mono mt-0.5">معرف الشركة: ${currentCompanyId}</p>
                             </div>
-                            <div class="w-full pt-2 sm:pt-3 border-t border-slate-800/80 flex justify-around text-[10px] sm:text-xs text-slate-300 font-mono flex-wrap gap-1.5">
+                            <div class="pt-2 border-t border-slate-800/80 flex justify-around text-[9px] text-slate-300 font-mono">
                                 <span>📞 الهاتف: ${phone}</span>
                                 <span class="text-emerald-400 font-bold">● متصل سحابياً</span>
                             </div>
@@ -826,7 +832,7 @@
         }
         window.renderTvScreen = renderTvScreen;
 
-        // رسم محتوى الشاشة الأولي فوراً دون انتظار شبكة Firebase
+        // رسم محتوى الشاشة الأولي فوراً
         renderTvScreen();
 
         signInAnonymously(auth).then(async () => {
@@ -947,11 +953,11 @@
                 let btn = document.getElementById(`remoteCh${idx+1}`);
                 if(btn) {
                     if(ch === channel) {
-                        btn.className = "px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-indigo-600 text-white shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0";
-                        btn.querySelector('span').className = "font-mono text-[8px] bg-indigo-800 px-1 py-0.5 rounded";
+                        btn.className = "px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-indigo-600 text-white shadow transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0";
+                        btn.querySelector('span').className = "font-mono text-[7px] bg-indigo-800 px-1 py-0.5 rounded";
                     } else {
-                        btn.className = "px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0";
-                        btn.querySelector('span').className = "font-mono text-[8px] bg-slate-700 px-1 py-0.5 rounded";
+                        btn.className = "px-2 py-1 rounded-lg text-[9px] sm:text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0";
+                        btn.querySelector('span').className = "font-mono text-[7px] bg-slate-700 px-1 py-0.5 rounded";
                     }
                 }
             });
@@ -971,12 +977,12 @@
             if(!banner) return;
 
             const titles = {
-                'metrics': ['CH 01', 'قناة المؤشرات الشاملة (الخزنة، المبيعات والأرباح)'],
-                'invoices': ['CH 02', 'قناة الفواتير الفردية والمجمعة'],
-                'inventory': ['CH 03', 'قناة المخزن والأصناف السحابية'],
-                'fleet': ['CH 04', 'قناة الأسطول والرحلات اللوجستية GPS'],
-                'clients': ['CH 05', 'قناة حسابات العملاء وجهات العمل'],
-                'profile': ['CH 06', 'قناة الملف الشخصي وصورة البروفايل (profile.html)']
+                'metrics': ['CH 01', 'قناة المؤشرات الشاملة (الخزنة والمبيعات)'],
+                'invoices': ['CH 02', 'قناة الفواتير المباشرة'],
+                'inventory': ['CH 03', 'قناة المخزن والأصناف'],
+                'fleet': ['CH 04', 'قناة الأسطول ورحلات GPS'],
+                'clients': ['CH 05', 'قناة حسابات العملاء'],
+                'profile': ['CH 06', 'قناة الملف الشخصي (profile.html)']
             };
 
             osdNum.innerText = titles[channel][0];
@@ -1004,7 +1010,7 @@
             if(isTvPoweredOn) {
                 overlay.classList.add('hidden');
                 screenContainer.classList.remove('tv-power-off');
-                led.className = "w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] transition-all";
+                led.className = "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] transition-all";
                 ledText.innerText = "POWER ON";
                 if (ambilight) {
                     ambilight.classList.remove('opacity-0');
@@ -1015,7 +1021,7 @@
             } else {
                 overlay.classList.remove('hidden');
                 screenContainer.classList.add('tv-power-off');
-                led.className = "w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-rose-600 shadow-[0_0_10px_#ef4444] transition-all";
+                led.className = "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-600 shadow-[0_0_8px_#ef4444] transition-all";
                 ledText.innerText = "STANDBY";
                 if (ambilight) {
                     ambilight.classList.remove('opacity-90');
@@ -1055,14 +1061,14 @@
             let btn = document.getElementById('wallModeBtn');
             if(isWallMode) {
                 bar.classList.add('opacity-10', 'hover:opacity-100');
-                btn.innerHTML = `<i class="fa-solid fa-eye ml-1"></i> إظهار التحكم`;
+                btn.innerHTML = `<i class="fa-solid fa-eye ml-1"></i> إظهار`;
             } else {
                 bar.classList.remove('opacity-10', 'hover:opacity-100');
                 btn.innerHTML = `<i class="fa-solid fa-tv ml-1"></i> جداري`;
             }
         };
 
-        // دالة التكبير والتصغير المحدثة والشاملة للهواتف والأندرويد
+        // دالة التكبير والتصغير للهواتف والأندرويد
         window.toggleTvFullscreen = function() {
             triggerHaptic(30);
             playBeepSound(500, 'sine', 0.1);
@@ -1105,7 +1111,7 @@
                 clearInterval(tvAutoSlideInterval);
                 tvAutoSlideInterval = null;
                 btn.classList.remove('bg-emerald-600'); btn.classList.add('bg-amber-500');
-                btn.innerHTML = `<i class="fa-solid fa-rotate ml-1"></i> دائرى (5s)`;
+                btn.innerHTML = `<i class="fa-solid fa-rotate"></i> دائرى (5s)`;
                 showNativeToast("⏹️ تم إيقاف التدوير الآلي");
             } else {
                 tvAutoSlideInterval = setInterval(() => {
@@ -1114,8 +1120,8 @@
                     switchTvChannel(channels[nextIdx]);
                 }, 5000);
                 btn.classList.remove('bg-amber-500'); btn.classList.add('bg-emerald-600');
-                btn.innerHTML = `<i class="fa-solid fa-pause ml-1"></i> إيقاف`;
-                showNativeToast("▶️ تم تفعيل التدوير الآلي (5s)");
+                btn.innerHTML = `<i class="fa-solid fa-pause"></i> إيقاف`;
+                showNativeToast("▶️ تم تفعيل التدوير الآلي");
             }
         };
 
@@ -1125,4 +1131,4 @@
         }, 1000);
     </script>
 </body>
-    </html>
+</html>

@@ -495,6 +495,7 @@
             setDoc, 
             addDoc,
             doc, 
+            getDoc,
             getDocs,
             onSnapshot,
             enableIndexedDbPersistence
@@ -608,8 +609,6 @@
             triggerHaptic(25);
             clearAuthMsgs();
 
-            if (isProcessingAuth) return;
-
             const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
@@ -651,9 +650,9 @@
                 }
             }
 
-            // 3. Google Identity Services (GIS Bottom-Sheet Overlay) الموضحة بالصورة
+            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                isProcessingAuth = true;
+                isProcessingAuth = false;
                 showNativeToast("جاري فتح حسابات Google...");
 
                 window.initGoogleIdentity();
@@ -668,14 +667,15 @@
             }
         };
 
-        // استقبال توكن Google من نافذة الـ Bottom-Sheet
+        // استقبال توكن Google من نافذة الـ Bottom-Sheet والمزامنة الفورية
         window.handleGoogleIdentityCredential = async function(response) {
             if (!response || !response.credential) {
                 isProcessingAuth = false;
                 return;
             }
             try {
-                showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
+                isProcessingAuth = true;
+                showNativeToast("⚡ جاري المصادقة والمزامنة الفورية...");
                 const credential = GoogleAuthProvider.credential(response.credential);
                 const result = await signInWithCredential(auth, credential);
                 await processGoogleAccountData(result.user);
@@ -685,59 +685,60 @@
             }
         };
 
-        // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة
+        // دالة مزامنة بيانات حساب Google مع Firestore وبدء الجلسة الفورية
         async function processGoogleAccountData(user) {
             try {
-                let userEmail = user.email || '';
+                let userEmail = (user.email || '').toLowerCase();
                 let userDisplayName = user.displayName || userEmail.split('@')[0] || 'مستخدم Google';
                 let userPhotoUrl = user.photoURL || '';
 
-                const querySnapshot = await getDocs(accountsRef);
-                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                let existingAccount = cloudAccounts.find(a => (a.email && a.email.toLowerCase() === userEmail.toLowerCase()));
-
-                if (existingAccount && existingAccount.isBanned) {
-                    showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                    alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                    isProcessingAuth = false;
-                    return;
-                }
-
                 let assignedCompanyId;
-                let finalUserName;
+                let finalUserName = userDisplayName;
                 let userRole = 'محاسب أول';
 
-                if (existingAccount) {
-                    finalUserName = existingAccount.name;
-                    assignedCompanyId = existingAccount.companyId;
-                    userRole = existingAccount.role || 'محاسب أول';
-                } else {
-                    finalUserName = userDisplayName;
-                    let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-                    assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
+                let cleanEmailKey = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+                assignedCompanyId = 'company_google_' + (cleanEmailKey || (user.uid ? user.uid.substring(0, 8) : Date.now()));
 
-                    if (userEmail.toLowerCase() === 'haretg@gmail.com') {
-                        assignedCompanyId = 'company_founder_karm';
-                        finalUserName = FOUNDER_NAME;
-                        userRole = 'مدير نظام رئيسي';
-                    }
-
-                    // كتابة الحساب بجدول Firestore بالحقول المعتمدة
-                    await setDoc(doc(db, "accounts", assignedCompanyId), {
-                        name: finalUserName,
-                        pin: "1234",
-                        role: userRole,
-                        companyId: assignedCompanyId,
-                        email: userEmail,
-                        avatar: userPhotoUrl,
-                        biometricVerified: true,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
+                if (userEmail === 'haretg@gmail.com') {
+                    assignedCompanyId = 'company_founder_karm';
+                    finalUserName = FOUNDER_NAME;
+                    userRole = 'مدير نظام رئيسي';
                 }
 
-                // حفظ الجلسة محلياً وفي الـ Session للدخول المباشر
+                const userDocRef = doc(db, "accounts", assignedCompanyId);
+
+                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
+                try {
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        const accountData = userDocSnap.data();
+                        if (accountData.isBanned) {
+                            showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                            alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                            isProcessingAuth = false;
+                            return;
+                        }
+                        if (accountData.name) finalUserName = accountData.name;
+                        if (accountData.role) userRole = accountData.role;
+                    }
+                } catch (snapErr) {
+                    console.warn("Direct doc read warning:", snapErr);
+                }
+
+                // حفظ وتحديث بيانات الحساب فوراً على السحابة
+                await setDoc(userDocRef, {
+                    name: finalUserName,
+                    pin: "1234",
+                    role: userRole,
+                    companyId: assignedCompanyId,
+                    email: userEmail,
+                    avatar: userPhotoUrl,
+                    biometricVerified: true,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+
+                // حفظ الجلسة محلياً ورأسياً للدخول الفوري
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
                 localStorage.setItem('eidco_offline_session', 'true');

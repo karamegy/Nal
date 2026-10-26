@@ -14,8 +14,6 @@
     <meta name="theme-color" content="#020617">
 
     <script src="capacitor.js"></script>
-
-    <!-- مكتبة Google Identity Services الرسمية للويب -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -196,14 +194,12 @@
     <div class="corporate-card p-5 sm:p-8 max-w-lg w-full space-y-4 text-right relative overflow-hidden my-auto">
         <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl"></div>
 
-        <!-- زر تثبيت الـ PWA -->
         <div id="installContainer" class="hidden text-center relative z-10">
             <button id="installAppBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 mx-auto shadow-lg transition cursor-pointer w-full border border-emerald-400/30">
                 <i class="fa-solid fa-download text-amber-300 text-sm"></i> تثبيت تطبيق EIDCO الرسمي على الهاتف
             </button>
         </div>
 
-        <!-- الهيدر واللوجو -->
         <div class="flex items-center gap-3 relative z-10">
             <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
                 <i class="fa-solid fa-cube text-xl text-white"></i>
@@ -214,10 +210,8 @@
             </div>
         </div>
 
-        <!-- شريط الرسائل والتنبيهات -->
         <div id="authMsgBox" class="hidden relative z-10 p-3 rounded-xl text-xs font-bold text-center border"></div>
 
-        <!-- أزرار تبويب طرق الدخول وإنشاء حساب -->
         <div class="flex items-center gap-1.5 relative z-10 pt-1">
             <button id="tabQuickBtn" onclick="switchAuthTab('quick')" class="auth-tab-btn active">
                 <i class="fa-solid fa-bolt text-amber-400 ml-1"></i> دخول سريع
@@ -230,11 +224,8 @@
             </button>
         </div>
 
-        <!-- قسم الدخول السريع (Google Native + الهاتف) -->
         <div id="quickAuthSection" class="space-y-3 relative z-10 pt-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                
-                <!-- زر دخول بـ Google -->
                 <button id="googleBtnCustom" onclick="signInWithGoogle()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer border border-slate-200 active:scale-95">
                     <i class="fa-brands fa-google text-rose-500 text-base"></i> دخول بـ Google
                 </button>
@@ -243,16 +234,14 @@
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
             </div>
-            
             <div id="g_id_onload" class="hidden"></div>
         </div>
 
-        <!-- قسم الدخول التقليدي (Username + PIN) -->
         <div id="pinAuthSection" class="space-y-3 relative z-10 pt-1 hidden">
             <div class="space-y-2.5">
                 <div>
                     <label class="block text-xs text-slate-300 font-bold mb-1">اسم المستخدم / الشركة:</label>
-                    <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل للبدء...">
+                    <input type="text" id="usernameInput" class="corporate-input text-xs font-bold" placeholder="أدخل اسم الحساب المسجل...">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-300 font-bold mb-1">الرقم السري (PIN Code):</label>
@@ -261,21 +250,20 @@
             </div>
 
             <div class="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 text-center space-y-2">
-                <div onclick="performBiometricAuth()" class="w-14 h-14 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء الدخول">
+                <div onclick="performBiometricAuth()" class="w-14 h-14 mx-auto bg-indigo-600/10 border-2 border-indigo-500/40 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition ring-pulse" title="انقر لبدء المصادقة">
                     <i class="fa-solid fa-fingerprint text-2xl text-indigo-400"></i>
                 </div>
                 <div>
-                    <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر للمصادقة وبدء المزامنة</span>
-                    <span class="text-[10px] text-slate-500 block mt-0.5" id="selectedAccountDisplay">يرجى إدخال البيانات والنقر للتحقق</span>
+                    <span class="text-xs text-indigo-400 font-mono block font-bold" id="bioStatusText">انقر للتحقق ببصمة الهاتف والدخول</span>
+                    <span class="text-[10px] text-slate-500 block mt-0.5" id="selectedAccountDisplay">يتم استخدام مستشعر الحماية المحلي</span>
                 </div>
             </div>
         </div>
 
-        <!-- قسم تسجيل حساب جديد -->
         <div id="registerAuthSection" class="space-y-3 relative z-10 pt-1 hidden">
             <div class="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-xl mb-2">
                 <p class="text-xs text-emerald-300 font-bold flex items-center gap-1.5">
-                    <i class="fa-solid fa-user-check"></i> إنشاء حساب جديد للمؤسسة / الشريك
+                    <i class="fa-solid fa-user-check"></i> إنشاء حساب جديد للمؤسسة
                 </p>
             </div>
             <div class="space-y-2.5">
@@ -285,7 +273,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-300 font-bold mb-1">البريد الإلكتروني أو الهاتف (اختياري):</label>
-                    <input type="text" id="regContactInput" class="corporate-input text-xs mono-font" placeholder="user@company.com / 010xxxxxxx">
+                    <input type="text" id="regContactInput" class="corporate-input text-xs mono-font" placeholder="user@company.com">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-300 font-bold mb-1">تحديد الرقم السري (PIN):</label>
@@ -297,7 +285,6 @@
             </button>
         </div>
 
-        <!-- خيارات إضافية -->
         <div class="space-y-2 relative z-10 pt-1">
             <button onclick="openComplaintsModal()" class="w-full bg-slate-900/90 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow active:scale-95">
                 <i class="fa-solid fa-triangle-exclamation"></i> إرسال بلاغ أو شكوى للإدارة العليا
@@ -319,7 +306,6 @@
     </div>
 
     <!-- Modals -->
-    <!-- 1. نافذة الخصوصية -->
     <div id="privacyModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'privacyModal')">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -335,7 +321,6 @@
                     <li><strong class="text-white">حماية الحسابات:</strong> تُستخدم بيانات التسجيل حصراً للتحقق من هوية المستخدم وتخصيص صلاحيات المنظومة.</li>
                     <li><strong class="text-white">التشفير السحابي:</strong> جميع المعلومات المخزنة على سحابة Firebase مشفرة ومحميّة ومعزولة لكل شركة.</li>
                     <li><strong class="text-white">البصمة الحيوية:</strong> تتم عملية مطابقة البصمة محلياً على جهازك بواسطة مستشعر الهاتف.</li>
-                    <li><strong class="text-white">عدم المشاركة:</strong> لا نقوم ببيع أو مشاركة بياناتك الشخصية مع أي أطراف خارجية.</li>
                 </ul>
             </div>
 
@@ -348,7 +333,6 @@
         </div>
     </div>
 
-    <!-- 2. نافذة الشكاوى -->
     <div id="complaintsModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'complaintsModal')">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -358,7 +342,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block mb-1 text-slate-300 font-bold">اسم الحساب / الشركة المُشتكية</label>
-                    <input type="text" id="complaintSenderName" class="corporate-input text-xs" placeholder="أدخل اسمك أو اسم شركتك المسجل">
+                    <input type="text" id="complaintSenderName" class="corporate-input text-xs" placeholder="أدخل اسمك أو اسم شركتك">
                 </div>
                 <div>
                     <label class="block mb-1 text-slate-300 font-bold">رقم الهاتف أو وسيلة التواصل</label>
@@ -378,7 +362,6 @@
         </div>
     </div>
 
-    <!-- 3. نافذة دخول الهاتف (OTP) -->
     <div id="phoneAuthModal" class="custom-modal" onclick="closeModalOnOutsideClick(event, 'phoneAuthModal')">
         <div class="corporate-card p-6 max-w-sm w-full space-y-4 text-right bg-slate-900 shadow-2xl border border-slate-700 custom-modal-content">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -426,6 +409,11 @@
             } else if (tab === 'pin') {
                 pinSec.classList.remove('hidden');
                 tabPinBtn.classList.add('active');
+                
+                const savedUser = localStorage.getItem('eidco_v14_admin');
+                if(savedUser && document.getElementById('usernameInput')) {
+                    document.getElementById('usernameInput').value = savedUser;
+                }
             } else if (tab === 'register') {
                 regSec.classList.remove('hidden');
                 tabRegisterBtn.classList.add('active');
@@ -438,14 +426,6 @@
                 document.getElementById(modalId).classList.remove('active');
             }
         }
-
-        document.addEventListener('focusin', (e) => {
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
-                setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
-            }
-        });
 
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -476,7 +456,7 @@
         }
     </script>
 
-    <!-- Firebase Engine & Native Auth Handlers -->
+    <!-- Firebase Engine & Biometric Auth Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -545,19 +525,32 @@
 
         let isProcessingAuth = false;
 
+        function redirectToMainPage(companyId, adminName) {
+            sessionStorage.setItem('eidco_biometric_verified', 'true');
+            sessionStorage.setItem('eidco_session_auth', 'true');
+            if (adminName) localStorage.setItem('eidco_v14_admin', adminName);
+            if (companyId) localStorage.setItem('eidco_current_company_id', companyId);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectPage = urlParams.get('redirect') || 'index.html';
+            const targetUrl = `${redirectPage}?companyId=${encodeURIComponent(companyId || 'company_founder_karm')}`;
+            
+            showNativeToast(`مرحباً بك.. جاري فتح المنظومة`);
+            window.location.href = targetUrl;
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (user && !user.isAnonymous && !isProcessingAuth) {
-                const urlParams = new URLSearchParams(window.location.search);
                 const savedCompanyId = localStorage.getItem('eidco_current_company_id');
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
                 if (savedCompanyId && sessionStorage.getItem('eidco_session_auth')) {
-                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
+                    redirectToMainPage(savedCompanyId, null);
                 }
             }
         });
 
-        // تهيئة مكتبة Google Identity Services للويب بدون فتح تلقائي للنوافذ
+        // =========================================================================
+        // تهيئة ومعالجة مصادقة حسابات جوجل (Google Identity Services & Native)
+        // =========================================================================
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -582,13 +575,6 @@
             }
         };
 
-        if (document.readyState === 'complete') {
-            window.initGoogleIdentity();
-        } else {
-            window.addEventListener('load', window.initGoogleIdentity);
-        }
-
-        // استقبال ה- Token المباشر من كود الأندرويد الناتيف
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
                 showNativeToast("جاري توثيق الحساب ومزامنة البيانات...");
@@ -598,190 +584,6 @@
             } catch (err) {
                 isProcessingAuth = false;
                 showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
-            }
-        };
-
-        // =========================================================================
-        // دالة الدخول الموحدة بـ Google (تستدعي نافذة الأندرويد الأصلية داخل الـ APK)
-        // =========================================================================
-        window.signInWithGoogle = async function() {
-            triggerHaptic(25);
-            clearAuthMsgs();
-
-            if (isProcessingAuth) return;
-
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
-            const googleAuthPlugin = window.Capacitor?.Plugins?.GoogleAuth;
-
-            // 1. الأولوية الأولى: الـ Native Android Bridge الخاص بالتطبيق (فتح قائمة الحسابات الناتيف)
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري اختيار الحساب...");
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 2. الأولوية الثانية: Capacitor Plugin للتطبيق (Fallback)
-            if (googleAuthPlugin) {
-                try {
-                    showNativeToast("جاري فتح حسابات الجهاز...");
-                    if (typeof googleAuthPlugin.initialize === 'function') {
-                        await googleAuthPlugin.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
-                            grantOfflineAccess: true,
-                            scopes: ['profile', 'email']
-                        }).catch(() => {});
-                    }
-                    const googleUser = await googleAuthPlugin.signIn();
-                    const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
-
-                    if (idToken) {
-                        const credential = GoogleAuthProvider.credential(idToken);
-                        const result = await signInWithCredential(auth, credential);
-                        await processGoogleAccountData(result.user);
-                        return;
-                    }
-                } catch (nativeErr) {
-                    console.warn("Capacitor Auth native retry:", nativeErr);
-                }
-            }
-
-            // 3. الأولوية الثالثة: متصفح الويب (GIS Web)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                window.initGoogleIdentity();
-                showNativeToast("جاري فتح حسابات جوجل...");
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-                        isProcessingAuth = false;
-                    }
-                });
-                return;
-            }
-        };
-
-        // إنشاء وتنسيق حساب جديد
-        window.createNewAccountProcess = async function() {
-            triggerHaptic(30);
-            clearAuthMsgs();
-
-            const username = document.getElementById('regUsernameInput').value.trim();
-            const contact = document.getElementById('regContactInput').value.trim();
-            const pin = document.getElementById('regPinInput').value.trim();
-
-            if (!username) {
-                alert('يرجى كتابة اسم الحساب أو الشركة الجديد.');
-                return;
-            }
-            if (!pin || pin.length < 4) {
-                alert('يرجى تحديد رقم سري (PIN) لا يقل عن 4 أرقام.');
-                return;
-            }
-
-            try {
-                const querySnapshot = await getDocs(accountsRef);
-                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                let existing = cloudAccounts.find(a => a.name === username);
-                if (existing) {
-                    showAuthMsg('error', '⚠️ هذا الاسم مسجل بالفعل، يرجى اختيار اسم آخر أو تسجيل الدخول.');
-                    return;
-                }
-
-                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
-
-                await setDoc(doc(db, "accounts", newCompanyId), {
-                    name: username,
-                    pin: pin,
-                    contact: contact || '',
-                    role: 'مدير مؤسسة جديد',
-                    companyId: newCompanyId,
-                    biometricVerified: true,
-                    isBanned: false,
-                    date: new Date().toISOString().split('T')[0]
-                }, { merge: true });
-
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v14_admin', username);
-                localStorage.setItem('eidco_current_company_id', newCompanyId);
-
-                showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
-                alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه إلى المنظومة...`);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
-
-            } catch (err) {
-                showAuthMsg('error', 'خطأ أثناء إنشاء الحساب: ' + err.message);
-            }
-        };
-
-        signInAnonymously(auth).then(() => {
-            onSnapshot(accountsRef, (snapshot) => {
-                let accountsData = snapshot.docs.map(docSnap => ({
-                    id: docSnap.id,
-                    ...docSnap.data()
-                }));
-
-                if (accountsData.length === 0) {
-                    setDoc(doc(db, "accounts", "company_founder_karm"), {
-                        name: FOUNDER_NAME,
-                        pin: "1234",
-                        role: 'مدير نظام رئيسي',
-                        companyId: 'company_founder_karm',
-                        biometricVerified: true,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
-                }
-            });
-        }).catch(err => {
-            console.error("خطأ في المصادقة الأولية:", err);
-        });
-
-        window.openComplaintsModal = function() {
-            triggerHaptic(20);
-            let currentInputName = document.getElementById('usernameInput').value.trim();
-            if(currentInputName) {
-                document.getElementById('complaintSenderName').value = currentInputName;
-            }
-            document.getElementById('complaintsModal').classList.add('active');
-        };
-
-        window.closeComplaintsModal = function() {
-            triggerHaptic(15);
-            document.getElementById('complaintsModal').classList.remove('active');
-        };
-
-        window.submitUserComplaint = async function() {
-            triggerHaptic(30);
-            let name = document.getElementById('complaintSenderName').value.trim();
-            let contact = document.getElementById('complaintContact').value.trim();
-            let message = document.getElementById('complaintMessage').value.trim();
-
-            if(!name || !message) {
-                alert('الرجاء إدخال اسم الحساب وتفاصيل الشكوى.');
-                return;
-            }
-
-            try {
-                await addDoc(messagesRef, {
-                    senderName: name,
-                    contactInfo: contact || 'بدون وسائل تواصل',
-                    message: message,
-                    type: 'شكوى نظام',
-                    status: 'قيد المراجعة',
-                    date: new Date().toISOString().replace('T', ' ').substring(0, 19)
-                });
-
-                showNativeToast("✓ تم إرسال الشكوى للإدارة بنجاح");
-                alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية.');
-                document.getElementById('complaintMessage').value = '';
-                window.closeComplaintsModal();
-            } catch(err) {
-                alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
 
@@ -832,26 +634,46 @@
                         companyId: assignedCompanyId,
                         email: userEmail,
                         avatar: userPhotoUrl,
+                        biometricVerified: true,
                         isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
                 }
 
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                showNativeToast("✓ تم تسجيل الدخول والمزامنة بنجاح");
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                redirectToMainPage(assignedCompanyId, finalUserName);
             } catch (err) {
                 isProcessingAuth = false;
                 showAuthMsg('error', 'خطأ في معالجة الحساب: ' + err.message);
             }
         }
+
+        window.signInWithGoogle = async function() {
+            triggerHaptic(25);
+            clearAuthMsgs();
+
+            const androidBridge = window.AndroidBridge || window.NativeBridge;
+            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
+                showNativeToast("جاري فتح حسابات جوجل...");
+                androidBridge.launchNativeGoogleSignIn();
+                return;
+            }
+
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.initGoogleIdentity();
+                showNativeToast("جاري فتح حسابات جوجل...");
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+                        isProcessingAuth = false;
+                    }
+                });
+                return;
+            }
+        };
+
+        // =========================================================================
+        // دخول رقم الهاتف (Firebase OTP)
+        // =========================================================================
+        let confirmationResult = null;
 
         window.openPhoneAuthModal = function() {
             triggerHaptic(20);
@@ -862,15 +684,10 @@
             document.getElementById('phoneAuthModal').classList.remove('active');
         };
 
-        let confirmationResult = null;
-
         window.sendPhoneVerificationCode = async function() {
             triggerHaptic(25);
             let phoneNumber = document.getElementById('userPhoneNumber').value.trim();
-            if(!phoneNumber) {
-                alert('يرجى إدخال رقم الهاتف بصيغة صحيحة.');
-                return;
-            }
+            if(!phoneNumber) return alert('يرجى إدخال رقم الهاتف بصيغة صحيحة.');
 
             try {
                 if (!window.recaptchaVerifier) {
@@ -920,112 +737,168 @@
                         role: userRole,
                         companyId: assignedCompanyId,
                         phone: phoneNum,
+                        biometricVerified: true,
                         isBanned: false,
                         date: new Date().toISOString().split('T')[0]
                     }, { merge: true });
                 }
 
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v14_admin', finalUserName);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                showNativeToast("✓ تمت المصادقة بنجاح");
-                alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                redirectToMainPage(assignedCompanyId, finalUserName);
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
             }
         };
 
+        // =========================================================================
+        // المصادقة بواسطة مستشعر البصمة الحقيقي للجهاز واسم المستخدم والـ PIN
+        // =========================================================================
         window.performBiometricAuth = async function() {
             triggerHaptic(40);
             clearAuthMsgs();
-            const username = document.getElementById('usernameInput').value.trim();
-            const pinInput = document.getElementById('userPinInput').value.trim();
-
-            if (!username) {
-                alert('يرجى إدخال اسم المستخدم أولاً.');
-                return;
-            }
-            if (!pinInput) {
-                alert('يرجى إدخال الرقم السري (PIN) الخاص بالحساب.');
-                return;
-            }
 
             const statusEl = document.getElementById('bioStatusText');
-            statusEl.innerText = `جاري التحقق من السجلات السحابية لـ (${username})...`;
+            let username = document.getElementById('usernameInput').value.trim();
+            const pinInput = document.getElementById('userPinInput').value.trim();
+            const savedCompanyId = localStorage.getItem('eidco_current_company_id');
+            const savedUsername = localStorage.getItem('eidco_v14_admin');
+
+            if (!username && savedUsername) {
+                username = savedUsername;
+                document.getElementById('usernameInput').value = savedUsername;
+            }
+
+            statusEl.innerText = "جاري التحقق عبر مستشعر البصمة...";
             statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
+
+            const bridge = window.AndroidBridge || window.NativeBridge;
+            if (bridge && typeof bridge.requestBiometric === 'function') {
+                try {
+                    const bioResult = await bridge.requestBiometric();
+                    if (bioResult === true || bioResult === "SUCCESS") {
+                        statusEl.innerText = "✓ تم التحقق بنجاح! جاري التوجيه...";
+                        statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
+                        redirectToMainPage(savedCompanyId || 'company_default', username || savedUsername || 'مستخدم الموبايل');
+                        return;
+                    }
+                } catch(e) { console.warn("Native Biometric bypass:", e); }
+            }
+
+            if (!username) {
+                statusEl.innerText = "❌ يرجى إدخال اسم المستخدم أولاً أو التسجيل.";
+                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                alert('يرجى كتابة اسم المستخدم أولاً للدخول.');
+                return;
+            }
 
             try {
                 const querySnapshot = await getDocs(accountsRef);
                 let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
                 let matchedAccount = cloudAccounts.find(a => a.name === username);
-                
+
                 if (matchedAccount && matchedAccount.isBanned) {
-                    statusEl.innerText = "❌ عذراً، هذا الحساب محظور من قِبل الإدارة!";
+                    statusEl.innerText = "❌ هذا الحساب محظور من قِبل الإدارة!";
                     statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
-                    showAuthMsg('error', "⚠️ هذا الحساب محظور نهائياً بسبب شكاوى ومخالفات مسجلة.");
-                    alert("⚠️ تنبيه: هذا الحساب تم حظره نهائياً بسبب شكاوى ومخالفات مسجلة ضده.");
+                    showAuthMsg('error', "⚠️ الحساب محظور بسبب المخالفات.");
                     return;
                 }
 
-                let assignedCompanyId;
+                let assignedCompanyId = matchedAccount ? matchedAccount.companyId : (savedCompanyId || ('company_' + Date.now()));
 
-                if (!matchedAccount) {
-                    let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                    assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
-                    
-                    if (username === FOUNDER_NAME) {
-                        assignedCompanyId = 'company_founder_karm';
-                    }
-
-                    await setDoc(doc(db, "accounts", assignedCompanyId), {
-                        name: username,
-                        pin: pinInput,
-                        role: 'محاسب أول',
-                        companyId: assignedCompanyId,
-                        biometricVerified: true,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
-
-                    statusEl.innerText = "✓ تم تسجيل الحساب الجديد ودمجه بالسحابة بنجاح!";
-                } else {
+                if (matchedAccount) {
                     let expectedPin = matchedAccount.pin || "1234";
-                    if (pinInput !== expectedPin) {
+                    if (!pinInput || pinInput !== expectedPin) {
                         statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
                         statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
                         showAuthMsg('error', "⚠️ الرقم السري غير مطابق للحساب.");
-                        alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
+                        alert("⚠️ تنبيه: الرقم السري (PIN) غير مطابق للحساب المسجل.");
                         return;
                     }
-                    assignedCompanyId = matchedAccount.companyId;
                 }
 
-                statusEl.innerText = "✓ تمت المطابقة بنجاح! جاري التوجيه...";
+                statusEl.innerText = "✓ تمت المطابقة والمصادقة بنجاح!";
                 statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
 
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_v14_admin', username);
-                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                showNativeToast(`مرحباً بك يا ${username}`);
-                setTimeout(() => {
-                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-                }, 400);
+                redirectToMainPage(assignedCompanyId, username);
 
             } catch (error) {
-                statusEl.innerText = "⚠️ خطأ في المصادقة السحابية: " + error.message;
-                statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                console.warn("Firestore Auth fallback to local session:", error);
+                if (savedCompanyId || username) {
+                    statusEl.innerText = "✓ تم الدخول النمط المحلي (أوفلاين)";
+                    statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
+                    redirectToMainPage(savedCompanyId || 'company_local', username);
+                } else {
+                    statusEl.innerText = "⚠️ تعثر الاتصال: " + error.message;
+                    statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                }
+            }
+        };
+
+        // إنشاء وتفعيل حساب جديد
+        window.createNewAccountProcess = async function() {
+            triggerHaptic(30);
+            clearAuthMsgs();
+
+            const username = document.getElementById('regUsernameInput').value.trim();
+            const contact = document.getElementById('regContactInput').value.trim();
+            const pin = document.getElementById('regPinInput').value.trim();
+
+            if (!username) return alert('يرجى كتابة اسم الحساب أو الشركة الجديد.');
+            if (!pin || pin.length < 4) return alert('يرجى تحديد رقم سري (PIN) لا يقل عن 4 أرقام.');
+
+            try {
+                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+
+                await setDoc(doc(db, "accounts", newCompanyId), {
+                    name: username,
+                    pin: pin,
+                    contact: contact || '',
+                    role: 'مدير مؤسسة جديد',
+                    companyId: newCompanyId,
+                    biometricVerified: true,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
+
+                redirectToMainPage(newCompanyId, username);
+
+            } catch (err) {
+                showAuthMsg('error', 'خطأ أثناء إنشاء الحساب: ' + err.message);
+            }
+        };
+
+        signInAnonymously(auth).catch(err => console.error("Anonym Auth:", err));
+
+        window.openComplaintsModal = function() {
+            triggerHaptic(20);
+            document.getElementById('complaintsModal').classList.add('active');
+        };
+        window.closeComplaintsModal = function() {
+            triggerHaptic(15);
+            document.getElementById('complaintsModal').classList.remove('active');
+        };
+
+        window.submitUserComplaint = async function() {
+            triggerHaptic(30);
+            let name = document.getElementById('complaintSenderName').value.trim();
+            let contact = document.getElementById('complaintContact').value.trim();
+            let message = document.getElementById('complaintMessage').value.trim();
+
+            if(!name || !message) return alert('الرجاء إدخال اسم الحساب وتفاصيل الشكوى.');
+
+            try {
+                await addDoc(messagesRef, {
+                    senderName: name,
+                    contactInfo: contact || 'بدون وسائل تواصل',
+                    message: message,
+                    type: 'شكوى نظام',
+                    status: 'قيد المراجعة',
+                    date: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                });
+                alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية.');
+                window.closeComplaintsModal();
+            } catch(err) {
+                alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
     </script>

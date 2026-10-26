@@ -558,7 +558,7 @@
 
         let isProcessingAuth = false;
 
-        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
+        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام في المتصفح
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -589,38 +589,17 @@
             }
         });
 
-        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد
-        window.onNativeGoogleSignInSuccess = async function(idToken) {
-            try {
-                showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
-                const credential = GoogleAuthProvider.credential(idToken);
-                const result = await signInWithCredential(auth, credential);
-                await processGoogleAccountData(result.user);
-            } catch (err) {
-                isProcessingAuth = false;
-                showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
-            }
-        };
-
         // =========================================================================
-        // دالة الدخول بـ Google المعتمدة (تفتح نافذة النظام المباشرة + المزامنة والدخول)
+        // دالة الدخول بـ Google المعتمدة والمطورة بالكامل للتطبيق والـ Web
         // =========================================================================
         window.signInWithGoogle = async function() {
             triggerHaptic(25);
             clearAuthMsgs();
 
-            const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
-            // 1. Android Native Bridge الخاص بتطبيق الأندرويد الأصلي
-            if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
-                showNativeToast("جاري فتح حسابات الجهاز...");
-                androidBridge.launchNativeGoogleSignIn();
-                return;
-            }
-
-            // 2. إذا كان التطبيق يعمل تحت Capacitor Native Engine
-            if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
+            // 1. التشغيل الناتيف تحت بيئة Android / Capacitor
+            if (Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
                 try {
                     isProcessingAuth = true;
                     showNativeToast("جاري فتح حسابات الجهاز...");
@@ -638,6 +617,7 @@
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
 
                     if (idToken) {
+                        showNativeToast("⚡ جاري المصادقة والمزامنة...");
                         const credential = GoogleAuthProvider.credential(idToken);
                         const result = await signInWithCredential(auth, credential);
                         await processGoogleAccountData(result.user);
@@ -646,11 +626,12 @@
                 } catch (nativeErr) {
                     isProcessingAuth = false;
                     console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
+                    showAuthMsg('error', 'تعذر اختيار الحساب: ' + (nativeErr.message || nativeErr));
                     return;
                 }
             }
 
-            // 3. Google Identity Services (GIS Bottom-Sheet Overlay)
+            // 2. Google Identity Services (GIS Overlay للمتصفح و PWA)
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
                 showNativeToast("جاري فتح حسابات Google...");
@@ -707,7 +688,6 @@
 
                 const userDocRef = doc(db, "accounts", assignedCompanyId);
 
-                // التحقق السريع المباشر للحساب المحدد فقط (بدون تحميل كامل السجلات)
                 try {
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {

@@ -54,6 +54,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          # حفظ نسخة مؤقتة من ملف google-services.json لمنع ضياعه عند مسح مجلد أندرويد
+          if [ -f "android/app/google-services.json" ]; then
+            cp android/app/google-services.json ./google-services-backup.json
+          elif [ -f "google-services.json" ]; then
+            cp google-services.json ./google-services-backup.json
+          fi
+
           # 1. تجهيز مجلد الويب www ونسخ الملفات المحلية
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
@@ -483,9 +490,11 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. نسخ google-services.json إلى مشروع الأندرويد إذا وجد
-          if [ -f "google-services.json" ]; then
-            cp google-services.json android/app/ 2>/dev/null || true
+          # 7. استرجاع وتسكين google-services.json داخل android/app/
+          if [ -f "./google-services-backup.json" ]; then
+            cp ./google-services-backup.json android/app/google-services.json
+          elif [ -f "google-services.json" ]; then
+            cp google-services.json android/app/google-services.json
           fi
 
           # 8. تجهيز AndroidManifest و file_paths و strings
@@ -596,7 +605,7 @@ jobs:
           # 10. مزامنة Capacitor مع أندرويد
           npx cap sync android
 
-          # 11. إعداد build.gradle
+          # 11. إعداد build.gradle وتطبيقه بأمان بدون التعارضات
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
 

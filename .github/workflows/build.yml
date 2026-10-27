@@ -115,7 +115,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java الأصلي بالكامل
+          # 5. حقن ملف MainActivity.java المعدل بالنظام الحديث
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -144,6 +144,8 @@ jobs:
           import android.widget.Toast;
 
           import androidx.annotation.NonNull;
+          import androidx.activity.result.ActivityResultLauncher;
+          import androidx.activity.result.contract.ActivityResultContracts;
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
 
@@ -167,9 +169,9 @@ jobs:
               private ValueCallback<Uri[]> filePathCallback;
               private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
               private static final int PERMISSION_REQUEST_CODE = 2002;
-              private static final int RC_SIGN_IN = 9001;
 
               private GoogleSignInClient mGoogleSignInClient;
+              private ActivityResultLauncher<Intent> googleSignInLauncher;
               private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
               private String pendingGeolocationOrigin;
@@ -184,6 +186,43 @@ jobs:
                           .requestEmail()
                           .build();
                   mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+                  googleSignInLauncher = registerForActivityResult(
+                          new ActivityResultContracts.StartActivityForResult(),
+                          result -> {
+                              if (result.getData() != null) {
+                                  Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
+                                  try {
+                                      GoogleSignInAccount account = task.getResult(ApiException.class);
+                                      if (account != null && account.getIdToken() != null) {
+                                          final String idToken = account.getIdToken();
+                                          Log.d(TAG, "Google Sign-In Success. Token length: " + idToken.length());
+
+                                          runOnUiThread(() -> {
+                                              WebView webView = bridge.getWebView();
+                                              if (webView != null) {
+                                                  String jsCode = "if (typeof window.onNativeGoogleSignInSuccess === 'function') { " +
+                                                                  "   window.onNativeGoogleSignInSuccess('" + idToken + "'); " +
+                                                                  "} else if (typeof window.handleGoogleIdToken === 'function') { " +
+                                                                  "   window.handleGoogleIdToken('" + idToken + "'); " +
+                                                                  "} else { " +
+                                                                  "   console.error('No Google ID token handler function defined on window object.'); " +
+                                                                  "}";
+                                                  webView.evaluateJavascript(jsCode, null);
+                                              } else {
+                                                  Log.e(TAG, "WebView is null, cannot evaluate Javascript");
+                                              }
+                                          });
+                                      } else {
+                                          Log.e(TAG, "Account or ID Token is null");
+                                      }
+                                  } catch (ApiException e) {
+                                      Log.e(TAG, "Google Sign-In Failed. Status Code: " + e.getStatusCode() + " - Message: " + e.getMessage());
+                                      Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل (رمز: " + e.getStatusCode() + ")", Toast.LENGTH_SHORT).show();
+                                  }
+                              }
+                          }
+                  );
 
                   WebView webView = this.bridge.getWebView();
                   if (webView != null) {
@@ -310,38 +349,6 @@ jobs:
                       filePathCallback.onReceiveValue(results);
                       filePathCallback = null;
                   }
-
-                  if (requestCode == RC_SIGN_IN) {
-                      Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-                      try {
-                          GoogleSignInAccount account = task.getResult(ApiException.class);
-                          if (account != null && account.getIdToken() != null) {
-                              final String idToken = account.getIdToken();
-                              Log.d(TAG, "Google Sign-In Success. Token length: " + idToken.length());
-
-                              runOnUiThread(() -> {
-                                  WebView webView = bridge.getWebView();
-                                  if (webView != null) {
-                                      String jsCode = "if (typeof window.onNativeGoogleSignInSuccess === 'function') { " +
-                                                      "   window.onNativeGoogleSignInSuccess('" + idToken + "'); " +
-                                                      "} else if (typeof window.handleGoogleIdToken === 'function') { " +
-                                                      "   window.handleGoogleIdToken('" + idToken + "'); " +
-                                                      "} else { " +
-                                                      "   console.error('No Google ID token handler function defined on window object.'); " +
-                                                      "}";
-                                      webView.evaluateJavascript(jsCode, null);
-                                  } else {
-                                      Log.e(TAG, "WebView is null, cannot evaluate Javascript");
-                                  }
-                              });
-                          } else {
-                              Log.e(TAG, "Account or ID Token is null");
-                          }
-                      } catch (ApiException e) {
-                          Log.e(TAG, "Google Sign-In Failed. Status Code: " + e.getStatusCode() + " - Message: " + e.getMessage());
-                          Toast.makeText(this, "فشل تسجيل الدخول بواسطة جوجل (رمز: " + e.getStatusCode() + ")", Toast.LENGTH_SHORT).show();
-                      }
-                  }
               }
 
               public class WebAppInterface {
@@ -395,7 +402,7 @@ jobs:
                           if (mGoogleSignInClient != null) {
                               mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
                                   Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                                  startActivityForResult(signInIntent, RC_SIGN_IN);
+                                  googleSignInLauncher.launch(signInIntent);
                               });
                           } else {
                               Log.e(TAG, "mGoogleSignInClient is null during launchNativeGoogleSignIn");

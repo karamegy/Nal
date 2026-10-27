@@ -51,10 +51,14 @@ public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_CODE = 2002;
 
     private GoogleSignInClient mGoogleSignInClient;
-    // إضافة النظام الحديث لاستقبال نتيجة تسجيل الدخول
     private ActivityResultLauncher<Intent> googleSignInLauncher;
-    
-    private static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
+
+    // قائمة كافة معرّفات Google OAuth 2.0 Client IDs
+    public static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
+    public static final String GOOGLE_ANDROID_CLIENT_1 = "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com";
+    public static final String GOOGLE_ANDROID_CLIENT_2 = "515898424721-d50taduhav5jm03e992fhr9ndcra21ac.apps.googleusercontent.com";
+    public static final String GOOGLE_ANDROID_CLIENT_3 = "515898424721-5oskj8kjn85soff6ulcuj8a7297a0nvk.apps.googleusercontent.com";
+    public static final String GOOGLE_ANDROID_CLIENT_4 = "515898424721-rkurikg1nudi31n7ghuttgsqu73p4chu.apps.googleusercontent.com";
 
     private String pendingGeolocationOrigin;
     private GeolocationPermissions.Callback pendingGeolocationCallback;
@@ -63,13 +67,14 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // إعداد مصادقة جوجل بطلب ID Token عبر Web Client ID المعتمد
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(GOOGLE_WEB_CLIENT_ID)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // تهيئة مستقبل النتائج الحديث (هذا هو مفتاح حل المشكلة)
+        // مستقبل نتائج تسجيل الدخول الحديث (ActivityResultLauncher)
         googleSignInLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -212,8 +217,6 @@ public class MainActivity extends BridgeActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // تم إزالة جزء RC_SIGN_IN من هنا لأننا استخدمنا Launcher الحديث
-
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
             Uri[] results = null;
@@ -287,7 +290,6 @@ public class MainActivity extends BridgeActivity {
                 if (mGoogleSignInClient != null) {
                     mGoogleSignInClient.signOut().addOnCompleteListener(MainActivity.this, task -> {
                         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-                        // تم الاستدعاء هنا باستخدام النظام الحديث لتخطي حظر Capacitor
                         googleSignInLauncher.launch(signInIntent);
                     });
                 } else {

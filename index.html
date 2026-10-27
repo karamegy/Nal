@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- النواة المركزية -->
     <script src="./eidco-core.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -155,6 +155,15 @@
             100% { box-shadow: 0 15px 30px rgba(79, 70, 229, 0.8), 0 0 25px rgba(129, 140, 248, 0.9); transform: rotateX(-5deg) rotateY(5deg); }
         }
 
+        #appSidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+        }
+
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
@@ -189,7 +198,7 @@
                 box-shadow: none !important;
                 display: block !important;
             }
-            .no-print, button, input, select, #floatingTvTrigger, .rss-ticker-wrapper {
+            .no-print, button, input, select, #floatingTvTrigger, .rss-ticker-wrapper, #appSidebarOverlay {
                 display: none !important;
             }
             .print-header {
@@ -225,21 +234,30 @@
         function toggleMobileSidebar() {
             triggerHaptic(20);
             const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('appSidebarOverlay');
             if (sidebar) {
-                sidebar.classList.toggle('mobile-open');
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                if (overlay) overlay.style.display = isOpen ? 'block' : 'none';
             }
         }
 
-        function lockSession() {
-            triggerHaptic(35);
+        // دالة قفل الجلسة المحدثة والمحمية عاماً
+        window.lockSession = function() {
+            triggerHaptic(40);
             sessionStorage.removeItem('eidco_session_auth');
             sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
             const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
-            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
-        }
+            showNativeToast('تم قفل الجلسة بنجاح، يرجى إعادة المصادقة');
+            setTimeout(() => {
+                window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+            }, 150);
+        };
 
         function escapeHTML(str) {
-            if (!str) return '';
+            if (str === null || str === undefined) return '';
             return String(str)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
@@ -250,6 +268,9 @@
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
+
+    <!-- غطاء للقائمة الجانبية بالهاتف -->
+    <div id="appSidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
     <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800 no-print">
         <div class="flex items-center gap-2 bg-indigo-900/80 text-indigo-200 px-2.5 py-1 rounded-lg text-xs font-black z-10 shrink-0 shadow-sm border border-indigo-700/50">
@@ -327,7 +348,8 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
-                <a href="javascript:void(0)" onclick="lockSession()" id="sidebarAuthNavLink" class="nav-link"><i class="fa-solid fa-fingerprint"></i> قفل الأمان والبيومترية</a>
+                <!-- زر قفل الأمان الجانبي - متاح دائماً لجميع المستخدمين -->
+                <a href="javascript:void(0)" onclick="window.lockSession()" id="sidebarAuthNavLink" class="nav-link text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -362,8 +384,9 @@
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <button onclick="lockSession()" id="headerAuthLockBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95" title="قفل الجلسة والعودة للبصمة">
-                            <i class="fa-solid fa-lock text-indigo-600"></i> قفل
+                        <!-- زر قفل الهيدر الرئيسي -->
+                        <button onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والعودة للبصمة">
+                            <i class="fa-solid fa-lock text-rose-600"></i> قفل
                         </button>
                         <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2 active:scale-95"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
                     </div>
@@ -531,9 +554,10 @@
                             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition"><i class="fa-solid fa-map-location-dot"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4><span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span></div>
                         </a>
-                        <a href="javascript:void(0)" onclick="lockSession()" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-amber-500">
-                            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
-                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية</h4><span class="text-[11px] text-slate-500">بوابة الأمان والبصمة</span></div>
+                        <!-- بطاقة قفل الأمان بالشاشة الرئيسية - متاحة للجميع -->
+                        <a href="javascript:void(0)" onclick="window.lockSession()" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500 bg-rose-50/20">
+                            <div class="w-12 h-12 bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-rose-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية والقفل</h4><span class="text-[11px] text-rose-600 font-bold">قفل الجلسة فوراً</span></div>
                         </a>
                         <a href="settings.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-slate-600">
                             <div class="w-12 h-12 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-slate-800 group-hover:text-white transition"><i class="fa-solid fa-sliders"></i></div>
@@ -551,7 +575,7 @@
     </div>
 
     <!-- نافذة إضافة خبر جديد في شريط RSS -->
-    <div id="addNewsModal" class="custom-modal">
+    <div id="addNewsModal" class="custom-modal" onclick="if(event.target === this) window.closeAddNewsModal()">
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-black text-base text-indigo-600"><i class="fa-solid fa-rss text-amber-500 ml-1"></i> إضافة خبر عاجل لشريط RSS</h3>
@@ -560,7 +584,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">عنوان الخبر / التنبيه:</label>
-                    <input type="text" id="newRssTextInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:border-indigo-600" placeholder="مثال: تم إضافة منتجات جديدة لمخزن الرئيسي...">
+                    <input type="text" id="newRssTextInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:border-indigo-600" placeholder="مثال: تم إضافة منتجات جديدة للمخزن الرئيسي...">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">تصنيف الخبر:</label>
@@ -580,7 +604,7 @@
     </div>
 
     <!-- نافذة عرض الملخص والتفاصيل -->
-    <div id="summaryModal" class="custom-modal">
+    <div id="summaryModal" class="custom-modal" onclick="if(event.target === this) window.closeSummaryModal()">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modalTitle" class="font-black text-base text-indigo-600">تفاصيل الملخص</h3>
@@ -593,7 +617,7 @@
         </div>
     </div>
 
-    <!-- تعريف الدوال العامة مباشرة المربوطة بالجسر الأهلي -->
+    <!-- تعريف الدوال العامة المربوطة بالجسر الأهلي -->
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
@@ -661,6 +685,9 @@
             rssNewsList.unshift(`📌 [${cat}] ${text}`);
             textInput.value = '';
             window.closeAddNewsModal();
+            if (typeof window.renderRssTicker === 'function') {
+                window.renderRssTicker();
+            }
             showNativeToast('تم نشر الخبر بنجاح لشريط الأخبار');
         };
 
@@ -743,12 +770,21 @@
             }
         };
 
+        // إغلاق النوافذ عند إدخال زر ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.closeAddNewsModal();
+                window.closeSummaryModal();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
+            // تخصيص روابط الإدارة العليا للفاوندر فقط دون إخفاء روابط القفل والمصادقة للآخرين
             if (currentAdminName !== FOUNDER_NAME) {
-                ['sidebarAuthNavLink', 'gridAuthCard', 'sidebarAdminAccountsLink', 'gridAdminAccountsCard', 'sidebarUsersLink', 'gridUsersCard', 'sidebarReportsLink', 'gridReportsCard', 'sidebarRemoteNavLink', 'gridRemoteCard'].forEach(id => {
+                ['sidebarAdminAccountsLink', 'gridAdminAccountsCard', 'sidebarUsersLink', 'gridUsersCard', 'sidebarReportsLink', 'gridReportsCard', 'sidebarRemoteNavLink', 'gridRemoteCard'].forEach(id => {
                     let el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 });
@@ -797,7 +833,6 @@
             transactions: []
         };
 
-        let analyticsChartInstance = null;
         let unsubscribers = [];
 
         window.purgeAllInvalidData = async function() {
@@ -863,7 +898,7 @@
                 updateAdminHeader();
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
-                renderRssTicker();
+                window.renderRssTicker();
             } catch (e) {}
 
             unsubscribers.push(onSnapshot(accountsRef, (snapshot) => {
@@ -874,13 +909,13 @@
             unsubscribers.push(onSnapshot(clientsRef, (snapshot) => {
                 state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
-                renderRssTicker();
+                window.renderRssTicker();
             }));
 
             unsubscribers.push(onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
-                renderRssTicker();
+                window.renderRssTicker();
             }));
 
             unsubscribers.push(onSnapshot(invoicesRef, (snapshot) => {
@@ -889,7 +924,7 @@
                 state.batchInvoices = allInvs.filter(i => i.isBatch);
                 updateStatsAndDashboard();
                 renderAnalyticsChart();
-                renderRssTicker();
+                window.renderRssTicker();
             }, (err) => {
                 state.invoices = [];
                 state.batchInvoices = [];
@@ -899,11 +934,11 @@
             unsubscribers.push(onSnapshot(transactionsRef, (snapshot) => {
                 state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
                 updateStatsAndDashboard();
-                renderRssTicker();
+                window.renderRssTicker();
             }));
         }
 
-        function renderRssTicker() {
+        window.renderRssTicker = function() {
             let container = document.getElementById('rssTickerContent');
             if(!container) return;
 
@@ -920,7 +955,7 @@
             dynamicNews.push(`💰 رصيد الخزنة النقدية الحالي سحابياً: ${totalVault.toLocaleString()} ج.م`);
 
             container.innerHTML = dynamicNews.map(n => `<span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle text-[6px] text-amber-400"></i> ${n}</span>`).join('&nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp;');
-        }
+        };
 
         (function setupDraggableFloatingBtn() {
             const dragEl = document.getElementById('floatingTvTrigger');
@@ -1012,7 +1047,7 @@
                     <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || i.totalProfit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-slate-500" dir="ltr">${escapeHTML(i.date || '---')}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse no-print">
-                        <button onclick="window.deleteDashboardBatchInvoice('${i.id}', '${i.docId}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
+                        <button onclick="window.deleteDashboardBatchInvoice('${escapeHTML(i.id || '')}', '${escapeHTML(i.docId || '')}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i> حذف
                         </button>
                     </td>
@@ -1105,10 +1140,10 @@
             let q = query.trim().toLowerCase();
             if(!q) return updateStatsAndDashboard();
             let filtered = state.batchInvoices.filter(i => 
-                (i.id && i.id.toLowerCase().includes(q)) || 
-                (i.batchNumber && i.batchNumber.toLowerCase().includes(q)) ||
-                (i.client && i.client.toLowerCase().includes(q)) ||
-                (i.clientName && i.clientName.toLowerCase().includes(q))
+                (i.id && String(i.id).toLowerCase().includes(q)) || 
+                (i.batchNumber && String(i.batchNumber).toLowerCase().includes(q)) ||
+                (i.client && String(i.client).toLowerCase().includes(q)) ||
+                (i.clientName && String(i.clientName).toLowerCase().includes(q))
             );
             updateStatsAndDashboard(filtered);
         };
@@ -1125,7 +1160,7 @@
                     for(let it of inv.items) {
                         let p = state.products.find(x => x.code === it.code);
                         if(p && p.docId) {
-                            await updateDoc(doc(db, "products", p.docId), { qty: p.qty + it.qty });
+                            await updateDoc(doc(db, "products", p.docId), { qty: (p.qty || 0) + Number(it.qty || 0) });
                         }
                     }
                 }
@@ -1147,13 +1182,16 @@
             let canvas = document.getElementById('analyticsChart');
             if (!canvas) return;
             let ctx = canvas.getContext('2d');
-            if (analyticsChartInstance) analyticsChartInstance.destroy();
+            
+            // تدمير أي رسم بياني سابق بشكل آمن لمنع الأخطاء البرمجية في Chart.js
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) existingChart.destroy();
 
             let allInvoicesList = [...state.invoices, ...state.batchInvoices];
             allInvoicesList.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
             let chartItems = allInvoicesList.slice(-10);
 
-            analyticsChartInstance = new Chart(ctx, {
+            new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: chartItems.length ? chartItems.map(i => i.invoiceNumber || i.batchNumber || i.id || 'INV') : ['بداية التشغيل سحابياً', 'اليوم'],

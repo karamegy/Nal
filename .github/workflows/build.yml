@@ -27,15 +27,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Restore Signing Keystore
+      - name: Restore Signing Keystore & Print Fingerprints
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
           if [ -n "${KEYSTORE_BASE64:-}" ]; then
             echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > signing.keystore
             chmod 600 signing.keystore
+            echo "=================== KEYSTORE SHA-1 & SHA-256 FINGERPRINTS ==================="
+            keytool -list -v -keystore signing.keystore -alias "${KEY_ALIAS}" -storepass "${KEYSTORE_PASSWORD}" | grep -E "SHA1:|SHA256:" || true
+            echo "============================================================================="
+          else
+            echo "WARNING: KEYSTORE_BASE64 secret is missing!"
           fi
 
       - name: Build Android App via Capacitor
@@ -54,7 +61,7 @@ jobs:
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 1.1 إنشاء ملف assetlinks.json والتأكيد الآلي للبصمات الأربع
+          # 1.1 إنشاء ملف assetlinks.json والتأكيد الآلي للبصمات
           mkdir -p www/.well-known
           cat << 'EOF' > www/.well-known/assetlinks.json
           [
@@ -74,7 +81,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json المحلي (محدث بالكامل 100%)
+          # 2. إعداد ملف capacitor.config.json المحلي بجميع الإعدادات المطلوبة لجوجل
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -119,14 +126,14 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت مكتبات الكاباسيتور والأيقونات
+          # 3. تثبيت مكتبات الكاباسيتور
           npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets --save-dev --legacy-peer-deps
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 5. حقن ملف MainActivity.java المعدل بالنظام الحديث
+          # 5. حقن ملف MainActivity.java
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -576,7 +583,7 @@ jobs:
           </resources>
           EOF
 
-          # 9. التحقق من وجود مفتاح التوقيع وجميع كلمات السر الخاصة به
+          # 9. التحقق من وجود مفتاح التوقيع
           HAS_KEYSTORE=false
           if [ -f "signing.keystore" ] && [ -n "${KEYSTORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
             cp signing.keystore android/app/
@@ -584,10 +591,10 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. مزامنة Capacitor مع منصة أندرويد
+          # 10. مزامنة Capacitor مع أندرويد
           npx cap sync android
 
-          # 11. إعادة كتابة ملف build.gradle بالكامل بتركيب صحيح وسليم
+          # 11. إعداد build.gradle
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
 
@@ -649,7 +656,7 @@ jobs:
           }
           EOF
 
-          # 12. تنفيذ أمر البناء الشامل لكل من APK و AAB
+          # 12. تنفيذ أمر البناء
           cd android
           chmod +x gradlew
 
@@ -657,11 +664,11 @@ jobs:
             echo "Building Signed Release APK and AAB..."
             ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
-            echo "Building Debug APK and AAB (Keystore missing or incomplete secrets)..."
+            echo "Building Debug APK and AAB..."
             ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
           fi
 
-          # 13. تجميع الملفات واستخراج النسخ الأصلية الصحيحة
+          # 13. تجميع المخرجات
           cd ..
           mkdir -p output_artifacts
           find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;

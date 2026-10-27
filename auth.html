@@ -355,7 +355,13 @@
                     <i class="fa-solid fa-phone text-emerald-400 text-base"></i> دخول برقم الهاتف
                 </button>
             </div>
-            <div id="g_id_onload" class="hidden"></div>
+            <!-- Google Identity Services Loader element -->
+            <div id="g_id_onload" 
+                 data-client_id="515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-auto_select="false"
+                 class="hidden"></div>
         </div>
 
         <div id="pinAuthSection" class="space-y-3 relative z-10 pt-1 hidden">
@@ -575,7 +581,17 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
-        const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
+        // كافة معرّفات عملاء Google OAuth 2.0 Client IDs لتطبيقات الويب والأندرويد
+        const GOOGLE_CLIENT_IDS = {
+            web: "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com",
+            android1: "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com",
+            android2: "515898424721-d50taduhav5jm03e992fhr9ndcra21ac.apps.googleusercontent.com",
+            android3: "515898424721-5oskj8kjn85soff6ulcuj8a7297a0nvk.apps.googleusercontent.com",
+            android4: "515898424721-rkurikg1nudi31n7ghuttgsqu73p4chu.apps.googleusercontent.com"
+        };
+
+        const CLIENT_ID = GOOGLE_CLIENT_IDS.web;
+        const ALL_GOOGLE_CLIENT_IDS = Object.values(GOOGLE_CLIENT_IDS);
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -651,8 +667,8 @@
                     
                     if (typeof Capacitor.Plugins.GoogleAuth.initialize === "function") {
                         await Capacitor.Plugins.GoogleAuth.initialize({
-                            clientId: CLIENT_ID,
-                            serverClientId: CLIENT_ID,
+                            clientId: GOOGLE_CLIENT_IDS.web,
+                            serverClientId: GOOGLE_CLIENT_IDS.web,
                             grantOfflineAccess: true,
                             scopes: ["profile", "email"]
                         }).catch(() => {});

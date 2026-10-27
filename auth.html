@@ -289,110 +289,7 @@
             }
         };
 
-        // دالة الدخول برقم PIN بدون الحاجة للانتظار الشبكي
-        window.performBiometricAuth = async function() {
-            window.triggerHaptic(40);
-            window.clearAuthMsgs();
-            const usernameInput = document.getElementById('usernameInput');
-            const pinInputEl = document.getElementById('userPinInput');
-
-            const username = usernameInput ? usernameInput.value.trim() : '';
-            const pinInput = pinInputEl ? pinInputEl.value.trim() : '';
-
-            if (!username) {
-                alert('يرجى إدخال اسم المستخدم أولاً.');
-                return;
-            }
-            if (!pinInput) {
-                alert('يرجى إدخال الرقم السري (PIN) الخاص بالحساب.');
-                return;
-            }
-
-            const statusEl = document.getElementById('bioStatusText');
-            if (statusEl) {
-                statusEl.innerText = `جاري التحقق من الحساب (${username})...`;
-                statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
-            }
-
-            try {
-                if (typeof window.executeCloudBiometricAuth === 'function') {
-                    await window.executeCloudBiometricAuth(username, pinInput);
-                } else {
-                    throw new Error("تخزين محلي مباشر");
-                }
-            } catch (error) {
-                // وضع المصادقة المحلي في حالة انقطاع الشبكة
-                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let offlineCompanyId = localStorage.getItem('eidco_current_company_id') || ('company_' + cleanNameKey + '_' + Date.now().toString().slice(-4));
-                
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_offline_session', 'true');
-                localStorage.setItem('eidco_v14_admin', username);
-                localStorage.setItem('eidco_current_company_id', offlineCompanyId);
-
-                if (statusEl) {
-                    statusEl.innerText = "✓ تمت المصادقة بنجاح! جاري التوجيه...";
-                    statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
-                }
-
-                window.showNativeToast(`مرحباً بك يا ${username}`);
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-                
-                setTimeout(() => {
-                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(offlineCompanyId)}`;
-                }, 300);
-            }
-        };
-
-        // دالة إنشاء حساب جديد مباشرة وضمان الاستجابة
-        window.createNewAccountProcess = async function() {
-            window.triggerHaptic(30);
-            window.clearAuthMsgs();
-
-            const usernameInput = document.getElementById('regUsernameInput');
-            const contactInput = document.getElementById('regContactInput');
-            const pinInputEl = document.getElementById('regPinInput');
-
-            const username = usernameInput ? usernameInput.value.trim() : '';
-            const contact = contactInput ? contactInput.value.trim() : '';
-            const pin = pinInputEl ? pinInputEl.value.trim() : '';
-
-            if (!username) {
-                alert('يرجى كتابة اسم الحساب أو الشركة الجديد.');
-                return;
-            }
-            if (!pin || pin.length < 4) {
-                alert('يرجى تحديد رقم سري (PIN) لا يقل عن 4 أرقام.');
-                return;
-            }
-
-            try {
-                if (typeof window.executeCloudCreateAccount === 'function') {
-                    await window.executeCloudCreateAccount(username, contact, pin);
-                } else {
-                    throw new Error("تفعيل محلي مباشر");
-                }
-            } catch (err) {
-                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
-
-                sessionStorage.setItem('eidco_biometric_verified', 'true');
-                sessionStorage.setItem('eidco_session_auth', 'true');
-                localStorage.setItem('eidco_offline_session', 'true');
-                localStorage.setItem('eidco_v14_admin', username);
-                localStorage.setItem('eidco_current_company_id', newCompanyId);
-
-                window.showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
-                alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه...`);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectPage = urlParams.get('redirect') || 'index.html';
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
-            }
-        };
-
+        // فحص الجلسة المحفوظة تلقائياً للتوجيه السريع
         (function checkOfflineSession() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -652,7 +549,7 @@
         });
     </script>
 
-    <!-- Firebase Engine & Native Auth Handlers -->
+    <!-- Firebase Engine & Native Auth Handlers الكامل والمربوط بالمحرك السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -671,6 +568,7 @@
             signInAnonymously, 
             GoogleAuthProvider, 
             signInWithCredential,
+            signInWithPopup,
             setPersistence,
             indexedDBLocalPersistence,
             browserLocalPersistence,
@@ -679,6 +577,7 @@
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        // بيانات الربط الخاصة بقاعدة البيانات Firebase المعتمدة بالكامل
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
             authDomain: "w2a-37531-672997.firebaseapp.com",
@@ -688,29 +587,26 @@
             appId: "1:515898424721:web:f9d4d842bc621db2da6e30"
         };
 
+        // معرف مصادقة جوجل Web Client ID الأصلي والمعتمد
         const CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
 
-        let app, db, auth;
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            auth.languageCode = 'ar';
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        auth.languageCode = 'ar';
 
-            enableIndexedDbPersistence(db).catch(() => {});
-            setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-                setPersistence(auth, browserLocalPersistence).catch(console.error);
-            });
-        } catch(e) {
-            console.warn("Firebase Init Error:", e);
-        }
+        enableIndexedDbPersistence(db).catch(() => {});
+        setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+            setPersistence(auth, browserLocalPersistence).catch(console.error);
+        });
 
-        const accountsRef = db ? collection(db, "accounts") : null;
-        const messagesRef = db ? collection(db, "messages") : null;
+        const accountsRef = collection(db, "accounts");
+        const messagesRef = collection(db, "messages");
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
         let isProcessingAuth = false;
 
+        // تهيئة GIS المباشر لفتح نافذة Bottom-Sheet النظام
         window.initGoogleIdentity = function() {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 window.google.accounts.id.initialize({
@@ -729,34 +625,32 @@
             window.addEventListener('load', window.initGoogleIdentity);
         }
 
-        if (auth) {
-            onAuthStateChanged(auth, async (user) => {
-                if (user && !user.isAnonymous && !isProcessingAuth) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const savedCompanyId = localStorage.getItem('eidco_current_company_id');
-                    const redirectPage = urlParams.get('redirect') || 'index.html';
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous && !isProcessingAuth) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const savedCompanyId = localStorage.getItem('eidco_current_company_id');
+                const redirectPage = urlParams.get('redirect') || 'index.html';
 
-                    if (savedCompanyId && (sessionStorage.getItem('eidco_session_auth') || localStorage.getItem('eidco_offline_session'))) {
-                        window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
-                    }
+                if (savedCompanyId && (sessionStorage.getItem('eidco_session_auth') || localStorage.getItem('eidco_offline_session'))) {
+                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
                 }
-            });
-        }
+            }
+        });
 
+        // استقبال الـ ID Token المباشر من النظام الأصلي للأندرويد والمصادقة في Firebase
         window.onNativeGoogleSignInSuccess = async function(idToken) {
             try {
-                window.showNativeToast("جاري توثيق الحساب ومزامنة الجلسة...");
-                if (auth) {
-                    const credential = GoogleAuthProvider.credential(idToken);
-                    const result = await signInWithCredential(auth, credential);
-                    await processGoogleAccountData(result.user);
-                }
+                window.showNativeToast("جاري توثيق الحساب ومزامنة الجلسة السحابية...");
+                const credential = GoogleAuthProvider.credential(idToken);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
             } catch (err) {
                 isProcessingAuth = false;
                 window.showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
 
+        // دالة الدخول بـ Google المعتمدة (تتضمن فتح الـ Native Bridge و الـ Bottom-Sheet و نافذة Popup Fallback)
         window.signInWithGoogle = async function() {
             window.triggerHaptic(25);
             window.clearAuthMsgs();
@@ -764,12 +658,14 @@
             const androidBridge = window.AndroidBridge || window.NativeBridge;
             const Capacitor = window.Capacitor;
 
+            // 1. Android Native Bridge للتطبيقات المحولة ناتيف
             if (androidBridge && typeof androidBridge.launchNativeGoogleSignIn === 'function') {
                 window.showNativeToast("جاري فتح حسابات الجهاز...");
                 androidBridge.launchNativeGoogleSignIn();
                 return;
             }
 
+            // 2. إذا كان التطبيق يعمل تحت بيئة Capacitor
             if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.GoogleAuth) {
                 try {
                     isProcessingAuth = true;
@@ -787,7 +683,7 @@
                     const googleUser = await Capacitor.Plugins.GoogleAuth.signIn();
                     const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
 
-                    if (idToken && auth) {
+                    if (idToken) {
                         const credential = GoogleAuthProvider.credential(idToken);
                         const result = await signInWithCredential(auth, credential);
                         await processGoogleAccountData(result.user);
@@ -796,21 +692,40 @@
                 } catch (nativeErr) {
                     isProcessingAuth = false;
                     console.warn("Native Google Auth Cancelled/Failed:", nativeErr);
-                    return;
                 }
             }
 
+            // 3. GIS Bottom-Sheet Overlay & Popup Fallback للمتصفحات والـ PWA
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 isProcessingAuth = false;
                 window.showNativeToast("جاري فتح حسابات Google...");
                 window.initGoogleIdentity();
-                window.google.accounts.id.prompt((notification) => {
+
+                window.google.accounts.id.prompt(async (notification) => {
                     if (notification.isNotDisplayed() || notification.isDismissedMoment()) {
-                        isProcessingAuth = false;
+                        // في حالة تم حظر Bottom-Sheet من المتصفح يتم فتح نافذة Pop-up المباشرة لـ Firebase
+                        try {
+                            isProcessingAuth = true;
+                            const provider = new GoogleAuthProvider();
+                            const result = await signInWithPopup(auth, provider);
+                            await processGoogleAccountData(result.user);
+                        } catch (popupErr) {
+                            isProcessingAuth = false;
+                            console.warn("Popup login failed or cancelled:", popupErr);
+                        }
                     }
                 });
             } else {
-                window.showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
+                // خيار احتياطي لتأكيد فتح النافذة المنبثقة من Firebase
+                try {
+                    isProcessingAuth = true;
+                    const provider = new GoogleAuthProvider();
+                    const result = await signInWithPopup(auth, provider);
+                    await processGoogleAccountData(result.user);
+                } catch (err) {
+                    isProcessingAuth = false;
+                    window.showNativeToast("⚠️ يتعذر فتح نافذة Google المباشرة، يرجى المحاولة لاحقاً");
+                }
             }
         };
 
@@ -822,17 +737,16 @@
             try {
                 isProcessingAuth = true;
                 window.showNativeToast("⚡ جاري المصادقة والمزامنة الفورية...");
-                if (auth) {
-                    const credential = GoogleAuthProvider.credential(response.credential);
-                    const result = await signInWithCredential(auth, credential);
-                    await processGoogleAccountData(result.user);
-                }
+                const credential = GoogleAuthProvider.credential(response.credential);
+                const result = await signInWithCredential(auth, credential);
+                await processGoogleAccountData(result.user);
             } catch (err) {
                 isProcessingAuth = false;
                 window.showAuthMsg('error', 'فشل المصادقة السحابية: ' + err.message);
             }
         };
 
+        // دالة حفظ ومزامنة بيانات حساب Google المعتمد في Firebase Firestore
         async function processGoogleAccountData(user) {
             try {
                 let userEmail = (user.email || '').toLowerCase();
@@ -852,35 +766,36 @@
                     userRole = 'مدير نظام رئيسي';
                 }
 
-                if (db) {
-                    const userDocRef = doc(db, "accounts", assignedCompanyId);
-                    try {
-                        const userDocSnap = await getDoc(userDocRef);
-                        if (userDocSnap.exists()) {
-                            const accountData = userDocSnap.data();
-                            if (accountData.isBanned) {
-                                window.showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                                alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
-                                isProcessingAuth = false;
-                                return;
-                            }
-                            if (accountData.name) finalUserName = accountData.name;
-                            if (accountData.role) userRole = accountData.role;
-                        }
-                    } catch (snapErr) {}
+                const userDocRef = doc(db, "accounts", assignedCompanyId);
 
-                    await setDoc(userDocRef, {
-                        name: finalUserName,
-                        pin: "1234",
-                        role: userRole,
-                        companyId: assignedCompanyId,
-                        email: userEmail,
-                        avatar: userPhotoUrl,
-                        biometricVerified: true,
-                        isBanned: false,
-                        date: new Date().toISOString().split('T')[0]
-                    }, { merge: true });
-                }
+                // فحص هل الحساب مسجل مسبقاً أم جديد
+                try {
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        const accountData = userDocSnap.data();
+                        if (accountData.isBanned) {
+                            window.showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                            alert("⚠️ عذراً، تم حظر هذا الحساب من قِبل الإدارة لمخالفة شروط الاستخدام.");
+                            isProcessingAuth = false;
+                            return;
+                        }
+                        if (accountData.name) finalUserName = accountData.name;
+                        if (accountData.role) userRole = accountData.role;
+                    }
+                } catch (snapErr) {}
+
+                // تسجيل/تحديث الحساب في Firestore
+                await setDoc(userDocRef, {
+                    name: finalUserName,
+                    pin: "1234",
+                    role: userRole,
+                    companyId: assignedCompanyId,
+                    email: userEmail,
+                    avatar: userPhotoUrl,
+                    biometricVerified: true,
+                    isBanned: false,
+                    date: new Date().toISOString().split('T')[0]
+                }, { merge: true });
 
                 sessionStorage.setItem('eidco_biometric_verified', 'true');
                 sessionStorage.setItem('eidco_session_auth', 'true');
@@ -899,128 +814,216 @@
             }
         }
 
-        // ربط السحابة للمصادقة المتقدمة
-        window.executeCloudBiometricAuth = async function(username, pinInput) {
-            if (!db || !accountsRef) throw new Error("السحابة غير متوفرة حالياً");
+        // المصادقة باسم المستخدم و PIN المباشرة عبر Firestore (أزرار تبويب اسم و PIN)
+        window.performBiometricAuth = async function() {
+            window.triggerHaptic(40);
+            window.clearAuthMsgs();
+            const usernameInput = document.getElementById('usernameInput');
+            const pinInputEl = document.getElementById('userPinInput');
 
-            const querySnapshot = await getDocs(accountsRef);
-            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const pinInput = pinInputEl ? pinInputEl.value.trim() : '';
 
-            let matchedAccount = cloudAccounts.find(a => a.name === username);
-            
-            if (matchedAccount && matchedAccount.isBanned) {
-                window.showAuthMsg('error', "⚠️ هذا الحساب محظور نهائياً بسبب شكاوى ومخالفات مسجلة.");
-                alert("⚠️ تنبيه: هذا الحساب تم حظره نهائياً بسبب شكاوى ومخالفات مسجلة ضده.");
+            if (!username) {
+                alert('يرجى إدخال اسم المستخدم أولاً.');
+                return;
+            }
+            if (!pinInput) {
+                alert('يرجى إدخال الرقم السري (PIN) الخاص بالحساب.');
                 return;
             }
 
-            let assignedCompanyId;
-            if (!matchedAccount) {
-                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-                assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+            const statusEl = document.getElementById('bioStatusText');
+            if (statusEl) {
+                statusEl.innerText = `جاري التحقق من السجلات السحابية لـ (${username})...`;
+                statusEl.className = "text-xs text-amber-400 font-mono block font-bold animate-pulse";
+            }
+
+            try {
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let matchedAccount = cloudAccounts.find(a => a.name === username);
                 
-                if (username === FOUNDER_NAME) {
-                    assignedCompanyId = 'company_founder_karm';
+                if (matchedAccount && matchedAccount.isBanned) {
+                    if (statusEl) {
+                        statusEl.innerText = "❌ عذراً، هذا الحساب محظور من قِبل الإدارة!";
+                        statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                    }
+                    window.showAuthMsg('error', "⚠️ هذا الحساب محظور نهائياً بسبب شكاوى ومخالفات مسجلة.");
+                    alert("⚠️ تنبيه: هذا الحساب تم حظره نهائياً بسبب شكاوى ومخالفات مسجلة ضده.");
+                    return;
                 }
 
-                await setDoc(doc(db, "accounts", assignedCompanyId), {
+                let assignedCompanyId;
+
+                if (!matchedAccount) {
+                    let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                    assignedCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+                    
+                    if (username === FOUNDER_NAME) {
+                        assignedCompanyId = 'company_founder_karm';
+                    }
+
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
+                        name: username,
+                        pin: pinInput,
+                        role: 'محاسب أول',
+                        companyId: assignedCompanyId,
+                        biometricVerified: true,
+                        isBanned: false,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
+
+                    if (statusEl) statusEl.innerText = "✓ تم تسجيل الحساب الجديد ودمجه بالسحابة بنجاح!";
+                } else {
+                    let expectedPin = matchedAccount.pin || "1234";
+                    if (pinInput !== expectedPin) {
+                        if (statusEl) {
+                            statusEl.innerText = "❌ الرقم السري (PIN) غير صحيح!";
+                            statusEl.className = "text-xs text-rose-400 font-mono block font-bold";
+                        }
+                        window.showAuthMsg('error', "⚠️ الرقم السري غير مطابق للحساب.");
+                        alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
+                        return;
+                    }
+                    assignedCompanyId = matchedAccount.companyId;
+                }
+
+                if (statusEl) {
+                    statusEl.innerText = "✓ تمت المطابقة بنجاح! جاري التوجيه...";
+                    statusEl.className = "text-xs text-emerald-400 font-mono block font-bold";
+                }
+
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', username);
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
+                window.showNativeToast(`مرحباً بك يا ${username}`);
+                setTimeout(() => {
+                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                }, 400);
+
+            } catch (error) {
+                // وضع المصادقة المحلي في حالة انقطاع الشبكة
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', username);
+                let offlineCompanyId = localStorage.getItem('eidco_current_company_id') || ('company_' + username.replace(/[^a-zA-Z0-9أ-ي]/g, '_'));
+                localStorage.setItem('eidco_current_company_id', offlineCompanyId);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
+                window.showNativeToast(`مرحباً بك (وضع عدم الاتصال)`);
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(offlineCompanyId)}`;
+            }
+        };
+
+        // إنشاء حساب جديد سحابياً مباشرة عبر Firebase Firestore (أزرار تبويب حساب جديد)
+        window.createNewAccountProcess = async function() {
+            window.triggerHaptic(30);
+            window.clearAuthMsgs();
+
+            const usernameInput = document.getElementById('regUsernameInput');
+            const contactInput = document.getElementById('regContactInput');
+            const pinInputEl = document.getElementById('regPinInput');
+
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const contact = contactInput ? contactInput.value.trim() : '';
+            const pin = pinInputEl ? pinInputEl.value.trim() : '';
+
+            if (!username) {
+                alert('يرجى كتابة اسم الحساب أو الشركة الجديد.');
+                return;
+            }
+            if (!pin || pin.length < 4) {
+                alert('يرجى تحديد رقم سري (PIN) لا يقل عن 4 أرقام.');
+                return;
+            }
+
+            try {
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                let existing = cloudAccounts.find(a => a.name === username);
+                if (existing) {
+                    window.showAuthMsg('error', '⚠️ هذا الاسم مسجل بالفعل، يرجى اختيار اسم آخر أو تسجيل الدخول.');
+                    return;
+                }
+
+                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+
+                await setDoc(doc(db, "accounts", newCompanyId), {
                     name: username,
-                    pin: pinInput,
+                    pin: pin,
+                    contact: contact,
                     role: 'محاسب أول',
-                    companyId: assignedCompanyId,
+                    companyId: newCompanyId,
                     biometricVerified: true,
                     isBanned: false,
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
-            } else {
-                let expectedPin = matchedAccount.pin || "1234";
-                if (pinInput !== expectedPin) {
-                    window.showAuthMsg('error', "⚠️ الرقم السري غير مطابق للحساب.");
-                    alert("⚠️ تنبيه: الرقم السري المدخل غير مطابق للرقم السري المسجل لهذا الحساب.");
-                    return;
-                }
-                assignedCompanyId = matchedAccount.companyId;
+
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', username);
+                localStorage.setItem('eidco_current_company_id', newCompanyId);
+
+                window.showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
+                alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه إلى المنظومة...`);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
+
+            } catch (err) {
+                let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
+
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', username);
+                localStorage.setItem('eidco_current_company_id', newCompanyId);
+
+                window.showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
+                alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه...`);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
             }
-
-            sessionStorage.setItem('eidco_biometric_verified', 'true');
-            sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_offline_session', 'true');
-            localStorage.setItem('eidco_v14_admin', username);
-            localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectPage = urlParams.get('redirect') || 'index.html';
-
-            window.showNativeToast(`مرحباً بك يا ${username}`);
-            setTimeout(() => {
-                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
-            }, 300);
         };
 
-        window.executeCloudCreateAccount = async function(username, contact, pin) {
-            if (!db || !accountsRef) throw new Error("السحابة غير متوفرة حالياً");
+        signInAnonymously(auth).then(() => {
+            onSnapshot(accountsRef, (snapshot) => {
+                let accountsData = snapshot.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    ...docSnap.data()
+                }));
 
-            const querySnapshot = await getDocs(accountsRef);
-            let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            let existing = cloudAccounts.find(a => a.name === username);
-            if (existing) {
-                window.showAuthMsg('error', '⚠️ هذا الاسم مسجل بالفعل، يرجى اختيار اسم آخر أو تسجيل الدخول.');
-                return;
-            }
-
-            let cleanNameKey = username.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
-            let newCompanyId = 'company_' + cleanNameKey + '_' + Date.now().toString().slice(-4);
-
-            await setDoc(doc(db, "accounts", newCompanyId), {
-                name: username,
-                pin: pin,
-                contact: contact,
-                role: 'محاسب أول',
-                companyId: newCompanyId,
-                biometricVerified: true,
-                isBanned: false,
-                date: new Date().toISOString().split('T')[0]
-            }, { merge: true });
-
-            sessionStorage.setItem('eidco_biometric_verified', 'true');
-            sessionStorage.setItem('eidco_session_auth', 'true');
-            localStorage.setItem('eidco_offline_session', 'true');
-            localStorage.setItem('eidco_v14_admin', username);
-            localStorage.setItem('eidco_current_company_id', newCompanyId);
-
-            window.showNativeToast(`✓ تم إنشاء وتفعيل حساب ${username} بنجاح`);
-            alert(`✓ تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه...`);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectPage = urlParams.get('redirect') || 'index.html';
-            window.location.href = `${redirectPage}?companyId=${encodeURIComponent(newCompanyId)}`;
-        };
-
-        if (auth) {
-            signInAnonymously(auth).then(() => {
-                if (accountsRef) {
-                    onSnapshot(accountsRef, (snapshot) => {
-                        let accountsData = snapshot.docs.map(docSnap => ({
-                            id: docSnap.id,
-                            ...docSnap.data()
-                        }));
-
-                        if (accountsData.length === 0) {
-                            setDoc(doc(db, "accounts", "company_founder_karm"), {
-                                name: FOUNDER_NAME,
-                                pin: "1234",
-                                role: 'مدير نظام رئيسي',
-                                companyId: 'company_founder_karm',
-                                biometricVerified: true,
-                                isBanned: false,
-                                date: new Date().toISOString().split('T')[0]
-                            }, { merge: true });
-                        }
-                    });
+                if (accountsData.length === 0) {
+                    setDoc(doc(db, "accounts", "company_founder_karm"), {
+                        name: FOUNDER_NAME,
+                        pin: "1234",
+                        role: 'مدير نظام رئيسي',
+                        companyId: 'company_founder_karm',
+                        biometricVerified: true,
+                        isBanned: false,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
                 }
-            }).catch(() => {});
-        }
+            });
+        }).catch(() => {});
 
         window.submitUserComplaint = async function() {
             window.triggerHaptic(30);
@@ -1034,23 +1037,21 @@
             }
 
             try {
-                if (db && messagesRef) {
-                    await addDoc(messagesRef, {
-                        senderName: name,
-                        contactInfo: contact || 'بدون وسائل تواصل',
-                        message: message,
-                        type: 'شكوى نظام',
-                        status: 'قيد المراجعة',
-                        date: new Date().toISOString().replace('T', ' ').substring(0, 19)
-                    });
-                }
+                await addDoc(messagesRef, {
+                    senderName: name,
+                    contactInfo: contact || 'بدون وسائل تواصل',
+                    message: message,
+                    type: 'شكوى نظام',
+                    status: 'قيد المراجعة',
+                    date: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                });
+
                 window.showNativeToast("✓ تم إرسال الشكوى للإدارة بنجاح");
                 alert('✓ تم إرسال شكواك بنجاح إلى الإدارة الرئيسية.');
                 if (document.getElementById('complaintMessage')) document.getElementById('complaintMessage').value = '';
                 window.closeComplaintsModal();
             } catch(err) {
-                alert('تم تسجيل الشكوى محلياً بنجاح.');
-                window.closeComplaintsModal();
+                alert('خطأ أثناء إرسال الشكوى: ' + err.message);
             }
         };
 
@@ -1065,16 +1066,14 @@
             }
 
             try {
-                if (auth) {
-                    if (!window.recaptchaVerifier) {
-                        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
-                    }
-                    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-                    document.getElementById('phoneStep1')?.classList.add('hidden');
-                    document.getElementById('phoneStep2')?.classList.remove('hidden');
-                    window.showNativeToast("✓ تم إرسال رمز التحقق (OTP)");
-                    alert('✓ تم إرسال رمز التحقق إلى هاتفك بنجاح.');
+                if (!window.recaptchaVerifier) {
+                    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
                 }
+                confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+                document.getElementById('phoneStep1')?.classList.add('hidden');
+                document.getElementById('phoneStep2')?.classList.remove('hidden');
+                window.showNativeToast("✓ تم إرسال رمز التحقق (OTP)");
+                alert('✓ تم إرسال رمز التحقق إلى هاتفك بنجاح.');
             } catch (error) {
                 alert('فشل إرسال رمز التحقق: ' + error.message);
             }
@@ -1086,27 +1085,52 @@
             if(!code) return alert('يرجى إدخال رمز التحقق.');
 
             try {
-                if (confirmationResult) {
-                    let result = await confirmationResult.confirm(code);
-                    let user = result.user;
-                    let phoneNum = user.phoneNumber || 'رقم الهاتف';
+                let result = await confirmationResult.confirm(code);
+                let user = result.user;
+                let phoneNum = user.phoneNumber || 'رقم الهاتف';
 
-                    let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
-                    let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
+                const querySnapshot = await getDocs(accountsRef);
+                let cloudAccounts = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                    sessionStorage.setItem('eidco_biometric_verified', 'true');
-                    sessionStorage.setItem('eidco_session_auth', 'true');
-                    localStorage.setItem('eidco_offline_session', 'true');
-                    localStorage.setItem('eidco_v14_admin', finalUserName);
-                    localStorage.setItem('eidco_current_company_id', assignedCompanyId);
-
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const redirectPage = urlParams.get('redirect') || 'index.html';
-
-                    window.showNativeToast("✓ تمت المصادقة بنجاح");
-                    alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
-                    window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
+                let existingAccount = cloudAccounts.find(a => a.phone === phoneNum);
+                if (existingAccount && existingAccount.isBanned) {
+                    window.showAuthMsg('error', "⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
+                    alert("⚠️ عذراً، هذا الحساب محظور من قِبل الإدارة.");
+                    return;
                 }
+
+                let assignedCompanyId = 'company_phone_' + user.uid.substring(0, 8);
+                let finalUserName = 'مستخدم الهاتف (' + phoneNum.slice(-4) + ')';
+                let userRole = 'مشرف أسطول';
+
+                if (existingAccount) {
+                    assignedCompanyId = existingAccount.companyId;
+                    finalUserName = existingAccount.name;
+                } else {
+                    await setDoc(doc(db, "accounts", assignedCompanyId), {
+                        name: finalUserName,
+                        pin: "1234",
+                        role: userRole,
+                        companyId: assignedCompanyId,
+                        phone: phoneNum,
+                        biometricVerified: true,
+                        isBanned: false,
+                        date: new Date().toISOString().split('T')[0]
+                    }, { merge: true });
+                }
+
+                sessionStorage.setItem('eidco_biometric_verified', 'true');
+                sessionStorage.setItem('eidco_session_auth', 'true');
+                localStorage.setItem('eidco_offline_session', 'true');
+                localStorage.setItem('eidco_v14_admin', finalUserName);
+                localStorage.setItem('eidco_current_company_id', assignedCompanyId);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectPage = urlParams.get('redirect') || 'index.html';
+
+                window.showNativeToast("✓ تمت المصادقة بنجاح");
+                alert('✓ تمت المصادقة ومزامنة الحساب ودخول المنظومة بنجاح!');
+                window.location.href = `${redirectPage}?companyId=${encodeURIComponent(assignedCompanyId)}`;
             } catch (error) {
                 alert('رمز التحقق غير صحيح: ' + error.message);
             }

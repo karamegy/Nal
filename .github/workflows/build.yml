@@ -596,10 +596,9 @@ jobs:
           # 10. مزامنة Capacitor مع أندرويد
           npx cap sync android
 
-          # 11. إعداد build.gradle (محدث ومضاف إليه Firebase BOM ومكتبات المصادقة بوضوح)
+          # 11. إعداد build.gradle
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
-          apply plugin: 'com.google.gms.google-services'
 
           android {
               namespace "io.github.karamegy.twa"
@@ -646,12 +645,16 @@ jobs:
               implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
               implementation project(':capacitor-android')
               implementation project(':capacitor-cordova-android-plugins')
-              
-              // تم إضافة Firebase BOM ومكتبات المصادقة وقاعدة البيانات هنا لتجنب أي توقف أو خطأ
-              implementation platform('com.google.firebase:firebase-bom:35.1.0')
-              implementation 'com.google.firebase:firebase-auth'
-              implementation 'com.google.firebase:firebase-firestore'
-              implementation 'com.google.android.gms:play-services-auth:21.2.0'
+              implementation 'com.google.android.gms:play-services-auth:20.7.0'
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.text) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json missing, skipping plugin apply")
           }
           EOF
 

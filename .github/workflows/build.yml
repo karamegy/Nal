@@ -54,13 +54,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 0. حفظ نسخة من ملف google-services.json إذا كان موجوداً قبل مسح مجلد أندرويد
-          if [ -f "android/app/google-services.json" ]; then
-            cp android/app/google-services.json ./google-services.json.tmp
-          elif [ -f "google-services.json" ]; then
-            cp google-services.json ./google-services.json.tmp
-          fi
-
           # 1. تجهيز مجلد الويب www ونسخ الملفات المحلية
           mkdir -p www
           cp -r *.html *.js *.json assets www/ 2>/dev/null || true
@@ -141,12 +134,6 @@ jobs:
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
-
-          # 4.1 استعادة ملف google-services.json إلى android/app/ فور إنشائه
-          if [ -f "./google-services.json.tmp" ]; then
-            cp ./google-services.json.tmp android/app/google-services.json
-            rm -f ./google-services.json.tmp
-          fi
 
           # 5. حقن ملف MainActivity.java
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
@@ -496,8 +483,8 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 7. التأكد من وجود google-services.json في android/app/
-          if [ -f "google-services.json" ] && [ ! -f "android/app/google-services.json" ]; then
+          # 7. نسخ google-services.json إلى مشروع الأندرويد إذا وجد
+          if [ -f "google-services.json" ]; then
             cp google-services.json android/app/ 2>/dev/null || true
           fi
 
@@ -606,18 +593,12 @@ jobs:
           fi
           export HAS_KEYSTORE
 
-          # 10. تفعيل إضافة google-services في android/build.gradle الرئيسي
-          if ! grep -q "com.google.gms:google-services" android/build.gradle; then
-            sed -i "/dependencies {/a \        classpath 'com.google.gms:google-services:4.4.1'" android/build.gradle
-          fi
-
-          # 10.1 مزامنة Capacitor مع أندرويد
+          # 10. مزامنة Capacitor مع أندرويد
           npx cap sync android
 
-          # 11. إعداد build.gradle وتفعيل إضافة Google Services ومكتبات Firebase
+          # 11. إعداد build.gradle
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
-          apply plugin: 'com.google.gms.google-services'
 
           android {
               namespace "io.github.karamegy.twa"
@@ -665,9 +646,15 @@ jobs:
               implementation project(':capacitor-android')
               implementation project(':capacitor-cordova-android-plugins')
               implementation 'com.google.android.gms:play-services-auth:20.7.0'
-              implementation platform('com.google.firebase:firebase-bom:33.9.0')
-              implementation 'com.google.firebase:firebase-auth'
-              implementation 'com.google.firebase:firebase-firestore'
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.text) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json missing, skipping plugin apply")
           }
           EOF
 

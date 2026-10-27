@@ -61,7 +61,7 @@ jobs:
             cp www/auth.html www/index.html 2>/dev/null || true
           fi
 
-          # 1.1 إنشاء ملف assetlinks.json والتأكيد الآلي للبصمات
+          # 1.1 إنشاء ملف assetlinks.json ودمج بصمات SHA-256 المطلوبة للتوثيق
           mkdir -p www/.well-known
           cat << 'EOF' > www/.well-known/assetlinks.json
           [
@@ -72,6 +72,8 @@ jobs:
                 "package_name": "io.github.karamegy.twa",
                 "sha256_cert_fingerprints": [
                   "64:FD:12:52:9E:51:45:41:86:E8:CD:1D:2F:79:0D:32:CF:BE:F0:CE:06:FF:8F:09:07:EE:5C:90:8C:39:EE:D5",
+                  "08:4F:AA:A3:E0:22:CC:85:64:5D:91:9B:85:CC:71:AE:4D:CF:0C:D4:25:51:10:75:56:2C:D3:D2:07:28:0D:59",
+                  "49:31:10:A6:B0:BC:62:F1:71:C6:48:FA:ED:D1:56:CC:DF:59:3F:81:5E:B5:CA:73:9E:87:01:CC:6B:68:C8:51",
                   "F8:38:2E:EE:4C:D1:5C:84:12:D1:35:F1:07:61:8A:AA:EC:C2:ED:E4:AD:E8:71:9E:F8:6A:93:7C:67:55:06:B6",
                   "97:08:D9:35:EB:83:8D:7B:2E:74:E6:A6:96:63:99:A1:6E:AB:A0:D4:0D:AF:58:00:03:A2:A9:AA:5E:70:BE:FA",
                   "61:31:DC:47:13:AE:40:C2:2F:6A:12:D1:81:7C:EA:F8:85:D5:24:F2:4C:5B:80:43:2F:85:F9:2A:45:E2:53"
@@ -81,7 +83,7 @@ jobs:
           ]
           EOF
 
-          # 2. إعداد ملف capacitor.config.json المحلي بجميع الإعدادات المطلوبة لجوجل
+          # 2. إعداد ملف capacitor.config.json المحلي بالإعدادات الكاملة
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "io.github.karamegy.twa",
@@ -126,7 +128,7 @@ jobs:
           }
           EOF
 
-          # 3. تثبيت مكتبات الكاباسيتور
+          # 3. تثبيت مكتبات كاباسيتور
           npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets --save-dev --legacy-peer-deps
 
           # 4. إعادة إنشاء منصة أندرويد

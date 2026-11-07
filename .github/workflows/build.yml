@@ -668,23 +668,23 @@ jobs:
           fi
 
           cd ..
-          mkdir -p output_artifacts
-          find android/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} ./output_artifacts/ \;
-
-          FIRST_APK=$(find ./output_artifacts -type f -name "*.apk" | head -n 1)
-          FIRST_AAB=$(find ./output_artifacts -type f -name "*.aab" | head -n 1)
+          FIRST_APK=$(find android/app/build/outputs -type f -name "*.apk" | head -n 1)
+          FIRST_AAB=$(find android/app/build/outputs -type f -name "*.aab" | head -n 1)
 
           if [ -n "$FIRST_APK" ]; then cp "$FIRST_APK" ./EIDCO-OS-app.apk; fi
           if [ -n "$FIRST_AAB" ]; then cp "$FIRST_AAB" ./EIDCO-OS-app.aab; fi
 
-      - name: Upload Artifacts
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EIDCO-OS-Android-Release
-          path: |
-            output_artifacts/*
-            EIDCO-OS-app.apk
-            EIDCO-OS-app.aab
+          name: EIDCO-OS-APK-Release
+          path: EIDCO-OS-app.apk
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EIDCO-OS-AAB-Release
+          path: EIDCO-OS-app.aab
 
       - name: Clean Up Signing Key
         if: always()

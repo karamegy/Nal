@@ -53,7 +53,6 @@ public class MainActivity extends BridgeActivity {
     private GoogleSignInClient mGoogleSignInClient;
     private ActivityResultLauncher<Intent> googleSignInLauncher;
 
-    // قائمة كافة معرّفات Google OAuth 2.0 Client IDs
     public static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
     public static final String GOOGLE_ANDROID_CLIENT_1 = "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com";
     public static final String GOOGLE_ANDROID_CLIENT_2 = "515898424721-d50taduhav5jm03e992fhr9ndcra21ac.apps.googleusercontent.com";
@@ -67,14 +66,12 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // إعداد مصادقة جوجل بطلب ID Token عبر Web Client ID المعتمد
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(GOOGLE_WEB_CLIENT_ID)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // مستقبل نتائج تسجيل الدخول الحديث (ActivityResultLauncher)
         googleSignInLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {

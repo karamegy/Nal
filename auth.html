@@ -571,6 +571,11 @@
             RecaptchaVerifier, 
             signInWithPhoneNumber 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getMessaging, 
+            getToken, 
+            onMessage 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC69al0BNfnnMm7tzBTcnch5VdrhUugYtA",
@@ -595,6 +600,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const messaging = getMessaging(app);
+        const VAPID_KEY = "BNztIh12_LLORr6XP1kWScr5VQePKIG5uK-sw2Drtovm41jDHs840l-XyVdfZO_QNV_zBHyINnhRtkesTD3_5dc";
+
         auth.languageCode = "ar";
 
         enableIndexedDbPersistence(db).catch(() => {});
@@ -611,6 +619,34 @@
         function sanitizeInput(str) {
             return (str || "").toString().trim().replace(/[<>&"']/g, "");
         }
+
+        // طلب إذن الإشعارات وحفظ FCM Token في Firestore
+        async function requestNotificationPermission(userCompanyId) {
+            try {
+                if (!("Notification" in window)) return;
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+                    if (token && userCompanyId) {
+                        await setDoc(doc(db, "accounts", userCompanyId), {
+                            fcmToken: token,
+                            lastTokenUpdate: new Date().toISOString()
+                        }, { merge: true });
+                        console.log("FCM Token Saved:", token);
+                    }
+                }
+            } catch (err) {
+                console.error("Error getting FCM Token:", err);
+            }
+        }
+
+        // الاستماع للإشعارات المباشرة أثناء تواجد المستخدم داخل التطبيق
+        onMessage(messaging, (payload) => {
+            console.log("Message received: ", payload);
+            if (payload.notification) {
+                window.showNativeToast(payload.notification.title + ": " + payload.notification.body);
+            }
+        });
 
         getRedirectResult(auth).then(async (result) => {
             if (result && result.user) {
@@ -629,6 +665,7 @@
                 const redirectPage = urlParams.get("redirect") || "index.html";
 
                 if (savedCompanyId && (sessionStorage.getItem("eidco_session_auth") || localStorage.getItem("eidco_offline_session"))) {
+                    await requestNotificationPermission(savedCompanyId);
                     window.location.href = `${redirectPage}?companyId=${encodeURIComponent(savedCompanyId)}`;
                 }
             }
@@ -772,6 +809,8 @@
                 localStorage.setItem("eidco_v14_admin", finalUserName);
                 localStorage.setItem("eidco_current_company_id", assignedCompanyId);
 
+                await requestNotificationPermission(assignedCompanyId);
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get("redirect") || "index.html";
 
@@ -870,6 +909,8 @@
                     localStorage.setItem("eidco_v14_admin", username);
                     localStorage.setItem("eidco_current_company_id", assignedCompanyId);
 
+                    await requestNotificationPermission(assignedCompanyId);
+
                     const urlParams = new URLSearchParams(window.location.search);
                     const redirectPage = urlParams.get("redirect") || "index.html";
 
@@ -946,6 +987,8 @@
                 localStorage.setItem("eidco_offline_session", "true");
                 localStorage.setItem("eidco_v14_admin", username);
                 localStorage.setItem("eidco_current_company_id", newCompanyId);
+
+                await requestNotificationPermission(newCompanyId);
 
                 window.showNativeToast(`تم إنشاء وتفعيل حساب ${username} بنجاح`);
                 alert(`تم إنشاء حسابك (${username}) بنجاح! جاري التوجيه إلى المنظومة...`);
@@ -1094,6 +1137,8 @@
                 localStorage.setItem("eidco_offline_session", "true");
                 localStorage.setItem("eidco_v14_admin", finalUserName);
                 localStorage.setItem("eidco_current_company_id", assignedCompanyId);
+
+                await requestNotificationPermission(assignedCompanyId);
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectPage = urlParams.get("redirect") || "index.html";

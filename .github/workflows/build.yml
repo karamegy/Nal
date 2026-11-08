@@ -51,7 +51,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true"
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true -Dorg.gradle.internal.http.connectionTimeout=300000 -Dorg.gradle.internal.http.socketTimeout=300000 -Dhttp.socketTimeout=300000 -Dhttp.connectionTimeout=300000"
         run: |
           set -euo pipefail
 
@@ -658,10 +658,10 @@ jobs:
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
             echo "Building Signed Release APK and AAB..."
-            ./gradlew assembleRelease bundleRelease --no-daemon
+            ./gradlew assembleRelease bundleRelease --no-daemon || (sleep 5 && ./gradlew assembleRelease bundleRelease --no-daemon)
           else
             echo "Building Debug APK and AAB..."
-            ./gradlew assembleDebug bundleDebug --no-daemon
+            ./gradlew assembleDebug bundleDebug --no-daemon || (sleep 5 && ./gradlew assembleDebug bundleDebug --no-daemon)
           fi
 
           cd ..

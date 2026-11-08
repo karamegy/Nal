@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // إدارة الشكاوى وبلاغات الحسابات المخالفة</title>
     
     <!-- PWA & Native App Meta Tags -->
@@ -12,61 +12,25 @@
     <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
+    <!-- Capacitor Native Bridge & Core -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
-        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي (Native Bridge Helper)
-        window.NativeBridge = {
-            vibrate: function(ms = 40) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                    window.AndroidBridge.vibrate(ms);
-                } else if (navigator.vibrate) {
-                    navigator.vibrate(ms);
-                }
-            },
-            showToast: function(msg) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                    window.AndroidBridge.showToast(msg);
-                } else {
-                    console.log("[Toast]: " + msg);
-                }
-            },
-            keepScreenOn: function(enable = true) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.keepScreenOn === 'function') {
-                    window.AndroidBridge.keepScreenOn(enable);
-                }
-            },
-            shareText: function(text) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                    window.AndroidBridge.shareText(text);
-                } else if (navigator.share) {
-                    navigator.share({ text: text }).catch(() => {});
-                } else {
-                    alert(text);
-                }
-            },
-            downloadFile: function(filename, base64Data) {
-                if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
-                    window.AndroidBridge.downloadFile(filename, base64Data);
-                } else {
-                    const link = document.createElement('a');
-                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
-                    link.download = filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            }
-        };
+        const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+        const FOUNDER_COMPANY = "company_founder_karm";
+        
+        if (!localStorage.getItem('eidco_current_company_id')) {
+            localStorage.setItem('eidco_current_company_id', FOUNDER_COMPANY);
+        }
+        if (!localStorage.getItem('eidco_v14_admin')) {
+            localStorage.setItem('eidco_v14_admin', FOUNDER_NAME);
+        }
 
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
-
-        // إبقاء الشاشة مضاءة أثناء مراقبة البلاغات
-        window.addEventListener('DOMContentLoaded', () => {
-            window.NativeBridge.keepScreenOn(true);
-        });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -86,37 +50,26 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
-        /* السماح بالتفاعل الكامل مع حقول الكتابة والمدخلات */
         input, textarea, select {
             -webkit-user-select: text !important;
             user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
-        html {
-            background-color: var(--bg-main);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            height: 100%;
-        }
-
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh; 
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); 
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
-            overflow-x: hidden;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            touch-action: manipulation;
+            padding-left: env(safe-area-inset-left, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
+            overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -177,7 +130,29 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #1e1b4b; color: #818cf8; }
         
-        /* حاوية الجدول المرنة بالتمرير الأفقي والعمودي السلس */
+        /* حل مشكلة القائمة الجانبية للهاتف لمنع تعارض Tailwind */
+        #appSidebar.mobile-open {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            width: 18rem !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            background-color: #0f172a !important;
+            z-index: 9999 !important;
+            box-shadow: -10px 0 25px rgba(0,0,0,0.7) !important;
+        }
+
+        #appSidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 98;
+        }
+
         .table-container {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -189,38 +164,102 @@
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-
-        /* القائمة الجانبية للجوال والتمرير السلس داخلياً */
-        #appSidebar.mobile-open {
-            display: flex !important;
-            position: fixed !important;
-            top: 0 !important;
-            right: 0 !important;
-            height: 100vh !important;
-            height: 100dvh !important;
-            z-index: 100 !important;
-            box-shadow: -10px 0 25px rgba(0,0,0,0.5);
-        }
-
-        #appSidebar nav {
-            -webkit-overflow-scrolling: touch;
-        }
     </style>
 
     <script>
-        function toggleMobileSidebar() {
-            window.NativeBridge.vibrate(20);
-            const sidebar = document.getElementById('appSidebar');
-            if (sidebar) {
-                sidebar.classList.toggle('mobile-open');
+        function getActiveBridge() {
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("[Toast]:", message);
             }
         }
+
+        function triggerHaptic(duration = 35) {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+                window.Capacitor.Plugins.Haptics.vibrate({ duration: duration });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
+            }
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileSidebar() {
+            triggerHaptic(20);
+            const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('appSidebarOverlay');
+            if (sidebar) {
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                if (overlay) overlay.style.display = isOpen ? 'block' : 'none';
+            }
+        }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، يرجى إعادة المصادقة');
+            setTimeout(() => {
+                window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+            }, 150);
+        };
+
+        window.NativeBridge = {
+            vibrate: triggerHaptic,
+            showToast: showNativeToast,
+            keepScreenOn: function(enable = true) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.keepScreenOn === 'function') {
+                    bridge.keepScreenOn(enable);
+                }
+            },
+            shareText: function(text) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.shareText === 'function') {
+                    bridge.shareText(text);
+                } else if (navigator.share) {
+                    navigator.share({ text: text }).catch(() => {});
+                } else {
+                    alert(text);
+                }
+            },
+            downloadFile: function(filename, base64Data) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(filename, base64Data);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        };
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
+    <!-- غطاء خلفي عند فتح القائمة الجانبية بالهاتف -->
+    <div id="appSidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية -->
+        <!-- القائمة الجانبية للشاشات الكبيرة والجوال -->
         <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-slate-900 border-l border-slate-800 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center justify-between mb-8 px-2">
                 <div class="flex items-center gap-3">
@@ -228,28 +267,37 @@
                         <i class="fa-solid fa-cube text-lg"></i>
                     </div>
                     <div>
-                        <h2 class="font-black text-white text-base">EIDCO // عيدكو</h2>
-                        <span class="text-[10px] text-indigo-400 font-mono font-bold">BUSINESS OS</span>
+                        <h2 class="font-black text-white text-base">EIDCO <span class="text-indigo-400">//</span> عيدكو</h2>
+                        <span class="text-[10px] text-indigo-400 font-mono font-bold tracking-wider">ADMIN CONTROL</span>
                     </div>
                 </div>
-                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 cursor-pointer">
+                <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <nav class="space-y-1.5 flex-1 overflow-y-auto">
+
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
                 <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
                 <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
                 <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
-                <a href="users.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين</a>
-                <a href="admin-accounts.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i> إدارة الحسابات والشركات</a>
-                <a href="admin-reports.html" class="nav-link active"><i class="fa-solid fa-triangle-exclamation"></i> الشكاوى والبلاغات</a>
+                
+                <a href="remote.html" id="sidebarRemoteNavLink" class="nav-link text-indigo-400 font-black"><i class="fa-solid fa-gamepad"></i> ريموت التحكم عن بُعد TV</a>
+                <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-400 font-black"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-400 font-black"><i class="fa-solid fa-building-shield"></i> إدارة الحسابات والشركات</a>
+                <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link active font-black"><i class="fa-solid fa-triangle-exclamation"></i> إدارة الشكاوى والبلاغات</a>
+
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="tv.html" class="nav-link text-indigo-400 cursor-pointer"><i class="fa-solid fa-tv text-amber-400"></i> شاشة البث TV 4K</a>
+                <a href="javascript:void(0)" onclick="window.lockSession()" id="sidebarAuthNavLink" class="nav-link text-rose-400 hover:bg-rose-950/40"><i class="fa-solid fa-fingerprint text-rose-400"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -258,7 +306,7 @@
             <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex justify-between items-center gap-3">
                     <div class="flex items-center gap-3">
-                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-slate-800 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-slate-700 shadow-sm transition hover:bg-slate-700 active:scale-95 shrink-0">
+                        <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-950/80 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-500/30 shadow-sm transition hover:bg-slate-800 active:scale-95 shrink-0" title="إظهار القائمة الجانبية">
                             <i class="fa-solid fa-bars text-lg"></i>
                         </button>
                         <div>
@@ -270,7 +318,12 @@
                             </div>
                         </div>
                     </div>
-                    <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold truncate">معرف الشركة: جاري التحميل...</span>
+                    <div class="flex items-center gap-2">
+                        <span id="companyBadgeDisplay" class="bg-indigo-950 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold truncate">معرف الشركة: جاري التحميل...</span>
+                        <button type="button" onclick="window.lockSession()" class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-lock text-rose-400"></i> قفل
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -282,7 +335,7 @@
                             <i class="fa-solid fa-shield-halved text-xl"></i>
                         </div>
                         <div>
-                            <h3 class="font-black text-white text-sm">لوحة الإشراف الرقابي للمدير</h3>
+                            <h3 class="font-black text-white text-sm">لوحة الإشراف الرقابي للمدير المؤسس</h3>
                             <p class="text-xs text-slate-400">مراجعة البلاغات والشكاوى الواردة من المستخدمين، مع إمكانية حظر الحسابات المخالفة فورياً أو معالجة البلاغ وإغلاقه.</p>
                         </div>
                     </div>
@@ -337,6 +390,21 @@
                 }
             });
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.NativeBridge && typeof window.NativeBridge.keepScreenOn === 'function') {
+                window.NativeBridge.keepScreenOn(true);
+            }
+
+            // تصفية روابط الإدارة العليا لتظهر للفاوندر فقط
+            const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
+            if (currentAdminName !== FOUNDER_NAME) {
+                ['sidebarAdminAccountsLink', 'sidebarUsersLink', 'sidebarReportsLink', 'sidebarRemoteNavLink'].forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
+        });
     </script>
 
     <!-- Firebase SDK Modules مع دعم Offline Persistence والجسر الأهلي -->
@@ -366,8 +434,9 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // التحقق من وجود الجسر البرمجي للأندرويد
-        if (window.AndroidBridge) {
+        // التحقق من وجود الجسر البرمجي للأندرويد والهجين
+        const activeBridge = getActiveBridge();
+        if (activeBridge) {
             const badge = document.getElementById('nativeStatusBadge');
             if (badge) badge.classList.remove('hidden');
         }
@@ -378,7 +447,7 @@
         });
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || FOUNDER_COMPANY;
         localStorage.setItem('eidco_current_company_id', currentCompanyId);
 
         const badgeEl = document.getElementById('companyBadgeDisplay');
@@ -387,14 +456,14 @@
         // تمرير معرف الشركة لروابط الملاحة
         document.querySelectorAll('a[href]').forEach(link => {
             let href = link.getAttribute('href');
-            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+            if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.includes('companyId=')) {
                 let separator = href.includes('?') ? '&' : '?';
                 link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
             }
         });
 
         window.banReportedUser = async function(reportId, targetUsername) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if (!confirm(`هل أنت متأكد من حظر المستخدم (${targetUsername || 'المُشتكي'}) نهائياً؟`)) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
@@ -406,23 +475,23 @@
                     });
                 }
                 await deleteDoc(doc(db, "messages", reportId));
-                window.NativeBridge.vibrate(80);
-                window.NativeBridge.showToast(`تم حظر الحساب (${targetUsername || ''}) وإغلاق البلاغ`);
+                triggerHaptic(80);
+                showNativeToast(`تم حظر الحساب (${targetUsername || ''}) وإغلاق البلاغ`);
             } catch (e) {
-                window.NativeBridge.showToast("خطأ أثناء التنفيذ: " + e.message);
+                showNativeToast("خطأ أثناء التنفيذ: " + e.message);
             }
         };
 
         window.dismissReport = async function(reportId) {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (!confirm("هل تريد إغلاق وحذف هذه الشكوى؟")) return;
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
                 await deleteDoc(doc(db, "messages", reportId));
-                window.NativeBridge.vibrate(50);
-                window.NativeBridge.showToast("تم إغلاق البلاغ وحذفه بنجاح");
+                triggerHaptic(50);
+                showNativeToast("تم إغلاق البلاغ وحذفه بنجاح");
             } catch (e) {
-                window.NativeBridge.showToast("خطأ أثناء الحذف: " + e.message);
+                showNativeToast("خطأ أثناء الحذف: " + e.message);
             }
         };
 

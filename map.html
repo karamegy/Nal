@@ -261,9 +261,9 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // دالة الملاحة المتطورة للغاية والمتوافقة مع Capacitor Native & Android WebViews
+        // دالة الملاحة الهجينة المتطورة لجلب الموقع بدون أخطاء شلل أو نوافذ منبثقة مزعجة
         async function getUserGpsPosition(successCb, errorCb) {
-            // 1. استخدام Capacitor Geolocation Native إن وجد
+            // 1. تجربة Capacitor Geolocation Native إن وجد
             if (window.Capacitor?.Plugins?.Geolocation) {
                 try {
                     let perm = await window.Capacitor.Plugins.Geolocation.checkPermissions();
@@ -273,7 +273,7 @@
                     if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
                         const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({
                             enableHighAccuracy: true,
-                            timeout: 15000,
+                            timeout: 12000,
                             maximumAge: 30000
                         });
                         if (pos && pos.coords) {
@@ -282,11 +282,11 @@
                         }
                     }
                 } catch (e) {
-                    console.warn("Capacitor Native Geolocation fallback triggered:", e);
+                    console.warn("Capacitor Native Geolocation fallback:", e);
                 }
             }
 
-            // 2. استخدام الجسر الأهلي المباشر للاندرويد إن وجد
+            // 2. تجربة الجسر الأهلي المباشر للاندرويد إن وجد
             const bridge = getActiveBridge();
             if (typeof bridge.getCurrentLocation === 'function') {
                 try {
@@ -303,14 +303,14 @@
                 }
             }
 
-            // 3. استخدام Web Geolocation مع المحاولة المتدرجة (Low Accuracy fallback تضمن عدم الشلل)
+            // 3. Web Geolocation مع المحاولة المرنة (High Accuracy ثم Network Location)
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
-                        console.warn("High Accuracy GPS timed out, switching to network position...");
+                        console.warn("جاري استخدام الموقع الشبكي التقريبي...");
                         navigator.geolocation.getCurrentPosition(
                             pos => {
                                 if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
@@ -321,7 +321,7 @@
                             { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
                         );
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
                 );
             } else if (errorCb) {
                 errorCb(new Error("خدمة GPS غير مدعومة بالمتصفح"));
@@ -334,7 +334,7 @@
                     console.log("✓ تم تحديد موقع GPS بنجاح:", lat, lng);
                 },
                 err => {
-                    console.warn("⚠️ لم يتم تحديد الموقع الجغرافي:", err.message);
+                    console.warn("⚠️ تم الاعتماد على الموقع الافتراضي للخريطة:", err.message);
                 }
             );
 
@@ -1037,7 +1037,7 @@
             const endQuery = document.getElementById('routeEndInput').value.trim();
 
             if (!endQuery) {
-                alert("يرجى إدخال اسم نقطة الوصول/الوجهة أولاً.");
+                showNativeToast("يرجى إدخال اسم نقطة الوصول/الوجهة أولاً.");
                 return;
             }
 
@@ -1050,7 +1050,7 @@
                         startLat = parseFloat(startData[0].lat);
                         startLng = parseFloat(startData[0].lon);
                     } else {
-                        alert("تعذر العثور على نقطة البداية المدخلة.");
+                        showNativeToast("تعذر العثور على نقطة البداية المدخلة.");
                         return;
                     }
                 } else {
@@ -1077,11 +1077,11 @@
                     const endLng = parseFloat(endData[0].lon);
                     window.calculateRoute(startLat, startLng, endLat, endLng, endQuery);
                 } else {
-                    alert("تعذر العثور على نقطة الوصول المدخلة.");
+                    showNativeToast("تعذر العثور على نقطة الوصول المدخلة.");
                 }
 
             } catch(e) {
-                alert("حدث خطأ أثناء البحث عن مسار الملاحة: " + e.message);
+                showNativeToast("حدث خطأ أثناء البحث عن مسار الملاحة.");
             }
         };
 
@@ -1169,10 +1169,10 @@
                             .openOn(map);
                     }
                 } else {
-                    alert("لم يتم العثور على نتائج للعنوان المدخل.");
+                    showNativeToast("لم يتم العثور على نتائج للعنوان المدخل.");
                 }
             } catch(e) {
-                alert("حدث خطأ أثناء إجراء البحث عن المكان.");
+                showNativeToast("حدث خطأ أثناء إجراء البحث عن المكان.");
             }
         };
 
@@ -1186,7 +1186,7 @@
             let lng = parseFloat(document.getElementById('vehicleLng').value);
 
             if (isNaN(lat) || isNaN(lng)) {
-                alert("يرجى إدخال خط العرض وخط الطول بشكل صحيح.");
+                showNativeToast("يرجى إدخال خط العرض وخط الطول بشكل صحيح.");
                 return;
             }
 
@@ -1254,7 +1254,7 @@
             let lng = parseFloat(document.getElementById('shipmentLng').value);
 
             if (isNaN(lat) || isNaN(lng)) {
-                alert("يرجى إدخال خط العرض وخط الطول لشحنة بشكل صحيح.");
+                showNativeToast("يرجى إدخال خط العرض وخط الطول للشحنة بشكل صحيح.");
                 return;
             }
 
@@ -1448,13 +1448,13 @@
                             })
                         }).addTo(map).bindPopup(`
                             <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:200px;">
-                                <div style="display:flex; justify-between; align-items:center;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${escapeHTML(s.code || id)}</b>
                                 </div>
                                 <hr style="margin:6px 0; border-color:#e2e8f0;">
                                 <div style="font-size:12px; color:#475569;">المستلم: <b>${escapeHTML(s.receiver || 'غير محدد')}</b></div>
                                 <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${escapeHTML(s.status || 'قيد التوصيل')}</span></div>
-                                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-flex-end;">
+                                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-content:flex-end;">
                                     <button onclick="window.navigateRouteTo(${sLat}, ${sLng}, '${escapeHTML(s.code || 'الشحنة')}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-route"></i> رسم مسار
                                     </button>
@@ -1544,11 +1544,20 @@
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 16, { animate: true });
+                        if (userLocationMarker) map.removeLayer(userLocationMarker);
+                        userLocationMarker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'custom-map-icon',
+                                html: `<div style="background:#10b981; width:22px; height:22px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(16,185,129,0.8);"></div>`,
+                                iconSize: [22, 22],
+                                iconAnchor: [11, 11]
+                            })
+                        }).addTo(map);
                         showNativeToast("✓ تم التمركز عند موقعك الحالي");
                     }
                 },
                 err => {
-                    showNativeToast("يتعذر تحديد موقع الدقة العالية الآن، حاول التحرك أو التواجد بمكان مكشوف");
+                    showNativeToast("يتعذر تحديد موقع الدقة العالية الآن، تم الاتزان عند المركز الأخير");
                 }
             );
         };

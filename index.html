@@ -167,7 +167,6 @@
             z-index: 98;
         }
 
-        /* إصلاح إظهار القائمة الجانبية في أجهزة المحمول */
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
@@ -253,7 +252,7 @@
             }
         }
 
-        // دالة قفل الجلسة المحدثة والمحمية عاماً
+        // دالة قفل الجلسة المحدثة للانتقال الفوري إلى auth.html
         window.lockSession = function() {
             triggerHaptic(40);
             sessionStorage.removeItem('eidco_session_auth');
@@ -262,10 +261,8 @@
             sessionStorage.clear();
             
             const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
-            showNativeToast('تم قفل الجلسة بنجاح، يرجى إعادة المصادقة');
-            setTimeout(() => {
-                window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
-            }, 150);
+            showNativeToast('تم قفل الجلسة بنجاح، جاري التوجيه لصفحة الدخول...');
+            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
         };
 
         function escapeHTML(str) {
@@ -281,7 +278,6 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <!-- غطاء للقائمة الجانبية بالهاتف -->
     <div id="appSidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
     <div class="rss-ticker-wrapper flex items-center justify-between px-3 py-1.5 border-b border-slate-800 no-print">
@@ -307,7 +303,6 @@
         </div>
     </div>
 
-    <!-- زر TV الطافي المحدث -->
     <div id="floatingTvTrigger" class="no-print cursor-grab active:cursor-grabbing select-none">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 group text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
@@ -320,7 +315,6 @@
     </div>
 
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية -->
         <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40 shrink-0">
             <div class="flex items-center justify-between mb-8 px-2">
                 <div class="flex items-center gap-3">
@@ -360,8 +354,8 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
-                <!-- زر قفل الأمان الجانبي - متاح دائماً لجميع المستخدمين -->
-                <a href="javascript:void(0)" onclick="window.lockSession()" id="sidebarAuthNavLink" class="nav-link text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
+                <!-- زر قفل الأمان الجانبي متصل بـ auth.html -->
+                <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" id="sidebarAuthNavLink" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -396,8 +390,8 @@
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <!-- زر قفل الهيدر الرئيسي -->
-                        <button type="button" onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والعودة للبصمة">
+                        <!-- زر قفل الهيدر الرئيسي للانتقال لصفحة auth.html -->
+                        <button type="button" onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والتحويل لصفحة auth.html">
                             <i class="fa-solid fa-lock text-rose-600"></i> قفل
                         </button>
                         <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2 active:scale-95"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
@@ -452,7 +446,6 @@
                     </div>
                 </div>
 
-                <!-- منطقة تقرير الطباعة الشامل والتصدير والمعاينة A4 -->
                 <div id="indexReportPrintArea" class="corporate-card p-6 space-y-4 bg-white">
                     <div class="hidden print-header flex justify-between items-center border-b pb-4">
                         <div>
@@ -566,10 +559,10 @@
                             <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition"><i class="fa-solid fa-map-location-dot"></i></div>
                             <div><h4 class="font-bold text-sm text-slate-900">خريطة الأسطول GPS</h4><span class="text-[11px] text-slate-500">تتبع المواقع والفروع حياً</span></div>
                         </a>
-                        <!-- بطاقة قفل الأمان بالشاشة الرئيسية - متاحة للجميع -->
-                        <a href="javascript:void(0)" onclick="window.lockSession()" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500 bg-rose-50/20">
+                        <!-- بطاقة قفل الأمان بالشاشة الرئيسية المربوطة بـ auth.html -->
+                        <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500 bg-rose-50/20 cursor-pointer">
                             <div class="w-12 h-12 bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-rose-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
-                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية والقفل</h4><span class="text-[11px] text-rose-600 font-bold">قفل الجلسة فوراً</span></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية والقفل</h4><span class="text-[11px] text-rose-600 font-bold">قفل الجلسة والانتقال للمصادقة</span></div>
                         </a>
                         <a href="settings.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-slate-600">
                             <div class="w-12 h-12 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-slate-800 group-hover:text-white transition"><i class="fa-solid fa-sliders"></i></div>
@@ -629,7 +622,6 @@
         </div>
     </div>
 
-    <!-- تعريف الدوال العامة المربوطة بالجسر الأهلي -->
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
@@ -782,7 +774,6 @@
             }
         };
 
-        // إغلاق النوافذ عند إدخال زر ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 window.closeAddNewsModal();
@@ -794,7 +785,6 @@
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
 
-            // تخصيص روابط الإدارة العليا للفاوندر فقط دون إخفاء روابط القفل والمصادقة للآخرين
             if (currentAdminName !== FOUNDER_NAME) {
                 ['sidebarAdminAccountsLink', 'gridAdminAccountsCard', 'sidebarUsersLink', 'gridUsersCard', 'sidebarReportsLink', 'gridReportsCard', 'sidebarRemoteNavLink', 'gridRemoteCard'].forEach(id => {
                     let el = document.getElementById(id);
@@ -1195,7 +1185,6 @@
             if (!canvas) return;
             let ctx = canvas.getContext('2d');
             
-            // تدمير أي رسم بياني سابق بشكل آمن لمنع الأخطاء البرمجية في Chart.js
             const existingChart = Chart.getChart(canvas);
             if (existingChart) existingChart.destroy();
 
@@ -1221,4 +1210,4 @@
         }
     </script>
 </body>
-    </html>
+</html>

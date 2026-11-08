@@ -13,10 +13,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- استدعاء سكريبت Capacitor والجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <script>
+        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge و CapacitorBridge
+        window.CapacitorBridge = window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || window.CapacitorBridge;
+        window.NativeBridge = window.NativeBridge || window.AndroidBridge;
+
         // التحقق الأمني الذكي للمدير المؤسس ومعرف الشركة
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
@@ -146,6 +152,12 @@
         }
         .custom-modal.active { display: flex !important; }
 
+        /* تفعيل القائمة الجانبية للـ Native Capacitor WebView */
+        #mobileNavDrawer.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+        }
+
         table th, table td { white-space: nowrap; }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -154,12 +166,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -167,10 +181,10 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
@@ -187,7 +201,10 @@
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
+            }
         }
     </script>
 </head>
@@ -509,6 +526,7 @@
             let role = document.getElementById('userRole').value;
 
             if(!name || !pinInput) {
+                showNativeToast("⚠️ الرجاء إدخال اسم المسؤول والرقم السري بشكل صحيح");
                 return alert('الرجاء إدخال اسم المسؤول والرقم السري بشكل صحيح.');
             }
 
@@ -531,7 +549,6 @@
 
                 window.closeUserModal();
                 showNativeToast("✓ تم حفظ بيانات الحساب سحابياً بنجاح");
-                alert('✓ تم حفظ وتحديث بيانات الحساب سحابياً بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء الحفظ في السحابة: ' + err.message);
             }
@@ -551,7 +568,6 @@
                     isBanned: !currentBannedStatus
                 });
                 showNativeToast(`✓ تم ${actionName} الحساب بنجاح`);
-                alert(`✓ تم تنفيذ إجراء ${actionName} الحساب بنجاح.`);
             } catch (err) {
                 alert('حدث خطأ أثناء تحديث حالة الحظر: ' + err.message);
             }
@@ -568,7 +584,6 @@
             try {
                 await deleteDoc(doc(db, "accounts", docId));
                 showNativeToast("✓ تم حذف الحساب نهائياً");
-                alert('✓ تم حذف الحساب نهائياً من السحابة بنجاح.');
             } catch(err) {
                 alert('حدث خطأ أثناء حذف الحساب بالسحابة: ' + err.message);
             }

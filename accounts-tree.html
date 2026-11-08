@@ -5,13 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // شجرة الحسابات والدليل المحاسبي وحسابات العملاء والمصروفات Native</title>
     
-    <!-- PWA & Native App Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
-    <link rel="manifest" href="manifest.json">
-
+    <!-- Capacitor Native Bridge & Core -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -50,6 +45,8 @@
             margin: 0; 
             padding-bottom: env(safe-area-inset-bottom, 5rem); 
             padding-top: env(safe-area-inset-top, 0px);
+            padding-left: env(safe-area-inset-left, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
             overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
@@ -57,6 +54,12 @@
         header { flex-shrink: 0; }
 
         input, textarea, select { scroll-margin-bottom: 120px; }
+
+        #appSidebar.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+            width: 18rem !important;
+        }
 
         .mono-font { 
             font-family: 'JetBrains Mono', monospace; 
@@ -157,7 +160,9 @@
 
     <script>
         function showNativeToast(message) {
-            if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
                 window.AndroidBridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -165,22 +170,42 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+                window.Capacitor.Plugins.Haptics.vibrate({ duration: duration });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
+            } else if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
                 window.AndroidBridge.vibrate(duration);
             }
         }
 
         function toggleMobileMenu() {
             triggerHaptic(20);
-            const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
+            const drawer = document.getElementById('appSidebar') || document.getElementById('mobileNavDrawer');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
+            }
         }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، يرجى إعادة المصادقة');
+            setTimeout(() => {
+                window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+            }, 150);
+        };
     </script>
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية للشاشات الكبيرة -->
+        <!-- القائمة الجانبية للشاشات الكبيرة (مطابقة لـ index.html) -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-cube"></i></div>
@@ -199,10 +224,18 @@
                 <a href="accounts-tree.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                 <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والأرشيف</a>
                 <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                
+                <a href="remote.html" id="sidebarRemoteNavLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-gamepad text-indigo-600"></i> ريموت التحكم عن بُعد TV</a>
+                <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
+                <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link text-amber-700 bg-amber-50/60 font-black"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> إدارة الشكاوى والبلاغات</a>
+
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
+                <a href="javascript:void(0)" onclick="window.lockSession()" id="sidebarAuthNavLink" class="nav-link text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -233,8 +266,8 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل -->
-            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+            <!-- القائمة المنسدلة الجانبية للموبايل متوافقة مع Capacitor ومطابقة لـ index.html -->
+            <div id="appSidebar" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                         <div class="flex items-center gap-3">
@@ -258,10 +291,18 @@
                         <a href="accounts-tree.html" class="nav-link active"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
                         <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والأرشيف</a>
                         <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                        <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+
+                        <a href="remote.html" id="mobileRemoteNavLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-gamepad text-indigo-600"></i> ريموت التحكم عن بُعد TV</a>
+                        <a href="users.html" id="mobileUsersLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-users-gear text-indigo-600"></i> إدارة المستخدمين والصلاحيات</a>
+                        <a href="admin-accounts.html" id="mobileAdminAccountsLink" class="nav-link text-indigo-600 bg-indigo-50/60 font-black"><i class="fa-solid fa-building-shield text-indigo-600"></i> إدارة الحسابات والشركات</a>
+                        <a href="admin-reports.html" id="mobileReportsLink" class="nav-link text-amber-700 bg-amber-50/60 font-black"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> إدارة الشكاوى والبلاغات</a>
+
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                        <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
+                        <a href="javascript:void(0)" onclick="window.lockSession()" class="nav-link text-rose-600 hover:bg-rose-50"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                         <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
                     </nav>
                 </div>
@@ -391,7 +432,6 @@
                 </button>
             </div>
 
-            <!-- جدول محتويات الملف المختار مع أمان التمرير الأفقي -->
             <div class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-slate-200">
                 <table class="w-full min-w-[850px] text-right text-xs whitespace-nowrap">
                     <thead id="folderTableHead" class="bg-slate-100 text-slate-700 font-mono sticky top-0 border-b z-10"></thead>
@@ -500,7 +540,7 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية ومراقبة الأحداث -->
+    <!-- دوال القائمة الجانبية ومراقبة الأحداث وتصفية صلاحيات الفاوندر -->
     <script>
         function handleCategoryChange() {
             let cat = document.getElementById('accCategory').value;
@@ -540,15 +580,26 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+            let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
             localStorage.setItem('eidco_current_company_id', currentCompanyId);
             
             const badgeEl = document.getElementById('companyBadgeDisplay');
             if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
+            // تصفية روابط الإدارة العليا لتظهر للفاوندر فقط متطابقة مع index.html
+            const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
+            const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
+            if (currentAdminName !== FOUNDER_NAME) {
+                ['sidebarAdminAccountsLink', 'sidebarUsersLink', 'sidebarReportsLink', 'sidebarRemoteNavLink',
+                 'mobileAdminAccountsLink', 'mobileUsersLink', 'mobileReportsLink', 'mobileRemoteNavLink'].forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
+
             document.querySelectorAll('a[href]').forEach(link => {
                 let href = link.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.includes('companyId=')) {
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.includes('companyId=')) {
                     let separator = href.includes('?') ? '&' : '?';
                     link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
                 }
@@ -604,7 +655,6 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // تفعيل IndexedDB للتخزين المحلي اللحظي دون إنترنت في التطبيق الأهلي Native WebView
         enableIndexedDbPersistence(db).catch((err) => {
             if (err.code === 'failed-precondition') {
                 console.warn('Persistence failed: Multiple tabs open');
@@ -614,7 +664,7 @@
         });
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'default_company';
+        let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
 
         let accountsTreeList = [];
         let clientsList = [];
@@ -1135,7 +1185,7 @@
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
     <div id="floatingTvTrigger" class="fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
-        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'default_company');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
+        <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>

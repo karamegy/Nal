@@ -21,11 +21,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup JDK 21
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Restore Signing Keystore & Print Fingerprints
         shell: bash
@@ -50,7 +50,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000"
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
         run: |
           set -euo pipefail
 
@@ -657,10 +657,10 @@ jobs:
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
             echo "Building Signed Release APK and AAB..."
-            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel || ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
+            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
             echo "Building Debug APK and AAB..."
-            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel || ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
+            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
           fi
 
           cd ..

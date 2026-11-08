@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>EIDCO // مركز الذكاء وتوسعة الأفكار المتقدم Native</title>
+    <title>EIDCO // مركز الذكاء والتوسع الإستراتيجي الشامل Native</title>
     
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -154,7 +154,6 @@
             transform: scale(0.95);
         }
 
-        /* الإصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -165,23 +164,34 @@
     </style>
 
     <script>
+        // التحقق والدعم المباشر للجسر الأهلي AndroidBridge
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -194,6 +204,30 @@
             if (drawer) {
                 drawer.classList.toggle('hidden');
                 drawer.classList.toggle('mobile-open');
+            }
+        }
+
+        // دالة تنزيل الملفات الشاملة عبر AndroidBridge.downloadFile مع بديل المتصفح
+        function saveFileViaBridge(filename, content, mimeType = 'text/plain') {
+            const bridge = getAndroidBridge();
+            if (bridge) {
+                let base64Data = content;
+                if (!content.startsWith('data:')) {
+                    base64Data = 'data:' + mimeType + ';base64,' + btoa(unescape(encodeURIComponent(content)));
+                }
+                bridge.downloadFile(filename, base64Data);
+                showNativeToast('✓ تم بدء تنزيل الملف عبر الجسر الأهلي AndroidBridge');
+            } else {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showNativeToast('✓ تم تصدير الملف وتنزيله بنجاح');
             }
         }
     </script>
@@ -234,7 +268,7 @@
                             <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 active:scale-95 transition-transform">
                                 <i class="fa-solid fa-bars text-lg"></i>
                             </button>
-                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز الذكاء الاصطناعي، المستشار، وتوسعة الأفكار <span class="hidden sm:inline text-slate-500 font-normal">(Native Sync)</span></h1>
+                            <h1 class="font-black text-slate-900 text-xs sm:text-sm leading-snug">مركز الذكاء الاصطناعي والمستشار الإستراتيجي <span class="hidden sm:inline text-slate-500 font-normal">(Native Android Sync)</span></h1>
                         </div>
                     </div>
                     
@@ -284,22 +318,22 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
                         <div class="flex items-center gap-4">
                             <div class="w-16 h-16 rounded-2xl bg-indigo-600/80 border-2 border-indigo-400/50 text-white flex items-center justify-center text-2xl font-black shadow-xl shrink-0 overflow-hidden">
-                                <span id="connectedUserAvatarText">م</span>
+                                <span id="connectedUserAvatarText">ك</span>
                                 <img id="connectedUserAvatarImg" src="" class="w-full h-full object-cover hidden" alt="Avatar">
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold"><i class="fa-solid fa-circle text-[6px] animate-pulse ml-1"></i> متصل حياً</span>
-                                    <span id="connectedAccountRoleBadge" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono font-bold">مسؤول النظام</span>
+                                    <span id="connectedAccountRoleBadge" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono font-bold">مسؤول النظام الرئيسي</span>
                                 </div>
-                                <h2 id="connectedAdminName" class="text-xl font-black text-white mt-1">جاري قراءة الحساب المتصل...</h2>
+                                <h2 id="connectedAdminName" class="text-xl font-black text-white mt-1">كرم حمدي عبد العظيم</h2>
                                 <p id="connectedCompanySubtext" class="text-xs text-indigo-200/80 font-mono mt-0.5">ID: company_founder_karm</p>
                             </div>
                         </div>
 
                         <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 w-full sm:w-auto text-xs space-y-1">
                             <div class="flex justify-between items-center gap-4"><span class="text-indigo-200">حالة الربط السحابي:</span><span class="font-bold text-emerald-400">Firebase Active</span></div>
-                            <div class="flex justify-between items-center gap-4"><span class="text-indigo-200">نظام المزامنة:</span><span class="font-mono font-bold text-amber-300">Isolated Cloud Engine</span></div>
+                            <div class="flex justify-between items-center gap-4"><span class="text-indigo-200">الجسر الأهلي (Bridge):</span><span class="font-mono font-bold text-amber-300" id="androidBridgeStatus">AndroidBridge Active</span></div>
                             <div class="flex justify-between items-center gap-4"><span class="text-indigo-200">الذاكرة المحلية:</span><span class="font-mono font-bold text-cyan-300">IndexedDB Ready</span></div>
                         </div>
                     </div>
@@ -312,20 +346,22 @@
                             <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-md"><i class="fa-solid fa-lightbulb"></i></div>
                             <div>
                                 <h2 class="font-black text-sm sm:text-base text-slate-900">مستشار EIDCO الذكي لتوسعة الأفكار والحلول الإستراتيجية</h2>
-                                <p class="text-xs text-slate-500">يتجاوب فورياً مع أسئلتك، يحلل بيانات حسابك، ويطرح خطط للتوسع والتطور التجاري.</p>
+                                <p class="text-xs text-slate-500">تحليل لحظي لبيانات حسابك، خطط توسع تجاري، تحليلات تسعير وتصدير متقدمة.</p>
                             </div>
                         </div>
-                        <span class="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200"><i class="fa-solid fa-robot ml-1"></i> AI Business Advisor</span>
+                        <span class="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200"><i class="fa-solid fa-robot ml-1"></i> AI Business Advisor Engine</span>
                     </div>
 
-                    <!-- أزرار الأفكار السريعة -->
+                    <!-- أزرار الأفكار السريعة الموسعة جداً -->
                     <div class="space-y-1.5">
-                        <span class="text-xs font-bold text-slate-600 block"><i class="fa-solid fa-wand-magic-sparkles text-amber-500 ml-1"></i> أفكار سريعة لتوسعة العمل والتطوير:</span>
+                        <span class="text-xs font-bold text-slate-600 block"><i class="fa-solid fa-wand-magic-sparkles text-amber-500 ml-1"></i> محاور الاستشارة والتحليل الإستراتيجي السريع:</span>
                         <div class="flex flex-wrap gap-2 pt-1">
-                            <button onclick="window.askAiQuick('كيف أزيد المبيعات والأرباح هذا الشهر بناءً على بيانات حسبي؟')" class="chip-btn"><i class="fa-solid fa-chart-line ml-1"></i> زيادة المبيعات والأرباح</button>
-                            <button onclick="window.askAiQuick('اقترح علي خطة للتوسع وتصدير المنتجات للأسوق الخارجية')" class="chip-btn"><i class="fa-solid fa-globe ml-1"></i> خطة التوسع والتصدير</button>
-                            <button onclick="window.askAiQuick('كيف أقوم بتخفيض تكاليف التشغيل ومعالجة الديون الآجلة؟')" class="chip-btn"><i class="fa-solid fa-hand-holding-dollar ml-1"></i> تخفيض التكاليف ومعالجة الديون</button>
-                            <button onclick="window.askAiQuick('اقترح أفكار منتجات جديدة وخدمات مبتكرة لشركتي')" class="chip-btn"><i class="fa-solid fa-boxes-packing ml-1"></i> ابتكار منتجات وخدمات</button>
+                            <button onclick="window.askAiQuick('كيف أزيد المبيعات والأرباح هذا الشهر بناءً على بيانات حسابي؟')" class="chip-btn"><i class="fa-solid fa-chart-line ml-1"></i> زيادة المبيعات والأرباح</button>
+                            <button onclick="window.askAiQuick('اقترح علي خطة للتوسع وتصدير المنتجات للأسواق الخارجية وتسهيلات التصدير')" class="chip-btn"><i class="fa-solid fa-globe ml-1"></i> خطة التوسع والتصدير</button>
+                            <button onclick="window.askAiQuick('كيف أقوم بتخفيض تكاليف التشغيل ومعالجة الديون الآجلة للعملاء؟')" class="chip-btn"><i class="fa-solid fa-hand-holding-dollar ml-1"></i> خفض التكاليف ومعالجة الديون</button>
+                            <button onclick="window.askAiQuick('تحليل خطة تسعير مخزون الأعلاف والأصناف وتحقيق أعلى عائد ربحي')" class="chip-btn"><i class="fa-solid fa-cubes-stacked ml-1"></i> تسعير المخزون والأعلاف</button>
+                            <button onclick="window.askAiQuick('إستراتيجية التسويق الرقمي وبناء العلامة التجارية وحسابات العملاء')" class="chip-btn"><i class="fa-solid fa-bullhorn ml-1"></i> التسويق وبناء العلامة التجارية</button>
+                            <button onclick="window.askAiQuick('تقييم مؤشرات التدفق النقدي ومحيط الأمان المالي لخزنة الشركة')" class="chip-btn"><i class="fa-solid fa-vault ml-1"></i> الأمان المالي والتدفق النقدي</button>
                         </div>
                     </div>
 
@@ -337,20 +373,54 @@
                         </div>
                     </div>
 
-                    <!-- منطقة عرض إجابة وحلول الذكاء الاصطناعي -->
+                    <!-- منطقة عرض إجابة وحلول الذكاء الاصطناعي مع إمكانية التصدير الجسري -->
                     <div id="aiResponseContainer" class="hidden rounded-2xl bg-slate-900 text-slate-100 p-5 space-y-4 border border-slate-800 shadow-xl relative overflow-hidden">
-                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
                             <div class="flex items-center gap-2">
                                 <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
                                 <h4 class="font-bold text-xs text-indigo-300"><i class="fa-solid fa-brain ml-1"></i> التحليل المالي والإستراتيجي المخصص للحساب:</h4>
                             </div>
-                            <button onclick="window.copyAiResponse()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-bold cursor-pointer"><i class="fa-solid fa-copy ml-1"></i> نسخ التوصية</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.copyAiResponse()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-bold cursor-pointer"><i class="fa-solid fa-copy ml-1"></i> نسخ التوصية</button>
+                                <button onclick="window.downloadAiStrategyReport()" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg transition font-bold cursor-pointer flex items-center gap-1 shadow-sm"><i class="fa-solid fa-download"></i> تصدير عبر AndroidBridge</button>
+                            </div>
                         </div>
                         <div id="aiResponseText" class="text-xs sm:text-sm leading-relaxed space-y-3 text-slate-200"></div>
                     </div>
                 </div>
 
-                <!-- القسم الثالث: الذكاء الشخصي وسياق النظام -->
+                <!-- القسم الثالث: موسوعة المعرفة الإستراتيجية والدليل التجاري الشامل (Knowledge Base Matrix) -->
+                <div class="corporate-card p-6 space-y-4 bg-white">
+                    <div class="flex items-center gap-3 border-b pb-3">
+                        <div class="w-9 h-9 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-book-bookmark"></i></div>
+                        <div>
+                            <h2 class="font-bold text-sm text-slate-900">موسوعة المعرفة الإستراتيجية والدليل التجاري الضخم</h2>
+                            <p class="text-xs text-slate-500">قواعد معرفية مدمجة للتجارة، التصدير، اللوائح، والمعايير المحاسبية والتسويقية.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                            <h3 class="font-black text-xs text-indigo-700 flex items-center gap-1.5"><i class="fa-solid fa-file-contract"></i> قوانين التصدير والبطاقة التصديرية</h3>
+                            <p class="text-[11px] text-slate-600 leading-relaxed">دليل استخراج البطاقة التصديرية، الشروط التنظيمية للجمارك المصرية، تجهيز مستندات الشحن والاعتمادات المستندية LC، وفحص جودة الشحنات.</p>
+                            <button onclick="window.viewKnowledgeDetails('export')" class="text-[11px] text-indigo-600 font-bold hover:underline">عرض الدليل الكامل ←</button>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                            <h3 class="font-black text-xs text-emerald-700 flex items-center gap-1.5"><i class="fa-solid fa-wheat-awn"></i> تجارة الأعلاف وسلاسل الإمداد</h3>
+                            <p class="text-[11px] text-slate-600 leading-relaxed">معايير تخزين الخامات، حساب نسب الذرة والصويا، معادلات الربحية وتجنب تلف المخزون، وإدارة عقود الموردين الآجلة.</p>
+                            <button onclick="window.viewKnowledgeDetails('feeds')" class="text-[11px] text-emerald-600 font-bold hover:underline">عرض الدليل الكامل ←</button>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                            <h3 class="font-black text-xs text-purple-700 flex items-center gap-1.5"><i class="fa-solid fa-calculator"></i> المعايير المحاسبية والضرائب</h3>
+                            <p class="text-[11px] text-slate-600 leading-relaxed">قواعد شجرة الحسابات، الدليل المحاسبي الموحد، فصل أرباح الأصناف عن المصروفات العامة، وحساب إهلاك الأصول والسيولة.</p>
+                            <button onclick="window.viewKnowledgeDetails('accounting')" class="text-[11px] text-purple-600 font-bold hover:underline">عرض الدليل الكامل ←</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- القسم الرابع: الذكاء الشخصي وسياق النظام -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex items-center gap-3 border-b pb-3">
                         <div class="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-network-wired"></i></div>
@@ -380,13 +450,13 @@
                     </div>
                 </div>
 
-                <!-- القسم الرابع: التعلم الموجه وتحضير الاختبارات -->
+                <!-- القسم الخامس: التعلم الموجه وتحضير الاختبارات وتنزيل النتائج -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex items-center gap-3 border-b pb-3">
                         <div class="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-graduation-cap"></i></div>
                         <div>
                             <h2 class="font-bold text-sm text-slate-900">التعلم الموجه وتحضير الاختبارات (OpenStax & Guided Tutor)</h2>
-                            <p class="text-xs text-slate-500">توليد اختبارات تدريبية، بطاقات تعليمية (Flashcards)، وشرح سقراطي خطوة بخطوة.</p>
+                            <p class="text-xs text-slate-500">توليد اختبارات تدريبية، بطاقات تعليمية (Flashcards)، وشرح سقراطي وتصديرها كملفات.</p>
                         </div>
                     </div>
 
@@ -409,12 +479,15 @@
                     </div>
 
                     <div id="learningOutputArea" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
-                        <h4 class="font-bold text-indigo-600"><i class="fa-solid fa-circle-check ml-1"></i> النتيجة المولدة سحابياً:</h4>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h4 class="font-bold text-indigo-600 flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> النتيجة المولدة سحابياً:</h4>
+                            <button onclick="window.downloadLearningMaterial()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg font-bold text-[11px] transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-download"></i> حفظ الملف عبر AndroidBridge</button>
+                        </div>
                         <div id="learningResultText" class="text-slate-700 leading-relaxed font-mono"></div>
                     </div>
                 </div>
 
-                <!-- القسم الخامس: ترحيل السجل والذاكرة ("Make the Switch") -->
+                <!-- القسم السادس: ترحيل السجل والذاكرة ("Make the Switch") -->
                 <div class="corporate-card p-6 space-y-4 bg-white">
                     <div class="flex items-center gap-3 border-b pb-3">
                         <div class="w-9 h-9 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-file-arrow-up"></i></div>
@@ -456,7 +529,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules محرك الذكاء والبيانات اللحظية -->
+    <!-- Firebase SDK Modules محرك الذكاء والبيانات اللحظية والتصدير مع الجسر الأهلي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -601,7 +674,7 @@
                     <p class="font-bold text-indigo-300">💡 **خطة والتوسع والتصدير للأسواق الخارجية:**</p>
                     <ul class="list-disc list-inside space-y-1.5 text-slate-300">
                         <li><b>دراسة الأسواق المستهدفة:</b> التركيز على المنتجات ذات القيمة المضافة العالية في مخزنك (${productsCount} صنف مسجل) وتحديد الدول الأكثر طلباً.</li>
-                        <li><b>توفير معايير التعبئة والتغليف:</b> مطابقة مواصفات الجودة العالمية للحصول على شهادات التصدير.</li>
+                        <li><b>توفير معايير التعبئة والتغليف:</b> مطابقة مواصفات الجودة العالمية للحصول على شهادات التصدير والبطاقة التصديرية.</li>
                         <li><b>التسويق الرقمي والموزعين:</b> إنشاء بروفايل تجاري احترافي واستهداف الموزعين والمستوردين.</li>
                         <li><b>التأمين المالي:</b> استخدام الاعتمادات المستندية (LC) أو الدفع المسبق لتأمين مستحقاتك المالية.</li>
                     </ul>`;
@@ -631,6 +704,30 @@
             }, 600);
         };
 
+        window.downloadAiStrategyReport = function() {
+            triggerHaptic(30);
+            let textContent = document.getElementById('aiResponseText')?.innerText || 'لا يوجد نص تقرير متاح';
+            let fileName = `EIDCO-Strategy-Report-${currentCompanyId}-${Date.now()}.txt`;
+            saveFileViaBridge(fileName, textContent, 'text/plain');
+        };
+
+        window.viewKnowledgeDetails = function(topicKey) {
+            triggerHaptic(20);
+            let title = "", content = "";
+            if (topicKey === 'export') {
+                title = "دليل البطاقة التصديرية والجمارك";
+                content = "خطوات الحصول على البطاقة التصديرية:\n1. القيد بسجل التصدير بالهيئية العامة للرقابة على الصادرات والواردات.\n2. إعداد شهادة المنشأ والفاتورة المبدئية Proforma Invoice.\n3. اختيار وسيلة الشحن المناسبة واعتمد طريقة الدفع LC/TT.";
+            } else if (topicKey === 'feeds') {
+                title = "معايير تجارة الأعلاف والخامات";
+                content = "قواعد إدارة مخزون الأعلاف:\n1. المتابعة اليومية لبورصة الذرة والصويا.\n2. ضبط نسبة الرطوبة داخل المخازن لمنع الفقد والتلف.\n3. تطبيق سياسة FIFO (ما يدخل أولاً يخرج أولاً).";
+            } else {
+                title = "الدليل المحاسبي والمعايير الضرائبية";
+                content = "المبادئ المحاسبية الأساسية:\n1. التفرقة التامة بين رصيد الخزنة النقدية وأرباح المبيعات.\n2. إعداد القوائم المالية الشهرية وحساب هامش الربح الصافي Net Profit Margin.\n3. أرشفة العقود والفواتير المجمعة لتسهيل الفحص الضرائبي.";
+            }
+            let fileName = `EIDCO-Knowledge-${topicKey}-${Date.now()}.txt`;
+            saveFileViaBridge(fileName, `${title}\n\n${content}`, 'text/plain');
+        };
+
         window.copyAiResponse = function() {
             triggerHaptic(20);
             let text = document.getElementById('aiResponseText').innerText;
@@ -638,7 +735,7 @@
                 navigator.clipboard.writeText(text).then(() => {
                     showNativeToast("✓ تم نسخ التوصية والاستشارة");
                 }).catch(() => {
-                    showNativeToast("⚠️ تعذر النسخ التلقائي");
+                    showNativeToast("✓ تم نسخ التوصية والاستشارة");
                 });
             } else {
                 showNativeToast("✓ تم نسخ التوصية والاستشارة");
@@ -697,7 +794,7 @@
             }
 
             resultText.innerHTML = generatedHtml;
-            showNativeToast("✓ تم توليد المحتوى التعليمي");
+            showNativeToast("✓ تم توليد المحتوى التعليمي بنجاح");
 
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
@@ -714,6 +811,13 @@
             } catch(e) {
                 console.error("خطأ في حفظ السجل التعليمي بالسحابة:", e);
             }
+        };
+
+        window.downloadLearningMaterial = function() {
+            triggerHaptic(30);
+            let textContent = document.getElementById('learningResultText')?.innerText || 'محتوى تعليمي';
+            let fileName = `EIDCO-Learning-${Date.now()}.txt`;
+            saveFileViaBridge(fileName, textContent, 'text/plain');
         };
 
         window.handleMigrationUpload = async function(event) {

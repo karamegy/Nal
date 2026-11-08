@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // لوحة التحكم الرئيسية والمؤشرات</title>
     
+    <!-- Capacitor Bridge Script -->
+    <script src="capacitor.js"></script>
+
     <!-- PWA & Native App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -161,18 +164,21 @@
             inset: 0;
             background: rgba(15, 23, 42, 0.5);
             backdrop-filter: blur(4px);
-            z-index: 90;
+            z-index: 98;
         }
 
+        /* إصلاح إظهار القائمة الجانبية في أجهزة المحمول */
         #appSidebar.mobile-open {
             display: flex !important;
             position: fixed !important;
             top: 0 !important;
             right: 0 !important;
+            width: 18rem !important;
             height: 100vh !important;
             height: 100dvh !important;
-            z-index: 100 !important;
-            box-shadow: -10px 0 25px rgba(0,0,0,0.3);
+            background-color: #ffffff !important;
+            z-index: 9999 !important;
+            box-shadow: -10px 0 25px rgba(0,0,0,0.3) !important;
         }
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -211,12 +217,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -224,7 +232,11 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
+            }
             const bridge = getActiveBridge();
             if (typeof bridge.vibrate === 'function') {
                 bridge.vibrate(duration);
@@ -283,13 +295,13 @@
             </div>
         </div>
         <div class="flex items-center gap-1.5 z-10 shrink-0 bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-800">
-            <button onclick="window.toggleRssSpeed()" class="text-slate-400 hover:text-amber-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="سرعة الشريط">
+            <button type="button" onclick="window.toggleRssSpeed()" class="text-slate-400 hover:text-amber-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="سرعة الشريط">
                 <i class="fa-solid fa-gauge-simple-high"></i> <span id="rssSpeedText">1x</span>
             </button>
-            <button onclick="window.toggleRssPause()" id="rssPauseBtn" class="text-slate-400 hover:text-indigo-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="إيقاف / تشغيل الحركة">
+            <button type="button" onclick="window.toggleRssPause()" id="rssPauseBtn" class="text-slate-400 hover:text-indigo-400 px-1.5 py-0.5 text-[11px] font-bold rounded transition" title="إيقاف / تشغيل الحركة">
                 <i class="fa-solid fa-pause"></i>
             </button>
-            <button onclick="window.openAddNewsModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-bold rounded-md transition flex items-center gap-1 cursor-pointer">
+            <button type="button" onclick="window.openAddNewsModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 text-[11px] font-bold rounded-md transition flex items-center gap-1 cursor-pointer">
                 <i class="fa-solid fa-plus text-[10px]"></i> خبر جديد
             </button>
         </div>
@@ -322,7 +334,7 @@
                         <span class="text-[10px] text-indigo-600 font-mono font-bold tracking-widest">3D BUSINESS OS</span>
                     </div>
                 </div>
-                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
+                <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -358,7 +370,7 @@
             <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex items-center gap-3">
-                        <button onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 shrink-0" title="إظهار / إخفاء القائمة الجانبية">
+                        <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-200 shadow-sm transition hover:bg-indigo-100 shrink-0" title="إظهار / إخفاء القائمة الجانبية">
                             <i class="fa-solid fa-bars text-base"></i>
                         </button>
                         <div class="logo-3d-container lg:hidden">
@@ -369,23 +381,23 @@
                         <h1 class="font-black text-slate-900 text-xs sm:text-sm">لوحة المؤشرات الرئيسية (معزولة ومزامنة لحظياً)</h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                        <button onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                        <button type="button" onclick="window.purgeAllInvalidData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                             <i class="fa-solid fa-broom text-rose-600"></i> تطهير الخزنة
                         </button>
-                        <button onclick="window.downloadReportPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                        <button type="button" onclick="window.downloadReportPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                             <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
                         </button>
-                        <button onclick="window.downloadReportImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                        <button type="button" onclick="window.downloadReportImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                             <i class="fa-solid fa-image"></i> تصدير صورة
                         </button>
-                        <button onclick="window.shareReport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                        <button type="button" onclick="window.shareReport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
                             <i class="fa-solid fa-share-nodes"></i> مشاركة
                         </button>
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
                         <!-- زر قفل الهيدر الرئيسي -->
-                        <button onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والعودة للبصمة">
+                        <button type="button" onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والعودة للبصمة">
                             <i class="fa-solid fa-lock text-rose-600"></i> قفل
                         </button>
                         <a href="batch-invoices.html" class="btn-primary text-xs py-2 px-4 flex items-center gap-2 active:scale-95"><i class="fa-solid fa-plus"></i> فاتورة مجمعة</a>
@@ -407,7 +419,7 @@
                             <span class="text-[11px] text-slate-500 font-mono font-bold bg-indigo-100/80 text-indigo-700 px-2 py-0.5 rounded-md inline-block mt-1 truncate max-w-[220px] sm:max-w-none" id="companyIdDisplayBadge">معرف الشركة: جاري التحميل...</span>
                         </div>
                     </div>
-                    <button onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95">
+                    <button type="button" onclick="window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition border border-slate-700 cursor-pointer active:scale-95">
                         <i class="fa-solid fa-tv text-amber-400 animate-pulse"></i> فتح شاشة التلفزيون بصفحة جديدة
                     </button>
                 </div>
@@ -579,7 +591,7 @@
         <div class="corporate-card p-6 max-w-md w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-black text-base text-indigo-600"><i class="fa-solid fa-rss text-amber-500 ml-1"></i> إضافة خبر عاجل لشريط RSS</h3>
-                <button onclick="window.closeAddNewsModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" onclick="window.closeAddNewsModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
@@ -597,8 +609,8 @@
                 </div>
             </div>
             <div class="pt-3 border-t flex justify-end gap-2">
-                <button onclick="window.closeAddNewsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
-                <button onclick="window.submitCustomNews()" class="btn-primary text-xs py-2 px-5 cursor-pointer">نشر الخبر الآن</button>
+                <button type="button" onclick="window.closeAddNewsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">إلغاء</button>
+                <button type="button" onclick="window.submitCustomNews()" class="btn-primary text-xs py-2 px-5 cursor-pointer">نشر الخبر الآن</button>
             </div>
         </div>
     </div>
@@ -608,11 +620,11 @@
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 text-right bg-white shadow-2xl relative custom-modal-content flex flex-col">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modalTitle" class="font-black text-base text-indigo-600">تفاصيل الملخص</h3>
-                <button onclick="window.closeSummaryModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" onclick="window.closeSummaryModal()" class="text-slate-400 hover:text-slate-700 text-base font-bold cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="modalBody" class="space-y-3 text-xs overflow-y-auto flex-1 p-1"></div>
             <div class="pt-2 border-t text-center">
-                <button onclick="window.closeSummaryModal()" class="btn-primary w-full py-2 text-xs cursor-pointer">إغلاق النافذة</button>
+                <button type="button" onclick="window.closeSummaryModal()" class="btn-primary w-full py-2 text-xs cursor-pointer">إغلاق النافذة</button>
             </div>
         </div>
     </div>
@@ -1047,7 +1059,7 @@
                     <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || i.totalProfit || 0).toLocaleString()} ج.م</td>
                     <td class="p-4 mono-font text-slate-500" dir="ltr">${escapeHTML(i.date || '---')}</td>
                     <td class="p-4 text-center space-x-2 space-x-reverse no-print">
-                        <button onclick="window.deleteDashboardBatchInvoice('${escapeHTML(i.id || '')}', '${escapeHTML(i.docId || '')}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
+                        <button type="button" onclick="window.deleteDashboardBatchInvoice('${escapeHTML(i.id || '')}', '${escapeHTML(i.docId || '')}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer px-2 py-1 font-bold active:scale-95" title="حذف الفاتورة سحابياً">
                             <i class="fa-solid fa-trash"></i> حذف
                         </button>
                     </td>

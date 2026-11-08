@@ -127,6 +127,7 @@
             touch-action: pan-x pan-y pinch-zoom;
         }
 
+        /* إصلاح تداخل القائمة الجانبية للموبايل فوق عناصر الخريطة */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -261,56 +262,32 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // دالة الملاحة الهجينة المتطورة لجلب الموقع بدون أخطاء شلل أو نوافذ منبثقة مزعجة
+        // دالة الملاحة المحسنة لجلب الموقع (تربط Capacitor Native و Web Geolocation)
         async function getUserGpsPosition(successCb, errorCb) {
-            // 1. تجربة Capacitor Geolocation Native إن وجد
+            // 1. استخدام Capacitor Geolocation Native إن وجد
             if (window.Capacitor?.Plugins?.Geolocation) {
                 try {
-                    let perm = await window.Capacitor.Plugins.Geolocation.checkPermissions();
-                    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
-                        perm = await window.Capacitor.Plugins.Geolocation.requestPermissions();
-                    }
+                    const perm = await window.Capacitor.Plugins.Geolocation.requestPermissions();
                     if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
                         const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({
                             enableHighAccuracy: true,
-                            timeout: 12000,
-                            maximumAge: 30000
+                            timeout: 10000
                         });
-                        if (pos && pos.coords) {
-                            if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
-                            return;
-                        }
+                        if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
+                        return;
                     }
                 } catch (e) {
-                    console.warn("Capacitor Native Geolocation fallback:", e);
+                    console.warn("Native Geolocation fallback:", e);
                 }
             }
 
-            // 2. تجربة الجسر الأهلي المباشر للاندرويد إن وجد
-            const bridge = getActiveBridge();
-            if (typeof bridge.getCurrentLocation === 'function') {
-                try {
-                    const res = bridge.getCurrentLocation();
-                    if (res) {
-                        const data = (typeof res === 'string') ? JSON.parse(res) : res;
-                        if (data.latitude && data.longitude) {
-                            if (successCb) successCb(data.latitude, data.longitude);
-                            return;
-                        }
-                    }
-                } catch(e) {
-                    console.warn("AndroidBridge location error:", e);
-                }
-            }
-
-            // 3. Web Geolocation مع المحاولة المرنة (High Accuracy ثم Network Location)
+            // 2. استخدام Web API مع نظام دقة مزدوج (High ثم Low Power)
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
-                        console.warn("جاري استخدام الموقع الشبكي التقريبي...");
                         navigator.geolocation.getCurrentPosition(
                             pos => {
                                 if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
@@ -318,10 +295,10 @@
                             err2 => {
                                 if (errorCb) errorCb(err2);
                             },
-                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+                            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
                         );
                     },
-                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
                 );
             } else if (errorCb) {
                 errorCb(new Error("خدمة GPS غير مدعومة بالمتصفح"));
@@ -334,7 +311,7 @@
                     console.log("✓ تم تحديد موقع GPS بنجاح:", lat, lng);
                 },
                 err => {
-                    console.warn("⚠️ تم الاعتماد على الموقع الافتراضي للخريطة:", err.message);
+                    console.warn("⚠️ لم يتم تحديد الموقع الجغرافي:", err.message);
                 }
             );
 
@@ -810,7 +787,6 @@
         window.map = null;
         let pickingMode = null;
         let activeRoutingControl = null;
-        let userLocationMarker = null;
 
         try {
             map = L.map('leafletMap', { 
@@ -834,17 +810,8 @@
             getUserGpsPosition(
                 (lat, lng) => {
                     if (map) {
-                        map.setView([lat, lng], 14);
-                        if (userLocationMarker) map.removeLayer(userLocationMarker);
-                        userLocationMarker = L.marker([lat, lng], {
-                            icon: L.divIcon({
-                                className: 'custom-map-icon',
-                                html: `<div style="background:#10b981; width:22px; height:22px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(16,185,129,0.8); animation: pulse 2s infinite;"></div>`,
-                                iconSize: [22, 22],
-                                iconAnchor: [11, 11]
-                            })
-                        }).addTo(map);
-                        showNativeToast("✓ تم تحديث موقعك الحقيقي بنجاح");
+                        map.setView([lat, lng], 13);
+                        showNativeToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
                     }
                 },
                 err => {
@@ -966,7 +933,7 @@
                         map.setView([lat, lng], 14);
                     },
                     err => {
-                        showNativeToast("جاري التمركز عند النطاق العام للشركة");
+                        showNativeToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
                     }
                 );
             }
@@ -1037,7 +1004,7 @@
             const endQuery = document.getElementById('routeEndInput').value.trim();
 
             if (!endQuery) {
-                showNativeToast("يرجى إدخال اسم نقطة الوصول/الوجهة أولاً.");
+                alert("يرجى إدخال اسم نقطة الوصول/الوجهة أولاً.");
                 return;
             }
 
@@ -1050,7 +1017,7 @@
                         startLat = parseFloat(startData[0].lat);
                         startLng = parseFloat(startData[0].lon);
                     } else {
-                        showNativeToast("تعذر العثور على نقطة البداية المدخلة.");
+                        alert("تعذر العثور على نقطة البداية المدخلة.");
                         return;
                     }
                 } else {
@@ -1077,11 +1044,11 @@
                     const endLng = parseFloat(endData[0].lon);
                     window.calculateRoute(startLat, startLng, endLat, endLng, endQuery);
                 } else {
-                    showNativeToast("تعذر العثور على نقطة الوصول المدخلة.");
+                    alert("تعذر العثور على نقطة الوصول المدخلة.");
                 }
 
             } catch(e) {
-                showNativeToast("حدث خطأ أثناء البحث عن مسار الملاحة.");
+                alert("حدث خطأ أثناء البحث عن مسار الملاحة: " + e.message);
             }
         };
 
@@ -1116,7 +1083,7 @@
                     showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
                 },
                 err => {
-                    showNativeToast("لم يتسنّ قراءة الموقع بدقة فائقة، يرجى المحاولة في مكان مكشوف");
+                    alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى التأكد من تفعيل الـ GPS والسماح بالأذونات.");
                 }
             );
         };
@@ -1169,10 +1136,10 @@
                             .openOn(map);
                     }
                 } else {
-                    showNativeToast("لم يتم العثور على نتائج للعنوان المدخل.");
+                    alert("لم يتم العثور على نتائج للعنوان المدخل.");
                 }
             } catch(e) {
-                showNativeToast("حدث خطأ أثناء إجراء البحث عن المكان.");
+                alert("حدث خطأ أثناء إجراء البحث عن المكان.");
             }
         };
 
@@ -1186,7 +1153,7 @@
             let lng = parseFloat(document.getElementById('vehicleLng').value);
 
             if (isNaN(lat) || isNaN(lng)) {
-                showNativeToast("يرجى إدخال خط العرض وخط الطول بشكل صحيح.");
+                alert("يرجى إدخال خط العرض وخط الطول بشكل صحيح.");
                 return;
             }
 
@@ -1254,7 +1221,7 @@
             let lng = parseFloat(document.getElementById('shipmentLng').value);
 
             if (isNaN(lat) || isNaN(lng)) {
-                showNativeToast("يرجى إدخال خط العرض وخط الطول للشحنة بشكل صحيح.");
+                alert("يرجى إدخال خط العرض وخط الطول لشحنة بشكل صحيح.");
                 return;
             }
 
@@ -1448,13 +1415,13 @@
                             })
                         }).addTo(map).bindPopup(`
                             <div style="font-family:'Cairo',sans-serif; text-align:right; min-width:200px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; justify-between; align-items:center;">
                                     <b style="color:#0f172a;"><i class="fa-solid fa-box text-emerald-600 ml-1"></i> ${escapeHTML(s.code || id)}</b>
                                 </div>
                                 <hr style="margin:6px 0; border-color:#e2e8f0;">
                                 <div style="font-size:12px; color:#475569;">المستلم: <b>${escapeHTML(s.receiver || 'غير محدد')}</b></div>
                                 <div style="font-size:12px; color:#475569; margin-top:2px;">الحالة: <span style="color:${isDelivered ? '#059669' : '#d97706'}; font-weight:bold;">${escapeHTML(s.status || 'قيد التوصيل')}</span></div>
-                                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-content:flex-end;">
+                                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; justify-flex-end;">
                                     <button onclick="window.navigateRouteTo(${sLat}, ${sLng}, '${escapeHTML(s.code || 'الشحنة')}')" style="background:#e0f2fe; color:#0369a1; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                                         <i class="fa-solid fa-route"></i> رسم مسار
                                     </button>
@@ -1544,20 +1511,11 @@
                 (lat, lng) => {
                     if (map) {
                         map.setView([lat, lng], 16, { animate: true });
-                        if (userLocationMarker) map.removeLayer(userLocationMarker);
-                        userLocationMarker = L.marker([lat, lng], {
-                            icon: L.divIcon({
-                                className: 'custom-map-icon',
-                                html: `<div style="background:#10b981; width:22px; height:22px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(16,185,129,0.8);"></div>`,
-                                iconSize: [22, 22],
-                                iconAnchor: [11, 11]
-                            })
-                        }).addTo(map);
                         showNativeToast("✓ تم التمركز عند موقعك الحالي");
                     }
                 },
                 err => {
-                    showNativeToast("يتعذر تحديد موقع الدقة العالية الآن، تم الاتزان عند المركز الأخير");
+                    alert("تعذر الحصول على موقع جهازك. تأكد من تفعيل خدمة GPS ومنح الإذن للبرنامج.");
                 }
             );
         };
@@ -1606,4 +1564,4 @@
         })();
     </script>
 </body>
-</html>
+    </html>

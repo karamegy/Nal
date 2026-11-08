@@ -138,7 +138,6 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
-        /* الإصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -194,23 +193,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -225,6 +234,18 @@
                 drawer.classList.toggle('mobile-open');
             }
         }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، جاري التوجيه لصفحة الدخول...');
+            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+        };
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
@@ -249,7 +270,7 @@
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -268,6 +289,9 @@
                     </div>
                     
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
+                        <button type="button" onclick="window.lockSession()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والتحويل لصفحة auth.html">
+                            <i class="fa-solid fa-lock text-rose-600"></i> قفل
+                        </button>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[180px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                         
                         <button onclick="window.openNewInvoiceModal()" class="btn-primary text-xs flex items-center gap-1.5 cursor-pointer py-2 px-3 sm:px-4 active:scale-95 shadow-sm">
@@ -277,7 +301,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل مع التعديل المتوافق -->
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -303,7 +327,7 @@
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                        <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                         <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
                     </nav>
                 </div>
@@ -401,7 +425,7 @@
             
             <div class="flex flex-wrap gap-2 pt-2">
                 <button type="button" onclick="window.printInvoicePDF()" class="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"><i class="fa-solid fa-file-pdf"></i> طباعة / PDF</button>
-                <button type="button" onclick="window.downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"><i class="fa-solid fa-image"></i> صورة</button>
+                <button type="button" onclick="window.downloadInvoiceImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"><i class="fa-solid fa-image"></i> تصدير صورة</button>
                 <button type="button" onclick="window.closePreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">إغلاق</button>
             </div>
         </div>
@@ -434,7 +458,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع التخزين المحلي والمزامنة اللحظية -->
+    <!-- Firebase SDK Modules وتصدير ملفات الصور والتفاعل عبر AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -682,15 +706,20 @@
             window.print();
         };
 
+        // تصدير صورة الفاتورة عبر AndroidBridge.downloadFile
         window.downloadInvoiceImage = function() {
             triggerHaptic(30);
             let element = document.getElementById('invoicePrintArea');
+            if (!element) return showNativeToast('منطقة الفاتورة غير متوفرة');
+
+            showNativeToast("⏳ جاري توليد صورة الفاتورة الفردية...");
+
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Invoice-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
                 
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
@@ -698,7 +727,9 @@
                     link.href = base64Data;
                     link.click();
                 }
-                showNativeToast("تم تصدير صورة الفاتورة بنجاح");
+                showNativeToast("✓ تم تصدير صورة الفاتورة بنجاح");
+            }).catch(err => {
+                showNativeToast('فشل تصدير الصورة: ' + err.message);
             });
         };
 
@@ -718,9 +749,9 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا! 🙏`;
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(text, 'EIDCO // فاتورة مبيعات');
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: 'EIDCO // فاتورة مبيعات', text: text });

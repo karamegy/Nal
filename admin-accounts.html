@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>EIDCO // إدارة الحسابات والشركات المعزولة (المدير الرئيسي)</title>
     
     <!-- PWA & Native App Meta Tags -->
@@ -12,63 +12,12 @@
     <meta name="theme-color" content="#020617">
     <link rel="manifest" href="manifest.json">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- Capacitor Native Bridge & Core -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
-        // الجسر البرمجي والتواصل مع تطبيق الأندرويد الأهلي والهجين
-        function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
-        }
-
-        window.NativeBridge = {
-            vibrate: function(ms = 40) {
-                const bridge = getActiveBridge();
-                if (typeof bridge.vibrate === 'function') {
-                    bridge.vibrate(ms);
-                } else if ("vibrate" in navigator) {
-                    navigator.vibrate(ms);
-                }
-            },
-            showToast: function(msg) {
-                const bridge = getActiveBridge();
-                if (typeof bridge.showToast === 'function') {
-                    bridge.showToast(msg);
-                } else {
-                    console.log("[Toast]: " + msg);
-                }
-            },
-            keepScreenOn: function(enable = true) {
-                const bridge = getActiveBridge();
-                if (typeof bridge.keepScreenOn === 'function') {
-                    bridge.keepScreenOn(enable);
-                }
-            },
-            shareText: function(text) {
-                const bridge = getActiveBridge();
-                if (typeof bridge.shareText === 'function') {
-                    bridge.shareText(text);
-                } else if (navigator.share) {
-                    navigator.share({ text: text }).catch(() => {});
-                } else {
-                    alert(text);
-                }
-            },
-            downloadFile: function(filename, base64Data) {
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
-                    bridge.downloadFile(filename, base64Data);
-                } else {
-                    const link = document.createElement('a');
-                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
-                    link.download = filename;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            }
-        };
-
         // التثبيت التلقائي لمعرف الشركة وصلاحيات المؤسس كرم حمدي عبدالعظيم
         const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
         const FOUNDER_COMPANY = "company_founder_karm";
@@ -83,11 +32,6 @@
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
-
-        // إبقاء الشاشة مضاءة أثناء مراقبة اللوحة
-        window.addEventListener('DOMContentLoaded', () => {
-            window.NativeBridge.keepScreenOn(true);
-        });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -107,36 +51,26 @@
 
         * {
             -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
-        /* السماح بالتفاعل الكامل مع حقول الكتابة */
         input, textarea, select {
             -webkit-user-select: text !important;
             user-select: text !important;
+            scroll-margin-bottom: 120px;
         }
 
-        html {
-            background-color: var(--bg-main);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            height: 100%;
-        }
-
-        body { 
+        html, body { 
             font-family: 'Cairo', sans-serif; 
-            background-color: var(--bg-main); 
+            background-color: var(--bg-main) !important; 
             color: var(--text-main); 
-            min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 0.75rem;
-            overflow-x: hidden;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            touch-action: manipulation;
+            padding-bottom: env(safe-area-inset-bottom, 5rem); 
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-left: env(safe-area-inset-left, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
+            overscroll-behavior-y: contain;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -181,7 +115,43 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.96); opacity: 0.9; }
 
-        /* ضبط التمرير السلس للجدول على الموبايل واللمس */
+        .nav-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.875rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            transition: all 0.2s; 
+            text-decoration: none; 
+        }
+        .nav-link:hover, .nav-link.active { background-color: #1e1b4b; color: #818cf8; }
+
+        /* حل مشكلة القائمة الجانبية للهاتف لمنع تعارض Tailwind */
+        #appSidebar.mobile-open {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            width: 18rem !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            background-color: #0f172a !important;
+            z-index: 9999 !important;
+            box-shadow: -10px 0 25px rgba(0,0,0,0.7) !important;
+        }
+
+        #appSidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 98;
+        }
+
         .table-container {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -189,7 +159,6 @@
             overscroll-behavior-x: contain;
         }
 
-        /* إصلاح النافذة المنبثقة للتوافق الكامل مع التمرير والكيبورد */
         .custom-modal { 
             display: none; 
             position: fixed; 
@@ -203,7 +172,6 @@
             box-sizing: border-box;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
         }
         .custom-modal.active { display: flex !important; }
 
@@ -223,6 +191,91 @@
     </style>
 
     <script>
+        function getActiveBridge() {
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        }
+
+        function showNativeToast(message) {
+            const bridge = getActiveBridge();
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else {
+                console.log("[Toast]:", message);
+            }
+        }
+
+        function triggerHaptic(duration = 35) {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+                window.Capacitor.Plugins.Haptics.vibrate({ duration: duration });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
+            }
+            const bridge = getActiveBridge();
+            if (typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            }
+        }
+
+        function toggleMobileSidebar() {
+            triggerHaptic(20);
+            const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('appSidebarOverlay');
+            if (sidebar) {
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                if (overlay) overlay.style.display = isOpen ? 'block' : 'none';
+            }
+        }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، يرجى إعادة المصادقة');
+            setTimeout(() => {
+                window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+            }, 150);
+        };
+
+        window.NativeBridge = {
+            vibrate: triggerHaptic,
+            showToast: showNativeToast,
+            keepScreenOn: function(enable = true) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.keepScreenOn === 'function') {
+                    bridge.keepScreenOn(enable);
+                }
+            },
+            shareText: function(text) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.shareText === 'function') {
+                    bridge.shareText(text);
+                } else if (navigator.share) {
+                    navigator.share({ text: text }).catch(() => {});
+                } else {
+                    alert(text);
+                }
+            },
+            downloadFile: function(filename, base64Data) {
+                const bridge = getActiveBridge();
+                if (typeof bridge.downloadFile === 'function') {
+                    bridge.downloadFile(filename, base64Data);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = base64Data.startsWith('data:') ? base64Data : 'data:application/json;charset=utf-8,' + encodeURIComponent(base64Data);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        };
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -236,122 +289,194 @@
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
 
-    <div class="max-w-6xl mx-auto space-y-6">
-        
-        <!-- رأس الصفحة والإجراءات الإدارية الأساسية -->
-        <div class="corporate-card p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-950 border-indigo-500/40">
-            <div class="flex items-center gap-3 w-full sm:w-auto">
-                <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
-                    <i class="fa-solid fa-shield-halved text-2xl text-white"></i>
+    <!-- غطاء خلفي عند فتح القائمة الجانبية بالهاتف -->
+    <div id="appSidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <div class="flex min-h-screen">
+        <!-- القائمة الجانبية للشاشات الكبيرة (Desktop Sidebar) -->
+        <aside id="appSidebar" class="hidden lg:flex flex-col w-72 p-6 bg-slate-900 border-l border-slate-800 sticky top-0 h-screen z-40 shrink-0">
+            <div class="flex items-center justify-between mb-8 px-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-black shadow-lg shadow-indigo-600/30">
+                        <i class="fa-solid fa-cube"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-white text-base">EIDCO <span class="text-indigo-400">//</span> عيدكو</h2>
+                        <span class="text-[10px] text-indigo-400 font-mono font-bold tracking-wider">ADMIN CONTROL</span>
+                    </div>
                 </div>
-                <div>
+                <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
+                <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
+                <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
+                <a href="batch-invoices.html" class="nav-link"><i class="fa-solid fa-file-lines"></i> الفواتير المجمعة</a>
+                <a href="inventory.html" class="nav-link"><i class="fa-solid fa-boxes-stacked"></i> المخزن والأصناف</a>
+                <a href="clients.html" class="nav-link"><i class="fa-solid fa-building-user"></i> حسابات العملاء</a>
+                <a href="accounts-tree.html" class="nav-link"><i class="fa-solid fa-folder-tree"></i> شجرة الحسابات والدليل</a>
+                <a href="documents.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> شجرة المستندات والمدفوعات</a>
+                <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i> الشات والاتصالات</a>
+                <a href="intelligence.html" class="nav-link"><i class="fa-solid fa-brain"></i> مركز الذكاء والتعلم</a>
+                <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
+                
+                <a href="remote.html" id="sidebarRemoteNavLink" class="nav-link text-indigo-400 font-black"><i class="fa-solid fa-gamepad"></i> ريموت التحكم عن بُعد TV</a>
+                <a href="users.html" id="sidebarUsersLink" class="nav-link text-indigo-400 font-black"><i class="fa-solid fa-users-gear"></i> إدارة المستخدمين والصلاحيات</a>
+                <a href="admin-accounts.html" id="sidebarAdminAccountsLink" class="nav-link active font-black"><i class="fa-solid fa-building-shield"></i> إدارة الحسابات والشركات</a>
+                <a href="admin-reports.html" id="sidebarReportsLink" class="nav-link text-amber-400 font-black"><i class="fa-solid fa-triangle-exclamation"></i> إدارة الشكاوى والبلاغات</a>
+
+                <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
+                <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
+                <a href="tv.html" class="nav-link text-indigo-400 cursor-pointer"><i class="fa-solid fa-tv text-amber-400"></i> شاشة البث TV 4K</a>
+                <a href="javascript:void(0)" onclick="window.lockSession()" id="sidebarAuthNavLink" class="nav-link text-rose-400 hover:bg-rose-950/40"><i class="fa-solid fa-fingerprint text-rose-400"></i> قفل الأمان والبيومترية</a>
+                <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
+            </nav>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- الهيدر العلوي المزود بزر القائمة الجانبية للهاتف -->
+            <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
+                <div class="max-w-6xl mx-auto flex justify-between items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden w-10 h-10 bg-indigo-950/80 text-indigo-400 rounded-xl flex items-center justify-center cursor-pointer border border-indigo-500/30 active:scale-95 transition-transform" title="إظهار القائمة الجانبية">
+                            <i class="fa-solid fa-bars text-lg"></i>
+                        </button>
+                        <h1 class="font-black text-white text-xs sm:text-sm leading-snug">
+                            إدارة الحسابات والشركات المعزولة 
+                            <span class="hidden sm:inline text-indigo-400 font-normal">(Native Sync)</span>
+                        </h1>
+                    </div>
+
                     <div class="flex items-center gap-2">
-                        <h1 class="text-base sm:text-lg font-black text-white">لوحة تحكم المدير المؤسس</h1>
-                        <span id="nativeStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        <span id="nativeStatusBadge" class="hidden px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                             <i class="fa-solid fa-mobile-screen ml-1"></i> Native Active
                         </span>
+                        <button type="button" onclick="window.lockSession()" class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-lock text-rose-400"></i> قفل
+                        </button>
                     </div>
-                    <p class="text-[10px] sm:text-xs text-indigo-300 font-mono">الرقابة والسيطرة الآمنة على كافة الحسابات المسجلة بقاعدة البيانات</p>
                 </div>
-            </div>
-            
-            <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
-                <a href="index.html" onclick="window.NativeBridge.vibrate(20)" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-arrow-right"></i> الرئيسية
-                </a>
-                <button onclick="window.exportAccountsData()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-cyan-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-file-export"></i> تصدير البيانات
-                </button>
-                <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-user-plus"></i> إضافة حساب
-                </button>
-                <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 active:scale-95 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
-                </button>
-            </div>
-        </div>
+            </header>
 
-        <!-- عدادات وإحصائيات سريعة -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-indigo-500 flex justify-between items-center">
-                <div>
-                    <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات</span>
-                    <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
+            <main class="max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
+                
+                <!-- رأس الصفحة والإجراءات الإدارية الأساسية -->
+                <div class="corporate-card p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-950 border-indigo-500/40">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+                            <i class="fa-solid fa-shield-halved text-2xl text-white"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base sm:text-lg font-black text-white">لوحة تحكم المدير المؤسس</h2>
+                            </div>
+                            <p class="text-[10px] sm:text-xs text-indigo-300 font-mono">الرقابة والسيطرة الآمنة على كافة الحسابات المسجلة بقاعدة البيانات</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
+                        <a href="index.html" onclick="triggerHaptic(20)" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-right"></i> الرئيسية
+                        </a>
+                        <button onclick="window.exportAccountsData()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-cyan-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-file-export"></i> تصدير البيانات
+                        </button>
+                        <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-user-plus"></i> إضافة حساب
+                        </button>
+                        <button onclick="window.resetDefaultAccounts()" class="bg-rose-600/20 hover:bg-rose-600/30 active:scale-95 text-rose-300 border border-rose-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
+                        </button>
+                    </div>
                 </div>
-                <i class="fa-solid fa-users text-2xl text-indigo-500/30"></i>
-            </div>
-            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-emerald-500 flex justify-between items-center">
-                <div>
-                    <span class="text-xs text-slate-400 block mb-1">حسابات نشطة ومصرحة</span>
-                    <span class="text-2xl font-black text-emerald-400 mono-font" id="activeAccountsCount">0</span>
+
+                <!-- عدادات وإحصائيات سريعة -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-indigo-500 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-slate-400 block mb-1">إجمالي الحسابات والشركات</span>
+                            <span class="text-2xl font-black text-white mono-font" id="totalAccountsCount">0</span>
+                        </div>
+                        <i class="fa-solid fa-users text-2xl text-indigo-500/30"></i>
+                    </div>
+                    <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-emerald-500 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-slate-400 block mb-1">حسابات نشطة ومصرحة</span>
+                            <span class="text-2xl font-black text-emerald-400 mono-font" id="activeAccountsCount">0</span>
+                        </div>
+                        <i class="fa-solid fa-user-check text-2xl text-emerald-500/30"></i>
+                    </div>
+                    <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-cyan-500 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-slate-400 block mb-1">المدير الحالي للجلسة</span>
+                            <span class="text-sm font-black text-cyan-400 block truncate max-w-[180px]" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
+                        </div>
+                        <i class="fa-solid fa-user-gear text-2xl text-cyan-500/30"></i>
+                    </div>
                 </div>
-                <i class="fa-solid fa-user-check text-2xl text-emerald-500/30"></i>
-            </div>
-            <div class="corporate-card p-4 sm:p-5 border-l-4 border-l-cyan-500 flex justify-between items-center">
-                <div>
-                    <span class="text-xs text-slate-400 block mb-1">المدير الحالي للجلسة</span>
-                    <span class="text-sm font-black text-cyan-400 block truncate max-w-[180px]" id="currentFounderBadge">كرم حمدي عبدالعظيم</span>
+
+                <!-- جدول الحسابات السحابية بالكامل -->
+                <div class="corporate-card p-4 sm:p-6 space-y-4">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-users-gear text-indigo-400"></i> قائمة الحسابات والشركات (Firebase)
+                        </h3>
+                        <span class="text-[11px] text-slate-400 mono-font" id="syncStatusText">جاري جلب السجلات...</span>
+                    </div>
+
+                    <div class="table-container rounded-xl border border-slate-800">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
+                                    <th class="p-3.5">اسم المستخدم / الجهة</th>
+                                    <th class="p-3.5">الصلاحية / الدور</th>
+                                    <th class="p-3.5">معرف الشركة (Company ID)</th>
+                                    <th class="p-3.5">البريد الإلكتروني / الهاتف</th>
+                                    <th class="p-3.5 text-center">حالة الحظر</th>
+                                    <th class="p-3.5">تاريخ الإنشاء</th>
+                                    <th class="p-3.5 text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
+                                <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <i class="fa-solid fa-user-gear text-2xl text-cyan-500/30"></i>
-            </div>
+
+                <!-- جدول الشكاوى والبلاغات الواردة -->
+                <div class="corporate-card p-4 sm:p-6 space-y-4">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> الشكاوى والبلاغات الواردة (messages)
+                        </h3>
+                        <span class="text-[11px] text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
+                    </div>
+
+                    <div class="table-container rounded-xl border border-slate-800">
+                        <table class="w-full text-right text-xs">
+                            <thead>
+                                <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
+                                    <th class="p-3.5">اسم المُشتكي</th>
+                                    <th class="p-3.5">وسيلة التواصل</th>
+                                    <th class="p-3.5">نص الشكوى / البلاغ</th>
+                                    <th class="p-3.5">تاريخ الإرسال</th>
+                                    <th class="p-3.5 text-center">القرار والإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminComplaintsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
+                                <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل الشكاوى...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </main>
         </div>
-
-        <!-- جدول الحسابات السحابية بالكامل -->
-        <div class="corporate-card p-4 sm:p-6 space-y-4">
-            <div class="flex justify-between items-center flex-wrap gap-2">
-                <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                    <i class="fa-solid fa-users-gear text-indigo-400"></i> قائمة الحسابات والشركات (Firebase)
-                </h3>
-                <span class="text-[11px] text-slate-400 mono-font" id="syncStatusText">جاري جلب السجلات...</span>
-            </div>
-
-            <div class="table-container rounded-xl border border-slate-800">
-                <table class="w-full text-right text-xs">
-                    <thead>
-                        <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
-                            <th class="p-3.5">اسم المستخدم / الجهة</th>
-                            <th class="p-3.5">الصلاحية / الدور</th>
-                            <th class="p-3.5">معرف الشركة (Company ID)</th>
-                            <th class="p-3.5">البريد الإلكتروني / الهاتف</th>
-                            <th class="p-3.5 text-center">حالة الحظر</th>
-                            <th class="p-3.5">تاريخ الإنشاء</th>
-                            <th class="p-3.5 text-center">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminAccountsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
-                        <tr><td colspan="7" class="p-4 text-center text-slate-400">جاري تحميل البيانات من السحابة...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- جدول الشكاوى والبلاغات الواردة -->
-        <div class="corporate-card p-4 sm:p-6 space-y-4">
-            <div class="flex justify-between items-center flex-wrap gap-2">
-                <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> الشكاوى والبلاغات الواردة (messages)
-                </h3>
-                <span class="text-[11px] text-slate-400 mono-font" id="complaintsSyncStatus">جاري مزامنة الشكاوى...</span>
-            </div>
-
-            <div class="table-container rounded-xl border border-slate-800">
-                <table class="w-full text-right text-xs">
-                    <thead>
-                        <tr class="bg-slate-900/80 text-slate-300 font-mono border-b border-slate-800">
-                            <th class="p-3.5">اسم المُشتكي</th>
-                            <th class="p-3.5">وسيلة التواصل</th>
-                            <th class="p-3.5">نص الشكوى / البلاغ</th>
-                            <th class="p-3.5">تاريخ الإرسال</th>
-                            <th class="p-3.5 text-center">القرار والإجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminComplaintsTableBody" class="divide-y divide-slate-800/60 bg-slate-950/40">
-                        <tr><td colspan="5" class="p-4 text-center text-slate-400">جاري تحميل الشكاوى...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
     </div>
 
     <!-- نافذة إضافة حساب جديد -->
@@ -413,6 +538,22 @@
                 }
             });
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.NativeBridge && typeof window.NativeBridge.keepScreenOn === 'function') {
+                window.NativeBridge.keepScreenOn(true);
+            }
+            
+            // تحديث رابط الحساب المعزول بالـ Header
+            const currentCompanyId = localStorage.getItem('eidco_current_company_id') || FOUNDER_COMPANY;
+            document.querySelectorAll('a[href]').forEach(link => {
+                let href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http') && !href.startsWith('javascript:') && !href.includes('companyId=')) {
+                    let separator = href.includes('?') ? '&' : '?';
+                    link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
+                }
+            });
+        });
     </script>
 
     <!-- Firebase SDK Modules مع التخزين المحلي والجسر الأهلي -->
@@ -445,7 +586,7 @@
         const auth = getAuth(app);
 
         // التحقق من وجود الجسر البرمجي للأندرويد والهجين
-        const activeBridge = (window.CapacitorBridge || window.AndroidBridge || window.NativeBridge);
+        const activeBridge = getActiveBridge();
         if (activeBridge) {
             const badge = document.getElementById('nativeStatusBadge');
             if (badge) badge.classList.remove('hidden');
@@ -595,7 +736,7 @@
         }
 
         window.openAddAccountModal = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (document.getElementById('modalAccountName')) document.getElementById('modalAccountName').value = '';
             if (document.getElementById('modalAccountCompanyId')) document.getElementById('modalAccountCompanyId').value = FOUNDER_COMPANY;
             if (document.getElementById('modalAccountPin')) document.getElementById('modalAccountPin').value = '1234';
@@ -610,13 +751,13 @@
         };
 
         window.closeAddAccountModal = function() {
-            window.NativeBridge.vibrate(20);
+            triggerHaptic(20);
             const modal = document.getElementById('adminAddModal');
             if (modal) modal.classList.remove('active');
         };
 
         window.saveAdminAccount = async function() {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let nameInput = document.getElementById('modalAccountName');
             let name = nameInput ? nameInput.value.trim() : '';
             let companyIdInput = document.getElementById('modalAccountCompanyId') ? document.getElementById('modalAccountCompanyId').value.trim() : FOUNDER_COMPANY;
@@ -625,7 +766,7 @@
             let role = roleSelect ? roleSelect.value : "مدير نظام رئيسي";
 
             if(!name) {
-                window.NativeBridge.showToast('الرجاء إدخال اسم المسؤول');
+                showNativeToast('الرجاء إدخال اسم المسؤول');
                 return;
             }
 
@@ -646,28 +787,28 @@
                     date: new Date().toISOString().split('T')[0]
                 });
                 
-                window.NativeBridge.vibrate(80);
-                window.NativeBridge.showToast(`تم حفظ الحساب (${name}) بالسحابة بنجاح`);
+                triggerHaptic(80);
+                showNativeToast(`تم حفظ الحساب (${name}) بالسحابة بنجاح`);
                 window.closeAddAccountModal();
             } catch(err) {
-                window.NativeBridge.showToast('خطأ أثناء الحفظ: ' + err.message);
+                showNativeToast('خطأ أثناء الحفظ: ' + err.message);
             }
         };
 
         window.exportAccountsData = function() {
-            window.NativeBridge.vibrate(30);
+            triggerHaptic(30);
             if (!globalAccountsList.length) {
-                window.NativeBridge.showToast('لا توجد بيانات لتصديرها');
+                showNativeToast('لا توجد بيانات لتصديرها');
                 return;
             }
             const jsonStr = JSON.stringify(globalAccountsList, null, 2);
             const fileName = `EIDCO_Accounts_${new Date().toISOString().split('T')[0]}.json`;
             window.NativeBridge.downloadFile(fileName, jsonStr);
-            window.NativeBridge.showToast('تم تصدير سجل الحسابات بنجاح');
+            showNativeToast('تم تصدير سجل الحسابات بنجاح');
         };
 
         window.resetDefaultAccounts = async function() {
-            window.NativeBridge.vibrate(50);
+            triggerHaptic(50);
             if (!confirm('هل تريد إعادة تعيين الحسابات وحذف الحسابات الأخرى مع الإبقاء على المدير فقط؟')) return;
 
             if (!auth.currentUser) {
@@ -689,15 +830,15 @@
                     date: new Date().toISOString().split('T')[0]
                 }, { merge: true });
 
-                window.NativeBridge.vibrate(100);
-                window.NativeBridge.showToast('تمت إعادة ضبط الحسابات بالسحابة بنجاح');
+                triggerHaptic(100);
+                showNativeToast('تمت إعادة ضبط الحسابات بالسحابة بنجاح');
             } catch (err) {
-                window.NativeBridge.showToast('حدث خطأ أثناء إعادة الضبط: ' + err.message);
+                showNativeToast('حدث خطأ أثناء إعادة الضبط: ' + err.message);
             }
         };
 
         window.toggleAccountBan = async function(docId, currentStatus) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             let actionName = currentStatus ? 'فك حظر' : 'حظر';
             if(!confirm(`هل أنت متأكد من ${actionName} هذا الحساب؟`)) return;
 
@@ -710,15 +851,15 @@
                     isBanned: !currentStatus,
                     companyId: FOUNDER_COMPANY
                 });
-                window.NativeBridge.vibrate(60);
-                window.NativeBridge.showToast(`تم ${actionName} الحساب بنجاح`);
+                triggerHaptic(60);
+                showNativeToast(`تم ${actionName} الحساب بنجاح`);
             } catch(err) {
-                window.NativeBridge.showToast('خطأ: ' + err.message);
+                showNativeToast('خطأ: ' + err.message);
             }
         };
 
         window.deleteCloudAccount = async function(docId, name) {
-            window.NativeBridge.vibrate(50);
+            triggerHaptic(50);
             if(!confirm(`هل أنت متأكد من حذف الحساب (${name}) نهائياً؟`)) return;
 
             if (!auth.currentUser) {
@@ -727,15 +868,15 @@
 
             try {
                 await deleteDoc(doc(db, "accounts", docId));
-                window.NativeBridge.vibrate(70);
-                window.NativeBridge.showToast('تم حذف الحساب من السحابة');
+                triggerHaptic(70);
+                showNativeToast('تم حذف الحساب من السحابة');
             } catch(err) {
-                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
+                showNativeToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.deleteComplaint = async function(docId) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if(!confirm('هل أنت متأكد من حذف هذه الشكوى؟')) return;
 
             if (!auth.currentUser) {
@@ -744,25 +885,25 @@
 
             try {
                 await deleteDoc(doc(db, "messages", docId));
-                window.NativeBridge.vibrate(50);
-                window.NativeBridge.showToast('تم حذف الشكوى بنجاح');
+                triggerHaptic(50);
+                showNativeToast('تم حذف الشكوى بنجاح');
             } catch(err) {
-                window.NativeBridge.showToast('خطأ أثناء الحذف: ' + err.message);
+                showNativeToast('خطأ أثناء الحذف: ' + err.message);
             }
         };
 
         window.resolveComplaint = async function(docId) {
-            window.NativeBridge.vibrate(40);
+            triggerHaptic(40);
             if (!auth.currentUser) {
                 try { await signInAnonymously(auth); } catch(e) {}
             }
 
             try {
                 await deleteDoc(doc(db, "messages", docId));
-                window.NativeBridge.vibrate(60);
-                window.NativeBridge.showToast('تم إغلاق الشكوى ومعالجتها بنجاح');
+                triggerHaptic(60);
+                showNativeToast('تم إغلاق الشكوى ومعالجتها بنجاح');
             } catch(err) {
-                window.NativeBridge.showToast('خطأ: ' + err.message);
+                showNativeToast('خطأ: ' + err.message);
             }
         };
     </script>

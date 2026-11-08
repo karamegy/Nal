@@ -133,7 +133,6 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
-        /* الإصلاح الخاص بالقائمة الجانبية في الهاتف لتجنب التعارض */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -192,23 +191,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -1200,28 +1209,70 @@
             activePreviewInv = null;
         };
 
+        // إصلاح تنزيل ملف PDF الفعلي وحفظه عبر الجسر الأهلي AndroidBridge
         window.printInvoicePDF = function() {
-            triggerHaptic(30);
-            window.print();
+            triggerHaptic(40);
+            if (!activePreviewInv) {
+                showNativeToast("⚠️ لا توجد فاتورة لمعاينتها وتصديرها");
+                return;
+            }
+
+            showNativeToast("⏳ جاري تحويل الفاتورة إلى PDF وحفظها...");
+            let element = document.getElementById('invoicePrintArea');
+
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                const fileName = `EIDCO-Invoice-${activePreviewInv.id}.pdf`;
+                const base64Pdf = pdf.output('datauristring');
+
+                const bridge = getAndroidBridge();
+                if (bridge) {
+                    bridge.downloadFile(fileName, base64Pdf);
+                } else {
+                    pdf.save(fileName);
+                    showNativeToast("تم حفظ ملف الـ PDF بنجاح");
+                }
+            }).catch(err => {
+                console.error("PDF Export Error:", err);
+                showNativeToast('❌ خطأ أثناء إنشاء PDF: ' + err.message);
+            });
         };
 
+        // إصلاح تصدير وحفظ الصورة عبر الجسر الأهلي AndroidBridge
         window.downloadInvoiceImage = function() {
             triggerHaptic(40);
+            if (!activePreviewInv) {
+                showNativeToast("⚠️ لا توجد فاتورة لمعاينتها وتصديرها");
+                return;
+            }
+
+            showNativeToast("⏳ جاري حفظ الصورة في التنزيلات...");
             let element = document.getElementById('invoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let fileName = `EIDCO-CapiterOrder-${activePreviewInv ? activePreviewInv.id : Date.now()}.png`;
+                let fileName = `EIDCO-CapiterOrder-${activePreviewInv.id}.png`;
                 let base64Data = canvas.toDataURL('image/png');
-                
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
                     link.download = fileName;
                     link.href = base64Data;
                     link.click();
+                    showNativeToast("تم تصدير وحفظ الصورة بنجاح");
                 }
-                showNativeToast("تم تصدير وحفظ الصورة بنجاح");
+            }).catch(err => {
+                console.error("Image Export Error:", err);
+                showNativeToast('❌ خطأ أثناء إنشاء الصورة: ' + err.message);
             });
         };
 
@@ -1250,9 +1301,9 @@
             text += `--------------------------\n`;
             text += `شكراً لتعاملكم معنا في منظومة كابيتر للجملة! 🙏`;
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(text, `طلب كابيتر ${inv.id}`);
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: `طلب كابيتر ${inv.id}`, text: text });

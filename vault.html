@@ -12,11 +12,17 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="manifest.json">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- استدعاء سكريبت Capacitor للجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
+        // توحيد الجسور الأهلية بين AndroidBridge و NativeBridge و CapacitorBridge
+        window.CapacitorBridge = window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+        window.AndroidBridge = window.AndroidBridge || window.NativeBridge || window.CapacitorBridge;
+        window.NativeBridge = window.NativeBridge || window.AndroidBridge;
+
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -139,6 +145,12 @@
         }
         .custom-modal.active { display: flex !important; }
 
+        /* تفعيل القائمة الجانبية للـ Native Capacitor WebView */
+        #mobileNavDrawer.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+        }
+
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
@@ -171,12 +183,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -184,17 +198,20 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
+            }
         }
     </script>
 </head>
@@ -598,6 +615,7 @@
             let selectedClientName = (clientSelect && selectedClientId) ? (clientSelect.options[clientSelect.selectedIndex].getAttribute('data-name') || '') : '';
 
             if (!amount || amount <= 0) {
+                showNativeToast("⚠️ يرجى إدخال مبلغ صحيح للحركة المالية");
                 return alert('⚠️ يرجى إدخال مبلغ صحيح للحركة المالية.');
             }
 
@@ -643,7 +661,6 @@
                 if (document.getElementById('txDesc')) document.getElementById('txDesc').value = '';
                 if (document.getElementById('txClientSelect')) document.getElementById('txClientSelect').value = '';
                 showNativeToast("✓ تم تسجيل الحركة سحابياً بنجاح");
-                alert('✓ تم تسجيل حركة الخزنة واعتمادها سحابياً بنجاح.');
             } catch (err) {
                 alert('حدث خطأ أثناء حفظ الحركة بالسحابة: ' + err.message);
             }
@@ -660,7 +677,6 @@
             try {
                 await deleteDoc(doc(db, "transactions", docId));
                 showNativeToast("✓ تم حذف الحركة من الخزنة");
-                alert('✓ تم حذف الحركة من الخزنة بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء الحذف: ' + err.message);
             }
@@ -680,7 +696,6 @@
             try {
                 await updateDoc(doc(db, "transactions", docId), { amount: newAmount });
                 showNativeToast("✓ تم تعديل المبلغ بنجاح");
-                alert('✓ تم تعديل المبلغ بنجاح.');
             } catch(err) {
                 alert('خطأ أثناء التعديل: ' + err.message);
             }

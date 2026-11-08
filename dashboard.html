@@ -14,7 +14,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- استدعاء سكريبت Capacitor للجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -119,6 +120,12 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         table th, table td { white-space: nowrap; }
 
+        /* الإصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
+        #mobileNavDrawer.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+        }
+
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
@@ -161,12 +168,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -174,10 +183,10 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
@@ -186,6 +195,7 @@
             const drawer = document.getElementById('mobileNavDrawer');
             if (drawer) {
                 drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
             }
         }
     </script>
@@ -242,8 +252,8 @@
                 </div>
             </header>
 
-            <!-- القائمة الجانبية للموبايل -->
-            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+            <!-- القائمة الجانبية للموبايل مع التعديل المتوافق -->
+            <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                         <div class="flex items-center gap-3">

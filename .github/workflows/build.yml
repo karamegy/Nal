@@ -128,11 +128,29 @@ jobs:
           }
           EOF
 
-          # تم إضافة @capacitor/geolocation@6 للحزمة المطلوبة
           npm install @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6 @capacitor/geolocation@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/assets --save-dev --legacy-peer-deps
 
           rm -rf android
           npx cap add android
+
+          cat << 'EOF' > android/variables.gradle
+          ext {
+              minSdkVersion = 23
+              compileSdkVersion = 36
+              targetSdkVersion = 36
+              androidxActivityVersion = '1.8.0'
+              androidxAppCompatVersion = '1.6.1'
+              androidxCoordinatorLayoutVersion = '1.2.0'
+              androidxCoreVersion = '1.12.0'
+              androidxFragmentVersion = '1.6.2'
+              coreSplashScreenVersion = '1.0.1'
+              androidxWebkitVersion = '1.9.0'
+              junitVersion = '4.13.2'
+              androidxJunitVersion = '1.1.5'
+              androidxEspressoCoreVersion = '3.5.1'
+              cordovaAndroidVersion = '10.1.1'
+          }
+          EOF
 
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
@@ -497,7 +515,6 @@ jobs:
           </paths>
           EOF
 
-          # تم إضافة أذونات الـ GPS والكاميرا والميديا داخل AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -606,12 +623,12 @@ jobs:
 
           android {
               namespace "io.github.karamegy.twa"
-              compileSdkVersion rootProject.ext.compileSdkVersion
+              compileSdkVersion 36
               defaultConfig {
                   applicationId "io.github.karamegy.twa"
                   minSdkVersion rootProject.ext.minSdkVersion
-                  targetSdkVersion rootProject.ext.targetSdkVersion
-                  versionCode 24
+                  targetSdkVersion 36
+                  versionCode 36
                   versionName "8.0.0.0"
                   testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
               }

@@ -238,7 +238,7 @@
 
         <!-- المحتوى الرئيسي -->
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- الهيدر المتجاوب مع زر إضافة حساب جديد -->
+            <!-- الهيدر المتجاوب مع زر إضافة حساب جديد وتصدير البيانات عبر الجسر الأهلي -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div class="flex items-center justify-between w-full lg:w-auto gap-3">
@@ -253,6 +253,9 @@
                     <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end flex-wrap">
                         <span id="authStatusBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold">✓ كرم حمدي (مدير مؤسس)</span>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate">company_founder_karm</span>
+                        <button onclick="window.exportUsersData()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm">
+                            <i class="fa-solid fa-file-arrow-down"></i> تصدير البيانات (JSON)
+                        </button>
                         <button onclick="window.openAddAccountModal()" class="btn-primary text-xs py-2 px-3 flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95">
                             <i class="fa-solid fa-user-plus"></i> إضافة حساب جديد
                         </button>
@@ -481,6 +484,43 @@
                     </tr>
                 `;
             }).join('');
+        };
+
+        // دالة تصدير وتنزيل ملف حسابات المستخدمين باستخدام الجسر الأهلي AndroidBridge.downloadFile
+        window.exportUsersData = function() {
+            triggerHaptic(40);
+            if (!accountsList || accountsList.length === 0) {
+                showNativeToast("⚠️ لا توجد حسابات لتصديرها");
+                return alert("لا توجد حسابات مسجلة لتصديرها.");
+            }
+
+            let currentCompId = localStorage.getItem('eidco_current_company_id') || FOUNDER_COMPANY;
+            let exportData = {
+                companyId: currentCompId,
+                exportDate: new Date().toISOString(),
+                totalAccounts: accountsList.length,
+                accounts: accountsList
+            };
+
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const fileName = `EIDCO_Users_${currentCompId}_${new Date().toISOString().split('T')[0]}.json`;
+            const bridge = getActiveBridge();
+
+            if (typeof bridge.downloadFile === 'function') {
+                bridge.downloadFile(fileName, jsonStr);
+            } else if (typeof window.AndroidBridge?.downloadFile === 'function') {
+                window.AndroidBridge.downloadFile(fileName, jsonStr);
+            } else {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
+                const dl = document.createElement('a'); 
+                dl.setAttribute("href", dataStr); 
+                dl.setAttribute("download", fileName);
+                document.body.appendChild(dl); 
+                dl.click(); 
+                dl.remove();
+            }
+
+            showNativeToast("✓ تم تصدير وتحميل قائمة الحسابات بنجاح");
         };
 
         window.openAddAccountModal = function() {

@@ -263,26 +263,33 @@
 
         // دالة الملاحة الهجينة المتطورة لجلب الموقع بدون أخطاء شلل أو نوافذ منبثقة مزعجة
         async function getUserGpsPosition(successCb, errorCb) {
-            // 1. تجربة Capacitor Geolocation Native إن وجد
+            // 1. استخدام Capacitor Geolocation Native
             if (window.Capacitor?.Plugins?.Geolocation) {
                 try {
                     let perm = await window.Capacitor.Plugins.Geolocation.checkPermissions();
+                    
+                    // طلب الإذن صراحة إذا لم يكن ممنوحاً
                     if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
                         perm = await window.Capacitor.Plugins.Geolocation.requestPermissions();
                     }
+
                     if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
                         const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({
                             enableHighAccuracy: true,
-                            timeout: 12000,
-                            maximumAge: 30000
+                            timeout: 10000,
+                            maximumAge: 0
                         });
                         if (pos && pos.coords) {
                             if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                             return;
                         }
+                    } else {
+                        showNativeToast("⚠️ يرجى تفعيل إذن الموقع للتطبيق من إعدادات الهاتف");
+                        if (errorCb) errorCb(new Error("Permission denied"));
+                        return;
                     }
                 } catch (e) {
-                    console.warn("Capacitor Native Geolocation fallback:", e);
+                    console.warn("خطأ في جلب الموقع عبر Capacitor Native:", e);
                 }
             }
 
@@ -303,25 +310,16 @@
                 }
             }
 
-            // 3. Web Geolocation مع المحاولة المرنة (High Accuracy ثم Network Location)
+            // 3. الاعتماد الاحتياطي على Web Geolocation
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
-                        console.warn("جاري استخدام الموقع الشبكي التقريبي...");
-                        navigator.geolocation.getCurrentPosition(
-                            pos => {
-                                if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
-                            },
-                            err2 => {
-                                if (errorCb) errorCb(err2);
-                            },
-                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-                        );
+                        if (errorCb) errorCb(err);
                     },
-                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else if (errorCb) {
                 errorCb(new Error("خدمة GPS غير مدعومة بالمتصفح"));
@@ -329,15 +327,6 @@
         }
 
         async function requestAllAppPermissions() {
-            getUserGpsPosition(
-                (lat, lng) => {
-                    console.log("✓ تم تحديد موقع GPS بنجاح:", lat, lng);
-                },
-                err => {
-                    console.warn("⚠️ تم الاعتماد على الموقع الافتراضي للخريطة:", err.message);
-                }
-            );
-
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 try {
                     await Notification.requestPermission();
@@ -831,27 +820,6 @@
 
             streetLayer.addTo(map);
 
-            getUserGpsPosition(
-                (lat, lng) => {
-                    if (map) {
-                        map.setView([lat, lng], 14);
-                        if (userLocationMarker) map.removeLayer(userLocationMarker);
-                        userLocationMarker = L.marker([lat, lng], {
-                            icon: L.divIcon({
-                                className: 'custom-map-icon',
-                                html: `<div style="background:#10b981; width:22px; height:22px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(16,185,129,0.8); animation: pulse 2s infinite;"></div>`,
-                                iconSize: [22, 22],
-                                iconAnchor: [11, 11]
-                            })
-                        }).addTo(map);
-                        showNativeToast("✓ تم تحديث موقعك الحقيقي بنجاح");
-                    }
-                },
-                err => {
-                    console.warn("تنبيه GPS الخريطة:", err.message);
-                }
-            );
-
             window.switchLayer = function(type) {
                 triggerHaptic(15);
                 map.removeLayer(streetLayer); map.removeLayer(topoLayer); map.removeLayer(satelliteLayer);
@@ -960,15 +928,6 @@
 
             if (bounds.length > 0) {
                 map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
-            } else {
-                getUserGpsPosition(
-                    (lat, lng) => {
-                        map.setView([lat, lng], 14);
-                    },
-                    err => {
-                        showNativeToast("جاري التمركز عند النطاق العام للشركة");
-                    }
-                );
             }
         };
 
@@ -1116,7 +1075,7 @@
                     showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
                 },
                 err => {
-                    showNativeToast("لم يتسنّ قراءة الموقع بدقة فائقة، يرجى المحاولة في مكان مكشوف");
+                    showNativeToast("تعذر جلب الموقع. تحقق من تفعيل الـ GPS وإعطاء الإذن للتطبيق.");
                 }
             );
         };
@@ -1557,7 +1516,7 @@
                     }
                 },
                 err => {
-                    showNativeToast("يتعذر تحديد موقع الدقة العالية الآن، تم الاتزان عند المركز الأخير");
+                    showNativeToast("تعذر جلب الموقع. تحقق من تفعيل الـ GPS وإعطاء الإذن للتطبيق.");
                 }
             );
         };

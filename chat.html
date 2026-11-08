@@ -116,7 +116,6 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
-        /* الاصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -178,23 +177,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -256,7 +265,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل مع التعديل المتوافق -->
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -331,9 +340,14 @@
                                 </span>
                             </div>
                         </div>
-                        <button onclick="shareActiveChatNative()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer" title="مشاركة المحادثة أندرويد">
-                            <i class="fa-solid fa-share-nodes"></i>
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="downloadChatLogFile()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer" title="تنزيل سجل المحادثة إلى الهاتف">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <button onclick="shareActiveChatNative()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer" title="مشاركة المحادثة أندرويد">
+                                <i class="fa-solid fa-share-nodes"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 text-xs" id="chatMessagesArea">
@@ -510,7 +524,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع التخزين المحلي واللحظي Offline Persistence -->
+    <!-- Firebase SDK Modules مع التخزين المحلي واللحظي وتصدير سجل المحادثة ملفاً هاتفياً -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -826,6 +840,46 @@
             }
         };
 
+        // تنزيل سجل المحادثة كملف نصي وحفظه في مجلد Downloads عبر الجسر الأهلي AndroidBridge
+        window.downloadChatLogFile = function() {
+            triggerHaptic(40);
+            let activeName = document.getElementById('activeChatName').innerText;
+            if (messagesList.length === 0 && !pendingClientReport) {
+                showNativeToast("⚠️ لا توجد رسائل لتنزيلها في هذه المحادثة");
+                return;
+            }
+
+            showNativeToast("⏳ جاري تنزيل سجل المحادثة...");
+            let exportText = `💬 EIDCO // سجل المحادثة: ${activeName}\n`;
+            exportText += `تاريخ التصدير: ${new Date().toLocaleString('ar-EG')}\n`;
+            exportText += `معرف الشركة: ${currentCompanyId}\n`;
+            exportText += `==================================================\n\n`;
+
+            if (pendingClientReport) {
+                exportText += `${pendingClientReport}\n\n==================================================\n\n`;
+            }
+
+            messagesList.forEach((m, idx) => {
+                let senderTag = m.sender === 'me' ? 'أنا' : (m.sender === 'system' ? 'النظام' : 'الطرف الآخر');
+                exportText += `${idx+1}. [${senderTag} - ${m.time || ''}]: ${m.text}\n`;
+            });
+
+            let cleanName = activeName.replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+            let fileName = `EIDCO-Chat-${cleanName}-${Date.now()}.txt`;
+            let base64Data = "data:text/plain;charset=utf-8;base64," + btoa(unescape(encodeURIComponent(exportText)));
+
+            const bridge = getAndroidBridge();
+            if (bridge) {
+                bridge.downloadFile(fileName, base64Data);
+            } else {
+                let link = document.createElement('a');
+                link.download = fileName;
+                link.href = base64Data;
+                link.click();
+                showNativeToast("تم حفظ سجل المحادثة بنجاح");
+            }
+        };
+
         window.shareActiveChatNative = async function() {
             triggerHaptic(30);
             let activeName = document.getElementById('activeChatName').innerText;
@@ -840,9 +894,9 @@
                 exportText += `${idx+1}. [${senderTag} - ${m.time || ''}]: ${m.text}\n`;
             });
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(exportText, `محادثة EIDCO - ${activeName}`);
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(exportText);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: `محادثة EIDCO - ${activeName}`, text: exportText });

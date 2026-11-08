@@ -24,6 +24,7 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -43,7 +44,7 @@
             min-height: 100vh;
             min-height: 100dvh; 
             margin: 0;
-            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); 
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden;
             overscroll-behavior-y: contain; 
@@ -92,23 +93,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -124,31 +135,56 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، جاري التوجيه لصفحة الدخول...');
+            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+        };
     </script>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 selection:bg-indigo-500 selection:text-white">
 
-    <div class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-[32px] p-5 shadow-2xl space-y-4 backdrop-blur-xl relative overflow-hidden my-auto">
+    <div id="remoteMainCard" class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-[32px] p-5 shadow-2xl space-y-4 backdrop-blur-xl relative overflow-hidden my-auto">
         
-        <!-- الهيدر والمعلومات والاتصال بالواي فاي -->
+        <!-- الهيدر والمعلومات والاتصال بالواي فاي وحفظ الصورة وقفل الجلسة -->
         <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-sm shadow-lg shadow-indigo-600/30">
                     <i class="fa-solid fa-gamepad"></i>
                 </div>
                 <div>
-                    <h1 class="text-xs sm:text-sm font-black text-white tracking-wide">EIDCO REMOTE</h1>
+                    <h1 class="text-xs sm:text-sm font-black text-white tracking-wide">EIDCO REMOTE 8CH</h1>
                     <p class="text-[9px] text-indigo-400 font-mono font-bold" id="remoteCompanyId">الشركة: جاري التحميل...</p>
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
+                <button onclick="window.downloadRemoteCardImage()" class="bg-slate-800 hover:bg-slate-700 text-indigo-400 p-2 rounded-xl text-xs border border-indigo-500/30 cursor-pointer shadow active:scale-90 transition" title="تصدير صورة الريموت">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
                 <button onclick="window.openWifiModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 p-2 rounded-xl text-xs border border-amber-500/30 cursor-pointer shadow active:scale-90 transition" title="إعدادات إتصال الواي فاي المباشر">
                     <i class="fa-solid fa-wifi"></i>
                 </button>
-                <span id="connectionBadge" class="text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 px-2.5 py-1 rounded-full font-bold font-mono flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span id="connStatusText">سحابي</span>
-                </span>
+                <button onclick="window.lockSession()" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 p-2 rounded-xl text-xs border border-rose-800/80 cursor-pointer shadow active:scale-90 transition" title="قفل الجلسة">
+                    <i class="fa-solid fa-lock"></i>
+                </button>
             </div>
+        </div>
+
+        <!-- شريط حالة الاتصال والربط المباشر -->
+        <div class="flex items-center justify-between px-1">
+            <span id="connectionBadge" class="text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 px-2.5 py-1 rounded-full font-bold font-mono flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span id="connStatusText">سحابي ☁️</span>
+            </span>
+            <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-tv text-xs"></i> الشاشة TV 4K
+            </a>
         </div>
 
         <!-- أزرار التحكم الرئيسية (طاقة / صوت / نطق) -->
@@ -189,36 +225,44 @@
             </button>
         </div>
 
-        <!-- أزرار اختيار القنوات والصفحات -->
+        <!-- أزرار اختيار القنوات الـ 8 الكاملة للمنظومة -->
         <div class="space-y-2">
             <h2 class="text-[11px] font-bold text-slate-400 flex items-center justify-between px-1">
-                <span>اختر القناة / الشاشة:</span>
+                <span>اختر القناة / الشاشة (8 قنوات تابعة للمنظومة):</span>
                 <i class="fa-solid fa-tv text-indigo-400"></i>
             </h2>
             <div class="grid grid-cols-2 gap-2 text-xs">
-                <button onclick="window.sendChannel('metrics')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('metrics')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">01</span>
                     <span class="truncate">📊 المؤشرات</span>
                 </button>
-                <button onclick="window.sendChannel('invoices')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('invoices')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">02</span>
                     <span class="truncate">🧾 الفواتير</span>
                 </button>
-                <button onclick="window.sendChannel('inventory')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('inventory')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">03</span>
                     <span class="truncate">📦 المخزن</span>
                 </button>
-                <button onclick="window.sendChannel('fleet')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('fleet')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">04</span>
                     <span class="truncate">🚛 الأسطول</span>
                 </button>
-                <button onclick="window.sendChannel('clients')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('clients')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">05</span>
                     <span class="truncate">👥 العملاء</span>
                 </button>
-                <button onclick="window.sendChannel('profile')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-3 rounded-2xl flex items-center gap-2.5 font-bold border border-slate-700/80 cursor-pointer text-right">
+                <button onclick="window.sendChannel('profile')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
                     <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">06</span>
                     <span class="truncate">👤 البروفايل</span>
+                </button>
+                <button onclick="window.sendChannel('vault')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">07</span>
+                    <span class="truncate">🏦 الخزنة</span>
+                </button>
+                <button onclick="window.sendChannel('intelligence')" class="remote-btn bg-slate-800 hover:bg-indigo-600 text-white p-2.5 rounded-2xl flex items-center gap-2 font-bold border border-slate-700/80 cursor-pointer text-right">
+                    <span class="w-6 h-6 bg-indigo-950 text-indigo-300 rounded-lg flex items-center justify-center text-[10px] font-mono shrink-0">08</span>
+                    <span class="truncate">🧠 الذكاء والتحليلات</span>
                 </button>
             </div>
         </div>
@@ -254,7 +298,7 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button onclick="window.saveWifiIpSetting()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex-1 py-2 rounded-xl text-xs cursor-pointer shadow">
-                    حفظ وااختبار الربط
+                    حفظ واختبار الربط
                 </button>
                 <button onclick="window.clearWifiIpSetting()" class="bg-slate-800 text-slate-400 hover:bg-slate-700 py-2 px-3 rounded-xl text-xs font-bold cursor-pointer">
                     إلغاء
@@ -263,7 +307,7 @@
         </div>
     </div>
 
-    <!-- Firebase Modules والتحكم المزدوج المحلي والسحابي -->
+    <!-- Firebase Modules والتحكم المزدوج المحلي والسحابي وتصدير الصور عبر AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -346,6 +390,33 @@
             document.getElementById('tvWifiIpInput').value = '';
             updateWifiBadge();
             window.closeWifiModal();
+        };
+
+        // تصدير صورة لبطاقة الريموت باستخدام html2canvas و AndroidBridge.downloadFile
+        window.downloadRemoteCardImage = function() {
+            triggerHaptic(30);
+            let element = document.getElementById('remoteMainCard');
+            if (!element) return showNativeToast('واجهة الريموت غير متوفرة');
+
+            showNativeToast("⏳ جاري تصدير صورة واجهة التحكم والريموت...");
+
+            html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#020617' }).then(canvas => {
+                let fileName = `EIDCO-RemoteCard-${Date.now()}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+                
+                const bridge = getAndroidBridge();
+                if (bridge) {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                }
+                showNativeToast("✓ تم تصدير صورة الريموت بنجاح");
+            }).catch(err => {
+                showNativeToast('فشل تصدير الصورة: ' + err.message);
+            });
         };
 
         // دالة الإرسال المزدوج المباشر (Wi-Fi Direct LAN + Broadcast + Firebase)

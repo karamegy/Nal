@@ -13,7 +13,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
 
-    <!-- النواة المركزية -->
+    <!-- استدعاء سكريبت Capacitor للجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -154,6 +155,12 @@
             box-shadow: none !important;
         }
 
+        /* إصلاح القائمة الجانبية للموبايل للتوافق التام مع Capacitor WebView */
+        #mobileNavDrawer.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -214,18 +221,23 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
+            }
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -233,10 +245,10 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
@@ -263,7 +275,7 @@
 <body class="w-full h-full">
 
     <!-- القائمة المنسدلة الجانبية للموبايل -->
-    <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm hidden transition-opacity" onclick="if(event.target === this) toggleMobileMenu()">
+    <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/85 backdrop-blur-sm hidden transition-opacity" onclick="if(event.target === this) toggleMobileMenu()">
         <div class="absolute right-0 top-0 bottom-0 w-72 sm:w-80 bg-slate-900 text-white p-5 sm:p-6 shadow-2xl flex flex-col h-full overflow-y-auto border-l border-slate-800">
             <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
                 <div class="flex items-center gap-3">
@@ -274,7 +286,7 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <nav class="space-y-1 flex-1">
+            <nav class="space-y-1 flex-1 font-bold text-xs">
                 <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم الشاملة</a>
                 <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> لوحة المؤشرات</a>
                 <a href="invoices.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير الفردية</a>
@@ -738,7 +750,7 @@
 
         // تصفية البيانات حسب شركة المستخدم أو استخدام البيانات المعروضة
         function filterByCompany(docList) {
-            return docList.filter(d => !d.companyId || d.companyId === currentCompanyId || d.docId.includes(currentCompanyId));
+            return docList.filter(d => !d.companyId || d.companyId === currentCompanyId || (d.docId && d.docId.includes(currentCompanyId)));
         }
 
         // رسم محتوى الشاشة بناءً على القناة الحالية

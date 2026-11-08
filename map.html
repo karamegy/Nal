@@ -127,7 +127,6 @@
             touch-action: pan-x pan-y pinch-zoom;
         }
 
-        /* إصلاح تداخل القائمة الجانبية للموبايل فوق عناصر الخريطة */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -262,32 +261,56 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // دالة الملاحة المحسنة لجلب الموقع (تربط Capacitor Native و Web Geolocation)
+        // دالة الملاحة المتطورة للغاية والمتوافقة مع Capacitor Native & Android WebViews
         async function getUserGpsPosition(successCb, errorCb) {
             // 1. استخدام Capacitor Geolocation Native إن وجد
             if (window.Capacitor?.Plugins?.Geolocation) {
                 try {
-                    const perm = await window.Capacitor.Plugins.Geolocation.requestPermissions();
+                    let perm = await window.Capacitor.Plugins.Geolocation.checkPermissions();
+                    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+                        perm = await window.Capacitor.Plugins.Geolocation.requestPermissions();
+                    }
                     if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
                         const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition({
                             enableHighAccuracy: true,
-                            timeout: 10000
+                            timeout: 15000,
+                            maximumAge: 30000
                         });
-                        if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
-                        return;
+                        if (pos && pos.coords) {
+                            if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
+                            return;
+                        }
                     }
                 } catch (e) {
-                    console.warn("Native Geolocation fallback:", e);
+                    console.warn("Capacitor Native Geolocation fallback triggered:", e);
                 }
             }
 
-            // 2. استخدام Web API مع نظام دقة مزدوج (High ثم Low Power)
+            // 2. استخدام الجسر الأهلي المباشر للاندرويد إن وجد
+            const bridge = getActiveBridge();
+            if (typeof bridge.getCurrentLocation === 'function') {
+                try {
+                    const res = bridge.getCurrentLocation();
+                    if (res) {
+                        const data = (typeof res === 'string') ? JSON.parse(res) : res;
+                        if (data.latitude && data.longitude) {
+                            if (successCb) successCb(data.latitude, data.longitude);
+                            return;
+                        }
+                    }
+                } catch(e) {
+                    console.warn("AndroidBridge location error:", e);
+                }
+            }
+
+            // 3. استخدام Web Geolocation مع المحاولة المتدرجة (Low Accuracy fallback تضمن عدم الشلل)
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
                     },
                     err => {
+                        console.warn("High Accuracy GPS timed out, switching to network position...");
                         navigator.geolocation.getCurrentPosition(
                             pos => {
                                 if (successCb) successCb(pos.coords.latitude, pos.coords.longitude);
@@ -295,10 +318,10 @@
                             err2 => {
                                 if (errorCb) errorCb(err2);
                             },
-                            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
                         );
                     },
-                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else if (errorCb) {
                 errorCb(new Error("خدمة GPS غير مدعومة بالمتصفح"));
@@ -787,6 +810,7 @@
         window.map = null;
         let pickingMode = null;
         let activeRoutingControl = null;
+        let userLocationMarker = null;
 
         try {
             map = L.map('leafletMap', { 
@@ -810,8 +834,17 @@
             getUserGpsPosition(
                 (lat, lng) => {
                     if (map) {
-                        map.setView([lat, lng], 13);
-                        showNativeToast("✓ تم تحديد موقعك الحالي (GPS) بنجاح");
+                        map.setView([lat, lng], 14);
+                        if (userLocationMarker) map.removeLayer(userLocationMarker);
+                        userLocationMarker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'custom-map-icon',
+                                html: `<div style="background:#10b981; width:22px; height:22px; border-radius:50%; border:3px solid white; box-shadow:0 0 12px rgba(16,185,129,0.8); animation: pulse 2s infinite;"></div>`,
+                                iconSize: [22, 22],
+                                iconAnchor: [11, 11]
+                            })
+                        }).addTo(map);
+                        showNativeToast("✓ تم تحديث موقعك الحقيقي بنجاح");
                     }
                 },
                 err => {
@@ -933,7 +966,7 @@
                         map.setView([lat, lng], 14);
                     },
                     err => {
-                        showNativeToast("لم يتم تحديد الموقع الحركي، جاري التمركز الافتراضي");
+                        showNativeToast("جاري التمركز عند النطاق العام للشركة");
                     }
                 );
             }
@@ -1083,7 +1116,7 @@
                     showNativeToast(`✓ موقعك الحالي: (${latFixed}, ${lngFixed})`);
                 },
                 err => {
-                    alert("تعذر الوصول للموقع الجغرافي للجهاز. يُرجى التأكد من تفعيل الـ GPS والسماح بالأذونات.");
+                    showNativeToast("لم يتسنّ قراءة الموقع بدقة فائقة، يرجى المحاولة في مكان مكشوف");
                 }
             );
         };
@@ -1515,7 +1548,7 @@
                     }
                 },
                 err => {
-                    alert("تعذر الحصول على موقع جهازك. تأكد من تفعيل خدمة GPS ومنح الإذن للبرنامج.");
+                    showNativeToast("يتعذر تحديد موقع الدقة العالية الآن، حاول التحرك أو التواجد بمكان مكشوف");
                 }
             );
         };

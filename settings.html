@@ -126,7 +126,6 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
-        /* إصلاح القائمة الجانبية للموبايل للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -137,23 +136,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 40) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -178,6 +187,18 @@
                 drawer.classList.toggle('mobile-open');
             }
         }
+
+        window.lockSession = function() {
+            triggerHaptic(40);
+            sessionStorage.removeItem('eidco_session_auth');
+            sessionStorage.removeItem('eidco_biometric_verified');
+            sessionStorage.removeItem('eidco_v14_auth');
+            sessionStorage.clear();
+            
+            const compId = localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
+            showNativeToast('تم قفل الجلسة بنجاح، جاري التوجيه لصفحة الدخول...');
+            window.location.href = `auth.html?companyId=${encodeURIComponent(compId)}`;
+        };
     </script>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
@@ -202,7 +223,7 @@
                 <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link active"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
         </aside>
@@ -220,7 +241,10 @@
                         </div>
                     </div>
                     
-                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
+                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
+                        <button type="button" onclick="window.lockSession()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والتحويل لصفحة auth.html">
+                            <i class="fa-solid fa-lock text-rose-600"></i> قفل
+                        </button>
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[200px] sm:max-w-none">معرف الشركة: جاري التحميل...</span>
                     </div>
                 </div>
@@ -252,7 +276,7 @@
                         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-badge"></i> الملف الشخصي</a>
                         <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                         <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
-                        <a href="auth.html" class="nav-link"><i class="fa-solid fa-fingerprint"></i> المصادقة البيومترية</a>
+                        <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                         <a href="settings.html" class="nav-link active"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
                     </nav>
                 </div>
@@ -363,7 +387,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية -->
+    <!-- Firebase SDK Modules مع دعم getDocs والمزامنة السحابية والجسر الأهلي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -493,6 +517,7 @@
             alert('✓ تم حفظ بريد Gmail الخاص بالشركة بنجاح');
         };
 
+        // تصدير وتحميل ملف النسخة الاحتياطية باستخدام AndroidBridge.downloadFile
         window.exportDatabase = async function() {
             triggerHaptic(40);
             if (!auth.currentUser) {
@@ -519,15 +544,16 @@
                 }
 
                 const jsonStr = JSON.stringify(backupData, null, 2);
-                const bridge = getActiveBridge();
-
-                if (typeof bridge.downloadFile === 'function') {
-                    bridge.downloadFile(`EIDCO_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`, jsonStr);
+                const fileName = `EIDCO_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`;
+                
+                const bridge = getAndroidBridge();
+                if (bridge) {
+                    bridge.downloadFile(fileName, jsonStr);
                 } else {
                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
                     const dl = document.createElement('a'); 
                     dl.setAttribute("href", dataStr); 
-                    dl.setAttribute("download", `EIDCO_Firebase_Backup_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`);
+                    dl.setAttribute("download", fileName);
                     document.body.appendChild(dl); 
                     dl.click(); 
                     dl.remove();
@@ -568,10 +594,10 @@
                 }
 
                 summaryText += `\nإجمالي السجلات السحابية: ${totalRecords}\nيرجى الاحتفاظ بهذا البريد للتوثيق والمراجعة.`;
-                const bridge = getActiveBridge();
-
-                if (typeof bridge.shareText === 'function') {
-                    bridge.shareText(summaryText, `EIDCO Backup - ${currentCompanyId}`);
+                
+                const bridge = getAndroidBridge();
+                if (bridge && typeof bridge.shareText === 'function') {
+                    bridge.shareText(summaryText);
                 } else if (navigator.share) {
                     try {
                         await navigator.share({

@@ -21,11 +21,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup JDK 17
+      - name: Setup JDK 17 with Gradle Cache
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
       - name: Restore Signing Keystore & Print Fingerprints
         shell: bash
@@ -50,7 +51,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true -Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000"
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true"
         run: |
           set -euo pipefail
 
@@ -652,34 +653,15 @@ jobs:
           }
           EOF
 
-          # التنزيل المسبق لملف Gradle عبر curl لتفادي انقطاع الشبكة
-          WRAPPER_PROP="android/gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$WRAPPER_PROP" ]; then
-            DIST_URL=$(grep "distributionUrl" "$WRAPPER_PROP" | cut -d'=' -f2 | tr -d '\\')
-            ZIP_NAME=$(basename "$DIST_URL")
-            echo "Pre-fetching Gradle distribution: $ZIP_NAME from $DIST_URL"
-            
-            (cd android && ./gradlew --version || true)
-            
-            find ~/.gradle/wrapper/dists -type d 2>/dev/null | while read -r dir; do
-              if [ -d "$dir" ] && [ "$dir" != "$HOME/.gradle/wrapper/dists" ]; then
-                if [ ! -f "$dir/$ZIP_NAME" ]; then
-                  echo "Downloading $ZIP_NAME to $dir via curl..."
-                  curl -sSL --retry 5 --retry-delay 2 "$DIST_URL" -o "$dir/$ZIP_NAME" || true
-                fi
-              fi
-            done
-          fi
-
           cd android
           chmod +x gradlew
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
             echo "Building Signed Release APK and AAB..."
-            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel || (sleep 3 && ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel)
+            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
             echo "Building Debug APK and AAB..."
-            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel || (sleep 3 && ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel)
+            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
           fi
 
           cd ..

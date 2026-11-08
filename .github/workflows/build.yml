@@ -21,12 +21,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup JDK 17 with Gradle Cache
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Restore Signing Keystore & Print Fingerprints
         shell: bash
@@ -658,10 +657,10 @@ jobs:
 
           if [ "$HAS_KEYSTORE" = "true" ]; then
             echo "Building Signed Release APK and AAB..."
-            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
+            ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel || ./gradlew assembleRelease bundleRelease --no-daemon --no-parallel
           else
             echo "Building Debug APK and AAB..."
-            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
+            ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel || ./gradlew assembleDebug bundleDebug --no-daemon --no-parallel
           fi
 
           cd ..

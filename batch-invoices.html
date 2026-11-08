@@ -14,7 +14,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- استدعاء سكريبت Capacitor للجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <!-- التحقق من الجلسة وصلاحيات الدخول -->
@@ -132,13 +133,19 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
+        /* الإصلاح الخاص بالقائمة الجانبية في الهاتف لتجنب التعارض */
+        #mobileNavDrawer.mobile-open {
+            display: flex !important;
+            z-index: 9999 !important;
+        }
+
         .custom-modal { 
             display: none; 
             position: fixed; 
             inset: 0; 
             background: rgba(15, 23, 42, 0.85); 
             backdrop-filter: blur(8px);
-            z-index: 1000; 
+            z-index: 10000; 
             align-items: center; 
             justify-content: center; 
             padding: 1rem; 
@@ -186,12 +193,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -199,17 +208,20 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
         function toggleMobileMenu() {
             triggerHaptic(20);
             const drawer = document.getElementById('mobileNavDrawer');
-            if (drawer) drawer.classList.toggle('hidden');
+            if (drawer) {
+                drawer.classList.toggle('hidden');
+                drawer.classList.toggle('mobile-open');
+            }
         }
     </script>
 </head>
@@ -266,8 +278,8 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل -->
-            <div id="mobileNavDrawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
+            <!-- القائمة المنسدلة الجانبية للموبايل مع دمج إصلاح الطبقات Z-index -->
+            <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                         <div class="flex items-center gap-3">
@@ -454,7 +466,6 @@
         <div class="corporate-card p-6 max-w-xl w-full space-y-4 bg-white shadow-2xl relative custom-modal-content">
             <div id="invoicePrintArea" class="p-6 bg-white rounded-xl border border-slate-200 space-y-4 w-full box-border">
                 
-                <!-- هيدر معتمد خصيصاً للطباعة والـ A4 -->
                 <div class="hidden print-header flex justify-between items-center border-b pb-3">
                     <div>
                         <h2 class="font-black text-slate-900 text-base">EIDCO B2B // إذن تسليم وشحنة جملة معتمدة</h2>
@@ -619,6 +630,7 @@
 
             onSnapshot(productsRef, (snapshot) => {
                 state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                refreshProductDropdowns();
             }, (error) => console.error("خطأ في جلب أصناف الجملة:", error));
 
             onSnapshot(invoicesRef, (snapshot) => {
@@ -646,10 +658,25 @@
             }
         }
 
+        function refreshProductDropdowns() {
+            const rows = document.querySelectorAll('#batchItemsTableBody tr');
+            rows.forEach(row => {
+                const sel = row.querySelector('.item-product');
+                if(sel) {
+                    const currentVal = sel.value;
+                    const productOptions = state.products.map(p => `<option value="${p.code}" data-barcode="${p.barcode || ''}" data-price="${p.sellPrice || 0}" data-buy="${p.buyPrice || 0}" data-qty="${p.qty}" ${p.code === currentVal ? 'selected' : ''}>${p.name} (المتاح بالمخزن: ${p.qty})</option>`).join('');
+                    sel.innerHTML = productOptions;
+                }
+            });
+        }
+
         window.initBatchPage = function() {
             populateClientsDropdown();
             if(!editingBatchId) {
-                window.addBatchItemRow();
+                let tbody = document.getElementById('batchItemsTableBody');
+                if(tbody && !tbody.children.length) {
+                    window.addBatchItemRow();
+                }
             }
             renderBatchInvoicesList();
             renderAnalyticsChart();
@@ -691,7 +718,7 @@
             tr.id = rowId;
             tr.className = "hover:bg-slate-50 transition";
             tr.innerHTML = `
-                <td class="p-3"><select class="corporate-input item-product font-bold" onchange="window.updateRowDetails('${rowId}')">${productOptions}</select></td>
+                <td class="p-3"><select class="corporate-input item-product font-bold" onchange="window.updateRowDetails('${rowId}')">${productOptions.length ? productOptions : '<option value="">جاري تحميل الأصناف...</option>'}</select></td>
                 <td class="p-3"><input type="number" class="corporate-input w-24 mono-font font-bold item-qty" value="${qtyVal}" min="1" oninput="window.calculateBatchTotals()" dir="ltr"></td>
                 <td class="p-3"><input type="number" class="corporate-input w-28 mono-font font-bold item-price" value="${priceVal}" oninput="window.calculateBatchTotals()" dir="ltr"></td>
                 <td class="p-3 mono-font font-bold text-indigo-600 item-subtotal" dir="ltr">0.00 ج.م</td>
@@ -796,9 +823,26 @@
                     items.push({ code, prodName, qty, unitPrice, subtotal });
                 }
 
-                let grandTotal = Math.max(0, itemsSubtotal - discount);
-                let batchId = editingBatchId || ('CPT-' + Math.floor(10000 + Math.random() * 90000));
-                let today = new Date().toISOString().split('T')[0];
+                let tempProducts = cloudProducts.map(p => ({ ...p }));
+                if(editingBatchId) {
+                    const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId), where("id", "==", editingBatchId)));
+                    if(!invoicesSnap.empty) {
+                        let oldInv = invoicesSnap.docs[0].data();
+                        if(oldInv && oldInv.items) {
+                            for(let it of oldInv.items) {
+                                let p = tempProducts.find(x => x.code === it.code);
+                                if(p) p.qty += it.qty;
+                            }
+                        }
+                    }
+                }
+
+                for(let item of items) {
+                    let p = tempProducts.find(x => x.code === item.code);
+                    if(!p || p.qty < item.qty) {
+                        return alert(`⚠️ الكمية المطلوبة للصنف (${item.prodName}) أكبر من المتاح في المخزن السحابي (${p ? p.qty : 0})`);
+                    }
+                }
 
                 if(editingBatchId) {
                     const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("companyId", "==", currentCompanyId), where("id", "==", editingBatchId)));
@@ -818,17 +862,14 @@
 
                 for(let item of items) {
                     let p = cloudProducts.find(x => x.code === item.code);
-                    if(!p || p.qty < item.qty) {
-                        return alert(`⚠️ الكمية المطلوبة للصنف (${item.prodName}) أكبر من المتاح في المخزن السحابي (${p ? p.qty : 0})`);
-                    }
-                }
-
-                for(let item of items) {
-                    let p = cloudProducts.find(x => x.code === item.code);
                     if(p && p.docId) {
                         await updateDoc(doc(db, "products", p.docId), { qty: p.qty - item.qty });
                     }
                 }
+
+                let grandTotal = Math.max(0, itemsSubtotal - discount);
+                let batchId = editingBatchId || ('CPT-' + Math.floor(10000 + Math.random() * 90000));
+                let today = new Date().toISOString().split('T')[0];
 
                 let newInvoiceData = {
                     id: batchId,

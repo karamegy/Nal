@@ -133,29 +133,6 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # إضافة بلاجين Google Services في build.gradle الرئيسي للبيئة
-          cat << 'EOF' > android/build.gradle
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.1'
-                  classpath 'com.google.gms:google-services:4.4.1'
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          task clean(type: Delete) {
-              delete rootProject.buildDir
-          }
-          EOF
-
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
           package io.github.karamegy.twa;
@@ -420,7 +397,7 @@ jobs:
                   public void keepScreenOn(final boolean keepOn) {
                       runOnUiThread(() -> {
                           if (keepOn) {
-                              getWindow].addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                              getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                           } else {
                               getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                           }
@@ -616,7 +593,6 @@ jobs:
 
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
-          apply plugin: 'com.google.gms.google-services'
 
           android {
               namespace "io.github.karamegy.twa"
@@ -664,6 +640,15 @@ jobs:
               implementation project(':capacitor-android')
               implementation project(':capacitor-cordova-android-plugins')
               implementation 'com.google.android.gms:play-services-auth:20.7.0'
+          }
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.exists() && servicesJSON.text.trim()) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json missing, skipping plugin apply")
           }
           EOF
 

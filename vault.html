@@ -261,10 +261,13 @@
                             </h1>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end">
+                    <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end flex-wrap">
                         <span id="companyBadgeDisplay" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold truncate max-w-[220px] sm:max-w-none">
                             معرف الشركة: جاري التحميل...
                         </span>
+                        <button onclick="window.exportVaultData()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm">
+                            <i class="fa-solid fa-file-arrow-down"></i> تصدير البيانات (JSON)
+                        </button>
                     </div>
                 </div>
             </header>
@@ -431,13 +434,16 @@
                         
                         <!-- أزرار التصدير والمشاركة -->
                         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <button onclick="window.exportVaultData()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                <i class="fa-solid fa-file-arrow-down"></i> تصدير (JSON)
+                            </button>
                             <button onclick="window.downloadVaultPDF()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
                                 <i class="fa-solid fa-file-pdf"></i> حفظ A4 (PDF)
                             </button>
-                            <button onclick="window.downloadVaultImage()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                            <button onclick="window.downloadVaultImage()" class="bg-indigo-500 hover:bg-indigo-600 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
                                 <i class="fa-solid fa-image"></i> تصدير صورة
                             </button>
-                            <button onclick="window.shareVaultReport()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
+                            <button onclick="window.shareVaultReport()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm">
                                 <i class="fa-solid fa-share-nodes"></i> مشاركة (أندرويد / واتساب)
                             </button>
                         </div>
@@ -781,6 +787,42 @@
             }).join('');
         };
 
+        // دالة تصدير وتنزيل ملف بيانات الخزنة باستخدام الجسر الأهلي AndroidBridge.downloadFile
+        window.exportVaultData = function() {
+            triggerHaptic(40);
+            if (!transactionsList || transactionsList.length === 0) {
+                showNativeToast("⚠️ لا توجد حركات نقدية لتصديرها");
+                return alert("لا توجد حركات نقدية لتصديرها.");
+            }
+
+            let exportData = {
+                companyId: currentCompanyId,
+                exportDate: new Date().toISOString(),
+                totalTransactions: transactionsList.length,
+                transactions: transactionsList
+            };
+
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const fileName = `EIDCO_Vault_${currentCompanyId}_${new Date().toISOString().split('T')[0]}.json`;
+            const bridge = getActiveBridge();
+
+            if (typeof bridge.downloadFile === 'function') {
+                bridge.downloadFile(fileName, jsonStr);
+            } else if (typeof window.AndroidBridge?.downloadFile === 'function') {
+                window.AndroidBridge.downloadFile(fileName, jsonStr);
+            } else {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
+                const dl = document.createElement('a'); 
+                dl.setAttribute("href", dataStr); 
+                dl.setAttribute("download", fileName);
+                document.body.appendChild(dl); 
+                dl.click(); 
+                dl.remove();
+            }
+
+            showNativeToast("✓ تم تصدير وتحميل حركات الخزنة بنجاح");
+        };
+
         window.downloadVaultPDF = function() {
             triggerHaptic(20);
             let companyTag = document.getElementById('printVaultCompanyTag');
@@ -801,6 +843,8 @@
                 const bridge = getActiveBridge();
                 if (typeof bridge.downloadFile === 'function') {
                     bridge.downloadFile(`EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`, imgData);
+                } else if (typeof window.AndroidBridge?.downloadFile === 'function') {
+                    window.AndroidBridge.downloadFile(`EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`, imgData);
                 } else {
                     let link = document.createElement('a');
                     link.download = `EIDCO-VaultReport-${currentCompanyId}-${Date.now()}.png`;

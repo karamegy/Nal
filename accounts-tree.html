@@ -20,6 +20,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
         :root { 
@@ -159,23 +160,32 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function showNativeToast(message) {
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
+                bridge.showToast(message);
+            } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Toast) {
                 window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-                window.AndroidBridge.showToast(message);
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
                 window.Capacitor.Plugins.Haptics.vibrate({ duration: duration });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
-            } else if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-                window.AndroidBridge.vibrate(duration);
             }
         }
 
@@ -205,7 +215,7 @@
 </head>
 <body>
     <div class="flex min-h-screen">
-        <!-- القائمة الجانبية للشاشات الكبيرة (مطابقة لـ index.html) -->
+        <!-- القائمة الجانبية للشاشات الكبيرة -->
         <aside class="hidden lg:flex flex-col w-72 p-6 bg-white border-l border-slate-200 sticky top-0 h-screen z-40">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg"><i class="fa-solid fa-cube"></i></div>
@@ -266,7 +276,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل متوافقة مع Capacitor ومطابقة لـ index.html -->
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="appSidebar" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -311,7 +321,7 @@
             <!-- محتوى الصفحة الرئيسي -->
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
                 
-                <!-- نموذج إضافة حساب جديد أو مدخل جديد -->
+                <!-- نموذج إضافة حساب جديد -->
                 <div class="corporate-card p-6 space-y-4 bg-white border border-indigo-100 shadow-sm">
                     <h3 class="font-bold text-sm text-slate-900 border-b pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i> 
@@ -354,7 +364,6 @@
                         </div>
                     </div>
 
-                    <!-- حقول إضافية تتغير ديناميكياً حسب التصنيف المختأر -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                         <div>
                             <label id="codeLabel" class="block mb-1 text-slate-700 font-bold">رقم الحساب أو الكود المحاسبي</label>
@@ -374,7 +383,6 @@
                         </div>
                     </div>
 
-                    <!-- رفع صورة المستند أو الفاتورة لجميع المدخلات -->
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
                         <label class="block mb-1 text-slate-700 font-bold"><i class="fa-solid fa-image text-indigo-600 ml-1"></i> رفع صورة الفاتورة أو المستند (اختياري)</label>
                         <input type="file" id="generalImageFileInput" accept="image/*" class="corporate-input bg-white text-xs cursor-pointer">
@@ -417,7 +425,7 @@
         </div>
     </div>
 
-    <!-- نافذة الجدول المخصص للملف/التصنيف عند النقر عليه -->
+    <!-- نافذة الجدول المخصص للملف/التصنيف -->
     <div id="folderTableModal" class="custom-modal">
         <div class="corporate-card p-4 sm:p-6 max-w-5xl w-full space-y-4 bg-white shadow-2xl relative box-border max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-3 shrink-0">
@@ -445,7 +453,7 @@
         </div>
     </div>
 
-    <!-- نافذة معاينة صورة المستند أو الفاتورة بحجم كامل -->
+    <!-- نافذة معاينة الصورة -->
     <div id="imagePreviewModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-lg w-full space-y-4 bg-white shadow-2xl relative box-border text-center">
             <div class="flex justify-between items-center border-b pb-3">
@@ -464,7 +472,7 @@
         </div>
     </div>
 
-    <!-- نافذة كشف حساب العميل التفصيلي وسجل معاملاته -->
+    <!-- نافذة كشف حساب العميل التفصيلي -->
     <div id="statementModal" class="custom-modal">
         <div class="corporate-card p-6 max-w-2xl w-full space-y-4 bg-white shadow-2xl box-border">
             <div id="statementPrintArea" class="p-4 bg-white rounded-xl space-y-4 w-full box-border">
@@ -540,7 +548,7 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية ومراقبة الأحداث وتصفية صلاحيات الفاوندر -->
+    <!-- دوال القائمة الجانبية ومراقبة الأحداث -->
     <script>
         function handleCategoryChange() {
             let cat = document.getElementById('accCategory').value;
@@ -586,7 +594,6 @@
             const badgeEl = document.getElementById('companyBadgeDisplay');
             if(badgeEl) badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
 
-            // تصفية روابط الإدارة العليا لتظهر للفاوندر فقط متطابقة مع index.html
             const currentAdminName = localStorage.getItem('eidco_v14_admin') || '';
             const FOUNDER_NAME = "كرم حمدي عبدالعظيم";
             if (currentAdminName !== FOUNDER_NAME) {
@@ -625,7 +632,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم Offline Persistence وتحديثات شجرة الحسابات -->
+    <!-- Firebase SDK Modules وتصدير الـ PDF والصورة عبر AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -655,13 +662,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence browser not supported');
-            }
-        });
+        enableIndexedDbPersistence(db).catch((err) => {});
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentCompanyId = urlParams.get('companyId') || localStorage.getItem('eidco_current_company_id') || 'company_founder_karm';
@@ -804,7 +805,6 @@
                 window.generalUploadedImageBase64 = '';
 
                 showNativeToast("✓ تم حفظ الحساب والمستند بنجاح");
-                alert('✓ تم حفظ المدخل ورفع المستند وربطه بالملف سحابياً بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الحفظ بالسحابة: ' + err.message);
             }
@@ -843,7 +843,6 @@
                     });
                 }
                 showNativeToast("✓ تم استيراد الملفات الافتراضية");
-                alert('✓ تم استيراد الملفات الافتراضية بنجاح.');
             } catch (err) {
                 alert('خطأ أثناء الاستيراد: ' + err.message);
             }
@@ -966,7 +965,6 @@
                 await deleteDoc(doc(db, "accounts_tree", accountId));
                 if (currentActiveFolder) openFolderTable(currentActiveFolder, true);
                 showNativeToast("✓ تم الحذف بنجاح");
-                alert('✓ تم الحذف بنجاح.');
             } catch (e) {
                 alert('خطأ أثناء الحذف: ' + e.message);
             }
@@ -1083,26 +1081,71 @@
 
                 document.getElementById('paymentAmountInput').value = '';
                 showNativeToast("✓ تم تسجيل الدفعة وإضافتها للخزنة");
-                alert('✓ تم تسجيل الدفعة بنجاح وإضافتها للخزنة وكشف الحساب');
             } catch (err) {
                 alert('خطأ أثناء تسجيل الدفعة: ' + err.message);
             }
         };
 
+        // تصدير كشف الحساب صورة عبر الجسر الأهلي AndroidBridge
         window.downloadStatementImage = function() {
-            triggerHaptic(30);
-            html2canvas(document.getElementById('statementPrintArea'), { scale: 2, useCORS: true }).then(canvas => {
-                let link = document.createElement('a');
-                let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName) : 'Client';
-                link.download = `EIDCO-Statement-${cName}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+            triggerHaptic(40);
+            let printArea = document.getElementById('statementPrintArea');
+            if (!printArea) return;
+
+            showNativeToast("⏳ جاري حفظ صورة كشف الحساب في التنزيلات...");
+            html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : 'Client';
+                let fileName = `EIDCO-Statement-${cName}.png`;
+                let base64Data = canvas.toDataURL('image/png');
+
+                const bridge = getAndroidBridge();
+                if (bridge) {
+                    bridge.downloadFile(fileName, base64Data);
+                } else {
+                    let link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = base64Data;
+                    link.click();
+                    showNativeToast("تم تصدير وحفظ الصورة بنجاح");
+                }
+            }).catch(err => {
+                console.error("Image Export Error:", err);
+                showNativeToast('❌ خطأ أثناء إنشاء الصورة: ' + err.message);
             });
         };
 
+        // تصدير كشف الحساب PDF وتوجيهه للجسر الأهلي AndroidBridge
         window.downloadStatementPDF = function() {
-            triggerHaptic(20);
-            window.print();
+            triggerHaptic(40);
+            let printArea = document.getElementById('statementPrintArea');
+            if (!printArea) return;
+
+            showNativeToast("⏳ جاري تحويل كشف الحساب إلى PDF وحفظه...");
+            html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : 'Client';
+                const fileName = `EIDCO-Statement-${cName}.pdf`;
+                const base64Pdf = pdf.output('datauristring');
+
+                const bridge = getAndroidBridge();
+                if (bridge) {
+                    bridge.downloadFile(fileName, base64Pdf);
+                } else {
+                    pdf.save(fileName);
+                    showNativeToast("تم حفظ ملف الـ PDF بنجاح");
+                }
+            }).catch(err => {
+                console.error("PDF Export Error:", err);
+                showNativeToast('❌ خطأ أثناء إنشاء PDF: ' + err.message);
+            });
         };
 
         window.sendStatementWhatsApp = async function() {
@@ -1110,8 +1153,9 @@
             let cName = currentActiveClient ? (currentActiveClient.name || currentActiveClient.clientName || currentActiveClient.companyName) : document.getElementById('stmtClientName').innerText;
             let text = `📊 *EIDCO // كشف حساب العميل*\n👤 العميل: *${cName}*\n🏢 معرف الشركة: *${currentCompanyId}*\n\nشكراً لتعاملكم المستمر معنا! 🙏`;
             
-            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === 'function') {
-                window.AndroidBridge.shareText(text);
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({

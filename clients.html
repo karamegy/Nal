@@ -127,7 +127,6 @@
         }
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
 
-        /* الإصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -202,23 +201,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -285,7 +294,7 @@
                 </div>
             </header>
 
-            <!-- القائمة المنسدلة الجانبية للموبايل مع التعديل المتوافق -->
+            <!-- القائمة المنسدلة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -539,7 +548,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع التخزين أوفلاين IndexedDB Persistence -->
+    <!-- Firebase SDK Modules مع التخزين أوفلاين وتصدير الملفات عبر الجسر الأهلي AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -955,15 +964,17 @@
             }
         };
 
+        // تصدير وتنزيل صورة الفاتورة عبر AndroidBridge.downloadFile
         window.downloadSingleInvoiceImage = function() {
             triggerHaptic(30);
+            showNativeToast("⏳ جاري توليد صورة الفاتورة...");
             let element = document.getElementById('singleInvoicePrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = 'EIDCO-Invoice-' + document.getElementById('prevSingleInvId').innerText + '.png';
                 let base64Data = canvas.toDataURL('image/png');
                 
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
@@ -971,19 +982,22 @@
                     link.href = base64Data;
                     link.click();
                 }
-                showNativeToast("تم تصدير صورة الفاتورة بنجاح");
+                showNativeToast("✓ تم تصدير وتحفيظ الفاتورة كصورة بنجاح");
             });
         };
 
+        // تصدير وتنزيل صورة كشف الحساب عبر AndroidBridge.downloadFile
         window.downloadStatementImage = function() {
             triggerHaptic(30);
+            showNativeToast("⏳ جاري توليد صورة كشف الحساب...");
             let element = document.getElementById('statementPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                let fileName = 'EIDCO-Statement-' + (currentActiveClient ? currentActiveClient.name : Date.now()) + '.png';
+                let cleanClientName = (currentActiveClient ? currentActiveClient.name : 'Client').replace(/[^a-zA-Z0-9أ-ي]/g, '_');
+                let fileName = 'EIDCO-Statement-' + cleanClientName + '-' + Date.now() + '.png';
                 let base64Data = canvas.toDataURL('image/png');
                 
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
@@ -991,7 +1005,7 @@
                     link.href = base64Data;
                     link.click();
                 }
-                showNativeToast("تم تصدير كشف الحساب كصورة بنجاح");
+                showNativeToast("✓ تم تصدير وتحفيظ كشف الحساب كصورة بنجاح");
             });
         };
 
@@ -1023,9 +1037,9 @@
             text += `📌 *الرصيد المتبقي (المديونية): ${dueBalance.toLocaleString()} ج.م*\n\n`;
             text += `شكراً لتعاملكم المستمر معنا! 🙏`;
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(text, `كشف حساب ${currentActiveClient.name}`);
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: `كشف حساب ${currentActiveClient.name}`, text: text });

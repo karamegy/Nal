@@ -41,6 +41,12 @@ jobs:
             echo "=================== KEYSTORE SHA-1 & SHA-256 FINGERPRINTS ==================="
             keytool -list -v -keystore signing.keystore -alias "${KEY_ALIAS}" -storepass "${KEYSTORE_PASSWORD}" | grep -E "SHA1:|SHA256:" || true
             echo "============================================================================="
+
+            # استخراج شهادة PEM وطباعتها في السجل
+            keytool -export -rfc -keystore signing.keystore -alias "${KEY_ALIAS}" -storepass "${KEYSTORE_PASSWORD}" -file upload_certificate.pem
+            echo "=================== PEM CERTIFICATE CONTENT ==================="
+            cat upload_certificate.pem
+            echo "==============================================================="
           else
             echo "WARNING: KEYSTORE_BASE64 secret is missing!"
           fi
@@ -708,6 +714,12 @@ jobs:
         with:
           name: EIDCO-OS-AAB-Release
           path: EIDCO-OS-app.aab
+
+      - name: Upload PEM Certificate Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EIDCO-OS-Upload-Certificate-PEM
+          path: upload_certificate.pem
 
       - name: Clean Up Signing Key
         if: always()

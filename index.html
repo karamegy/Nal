@@ -215,30 +215,36 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
-            }
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
             }
         }
 
@@ -252,7 +258,7 @@
             }
         }
 
-        // دالة قفل الجلسة المحدثة للانتقال الفوري إلى auth.html
+        // دالة قفل الجلسة المحدثة للانتقال المباشر إلى auth.html
         window.lockSession = function() {
             triggerHaptic(40);
             sessionStorage.removeItem('eidco_session_auth');
@@ -354,7 +360,7 @@
                 <a href="vault.html" class="nav-link"><i class="fa-solid fa-vault"></i> الخزنة النقدية</a>
                 <a href="map.html" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> خريطة الأسطول GPS</a>
                 <a href="tv.html" class="nav-link text-indigo-600 cursor-pointer"><i class="fa-solid fa-tv text-amber-500"></i> شاشة البث TV 4K</a>
-                <!-- زر قفل الأمان الجانبي متصل بـ auth.html -->
+                <!-- زر قفل الأمان الجانبي متصل بـ auth.html مباشرة -->
                 <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" id="sidebarAuthNavLink" class="nav-link text-rose-600 hover:bg-rose-50 cursor-pointer"><i class="fa-solid fa-fingerprint text-rose-600"></i> قفل الأمان والبيومترية</a>
                 <a href="settings.html" class="nav-link"><i class="fa-solid fa-sliders"></i> الإعدادات والنسخ</a>
             </nav>
@@ -390,7 +396,7 @@
                         <a href="dashboard.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95">
                             <i class="fa-solid fa-gauge-high"></i> الشاملة
                         </a>
-                        <!-- زر قفل الهيدر الرئيسي للانتقال لصفحة auth.html -->
+                        <!-- زر قفل الهيدر الرئيسي للانتقال المباشر لصفحة auth.html -->
                         <button type="button" onclick="window.lockSession()" id="headerAuthLockBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm" title="قفل الجلسة والتحويل لصفحة auth.html">
                             <i class="fa-solid fa-lock text-rose-600"></i> قفل
                         </button>
@@ -562,7 +568,7 @@
                         <!-- بطاقة قفل الأمان بالشاشة الرئيسية المربوطة بـ auth.html -->
                         <a href="auth.html" onclick="event.preventDefault(); window.lockSession();" id="gridAuthCard" class="corporate-card p-5 flex items-center gap-4 group hover:border-rose-500 bg-rose-50/20 cursor-pointer">
                             <div class="w-12 h-12 bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-rose-600 group-hover:text-white transition"><i class="fa-solid fa-fingerprint"></i></div>
-                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية والقفل</h4><span class="text-[11px] text-rose-600 font-bold">قفل الجلسة والانتقال للمصادقة</span></div>
+                            <div><h4 class="font-bold text-sm text-slate-900">المصادقة البيومترية والقفل</h4><span class="text-[11px] text-rose-600 font-bold">قفل الجلسة والانتقال لصفحة auth.html</span></div>
                         </a>
                         <a href="settings.html" class="corporate-card p-5 flex items-center gap-4 group hover:border-slate-600">
                             <div class="w-12 h-12 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center text-xl group-hover:bg-slate-800 group-hover:text-white transition"><i class="fa-solid fa-sliders"></i></div>
@@ -710,6 +716,7 @@
             window.print();
         };
 
+        // تصدير وتنزيل صورة تقرير المؤشرات عبر AndroidBridge.downloadFile
         window.downloadReportImage = function() {
             triggerHaptic(30);
             let element = document.getElementById('indexReportPrintArea');
@@ -726,12 +733,13 @@
         };
 
         function executeImageCapture(element) {
+            showNativeToast("⏳ جاري توليد صورة لوحة المؤشرات...");
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Indicators-${currentCompanyId}-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
                 
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
@@ -739,7 +747,7 @@
                     link.href = base64Data;
                     link.click();
                 }
-                showNativeToast('تم تصدير وحفظ التقرير كصورة بنجاح');
+                showNativeToast('✓ تم تصدير وحفظ التقرير كصورة بنجاح');
             }).catch(err => {
                 showNativeToast('فشل تصدير الصورة: ' + err.message);
             });
@@ -760,9 +768,9 @@
             text += `👥 العملاء المسجلون: *${clientsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(text, 'EIDCO // ملخص مؤشرات الأداء');
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: 'EIDCO // ملخص مؤشرات الأداء', text: text });
@@ -794,7 +802,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules والمزامنة اللحظية مع السحابة -->
+    <!-- Firebase SDK Modules والمزامنة اللحظية مع السحابة والتصدير عبر AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 

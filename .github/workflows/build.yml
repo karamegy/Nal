@@ -114,7 +114,7 @@ jobs:
                   "email"
                 ],
                 "serverClientId": "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com",
-                "clientId": "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com",
+                "clientId": "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com",
                 "forceCodeForRefreshToken": true
               },
               "SplashScreen": {
@@ -132,6 +132,29 @@ jobs:
 
           rm -rf android
           npx cap add android
+
+          # إضافة بلاجين Google Services في build.gradle الرئيسي للبيئة
+          cat << 'EOF' > android/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.1'
+                  classpath 'com.google.gms:google-services:4.4.1'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          task clean(type: Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
 
           mkdir -p android/app/src/main/java/io/github/karamegy/twa
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/twa/MainActivity.java
@@ -191,10 +214,6 @@ jobs:
               private ActivityResultLauncher<Intent> googleSignInLauncher;
 
               public static final String GOOGLE_WEB_CLIENT_ID = "515898424721-86pclcejrec62gn34st41qdp6rj5j9vt.apps.googleusercontent.com";
-              public static final String GOOGLE_ANDROID_CLIENT_1 = "515898424721-ovtpchg5l9ap0r7ik78thic3g8h35kvj.apps.googleusercontent.com";
-              public static final String GOOGLE_ANDROID_CLIENT_2 = "515898424721-vr6cqn2f0fj2u9ube7detisuep90sg0l.apps.googleusercontent.com";
-              public static final String GOOGLE_ANDROID_CLIENT_3 = "515898424721-ejlon1kfpm7d5hf2588eq1jh29e570cc.apps.googleusercontent.com";
-              public static final String GOOGLE_ANDROID_CLIENT_4 = "515898424721-oobirgk6hbk2keo6o3b6hcj7btvifq9n.apps.googleusercontent.com";
 
               private String pendingGeolocationOrigin;
               private GeolocationPermissions.Callback pendingGeolocationCallback;
@@ -401,7 +420,7 @@ jobs:
                   public void keepScreenOn(final boolean keepOn) {
                       runOnUiThread(() -> {
                           if (keepOn) {
-                              getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                              getWindow].addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                           } else {
                               getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                           }
@@ -597,6 +616,7 @@ jobs:
 
           cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
+          apply plugin: 'com.google.gms.google-services'
 
           android {
               namespace "io.github.karamegy.twa"
@@ -644,15 +664,6 @@ jobs:
               implementation project(':capacitor-android')
               implementation project(':capacitor-cordova-android-plugins')
               implementation 'com.google.android.gms:play-services-auth:20.7.0'
-          }
-
-          try {
-              def servicesJSON = file('google-services.json')
-              if (servicesJSON.text) {
-                  apply plugin: 'com.google.gms.google-services'
-              }
-          } catch(Exception e) {
-              logger.info("google-services.json missing, skipping plugin apply")
           }
           EOF
 

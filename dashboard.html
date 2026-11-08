@@ -120,7 +120,6 @@
         .nav-link:hover, .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         table th, table td { white-space: nowrap; }
 
-        /* الإصلاح الخاص بالقائمة الجانبية للتوافق التام مع Capacitor WebView */
         #mobileNavDrawer.mobile-open {
             display: flex !important;
             z-index: 9999 !important;
@@ -167,23 +166,33 @@
     </style>
 
     <script>
+        function getAndroidBridge() {
+            if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+                return window.AndroidBridge;
+            }
+            return null;
+        }
+
         function getActiveBridge() {
-            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.AndroidBridge || window.Capacitor?.Plugins || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
-            const bridge = getActiveBridge();
-            if (window.Capacitor?.Plugins?.Toast) {
-                window.Capacitor.Plugins.Toast.show({ text: message });
-            } else if (typeof bridge.showToast === 'function') {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
+            } else if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
             } else {
                 console.log("Toast:", message);
             }
         }
 
         function triggerHaptic(duration = 35) {
-            if (window.Capacitor?.Plugins?.Haptics) {
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.vibrate === 'function') {
+                bridge.vibrate(duration);
+            } else if (window.Capacitor?.Plugins?.Haptics) {
                 window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
             } else if ("vibrate" in navigator) {
                 navigator.vibrate(duration);
@@ -252,7 +261,7 @@
                 </div>
             </header>
 
-            <!-- القائمة الجانبية للموبايل مع التعديل المتوافق -->
+            <!-- القائمة الجانبية للموبايل -->
             <div id="mobileNavDrawer" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden lg:hidden transition-opacity">
                 <div class="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-2xl flex flex-col h-full overflow-y-auto">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
@@ -424,7 +433,7 @@
         });
     </script>
 
-    <!-- Firebase SDK Modules مع دعم Offline Persistence والتوافق مع Native WebViews -->
+    <!-- Firebase SDK Modules مع دعم Offline Persistence والتصدير عبر AndroidBridge -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -670,15 +679,17 @@
             window.print();
         };
 
+        // تصدير وتنزيل صورة تقرير لوحة التحكم عبر AndroidBridge.downloadFile
         window.downloadDashboardImage = function() {
             triggerHaptic(30);
+            showNativeToast("⏳ جاري توليد صورة لوحة التحكم...");
             let element = document.getElementById('dashboardPrintArea');
             html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 let fileName = `EIDCO-Dashboard-${currentCompanyId}-${Date.now()}.png`;
                 let base64Data = canvas.toDataURL('image/png');
                 
-                const bridge = getActiveBridge();
-                if (typeof bridge.downloadFile === 'function') {
+                const bridge = getAndroidBridge();
+                if (bridge) {
                     bridge.downloadFile(fileName, base64Data);
                 } else {
                     let link = document.createElement('a');
@@ -686,7 +697,7 @@
                     link.href = base64Data;
                     link.click();
                 }
-                showNativeToast("تم تصدير لوحة التحكم كصورة بنجاح");
+                showNativeToast("✓ تم تصدير وتحفيظ لوحة التحكم كصورة بنجاح");
             });
         };
 
@@ -705,9 +716,9 @@
             text += `📦 الأصناف بالمخزن: *${productsVal}*\n\n`;
             text += `_تم توليد التقرير عبر EIDCO Business OS_`;
 
-            const bridge = getActiveBridge();
-            if (typeof bridge.shareText === 'function') {
-                bridge.shareText(text, 'EIDCO // ملخص لوحة التحكم');
+            const bridge = getAndroidBridge();
+            if (bridge && typeof bridge.shareText === 'function') {
+                bridge.shareText(text);
             } else if (navigator.share) {
                 try {
                     await navigator.share({ title: 'EIDCO // ملخص لوحة التحكم', text: text });

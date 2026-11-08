@@ -13,7 +13,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
 
-    <!-- النواة المركزية والجسر الأهلي -->
+    <!-- استدعاء سكريبت Capacitor للجسر الأهلي والنواة المركزية -->
+    <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
     <script>
@@ -75,7 +76,7 @@
             inset: 0;
             background: rgba(2, 6, 23, 0.85);
             backdrop-filter: blur(8px);
-            z-index: 1000;
+            z-index: 10000;
             align-items: center;
             justify-content: center;
             padding: 1rem;
@@ -92,12 +93,14 @@
 
     <script>
         function getActiveBridge() {
-            return window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
+            return window.Capacitor?.Plugins || window.CapacitorBridge || window.AndroidBridge || window.NativeBridge || {};
         }
 
         function showNativeToast(message) {
             const bridge = getActiveBridge();
-            if (typeof bridge.showToast === 'function') {
+            if (window.Capacitor?.Plugins?.Toast) {
+                window.Capacitor.Plugins.Toast.show({ text: message });
+            } else if (typeof bridge.showToast === 'function') {
                 bridge.showToast(message);
             } else {
                 console.log("Toast:", message);
@@ -105,10 +108,10 @@
         }
 
         function triggerHaptic(duration = 35) {
-            if ("vibrate" in navigator) navigator.vibrate(duration);
-            const bridge = getActiveBridge();
-            if (typeof bridge.vibrate === 'function') {
-                bridge.vibrate(duration);
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+            } else if ("vibrate" in navigator) {
+                navigator.vibrate(duration);
             }
         }
 
@@ -251,7 +254,7 @@
             </div>
             <div class="flex gap-2 pt-2">
                 <button onclick="window.saveWifiIpSetting()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex-1 py-2 rounded-xl text-xs cursor-pointer shadow">
-                    حفظ واختبار الربط
+                    حفظ وااختبار الربط
                 </button>
                 <button onclick="window.clearWifiIpSetting()" class="bg-slate-800 text-slate-400 hover:bg-slate-700 py-2 px-3 rounded-xl text-xs font-bold cursor-pointer">
                     إلغاء

@@ -18,16 +18,8 @@
     <script src="capacitor.js"></script>
     <script src="./eidco-core.js"></script>
 
+    <!-- التحقق من الجلسة وصلاحيات الدخول -->
     <script>
-        // إلغاء تفعيل Service Worker القديم لمنع احتفاظ المتصفح بنسخ قديمة
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-            });
-        }
-
         if (!sessionStorage.getItem('eidco_session_auth') && !localStorage.getItem('eidco_v14_admin')) {
             window.location.href = 'auth.html';
         }
@@ -63,10 +55,11 @@
             min-height: 100vh;
             min-height: 100dvh; 
             margin: 0; 
-            padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); 
+            padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); 
             padding-top: env(safe-area-inset-top, 0px);
             overflow-x: hidden;
-            overscroll-behavior-y: contain;
+            overflow-y: auto !important;
+            overscroll-behavior-y: auto;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -275,7 +268,7 @@
             </nav>
         </aside>
 
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
             <!-- الهيدر المحدث والمتجاوب مع الموبايل -->
             <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-4 sticky top-0 z-30 shadow-sm">
                 <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -333,7 +326,7 @@
                 </div>
             </div>
 
-            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+            <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-24">
                 <div class="corporate-card p-6 space-y-5 bg-white shadow-sm">
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs whitespace-nowrap">
@@ -504,48 +497,38 @@
             clients: [],
             products: [],
             invoices: [],
-            transactions: []
+            auxLoaded: false
         };
 
-        signInAnonymously(auth).then(async () => {
+        // تحميل العملاء والأصناف عند الحاجة فقط (لتجنب تجميد WebView عند الدخول)
+        async function ensureClientsAndProductsLoaded() {
+            if (state.auxLoaded && state.clients.length && state.products.length) return;
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
+            const [clientsSnap, productsSnap] = await Promise.all([
+                getDocs(clientsRef),
+                getDocs(productsRef)
+            ]);
+            state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+            state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+            state.auxLoaded = true;
+        }
+
+        signInAnonymously(auth).then(() => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
-            const transactionsRef = query(collection(db, "transactions"), where("companyId", "==", currentCompanyId));
 
-            try {
-                const [clientsSnap, productsSnap, invoicesSnap, transactionsSnap] = await Promise.all([
-                    getDocs(clientsRef),
-                    getDocs(productsRef),
-                    getDocs(invoicesRef),
-                    getDocs(transactionsRef)
-                ]);
-
-                state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.invoices = invoicesSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                state.transactions = transactionsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                window.renderInvoices();
-            } catch (e) {
-                console.error("خطأ في الجلب الأولي باستخدام getDocs:", e);
-            }
-
-            onSnapshot(clientsRef, (snapshot) => {
-                state.clients = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            });
-
-            onSnapshot(productsRef, (snapshot) => {
-                state.products = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            });
-
+            // مستمع واحد خفيف للفواتير فقط يقرأ من الكاش فوراً ويتزامن مع السحابة
             onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-                window.renderInvoices();
+                requestAnimationFrame(() => window.renderInvoices());
+            }, (error) => {
+                console.error("خطأ في جلب الفواتير سحابياً:", error);
             });
 
-            onSnapshot(transactionsRef, (snapshot) => {
-                state.transactions = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            });
+            // تحميل العملاء والأصناف في الخلفية بعد استقرار الواجهة بـ 800ms
+            setTimeout(() => {
+                ensureClientsAndProductsLoaded().catch(() => {});
+            }, 800);
         }).catch((err) => {
             console.error("فشل المصادقة سحابياً:", err);
         });
@@ -553,6 +536,7 @@
         window.renderInvoices = function() {
             let singleInvoices = state.invoices.filter(i => !i.isBatch);
             let tbody = document.getElementById('invoicesTableBody');
+            if (!tbody) return;
             
             if(!singleInvoices.length) {
                 tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
@@ -588,8 +572,14 @@
             `).join('');
         };
 
-        window.openNewInvoiceModal = function() {
+        window.openNewInvoiceModal = async function() {
             triggerHaptic(20);
+            try {
+                await ensureClientsAndProductsLoaded();
+            } catch (e) {
+                return showNativeToast('خطأ في تحميل العملاء والأصناف: ' + e.message);
+            }
+
             if(!state.clients.length || !state.products.length) return alert('⚠️ يرجى إضافة عملاء وأصناف إلى النظام سحابياً أولاً.');
             
             document.getElementById('invClient').innerHTML = state.clients.map(c => `<option value="${escapeHTML(c.name)}">${escapeHTML(c.name)}</option>`).join('');
@@ -639,7 +629,9 @@
 
             try {
                 if (prod.docId) {
-                    await updateDoc(doc(db, "products", prod.docId), { qty: prod.qty - qty });
+                    const newQty = prod.qty - qty;
+                    await updateDoc(doc(db, "products", prod.docId), { qty: newQty });
+                    prod.qty = newQty;
                 }
 
                 await addDoc(collection(db, "invoices"), { 
@@ -772,12 +764,15 @@
             }
 
             try {
+                await ensureClientsAndProductsLoaded();
                 let inv = state.invoices.find(i => i.id === id);
                 
                 if(inv) { 
                     let p = state.products.find(x => x.code === inv.productCode); 
                     if(p && p.docId) {
-                        await updateDoc(doc(db, "products", p.docId), { qty: p.qty + inv.qty });
+                        const restoredQty = p.qty + inv.qty;
+                        await updateDoc(doc(db, "products", p.docId), { qty: restoredQty });
+                        p.qty = restoredQty;
                     }
                 }
                 
@@ -786,9 +781,15 @@
                     await deleteDoc(doc(db, "invoices", targetDocId));
                 }
                 
-                let tx = state.transactions.find(t => t.desc && t.desc.includes(id));
-                if(tx && tx.docId) {
-                    await deleteDoc(doc(db, "transactions", tx.docId));
+                // البحث عن حركة الخزنة المرتبطة بهذه الفاتورة فقط بدلاً من تحميل كل المعاملات
+                const txQuery = query(
+                    collection(db, "transactions"),
+                    where("companyId", "==", currentCompanyId),
+                    where("desc", "==", `فاتورة مبيعات ${id}`)
+                );
+                const txSnap = await getDocs(txQuery);
+                for (const txDoc of txSnap.docs) {
+                    await deleteDoc(doc(db, "transactions", txDoc.id));
                 }
                 
                 showNativeToast("✓ تم حذف الفاتورة وتحديث النظام");
@@ -846,7 +847,7 @@
     </script>
     
     <!-- الزر العائم المتحرك لبث EIDCO TV -->
-    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none touch-none cursor-grab active:cursor-grabbing">
+    <div id="floatingTvTrigger" class="no-print fixed bottom-6 left-6 z-[999] select-none cursor-grab active:cursor-grabbing">
         <a href="tv.html" onclick="event.preventDefault(); window.location.href='tv.html?companyId=' + encodeURIComponent(localStorage.getItem('eidco_current_company_id') || 'company_founder_karm');" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-900 text-white px-4 py-3 rounded-full shadow-2xl border-2 border-indigo-400/60 flex items-center gap-2.5 font-black text-xs hover:scale-105 transition-transform active:scale-95 text-decoration-none cursor-pointer">
             <span class="relative flex h-3 w-3">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -863,22 +864,23 @@
             if (!dragEl) return;
             let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
-            dragEl.addEventListener('touchstart', dragStart, {passive: false});
-            dragEl.addEventListener('touchend', dragEnd, {passive: false});
-            dragEl.addEventListener('touchmove', drag, {passive: false});
+            dragEl.addEventListener('touchstart', dragStart, {passive: true});
+            dragEl.addEventListener('touchend', dragEnd, {passive: true});
+            dragEl.addEventListener('touchmove', drag, {passive: true});
             dragEl.addEventListener('mousedown', dragStart);
             document.addEventListener('mouseup', dragEnd);
             document.addEventListener('mousemove', drag);
 
             function dragStart(e) {
-                initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-                initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
-                if (e.target.closest('#floatingTvTrigger')) isDragging = true;
+                if (e.target.closest('#floatingTvTrigger')) {
+                    initialX = (e.type === 'touchstart') ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+                    initialY = (e.type === 'touchstart') ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+                    isDragging = true;
+                }
             }
             function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
             function drag(e) {
                 if (isDragging) {
-                    e.preventDefault();
                     currentX = (e.type === 'touchmove') ? e.touches[0].clientX - initialX : e.clientX - initialX;
                     currentY = (e.type === 'touchmove') ? e.touches[0].clientY - initialY : e.clientY - initialY;
                     xOffset = currentX; yOffset = currentY;

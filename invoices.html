@@ -78,6 +78,7 @@
             border: 1px solid var(--border-color); 
             border-radius: 20px; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             width: 100%; 
             box-sizing: border-box; 
         }
@@ -327,7 +328,43 @@
             </div>
 
             <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-24">
+                <!-- بطاقات القراءات والإحصائيات الفورية (تعمل في 0ms من الكاش وتتحدث لحظياً) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-indigo-600">
+                        <span class="text-xs text-slate-500 font-medium">إجمالي الفواتير الفردية</span>
+                        <div class="text-2xl font-black text-slate-900 mono-font" id="statInvCount" dir="ltr">0 فاتورة</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-cyan-500">
+                        <span class="text-xs text-slate-500 font-medium">إجمالي المبيعات الفردية</span>
+                        <div class="text-2xl font-black text-cyan-600 mono-font" id="statInvSales" dir="ltr">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-emerald-500">
+                        <span class="text-xs text-slate-500 font-medium">صافي الأرباح المحققة</span>
+                        <div class="text-2xl font-black text-emerald-600 mono-font" id="statInvProfit" dir="ltr">0 ج.م</div>
+                    </div>
+                    <div class="corporate-card p-5 space-y-2 border-l-4 border-l-amber-500">
+                        <span class="text-xs text-slate-500 font-medium">الربط الضريبي (ETA)</span>
+                        <div class="text-2xl font-black text-amber-600 mono-font" id="statInvEta" dir="ltr">0 / 0 مرسلة</div>
+                    </div>
+                </div>
+
+                <!-- شريط البحث الفوري في الفواتير -->
+                <div class="corporate-card p-4 flex gap-3 items-center no-print">
+                    <div class="flex-1 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute right-4 top-3 text-slate-400"></i>
+                        <input type="text" id="invoiceSearchInput" oninput="window.renderInvoices()" placeholder="البحث برقم الفاتورة، اسم العميل، أو اسم الصنف..." class="corporate-input pr-10 text-xs">
+                    </div>
+                </div>
+
+                <!-- جدول الفواتير الفردية -->
                 <div class="corporate-card p-6 space-y-5 bg-white shadow-sm">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-file-invoice-dollar ml-2 text-indigo-600"></i> سجل الفواتير الفردية السحابية</h3>
+                        <span id="syncStatusBadge" class="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                            <i class="fa-solid fa-bolt ml-1"></i> جاهز (Instant Cache)
+                        </span>
+                    </div>
+
                     <div class="overflow-x-auto rounded-xl border border-slate-200">
                         <table class="w-full text-right text-xs whitespace-nowrap">
                             <thead>
@@ -345,6 +382,15 @@
                             <tbody id="invoicesTableBody" class="divide-y divide-slate-100 bg-white">
                                 <tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">جاري تحميل الفواتير من سحابة Firebase...</td></tr>
                             </tbody>
+                            <tfoot class="bg-indigo-50/70 font-bold text-slate-900 border-t">
+                                <tr>
+                                    <td colspan="3" class="p-3.5 text-left">إجمالي الفواتير المعروضة:</td>
+                                    <td id="tfootInvQty" class="p-3.5 mono-font text-slate-700" dir="ltr">0</td>
+                                    <td id="tfootInvTotal" class="p-3.5 mono-font text-indigo-700" dir="ltr">0 ج.م</td>
+                                    <td id="tfootInvProfit" class="p-3.5 mono-font text-emerald-700" dir="ltr">+0 ج.م</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -424,7 +470,7 @@
         </div>
     </div>
 
-    <!-- دوال القائمة الجانبية للموبايل وتمرير معرف الشركة تلقائياً -->
+    <!-- دوال القائمة الجانبية والكاش الفوري في 0 مللي ثانية -->
     <script>
         function escapeHTML(str) {
             if (!str) return '';
@@ -435,6 +481,91 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+
+        window.__eidcoInvoicesState = {
+            clients: [],
+            products: [],
+            invoices: [],
+            auxLoaded: false
+        };
+
+        window.renderInvoices = function() {
+            const state = window.__eidcoInvoicesState;
+            const searchEl = document.getElementById('invoiceSearchInput');
+            const search = searchEl ? searchEl.value.toLowerCase().trim() : '';
+
+            const allSingle = state.invoices.filter(i => !i.isBatch);
+
+            // تحديث بطاقات القراءات الإحصائية الكلية
+            const totalCount = allSingle.length;
+            const totalSalesAll = allSingle.reduce((s, i) => s + Number(i.total || 0), 0);
+            const totalProfitAll = allSingle.reduce((s, i) => s + Number(i.profit || 0), 0);
+            const totalEtaSent = allSingle.filter(i => i.etaSubmitted).length;
+
+            const statCountEl = document.getElementById('statInvCount');
+            const statSalesEl = document.getElementById('statInvSales');
+            const statProfitEl = document.getElementById('statInvProfit');
+            const statEtaEl = document.getElementById('statInvEta');
+
+            if (statCountEl) statCountEl.innerText = `${totalCount.toLocaleString()} فاتورة`;
+            if (statSalesEl) statSalesEl.innerText = `${totalSalesAll.toLocaleString()} ج.م`;
+            if (statProfitEl) statProfitEl.innerText = `${totalProfitAll.toLocaleString()} ج.م`;
+            if (statEtaEl) statEtaEl.innerText = `${totalEtaSent} / ${totalCount} مرسلة`;
+
+            // تصفية الجدول حسب البحث
+            const filtered = search ? allSingle.filter(i =>
+                (i.id && i.id.toLowerCase().includes(search)) ||
+                (i.client && i.client.toLowerCase().includes(search)) ||
+                (i.productName && i.productName.toLowerCase().includes(search))
+            ) : allSingle;
+
+            const filteredQty = filtered.reduce((s, i) => s + Number(i.qty || 1), 0);
+            const filteredTotal = filtered.reduce((s, i) => s + Number(i.total || 0), 0);
+            const filteredProfit = filtered.reduce((s, i) => s + Number(i.profit || 0), 0);
+
+            const tfootQty = document.getElementById('tfootInvQty');
+            const tfootTotal = document.getElementById('tfootInvTotal');
+            const tfootProfit = document.getElementById('tfootInvProfit');
+            if (tfootQty) tfootQty.innerText = filteredQty.toLocaleString();
+            if (tfootTotal) tfootTotal.innerText = `${filteredTotal.toLocaleString()} ج.م`;
+            if (tfootProfit) tfootProfit.innerText = `+${filteredProfit.toLocaleString()} ج.م`;
+
+            const tbody = document.getElementById('invoicesTableBody');
+            if (!tbody) return;
+
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">لا توجد فواتير فردية مطابقة أو مسجلة لهذا الحساب.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(i => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${escapeHTML(i.id || 'INV')}</td>
+                    <td class="p-4 font-bold text-slate-900">${escapeHTML(i.client || 'عميل')}</td>
+                    <td class="p-4 text-slate-700">${escapeHTML(i.productName || 'صنف')}</td>
+                    <td class="p-4 mono-font" dir="ltr">${i.qty || 1}</td>
+                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${i.etaSubmitted ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
+                            ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center space-x-1.5 space-x-reverse flex items-center justify-center">
+                        ${!i.etaSubmitted ? `
+                            <button onclick="window.sendToETA('${escapeHTML(i.id)}', '${escapeHTML(i.docId || '')}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200 active:scale-95" title="إرسال لمصلحة الضرائب">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="window.openInvoicePreview('${escapeHTML(i.id)}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200 active:scale-95" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="window.sendInvoiceWhatsApp('${escapeHTML(i.id)}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200 active:scale-95" title="إرسال واتساب / مشاركة"><i class="fa-brands fa-whatsapp text-sm"></i></button>
+                        <button onclick="window.deleteInvoice('${escapeHTML(i.id)}', '${escapeHTML(i.docId || '')}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200 active:scale-95" title="حذف الفاتورة">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -448,6 +579,26 @@
                     link.setAttribute('href', href + separator + 'companyId=' + encodeURIComponent(currentCompanyId));
                 }
             });
+
+            // تحميل فوري من الكاش في 0 مللي ثانية قبل وصول رد السحابة
+            try {
+                const cachedInvoices = localStorage.getItem('eidco_invoices_cache_' + currentCompanyId);
+                if (cachedInvoices) {
+                    const parsed = JSON.parse(cachedInvoices);
+                    if (Array.isArray(parsed)) {
+                        window.__eidcoInvoicesState.invoices = parsed;
+                        window.renderInvoices();
+                    }
+                }
+                const cachedClients = localStorage.getItem('eidco_clients_cache_' + currentCompanyId);
+                if (cachedClients) {
+                    window.__eidcoInvoicesState.clients = JSON.parse(cachedClients) || [];
+                }
+                const cachedProducts = localStorage.getItem('eidco_products_cache_' + currentCompanyId);
+                if (cachedProducts) {
+                    window.__eidcoInvoicesState.products = JSON.parse(cachedProducts) || [];
+                }
+            } catch (e) {}
         });
     </script>
 
@@ -493,16 +644,24 @@
             badgeEl.innerText = `معرف الشركة: ${currentCompanyId}`;
         }
 
-        let state = {
-            clients: [],
-            products: [],
-            invoices: [],
-            auxLoaded: false
-        };
+        const state = window.__eidcoInvoicesState;
 
-        // تحميل العملاء والأصناف عند الحاجة فقط (لتجنب تجميد WebView عند الدخول)
-        async function ensureClientsAndProductsLoaded() {
-            if (state.auxLoaded && state.clients.length && state.products.length) return;
+        function persistInvoicesCache() {
+            try {
+                localStorage.setItem('eidco_invoices_cache_' + currentCompanyId, JSON.stringify(state.invoices));
+            } catch (e) {}
+        }
+
+        function persistAuxCache() {
+            try {
+                localStorage.setItem('eidco_clients_cache_' + currentCompanyId, JSON.stringify(state.clients));
+                localStorage.setItem('eidco_products_cache_' + currentCompanyId, JSON.stringify(state.products));
+            } catch (e) {}
+        }
+
+        // تحميل العملاء والأصناف وتحديث الكاش الخاص بهما
+        async function ensureClientsAndProductsLoaded(forceRefresh = false) {
+            if (!forceRefresh && state.auxLoaded && state.clients.length && state.products.length) return;
             const clientsRef = query(collection(db, "clients"), where("companyId", "==", currentCompanyId));
             const productsRef = query(collection(db, "products"), where("companyId", "==", currentCompanyId));
             const [clientsSnap, productsSnap] = await Promise.all([
@@ -512,70 +671,42 @@
             state.clients = clientsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
             state.products = productsSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
             state.auxLoaded = true;
+            persistAuxCache();
         }
 
         signInAnonymously(auth).then(() => {
             const invoicesRef = query(collection(db, "invoices"), where("companyId", "==", currentCompanyId));
 
-            // مستمع واحد خفيف للفواتير فقط يقرأ من الكاش فوراً ويتزامن مع السحابة
+            // مستمع واحد خفيف للفواتير فقط يحدّث الجدول والقراءات والكاش لحظياً
             onSnapshot(invoicesRef, (snapshot) => {
                 state.invoices = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+                persistInvoicesCache();
+                const syncBadge = document.getElementById('syncStatusBadge');
+                if (syncBadge) {
+                    syncBadge.innerHTML = `<i class="fa-solid fa-cloud-check ml-1"></i> متزامن سحابياً`;
+                }
                 requestAnimationFrame(() => window.renderInvoices());
             }, (error) => {
                 console.error("خطأ في جلب الفواتير سحابياً:", error);
             });
 
-            // تحميل العملاء والأصناف في الخلفية بعد استقرار الواجهة بـ 800ms
+            // تحميل وتحديث العملاء والأصناف في الخلفية بعد استقرار الواجهة بـ 800ms
             setTimeout(() => {
-                ensureClientsAndProductsLoaded().catch(() => {});
+                ensureClientsAndProductsLoaded(true).catch(() => {});
             }, 800);
         }).catch((err) => {
             console.error("فشل المصادقة سحابياً:", err);
         });
 
-        window.renderInvoices = function() {
-            let singleInvoices = state.invoices.filter(i => !i.isBatch);
-            let tbody = document.getElementById('invoicesTableBody');
-            if (!tbody) return;
-            
-            if(!singleInvoices.length) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 font-bold">لا توجد فواتير فردية مسجلة سحابياً لهذا الحساب.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = singleInvoices.map(i => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${escapeHTML(i.id || 'INV')}</td>
-                    <td class="p-4 font-bold text-slate-900">${escapeHTML(i.client || 'عميل')}</td>
-                    <td class="p-4 text-slate-700">${escapeHTML(i.productName || 'صنف')}</td>
-                    <td class="p-4 mono-font" dir="ltr">${i.qty || 1}</td>
-                    <td class="p-4 mono-font text-indigo-600 font-bold" dir="ltr">${Number(i.total || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 mono-font text-emerald-600 font-bold" dir="ltr">+${Number(i.profit || 0).toLocaleString()} ج.م</td>
-                    <td class="p-4 text-center">
-                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${i.etaSubmitted ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
-                            ${i.etaSubmitted ? 'مرسلة للضرائب ✓' : 'غير مرسلة'}
-                        </span>
-                    </td>
-                    <td class="p-4 text-center space-x-1.5 space-x-reverse flex items-center justify-center">
-                        ${!i.etaSubmitted ? `
-                            <button onclick="window.sendToETA('${i.id}', '${i.docId || ''}')" class="text-indigo-600 hover:text-indigo-800 text-xs cursor-pointer p-1.5 bg-indigo-50 rounded-lg border border-indigo-200 active:scale-95" title="إرسال لمصلحة الضرائب">
-                                <i class="fa-solid fa-file-arrow-up"></i>
-                            </button>
-                        ` : ''}
-                        <button onclick="window.openInvoicePreview('${i.id}')" class="text-indigo-600 hover:text-indigo-800 cursor-pointer text-xs font-bold p-1.5 bg-slate-50 rounded-lg border border-slate-200 active:scale-95" title="معاينة وصورة"><i class="fa-solid fa-eye"></i></button>
-                        <button onclick="window.sendInvoiceWhatsApp('${i.id}')" class="text-emerald-600 hover:text-emerald-800 cursor-pointer text-xs font-bold p-1.5 bg-emerald-50 rounded-lg border border-slate-200 active:scale-95" title="إرسال واتساب / مشاركة"><i class="fa-brands fa-whatsapp text-sm"></i></button>
-                        <button onclick="window.deleteInvoice('${i.id}', '${i.docId || ''}')" class="text-rose-500 hover:text-rose-700 text-xs cursor-pointer p-1.5 bg-rose-50 rounded-lg border border-rose-200 active:scale-95" title="حذف الفاتورة">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        };
-
         window.openNewInvoiceModal = async function() {
             triggerHaptic(20);
             try {
-                await ensureClientsAndProductsLoaded();
+                // إذا كان الكاش متاحاً نفتح النافذة فوراً ونحدّث البيانات في الخلفية
+                if (!state.clients.length || !state.products.length) {
+                    await ensureClientsAndProductsLoaded(true);
+                } else {
+                    ensureClientsAndProductsLoaded(true).catch(() => {});
+                }
             } catch (e) {
                 return showNativeToast('خطأ في تحميل العملاء والأصناف: ' + e.message);
             }
@@ -612,10 +743,11 @@
             triggerHaptic(30);
             let code = document.getElementById('invProduct').value;
             let prod = state.products.find(p => p.code === code);
-            let qty = Number(document.getElementById('invQty').value) || 1;
+            let qty = Number(document.getElementById('invQty').value) || 0;
             let price = Number(document.getElementById('invPriceUnit').value) || 0;
             
             if(!prod) return alert('⚠️ يرجى اختيار الصنف بشكل صحيح');
+            if(qty <= 0) return alert('⚠️ يرجى إدخال كمية صحيحة أكبر من صفر');
             if(prod.qty < qty) return alert('⚠️ الكمية المحددة غير متوفرة حالياً بالكامل في المخزن السحابي');
             
             let total = qty * price;
@@ -632,9 +764,10 @@
                     const newQty = prod.qty - qty;
                     await updateDoc(doc(db, "products", prod.docId), { qty: newQty });
                     prod.qty = newQty;
+                    persistAuxCache();
                 }
 
-                await addDoc(collection(db, "invoices"), { 
+                const newInvoiceObj = { 
                     companyId: currentCompanyId,
                     id, 
                     client: document.getElementById('invClient').value, 
@@ -647,7 +780,9 @@
                     date: today,
                     isBatch: false,
                     etaSubmitted: false
-                });
+                };
+
+                await addDoc(collection(db, "invoices"), newInvoiceObj);
 
                 await addDoc(collection(db, "transactions"), { 
                     companyId: currentCompanyId,
@@ -773,6 +908,7 @@
                         const restoredQty = p.qty + inv.qty;
                         await updateDoc(doc(db, "products", p.docId), { qty: restoredQty });
                         p.qty = restoredQty;
+                        persistAuxCache();
                     }
                 }
                 
@@ -781,7 +917,6 @@
                     await deleteDoc(doc(db, "invoices", targetDocId));
                 }
                 
-                // البحث عن حركة الخزنة المرتبطة بهذه الفاتورة فقط بدلاً من تحميل كل المعاملات
                 const txQuery = query(
                     collection(db, "transactions"),
                     where("companyId", "==", currentCompanyId),
